@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>rails_application_templates.md</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>     
+    <div class="banner">
+        
+        <h1>
+            rails_application_templates.md
+        </h1>
+        <ul class="files">
+            <li>rails/guides/source/rails_application_templates.md</li>
+            <li>Last modified: 2013-04-26 19:51:18 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h1 id="label-Rails+Application+Templates"><a href="../../../../classes/Rails.html">Rails</a> Application Templates</h1>
+
+<p>Application templates are simple Ruby files containing DSL for adding
+gems/initializers etc. to your freshly created <a
+href="../../../../classes/Rails.html">Rails</a> project or an existing <a
+href="../../../../classes/Rails.html">Rails</a> project.</p>
+
+<p>After reading this guide, you will know:</p>
+<ul><li>
+<p>How to use templates to generate/customize <a
+href="../../../../classes/Rails.html">Rails</a> applications.</p>
+</li><li>
+<p>How to write your own reusable application templates using the <a
+href="../../../../classes/Rails.html">Rails</a> template API.</p>
+</li></ul>
+<hr style="height: 1px">
+
+<h2 id="label-Usage">Usage</h2>
+
+<p>To apply a template, you need to provide the <a
+href="../../../../classes/Rails.html">Rails</a> generator with the location
+of the template you wish to apply, using -m option. This can either be path
+to a file or a URL.</p>
+
+<pre><code>$ rails new blog -m ~/template.rb
+$ rails new blog -m http://example.com/template.rb</code></pre>
+
+<p>You can use the rake task <code>rails:template</code> to apply templates to
+an existing <a href="../../../../classes/Rails.html">Rails</a> application.
+The location of the template needs to be passed in to an environment
+variable named LOCATION. Again, this can either be path to a file or a URL.</p>
+
+<pre><code>$ rake rails:template LOCATION=~/template.rb
+$ rake rails:template LOCATION=http://example.com/template.rb</code></pre>
+
+<h2 id="label-Template+API">Template API</h2>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> templates API is very
+self explanatory and easy to understand. Here&#39;s an example of a typical
+<a href="../../../../classes/Rails.html">Rails</a> template:</p>
+
+<pre><code># template.rb
+generate(:scaffold, &quot;person name:string&quot;)
+route &quot;root to: &#39;people#index&#39;&quot;
+rake(&quot;db:migrate&quot;)
+
+git :init
+git add: &quot;.&quot;
+git commit: %Q{ -m &#39;Initial commit&#39; }
+</code></pre>
+
+<p>The following sections outlines the primary methods provided by the API:</p>
+
+<h3 id="label-gem%28%2Aargs%29">gem(*args)</h3>
+
+<p>Adds a <code>gem</code> entry for the supplied gem to the generated
+application’s <code>Gemfile</code>.</p>
+
+<p>For example, if your application depends on the gems <code>bj</code> and
+<code>nokogiri</code>:</p>
+
+<pre><code>gem &quot;bj&quot;
+gem &quot;nokogiri&quot;
+</code></pre>
+
+<p>Please note that this will NOT install the gems for you and you will have
+to run <code>bundle install</code> to do that.</p>
+
+<pre><code>bundle install</code></pre>
+
+<h3 id="label-gem_group%28%2Anames%2C+%26block%29">gem_group(*names, &amp;block)</h3>
+
+<p>Wraps gem entries inside a group.</p>
+
+<p>For example, if you want to load <code>rspec-rails</code> only in
+<code>development</code> and <code>test</code> group:</p>
+
+<pre><code>gem_group :development, :test do
+  gem &quot;rspec-rails&quot;
+end
+</code></pre>
+
+<h3 id="label-add_source%28source%2C+options+%3D+%7B%7D%29">add_source(source, options = {})</h3>
+
+<p>Adds the given source to the generated application&#39;s
+<code>Gemfile</code>.</p>
+
+<p>For example, if you need to source a gem from “<a
+href="http://code.whytheluckystiff.net">code.whytheluckystiff.net</a>”:</p>
+
+<pre><code>add_source &quot;http://code.whytheluckystiff.net&quot;
+</code></pre>
+
+<h3 id="label-environment%2Fapplication%28data%3Dnil%2C+options%3D%7B%7D%2C+%26block%29">environment/application(data=nil, options={}, &amp;block)</h3>
+
+<p>Adds a line inside the <code>Application</code> class for
+<code>config/application.rb</code>.</p>
+
+<p>If <code>options[:env]</code> is specified, the line is appended to the
+corresponding file in <code>config/environments</code>.</p>
+
+<pre><code>environment &#39;config.action_mailer.default_url_options = {host: &#39;http://yourwebsite.example.com&#39;}, env: &#39;production&#39;
+</code></pre>
+
+<p><a href="../../../../classes/A.html">A</a> block can be used in place of
+the <code>data</code> argument.</p>
+
+<h3 id="label-vendor%2Flib%2Ffile%2Finitializer%28filename%2C+data+%3D+nil%2C+%26block%29">vendor/lib/file/initializer(filename, data = nil, &amp;block)</h3>
+
+<p>Adds an initializer to the generated application’s
+<code>config/initializers</code> directory.</p>
+
+<p>Lets say you like using <code>Object#not_nil?</code> and
+<code>Object#not_blank?</code>:</p>
+
+<pre><code>initializer &#39;bloatlol.rb&#39;, &lt;&lt;-CODE
+  class Object
+    def not_nil?
+      !nil?
+    end
+
+    def not_blank?
+      !blank?
+    end
+  end
+CODE
+</code></pre>
+
+<p>Similarly <code>lib()</code> creates a file in the <code>lib/</code>
+directory and <code>vendor()</code> creates a file in the
+<code>vendor/</code> directory.</p>
+
+<p>There is even <code>file()</code>, which accepts a relative path from
+<code>Rails.root</code> and creates all the directories/file needed:</p>
+
+<pre><code>file &#39;app/components/foo.rb&#39;, &lt;&lt;-CODE
+  class Foo
+  end
+CODE
+</code></pre>
+
+<p>That’ll create <code>app/components</code> directory and put
+<code>foo.rb</code> in there.</p>
+
+<h3 id="label-rakefile%28filename%2C+data+%3D+nil%2C+%26block%29">rakefile(filename, data = nil, &amp;block)</h3>
+
+<p>Creates a new rake file under <code>lib/tasks</code> with the supplied
+tasks:</p>
+
+<pre><code>rakefile(&quot;bootstrap.rake&quot;) do
+  &lt;&lt;-TASK
+    namespace :boot do
+      task :strap do
+        puts &quot;i like boots!&quot;
+      end
+    end
+  TASK
+end
+</code></pre>
+
+<p>The above creates <code>lib/tasks/bootstrap.rake</code> with a
+<code>boot:strap</code> rake task.</p>
+
+<h3 id="label-generate%28what%2C+%2Aargs%29">generate(what, *args)</h3>
+
+<p>Runs the supplied rails generator with given arguments.</p>
+
+<pre><code>generate(:scaffold, &quot;person&quot;, &quot;name:string&quot;, &quot;address:text&quot;, &quot;age:number&quot;)
+</code></pre>
+
+<h3 id="label-run%28command%29">run(command)</h3>
+
+<p>Executes an arbitrary command. Just like the backticks. Let&#39;s say you
+want to remove the <code>README.rdoc</code> file:</p>
+
+<pre><code>run &quot;rm README.rdoc&quot;
+</code></pre>
+
+<h3 id="label-rake%28command%2C+options+%3D+%7B%7D%29">rake(command, options = {})</h3>
+
+<p>Runs the supplied rake tasks in the <a
+href="../../../../classes/Rails.html">Rails</a> application. Let&#39;s say
+you want to migrate the database:</p>
+
+<pre><code>rake &quot;db:migrate&quot;
+</code></pre>
+
+<p>You can also run rake tasks with a different <a
+href="../../../../classes/Rails.html">Rails</a> environment:</p>
+
+<pre><code>rake &quot;db:migrate&quot;, env: &#39;production&#39;
+</code></pre>
+
+<h3 id="label-route%28routing_code%29">route(routing_code)</h3>
+
+<p>Adds a routing entry to the <code>config/routes.rb</code> file. In above
+steps, we generated a person scaffold and also removed
+<code>README.rdoc</code>. Now to make <code>PeopleController#index</code>
+as the default page for the application:</p>
+
+<pre><code>route &quot;root to: &#39;person#index&#39;&quot;
+</code></pre>
+
+<h3 id="label-inside%28dir%29">inside(dir)</h3>
+
+<p>Enables you to run a command from the given directory. For example, if you
+have a copy of edge rails that you wish to symlink from your new apps, you
+can do this:</p>
+
+<pre><code>inside(&#39;vendor&#39;) do
+  run &quot;ln -s ~/commit-rails/rails rails&quot;
+end
+</code></pre>
+
+<h3 id="label-ask%28question%29">ask(question)</h3>
+
+<p><code>ask()</code> gives you a chance to get some feedback from the user
+and use it in your templates. Lets say you want your user to name the new
+shiny library you’re adding:</p>
+
+<pre><code>lib_name = ask(&quot;What do you want to call the shiny library ?&quot;)
+lib_name &lt;&lt; &quot;.rb&quot; unless lib_name.index(&quot;.rb&quot;)
+
+lib lib_name, &lt;&lt;-CODE
+  class Shiny
+  end
+CODE
+</code></pre>
+
+<h3 id="label-yes%3F%28question%29+or+no%3F%28question%29">yes?(question) or no?(question)</h3>
+
+<p>These methods let you ask questions from templates and decide the flow
+based on the user’s answer. Lets say you want to freeze rails only if the
+user want to:</p>
+
+<pre><code>rake(&quot;rails:freeze:gems&quot;) if yes?(&quot;Freeze rails gems?&quot;)
+# no?(question) acts just the opposite.
+</code></pre>
+
+<h3 id="label-git%28%3Acommand%29">git(:command)</h3>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> templates let you run
+any git command:</p>
+
+<pre><code>git :init
+git add: &quot;.&quot;
+git commit: &quot;-a -m &#39;Initial commit&#39;&quot;
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

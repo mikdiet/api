@@ -1,0 +1,582 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>caching_with_rails.md</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>     
+    <div class="banner">
+        
+        <h1>
+            caching_with_rails.md
+        </h1>
+        <ul class="files">
+            <li>rails/guides/source/caching_with_rails.md</li>
+            <li>Last modified: 2013-04-26 19:51:18 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h1 id="label-Caching+with+Rails%3A+An+overview">Caching with Rails: An overview</h1>
+
+<p>This guide will teach you what you need to know about avoiding that
+expensive round-trip to your database and returning what you need to return
+to the web clients in the shortest time possible.</p>
+
+<p>After reading this guide, you will know:</p>
+<ul><li>
+<p>Page, action, and fragment caching.</p>
+</li><li>
+<p>Sweepers.</p>
+</li><li>
+<p>Alternative cache stores.</p>
+</li><li>
+<p>Conditional GET support.</p>
+</li></ul>
+<hr style="height: 1px">
+
+<h2 id="label-Basic+Caching">Basic Caching</h2>
+
+<p>This is an introduction to three types of caching techniques: page, action
+and fragment caching. <a href="../../../../classes/Rails.html">Rails</a>
+provides by default fragment caching. In order to use page and action
+caching, you will need to add <code>actionpack-page_caching</code> and
+<code>actionpack-action_caching</code> to your <a
+href="../../Gemfile.html">Gemfile</a>.</p>
+
+<p>To start playing with caching you&#39;ll want to ensure that
+<code>config.action_controller.perform_caching</code> is set to
+<code>true</code>, if you&#39;re running in development mode. This flag is
+normally set in the corresponding <code>config/environments/*.rb</code> and
+caching is disabled by default for development and test, and enabled for
+production.</p>
+
+<pre><code>config.action_controller.perform_caching = true
+</code></pre>
+
+<h3 id="label-Page+Caching">Page Caching</h3>
+
+<p>Page caching is a <a href="../../../../classes/Rails.html">Rails</a>
+mechanism which allows the request for a generated page to be fulfilled by
+the webserver (i.e. Apache or nginx), without ever having to go through the
+<a href="../../../../classes/Rails.html">Rails</a> stack at all. Obviously,
+this is super-fast. Unfortunately, it can&#39;t be applied to every
+situation (such as pages that need authentication) and since the webserver
+is literally just serving a file from the filesystem, cache expiration is
+an issue that needs to be dealt with.</p>
+
+<p>INFO: Page Caching has been removed from <a
+href="../../../../classes/Rails.html">Rails</a> 4. See the <a
+href="https://github.com/rails/actionpack-page_caching">actionpack-page_caching
+gem</a></p>
+
+<h3 id="label-Action+Caching">Action Caching</h3>
+
+<p>Page Caching cannot be used for actions that have before filters - for
+example, pages that require authentication. This is where Action Caching
+comes in. Action Caching works like Page Caching except the incoming web
+request hits the <a href="../../../../classes/Rails.html">Rails</a> stack
+so that before filters can be run on it before the cache is served. This
+allows authentication and other restrictions to be run while still serving
+the result of the output from a cached copy.</p>
+
+<p>INFO: Action Caching has been removed from <a
+href="../../../../classes/Rails.html">Rails</a> 4. See the <a
+href="https://github.com/rails/actionpack-action_caching">actionpack-action_caching
+gem</a></p>
+
+<h3 id="label-Fragment+Caching">Fragment Caching</h3>
+
+<p>Life would be perfect if we could get away with caching the entire contents
+of a page or action and serving it out to the world. Unfortunately, dynamic
+web applications usually build pages with a variety of components not all
+of which have the same caching characteristics. In order to address such a
+dynamically created page where different parts of the page need to be
+cached and expired differently, <a
+href="../../../../classes/Rails.html">Rails</a> provides a mechanism called
+Fragment Caching.</p>
+
+<p>Fragment Caching allows a fragment of view logic to be wrapped in a cache
+block and served out of the cache store when the next request comes in.</p>
+
+<p>As an example, if you wanted to show all the orders placed on your website
+in real time and didn&#39;t want to cache that part of the page, but did
+want to cache the part of the page which lists all products available, you
+could use this piece of code:</p>
+
+<pre><code>&lt;% Order.find_recent.each do |o| %&gt;
+  &lt;%= o.buyer.name %&gt; bought &lt;%= o.product.name %&gt;
+&lt;% end %&gt;
+
+&lt;% cache do %&gt;
+  All available products:
+  &lt;% Product.all.each do |p| %&gt;
+    &lt;%= link_to p.name, product_url(p) %&gt;
+  &lt;% end %&gt;
+&lt;% end %&gt;</code></pre>
+
+<p>The cache block in our example will bind to the action that called it and
+is written out to the same place as the Action Cache, which means that if
+you want to cache multiple fragments per action, you should provide an
+<code>action_suffix</code> to the cache call:</p>
+
+<pre><code>&lt;% cache(action: &#39;recent&#39;, action_suffix: &#39;all_products&#39;) do %&gt;
+  All available products:</code></pre>
+
+<p>and you can expire it using the <code>expire_fragment</code> method, like
+so:</p>
+
+<pre><code>expire_fragment(controller: &#39;products&#39;, action: &#39;recent&#39;, action_suffix: &#39;all_products&#39;)
+</code></pre>
+
+<p>If you don&#39;t want the cache block to bind to the action that called it,
+you can also use globally keyed fragments by calling the <code>cache</code>
+method with a key:</p>
+
+<pre><code>&lt;% cache(&#39;all_available_products&#39;) do %&gt;
+  All available products:
+&lt;% end %&gt;</code></pre>
+
+<p>This fragment is then available to all actions in the
+<code>ProductsController</code> using the key and can be expired the same
+way:</p>
+
+<pre><code>expire_fragment(&#39;all_available_products&#39;)
+</code></pre>
+
+<p>If you want to avoid expiring the fragment manually, whenever an action
+updates a product, you can define a helper method:</p>
+
+<pre><code>module ProductsHelper
+  def cache_key_for_products
+    count          = Product.count
+    max_updated_at = Product.maximum(:updated_at).try(:utc).try(:to_s, :number)
+    &quot;products/all-#{count}-#{max_updated_at}&quot;
+  end
+end
+</code></pre>
+
+<p>This method generates a cache key that depends on all products and can be
+used in the view:</p>
+
+<pre><code>&lt;% cache(cache_key_for_products) do %&gt;
+  All available products:
+&lt;% end %&gt;</code></pre>
+
+<p>You can also use an Active Record model as the cache key:</p>
+
+<pre><code>&lt;% Product.all.each do |p| %&gt;
+  &lt;% cache(p) do %&gt;
+    &lt;%= link_to p.name, product_url(p) %&gt;
+  &lt;% end %&gt;
+&lt;% end %&gt;</code></pre>
+
+<p>Behind the scenes, a method called <code>cache_key</code> will be invoked
+on the model and it returns a string like
+<code>products/23-20130109142513</code>. The cache key includes the model
+name, the id and finally the updated_at timestamp. Thus it will
+automatically generate a new fragment when the product is updated because
+the key changes.</p>
+
+<p>You can also combine the two schemes which is called “Russian Doll
+Caching”:</p>
+
+<pre><code>&lt;% cache(cache_key_for_products) do %&gt;
+  All available products:
+  &lt;% Product.all.each do |p| %&gt;
+    &lt;% cache(p) do %&gt;
+      &lt;%= link_to p.name, product_url(p) %&gt;
+    &lt;% end %&gt;
+  &lt;% end %&gt;
+&lt;% end %&gt;</code></pre>
+
+<p>It&#39;s called “Russian Doll Caching” because it nests multiple fragments.
+The advantage is that if a single product is updated, all the other inner
+fragments can be reused when regenerating the outer fragment.</p>
+
+<h3 id="label-SQL+Caching">SQL Caching</h3>
+
+<p>Query caching is a <a href="../../../../classes/Rails.html">Rails</a>
+feature that caches the result set returned by each query so that if <a
+href="../../../../classes/Rails.html">Rails</a> encounters the same query
+again for that request, it will use the cached result set as opposed to
+running the query against the database again.</p>
+
+<p>For example:</p>
+
+<pre><code>class ProductsController &lt; ApplicationController
+
+  def index
+    # Run a find query
+    @products = Product.all
+
+    ...
+
+    # Run the same query again
+    @products = Product.all
+  end
+
+end
+</code></pre>
+
+<h2 id="label-Cache+Stores">Cache Stores</h2>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> provides different
+stores for the cached data created by <strong>action</strong> and
+<strong>fragment</strong> caches.</p>
+
+<p>TIP: Page caches are always stored on disk.</p>
+
+<h3 id="label-Configuration">Configuration</h3>
+
+<p>You can set up your application&#39;s default cache store by calling
+<code>config.cache_store=</code> in the Application definition inside your
+<code>config/application.rb</code> file or in an Application.configure
+block in an environment specific configuration file (i.e.
+<code>config/environments/*.rb</code>). The first argument will be the
+cache store to use and the rest of the argument will be passed as arguments
+to the cache store constructor.</p>
+
+<pre><code>config.cache_store = :memory_store
+</code></pre>
+
+<p>NOTE: Alternatively, you can call
+<code>ActionController::Base.cache_store</code> outside of a configuration
+block.</p>
+
+<p>You can access the cache by calling <code>Rails.cache</code>.</p>
+
+<h3 id="label-ActiveSupport%3A%3ACache%3A%3AStore"><a href="../../../../classes/ActiveSupport/Cache/Store.html">ActiveSupport::Cache::Store</a></h3>
+
+<p>This class provides the foundation for interacting with the cache in <a
+href="../../../../classes/Rails.html">Rails</a>. This is an abstract class
+and you cannot use it on its own. Rather you must use a concrete
+implementation of the class tied to a storage engine. <a
+href="../../../../classes/Rails.html">Rails</a> ships with several
+implementations documented below.</p>
+
+<p>The main methods to call are <code>read</code>, <code>write</code>,
+<code>delete</code>, <code>exist?</code>, and <code>fetch</code>. The fetch
+method takes a block and will either return an existing value from the
+cache, or evaluate the block and write the result to the cache if no value
+exists.</p>
+
+<p>There are some common options used by all cache implementations. These can
+be passed to the constructor or the various methods to interact with
+entries.</p>
+<ul><li>
+<p><code>:namespace</code> - This option can be used to create a namespace
+within the cache store. It is especially useful if your application shares
+a cache with other applications. The default value will include the
+application name and <a href="../../../../classes/Rails.html">Rails</a>
+environment.</p>
+</li><li>
+<p><code>:compress</code> - This option can be used to indicate that
+compression should be used in the cache. This can be useful for
+transferring large cache entries over a slow network.</p>
+</li><li>
+<p><code>:compress_threshold</code> - This options is used in conjunction with
+the <code>:compress</code> option to indicate a threshold under which cache
+entries should not be compressed. This defaults to 16 kilobytes.</p>
+</li><li>
+<p><code>:expires_in</code> - This option sets an expiration time in seconds
+for the cache entry when it will be automatically removed from the cache.</p>
+</li><li>
+<p><code>:race_condition_ttl</code> - This option is used in conjunction with
+the <code>:expires_in</code> option. It will prevent race conditions when
+cache entries expire by preventing multiple processes from simultaneously
+regenerating the same entry (also known as the dog pile effect). This
+option sets the number of seconds that an expired entry can be reused while
+a new value is being regenerated. It&#39;s a good practice to set this
+value if you use the <code>:expires_in</code> option.</p>
+</li></ul>
+
+<h3 id="label-ActiveSupport%3A%3ACache%3A%3AMemoryStore"><a href="../../../../classes/ActiveSupport/Cache/MemoryStore.html">ActiveSupport::Cache::MemoryStore</a></h3>
+
+<p>This cache store keeps entries in memory in the same Ruby process. The
+cache store has a bounded size specified by the <code>:size</code> options
+to the initializer (default is 32Mb). When the cache exceeds the allotted
+size, a cleanup will occur and the least recently used entries will be
+removed.</p>
+
+<pre><code>config.cache_store = :memory_store, { size: 64.megabytes }
+</code></pre>
+
+<p>If you&#39;re running multiple Ruby on <a
+href="../../../../classes/Rails.html">Rails</a> server processes (which is
+the case if you&#39;re using mongrel_cluster or Phusion Passenger), then
+your <a href="../../../../classes/Rails.html">Rails</a> server process
+instances won&#39;t be able to share cache data with each other. This cache
+store is not appropriate for large application deployments, but can work
+well for small, low traffic sites with only a couple of server processes or
+for development and test environments.</p>
+
+<h3 id="label-ActiveSupport%3A%3ACache%3A%3AFileStore"><a href="../../../../classes/ActiveSupport/Cache/FileStore.html">ActiveSupport::Cache::FileStore</a></h3>
+
+<p>This cache store uses the file system to store entries. The path to the
+directory where the store files will be stored must be specified when
+initializing the cache.</p>
+
+<pre><code>config.cache_store = :file_store, &quot;/path/to/cache/directory&quot;
+</code></pre>
+
+<p>With this cache store, multiple server processes on the same host can share
+a cache. Servers processes running on different hosts could share a cache
+by using a shared file system, but that set up would not be ideal and is
+not recommended. The cache store is appropriate for low to medium traffic
+sites that are served off one or two hosts.</p>
+
+<p>Note that the cache will grow until the disk is full unless you
+periodically clear out old entries.</p>
+
+<p>This is the default cache store implementation.</p>
+
+<h3 id="label-ActiveSupport%3A%3ACache%3A%3AMemCacheStore"><a href="../../../../classes/ActiveSupport/Cache/MemCacheStore.html">ActiveSupport::Cache::MemCacheStore</a></h3>
+
+<p>This cache store uses Danga&#39;s <code>memcached</code> server to provide
+a centralized cache for your application. <a
+href="../../../../classes/Rails.html">Rails</a> uses the bundled
+<code>dalli</code> gem by default. This is currently the most popular cache
+store for production websites. It can be used to provide a single, shared
+cache cluster with very a high performance and redundancy.</p>
+
+<p>When initializing the cache, you need to specify the addresses for all
+memcached servers in your cluster. If none is specified, it will assume
+memcached is running on the local host on the default port, but this is not
+an ideal set up for larger sites.</p>
+
+<p>The <code>write</code> and <code>fetch</code> methods on this cache accept
+two additional options that take advantage of features specific to
+memcached. You can specify <code>:raw</code> to send a value directly to
+the server with no serialization. The value must be a string or number. You
+can use memcached direct operation like <code>increment</code> and
+<code>decrement</code> only on raw values. You can also specify
+<code>:unless_exist</code> if you don&#39;t want memcached to overwrite an
+existing entry.</p>
+
+<pre><code>config.cache_store = :mem_cache_store, &quot;cache-1.example.com&quot;, &quot;cache-2.example.com&quot;
+</code></pre>
+
+<h3 id="label-ActiveSupport%3A%3ACache%3A%3AEhcacheStore">ActiveSupport::Cache::EhcacheStore</h3>
+
+<p>If you are using JRuby you can use Terracotta&#39;s Ehcache as the cache
+store for your application. Ehcache is an open source Java cache that also
+offers an enterprise version with increased scalability, management, and
+commercial support. You must first install the jruby-ehcache-rails3 gem
+(version 1.1.0 or later) to use this cache store.</p>
+
+<pre><code>config.cache_store = :ehcache_store
+</code></pre>
+
+<p>When initializing the cache, you may use the <code>:ehcache_config</code>
+option to specify the Ehcache config file to use (where the default is
+“ehcache.xml” in your <a href="../../../../classes/Rails.html">Rails</a>
+config directory), and the :cache_name option to provide a custom name for
+your cache (the default is rails_cache).</p>
+
+<p>In addition to the standard <code>:expires_in</code> option, the
+<code>write</code> method on this cache can also accept the additional
+<code>:unless_exist</code> option, which will cause the cache store to use
+Ehcache&#39;s <code>putIfAbsent</code> method instead of <code>put</code>,
+and therefore will not overwrite an existing entry. Additionally, the
+<code>write</code> method supports all of the properties exposed by the <a
+href="http://ehcache.org/apidocs/net/sf/ehcache/Element.html">Ehcache
+Element class</a> , including:</p>
+
+<p>| Property | Argument Type | Description | | ————————— | ——————- |
+———————————————————– | | elementEvictionData | ElementEvictionData | Sets
+this element&#39;s eviction data instance. | | eternal | boolean | Sets
+whether the element is eternal. | | timeToIdle, tti | int | Sets time to
+idle | | timeToLive, ttl, expires_in | int | Sets time to Live | | version
+| long | Sets the version attribute of the ElementAttributes object. |</p>
+
+<p>These options are passed to the <code>write</code> method as <a
+href="../../../../classes/Hash.html">Hash</a> options using either
+camelCase or underscore notation, as in the following examples:</p>
+
+<pre><code>Rails.cache.write(&#39;key&#39;, &#39;value&#39;, time_to_idle: 60.seconds, timeToLive: 600.seconds)
+caches_action :index, expires_in: 60.seconds, unless_exist: true
+</code></pre>
+
+<p>For more information about Ehcache, see <a
+href="http://ehcache.org/">ehcache.org/</a> . For more information about
+Ehcache for JRuby and <a href="../../../../classes/Rails.html">Rails</a>,
+see <a
+href="http://ehcache.org/documentation/jruby.html">ehcache.org/documentation/jruby.html</a></p>
+
+<h3 id="label-ActiveSupport%3A%3ACache%3A%3ANullStore"><a href="../../../../classes/ActiveSupport/Cache/NullStore.html">ActiveSupport::Cache::NullStore</a></h3>
+
+<p>This cache store implementation is meant to be used only in development or
+test environments and it never stores anything. This can be very useful in
+development when you have code that interacts directly with
+<code>Rails.cache</code>, but caching may interfere with being able to see
+the results of code changes. With this cache store, all <code>fetch</code>
+and <code>read</code> operations will result in a miss.</p>
+
+<pre><code>config.cache_store = :null_store
+</code></pre>
+
+<h3 id="label-Custom+Cache+Stores"><a href="../../../../classes/Custom.html">Custom</a> Cache Stores</h3>
+
+<p>You can create your own custom cache store by simply extending
+<code>ActiveSupport::Cache::Store</code> and implementing the appropriate
+methods. In this way, you can swap in any number of caching technologies
+into your <a href="../../../../classes/Rails.html">Rails</a> application.</p>
+
+<p>To use a custom cache store, simple set the cache store to a new instance
+of the class.</p>
+
+<pre><code>config.cache_store = MyCacheStore.new
+</code></pre>
+
+<h3 id="label-Cache+Keys">Cache Keys</h3>
+
+<p>The keys used in a cache can be any object that responds to either
+<code>:cache_key</code> or to <code>:to_param</code>. You can implement the
+<code>:cache_key</code> method on your classes if you need to generate
+custom keys. Active Record will generate keys based on the class name and
+record id.</p>
+
+<p>You can use Hashes and Arrays of values as cache keys.</p>
+
+<pre><code># This is a legal cache key
+Rails.cache.read(site: &quot;mysite&quot;, owners: [owner_1, owner_2])
+</code></pre>
+
+<p>The keys you use on <code>Rails.cache</code> will not be the same as those
+actually used with the storage engine. They may be modified with a
+namespace or altered to fit technology backend constraints. This means, for
+instance, that you can&#39;t save values with <code>Rails.cache</code> and
+then try to pull them out with the <code>memcache-client</code> gem.
+However, you also don&#39;t need to worry about exceeding the memcached
+size limit or violating syntax rules.</p>
+
+<h2 id="label-Conditional+GET+support">Conditional GET support</h2>
+
+<p>Conditional GETs are a feature of the HTTP specification that provide a way
+for web servers to tell browsers that the response to a GET request
+hasn&#39;t changed since the last request and can be safely pulled from the
+browser cache.</p>
+
+<p>They work by using the <code>HTTP_IF_NONE_MATCH</code> and
+<code>HTTP_IF_MODIFIED_SINCE</code> headers to pass back and forth both a
+unique content identifier and the timestamp of when the content was last
+changed. If the browser makes a request where the content identifier (etag)
+or last modified since timestamp matches the server’s version then the
+server only needs to send back an empty response with a not modified
+status.</p>
+
+<p>It is the server&#39;s (i.e. our) responsibility to look for a last
+modified timestamp and the if-none-match header and determine whether or
+not to send back the full response. With conditional-get support in <a
+href="../../../../classes/Rails.html">Rails</a> this is a pretty easy task:</p>
+
+<pre><code>class ProductsController &lt; ApplicationController
+
+  def show
+    @product = Product.find(params[:id])
+
+    # If the request is stale according to the given timestamp and etag value
+    # (i.e. it needs to be processed again) then execute this block
+    if stale?(last_modified: @product.updated_at.utc, etag: @product.cache_key)
+      respond_to do |wants|
+        # ... normal response processing
+      end
+    end
+
+    # If the request is fresh (i.e. it&#39;s not modified) then you don&#39;t need to do
+    # anything. The default render checks for this using the parameters
+    # used in the previous call to stale? and will automatically send a
+    # :not_modified. So that&#39;s it, you&#39;re done.
+  end
+end
+</code></pre>
+
+<p>Instead of a options hash, you can also simply pass in a model, <a
+href="../../../../classes/Rails.html">Rails</a> will use the
+<code>updated_at</code> and <code>cache_key</code> methods for setting
+<code>last_modified</code> and <code>etag</code>:</p>
+
+<pre><code>class ProductsController &lt; ApplicationController
+  def show
+    @product = Product.find(params[:id])
+    respond_with(@product) if stale?(@product)
+  end
+end
+</code></pre>
+
+<p>If you don&#39;t have any special response processing and are using the
+default rendering mechanism (i.e. you&#39;re not using respond_to or
+calling render yourself) then you’ve got an easy helper in fresh_when:</p>
+
+<pre><code>class ProductsController &lt; ApplicationController
+
+  # This will automatically send back a :not_modified if the request is fresh,
+  # and will render the default template (product.*) if it&#39;s stale.
+
+  def show
+    @product = Product.find(params[:id])
+    fresh_when last_modified: @product.published_at.utc, etag: @product
+  end
+end
+</code></pre>
+
+<h2 id="label-Further+reading">Further reading</h2>
+<ul><li>
+<p><a href="http://railslab.newrelic.com/scaling-rails">Scaling Rails
+Screencasts</a></p>
+</li></ul>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,938 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>debugging_rails_applications.md</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>     
+    <div class="banner">
+        
+        <h1>
+            debugging_rails_applications.md
+        </h1>
+        <ul class="files">
+            <li>rails/guides/source/debugging_rails_applications.md</li>
+            <li>Last modified: 2013-04-26 19:51:18 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h1 id="label-Debugging+Rails+Applications">Debugging <a href="../../../../classes/Rails.html">Rails</a> Applications</h1>
+
+<p>This guide introduces techniques for debugging Ruby on <a
+href="../../../../classes/Rails.html">Rails</a> applications.</p>
+
+<p>After reading this guide, you will know:</p>
+<ul><li>
+<p>The purpose of debugging.</p>
+</li><li>
+<p>How to track down problems and issues in your application that your tests
+aren&#39;t identifying.</p>
+</li><li>
+<p>The different ways of debugging.</p>
+</li><li>
+<p>How to analyze the stack trace.</p>
+</li></ul>
+<hr style="height: 1px">
+
+<h2 id="label-View+Helpers+for+Debugging">View Helpers for Debugging</h2>
+
+<p><a href="../../../../classes/One.html">One</a> common task is to inspect
+the contents of a variable. In <a
+href="../../../../classes/Rails.html">Rails</a>, you can do this with three
+methods:</p>
+<ul><li>
+<p><code>debug</code></p>
+</li><li>
+<p><code>to_yaml</code></p>
+</li><li>
+<p><code>inspect</code></p>
+</li></ul>
+
+<h3 id="label-debug"><code>debug</code></h3>
+
+<p>The <code>debug</code> helper will return a &lt;pre&gt;-tag that renders
+the object using the YAML format. This will generate human-readable data
+from any object. For example, if you have this code in a view:</p>
+
+<pre><code>&lt;%= debug @post %&gt;
+&lt;p&gt;
+  &lt;b&gt;Title:&lt;/b&gt;
+  &lt;%= @post.title %&gt;
+&lt;/p&gt;</code></pre>
+
+<p>You&#39;ll see something like this:</p>
+
+<pre><code>--- !ruby/object:Post
+attributes:
+  updated_at: 2008-09-05 22:55:47
+  body: It&#39;s a very helpful guide for debugging your Rails app.
+  title: Rails debugging guide
+  published: t
+  id: &quot;1&quot;
+  created_at: 2008-09-05 22:55:47
+attributes_cache: {}
+
+
+Title: Rails debugging guide</code></pre>
+
+<h3 id="label-to_yaml"><code>to_yaml</code></h3>
+
+<p>Displaying an instance variable, or any other object or method, in YAML
+format can be achieved this way:</p>
+
+<pre><code>&lt;%= simple_format @post.to_yaml %&gt;
+&lt;p&gt;
+  &lt;b&gt;Title:&lt;/b&gt;
+  &lt;%= @post.title %&gt;
+&lt;/p&gt;</code></pre>
+
+<p>The <code>to_yaml</code> method converts the method to YAML format leaving
+it more readable, and then the <code>simple_format</code> helper is used to
+render each line as in the console. This is how <code>debug</code> method
+does its magic.</p>
+
+<p>As a result of this, you will have something like this in your view:</p>
+
+<pre><code>--- !ruby/object:Post
+attributes:
+updated_at: 2008-09-05 22:55:47
+body: It&#39;s a very helpful guide for debugging your Rails app.
+title: Rails debugging guide
+published: t
+id: &quot;1&quot;
+created_at: 2008-09-05 22:55:47
+attributes_cache: {}
+
+Title: Rails debugging guide</code></pre>
+
+<h3 id="label-inspect"><code>inspect</code></h3>
+
+<p><a href="../../../../classes/Another.html">Another</a> useful method for
+displaying object values is <code>inspect</code>, especially when working
+with arrays or hashes. This will print the object value as a string. For
+example:</p>
+
+<pre><code>&lt;%= [1, 2, 3, 4, 5].inspect %&gt;
+&lt;p&gt;
+  &lt;b&gt;Title:&lt;/b&gt;
+  &lt;%= @post.title %&gt;
+&lt;/p&gt;</code></pre>
+
+<p>Will be rendered as follows:</p>
+
+<pre><code>[1, 2, 3, 4, 5]
+
+Title: Rails debugging guide</code></pre>
+
+<h2 id="label-The+Logger">The <a href="../../../../classes/Logger.html">Logger</a></h2>
+
+<p>It can also be useful to save information to log files at runtime. <a
+href="../../../../classes/Rails.html">Rails</a> maintains a separate log
+file for each runtime environment.</p>
+
+<h3 id="label-What+is+the+Logger%3F">What is the <a href="../../../../classes/Logger.html">Logger</a>?</h3>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> makes use of the
+<code>ActiveSupport::Logger</code> class to write log information. You can
+also substitute another logger such as <code>Log4r</code> if you wish.</p>
+
+<p>You can specify an alternative logger in your <code>environment.rb</code>
+or any environment file:</p>
+
+<pre><code>Rails.logger = Logger.new(STDOUT)
+Rails.logger = Log4r::Logger.new(&quot;Application Log&quot;)
+</code></pre>
+
+<p>Or in the <code>Initializer</code> section, add <em>any</em> of the
+following</p>
+
+<pre><code>config.logger = Logger.new(STDOUT)
+config.logger = Log4r::Logger.new(&quot;Application Log&quot;)
+</code></pre>
+
+<p>TIP: By default, each log is created under <code>Rails.root/log/</code> and
+the log file name is <code>environment_name.log</code>.</p>
+
+<h3 id="label-Log+Levels">Log Levels</h3>
+
+<p>When something is logged it&#39;s printed into the corresponding log if the
+log level of the message is equal or higher than the configured log level.
+If you want to know the current log level you can call the
+<code>Rails.logger.level</code> method.</p>
+
+<p>The available log levels are: <code>:debug</code>, <code>:info</code>,
+<code>:warn</code>, <code>:error</code>, <code>:fatal</code>, and
+<code>:unknown</code>, corresponding to the log level numbers from 0 up to
+5 respectively. To change the default log level, use</p>
+
+<pre><code>config.log_level = :warn # In any environment initializer, or
+Rails.logger.level = 0 # at any time
+</code></pre>
+
+<p>This is useful when you want to log under development or staging, but you
+don&#39;t want to flood your production log with unnecessary information.</p>
+
+<p>TIP: The default <a href="../../../../classes/Rails.html">Rails</a> log
+level is <code>info</code> in production mode and <code>debug</code> in
+development and test mode.</p>
+
+<h3 id="label-Sending+Messages">Sending Messages</h3>
+
+<p>To write in the current log use the
+<code>logger.(debug|info|warn|error|fatal)</code> method from within a
+controller, model or mailer:</p>
+
+<pre><code>logger.debug &quot;Person attributes hash: #{@person.attributes.inspect}&quot;
+logger.info &quot;Processing the request...&quot;
+logger.fatal &quot;Terminating application, raised unrecoverable error!!!&quot;
+</code></pre>
+
+<p>Here&#39;s an example of a method instrumented with extra logging:</p>
+
+<pre><code>class PostsController &lt; ApplicationController
+  # ...
+
+  def create
+    @post = Post.new(params[:post])
+    logger.debug &quot;New post: #{@post.attributes.inspect}&quot;
+    logger.debug &quot;Post should be valid: #{@post.valid?}&quot;
+
+    if @post.save
+      flash[:notice] = &#39;Post was successfully created.&#39;
+      logger.debug &quot;The post was saved and now the user is going to be redirected...&quot;
+      redirect_to(@post)
+    else
+      render action: &quot;new&quot;
+    end
+  end
+
+  # ...
+end
+</code></pre>
+
+<p>Here&#39;s an example of the log generated by this method:</p>
+
+<pre><code>Processing PostsController#create (for 127.0.0.1 at 2008-09-08 11:52:54) [POST]
+  Session ID: BAh7BzoMY3NyZl9pZCIlMDY5MWU1M2I1ZDRjODBlMzkyMWI1OTg2NWQyNzViZjYiCmZsYXNoSUM6J0FjdGl
+vbkNvbnRyb2xsZXI6OkZsYXNoOjpGbGFzaEhhc2h7AAY6CkB1c2VkewA=--b18cd92fba90eacf8137e5f6b3b06c4d724596a4
+  Parameters: {&quot;commit&quot;=&gt;&quot;Create&quot;, &quot;post&quot;=&gt;{&quot;title&quot;=&gt;&quot;Debugging Rails&quot;,
+ &quot;body&quot;=&gt;&quot;I&#39;m learning how to print in logs!!!&quot;, &quot;published&quot;=&gt;&quot;0&quot;},
+ &quot;authenticity_token&quot;=&gt;&quot;2059c1286e93402e389127b1153204e0d1e275dd&quot;, &quot;action&quot;=&gt;&quot;create&quot;, &quot;controller&quot;=&gt;&quot;posts&quot;}
+New post: {&quot;updated_at&quot;=&gt;nil, &quot;title&quot;=&gt;&quot;Debugging Rails&quot;, &quot;body&quot;=&gt;&quot;I&#39;m learning how to print in logs!!!&quot;,
+ &quot;published&quot;=&gt;false, &quot;created_at&quot;=&gt;nil}
+Post should be valid: true
+  Post Create (0.000443)   INSERT INTO &quot;posts&quot; (&quot;updated_at&quot;, &quot;title&quot;, &quot;body&quot;, &quot;published&quot;,
+ &quot;created_at&quot;) VALUES(&#39;2008-09-08 14:52:54&#39;, &#39;Debugging Rails&#39;,
+ &#39;I&#39;&#39;m learning how to print in logs!!!&#39;, &#39;f&#39;, &#39;2008-09-08 14:52:54&#39;)
+The post was saved and now the user is going to be redirected...
+Redirected to #&lt;Post:0x20af760&gt;
+Completed in 0.01224 (81 reqs/sec) | DB: 0.00044 (3%) | 302 Found [http://localhost/posts]
+</code></pre>
+
+<p>Adding extra logging like this makes it easy to search for unexpected or
+unusual behavior in your logs. If you add extra logging, be sure to make
+sensible use of log levels, to avoid filling your production logs with
+useless trivia.</p>
+
+<h3 id="label-Tagged+Logging">Tagged Logging</h3>
+
+<p>When running multi-user, multi-account applications, it’s often useful to
+be able to filter the logs using some custom rules.
+<code>TaggedLogging</code> in Active Support helps in doing exactly that by
+stamping log lines with subdomains, request ids, and anything else to aid
+debugging such applications.</p>
+
+<pre><code>logger = ActiveSupport::TaggedLogging.new(Logger.new(STDOUT))
+logger.tagged(&quot;BCX&quot;) { logger.info &quot;Stuff&quot; }                            # Logs &quot;[BCX] Stuff&quot;
+logger.tagged(&quot;BCX&quot;, &quot;Jason&quot;) { logger.info &quot;Stuff&quot; }                   # Logs &quot;[BCX] [Jason] Stuff&quot;
+logger.tagged(&quot;BCX&quot;) { logger.tagged(&quot;Jason&quot;) { logger.info &quot;Stuff&quot; } } # Logs &quot;[BCX] [Jason] Stuff&quot;
+</code></pre>
+
+<h2 id="label-Debugging+with+the+debugger+gem">Debugging with the <code>debugger</code> gem</h2>
+
+<p>When your code is behaving in unexpected ways, you can try printing to logs
+or the console to diagnose the problem. Unfortunately, there are times when
+this sort of error tracking is not effective in finding the root cause of a
+problem. When you actually need to journey into your running source code,
+the debugger is your best companion.</p>
+
+<p>The debugger can also help you if you want to learn about the <a
+href="../../../../classes/Rails.html">Rails</a> source code but don&#39;t
+know where to start. Just debug any request to your application and use
+this guide to learn how to move from the code you have written deeper into
+<a href="../../../../classes/Rails.html">Rails</a> code.</p>
+
+<h3 id="label-Setup">Setup</h3>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> uses the
+<code>debugger</code> gem to set breakpoints and step through live code. To
+install it, just run:</p>
+
+<pre><code>$ gem install debugger</code></pre>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> has had built-in support
+for debugging since <a href="../../../../classes/Rails.html">Rails</a> 2.0.
+Inside any <a href="../../../../classes/Rails.html">Rails</a> application
+you can invoke the debugger by calling the <code>debugger</code> method.</p>
+
+<p>Here&#39;s an example:</p>
+
+<pre><code>class PeopleController &lt; ApplicationController
+  def new
+    debugger
+    @person = Person.new
+  end
+end
+</code></pre>
+
+<p>If you see the message in the console or logs:</p>
+
+<pre><code>***** Debugger requested, but was not available: Start server with --debugger to enable *****</code></pre>
+
+<p>Make sure you have started your web server with the option
+<code>--debugger</code>:</p>
+
+<pre><code>$ rails server --debugger
+=&gt; Booting WEBrick
+=&gt; Rails 3.0.0 application starting on http://0.0.0.0:3000
+=&gt; Debugger enabled
+...
+</code></pre>
+
+<p>TIP: In development mode, you can dynamically <code>require
+\'debugger\&#39;</code> instead of restarting the server, if it was started
+without <code>--debugger</code>.</p>
+
+<h3 id="label-The+Shell">The Shell</h3>
+
+<p>As soon as your application calls the <code>debugger</code> method, the
+debugger will be started in a debugger shell inside the terminal window
+where you launched your application server, and you will be placed at the
+debugger&#39;s prompt <code>(rdb:n)</code>. The <em>n</em> is the thread
+number. The prompt will also show you the next line of code that is waiting
+to run.</p>
+
+<p>If you got there by a browser request, the browser tab containing the
+request will be hung until the debugger has finished and the trace has
+finished processing the entire request.</p>
+
+<p>For example:</p>
+
+<pre><code>@posts = Post.all
+(rdb:7)</code></pre>
+
+<p>Now it&#39;s time to explore and dig into your application. <a
+href="../../../../classes/A.html">A</a> good place to start is by asking
+the debugger for help… so type: <code>help</code> (You didn&#39;t see that
+coming, right?)</p>
+
+<pre><code>(rdb:7) help
+ruby-debug help v0.10.2
+Type &#39;help &lt;command-name&gt;&#39; for help on a specific command
+
+Available commands:
+backtrace  delete   enable  help    next  quit     show    trace
+break      disable  eval    info    p     reload   source  undisplay
+catch      display  exit    irb     pp    restart  step    up
+condition  down     finish  list    ps    save     thread  var
+continue   edit     frame   method  putl  set      tmate   where</code></pre>
+
+<p>TIP: To view the help menu for any command use <code>help
+&lt;command-name&gt;</code> in active debug mode. For example:
+<code><em>help var</em></code></p>
+
+<p>The next command to learn is one of the most useful: <code>list</code>. You
+can abbreviate any debugging command by supplying just enough letters to
+distinguish them from other commands, so you can also use <code>l</code>
+for the <code>list</code> command.</p>
+
+<p>This command shows you where you are in the code by printing 10 lines
+centered around the current line; the current line in this particular case
+is line 6 and is marked by <code>=&gt;</code>.</p>
+
+<pre><code>(rdb:7) list
+[1, 10] in /PathToProject/posts_controller.rb
+   1  class PostsController &lt; ApplicationController
+   2    # GET /posts
+   3    # GET /posts.json
+   4    def index
+   5      debugger
+=&gt; 6      @posts = Post.all
+   7
+   8      respond_to do |format|
+   9        format.html # index.html.erb
+   10        format.json { render :json =&gt; @posts }
+</code></pre>
+
+<p>If you repeat the <code>list</code> command, this time using just
+<code>l</code>, the next ten lines of the file will be printed out.</p>
+
+<pre><code>(rdb:7) l
+[11, 20] in /PathTo/project/app/controllers/posts_controller.rb
+   11      end
+   12    end
+   13
+   14    # GET /posts/1
+   15    # GET /posts/1.json
+   16    def show
+   17      @post = Post.find(params[:id])
+   18
+   19      respond_to do |format|
+   20        format.html # show.html.erb
+</code></pre>
+
+<p>And so on until the end of the current file. When the end of file is
+reached, the <code>list</code> command will start again from the beginning
+of the file and continue again up to the end, treating the file as a
+circular buffer.</p>
+
+<p>On the other hand, to see the previous ten lines you should type
+<code>list-</code> (or <code>l-</code>)</p>
+
+<pre><code>(rdb:7) l-
+[1, 10] in /PathToProject/posts_controller.rb
+   1  class PostsController &lt; ApplicationController
+   2    # GET /posts
+   3    # GET /posts.json
+   4    def index
+   5      debugger
+   6      @posts = Post.all
+   7
+   8      respond_to do |format|
+   9        format.html # index.html.erb
+   10        format.json { render :json =&gt; @posts }
+</code></pre>
+
+<p>This way you can move inside the file, being able to see the code above and
+over the line you added the <code>debugger</code>. Finally, to see where
+you are in the code again you can type <code>list=</code></p>
+
+<pre><code>(rdb:7) list=
+[1, 10] in /PathToProject/posts_controller.rb
+   1  class PostsController &lt; ApplicationController
+   2    # GET /posts
+   3    # GET /posts.json
+   4    def index
+   5      debugger
+=&gt; 6      @posts = Post.all
+   7
+   8      respond_to do |format|
+   9        format.html # index.html.erb
+   10        format.json { render :json =&gt; @posts }
+</code></pre>
+
+<h3 id="label-The+Context">The Context</h3>
+
+<p>When you start debugging your application, you will be placed in different
+contexts as you go through the different parts of the stack.</p>
+
+<p>The debugger creates a context when a stopping point or an event is
+reached. The context has information about the suspended program which
+enables a debugger to inspect the frame stack, evaluate variables from the
+perspective of the debugged program, and contains information about the
+place where the debugged program is stopped.</p>
+
+<p>At any time you can call the <code>backtrace</code> command (or its alias
+<code>where</code>) to print the backtrace of the application. This can be
+very helpful to know how you got where you are. If you ever wondered about
+how you got somewhere in your code, then <code>backtrace</code> will supply
+the answer.</p>
+
+<pre><code>(rdb:5) where
+    #0 PostsController.index
+       at line /PathTo/project/app/controllers/posts_controller.rb:6
+    #1 Kernel.send
+       at line /PathTo/project/vendor/rails/actionpack/lib/action_controller/base.rb:1175
+    #2 ActionController::Base.perform_action_without_filters
+       at line /PathTo/project/vendor/rails/actionpack/lib/action_controller/base.rb:1175
+    #3 ActionController::Filters::InstanceMethods.call_filters(chain#ActionController::Fil...,...)
+       at line /PathTo/project/vendor/rails/actionpack/lib/action_controller/filters.rb:617
+...</code></pre>
+
+<p>You move anywhere you want in this trace (thus changing the context) by
+using the <code>frame <em>n</em></code> command, where <em>n</em> is the
+specified frame number.</p>
+
+<pre><code>(rdb:5) frame 2
+#2 ActionController::Base.perform_action_without_filters
+       at line /PathTo/project/vendor/rails/actionpack/lib/action_controller/base.rb:1175</code></pre>
+
+<p>The available variables are the same as if you were running the code line
+by line. After all, that&#39;s what debugging is.</p>
+
+<p>Moving up and down the stack frame: You can use <code>up [n]</code>
+(<code>u</code> for abbreviated) and <code>down [n]</code> commands in
+order to change the context <em>n</em> frames up or down the stack
+respectively. <em>n</em> defaults to one. Up in this case is towards
+higher-numbered stack frames, and down is towards lower-numbered stack
+frames.</p>
+
+<h3 id="label-Threads">Threads</h3>
+
+<p>The debugger can list, stop, resume and switch between running threads by
+using the command <code>thread</code> (or the abbreviated <code>th</code>).
+This command has a handful of options:</p>
+<ul><li>
+<p><code>thread</code> shows the current thread.</p>
+</li><li>
+<p><code>thread list</code> is used to list all threads and their statuses.
+The plus + character and the number indicates the current thread of
+execution.</p>
+</li><li>
+<p><code>thread stop <em>n</em></code> stop thread <em>n</em>.</p>
+</li><li>
+<p><code>thread resume <em>n</em></code> resumes thread <em>n</em>.</p>
+</li><li>
+<p><code>thread switch <em>n</em></code> switches the current thread context
+to <em>n</em>.</p>
+</li></ul>
+
+<p>This command is very helpful, among other occasions, when you are debugging
+concurrent threads and need to verify that there are no race conditions in
+your code.</p>
+
+<h3 id="label-Inspecting+Variables">Inspecting Variables</h3>
+
+<p>Any expression can be evaluated in the current context. To evaluate an
+expression, just type it!</p>
+
+<p>This example shows how you can print the instance_variables defined within
+the current context:</p>
+
+<pre><code>@posts = Post.all
+(rdb:11) instance_variables
+[&quot;@_response&quot;, &quot;@action_name&quot;, &quot;@url&quot;, &quot;@_session&quot;, &quot;@_cookies&quot;, &quot;@performed_render&quot;, &quot;@_flash&quot;, &quot;@template&quot;, &quot;@_params&quot;, &quot;@before_filter_chain_aborted&quot;, &quot;@request_origin&quot;, &quot;@_headers&quot;, &quot;@performed_redirect&quot;, &quot;@_request&quot;]</code></pre>
+
+<p>As you may have figured out, all of the variables that you can access from
+a controller are displayed. This list is dynamically updated as you execute
+code. For example, run the next line using <code>next</code> (you&#39;ll
+learn more about this command later in this guide).</p>
+
+<pre><code>(rdb:11) next
+Processing PostsController#index (for 127.0.0.1 at 2008-09-04 19:51:34) [GET]
+  Session ID: BAh7BiIKZmxhc2hJQzonQWN0aW9uQ29udHJvbGxlcjo6Rmxhc2g6OkZsYXNoSGFzaHsABjoKQHVzZWR7AA==--b16e91b992453a8cc201694d660147bba8b0fd0e
+  Parameters: {&quot;action&quot;=&gt;&quot;index&quot;, &quot;controller&quot;=&gt;&quot;posts&quot;}
+/PathToProject/posts_controller.rb:8
+respond_to do |format|
+</code></pre>
+
+<p>And then ask again for the instance_variables:</p>
+
+<pre><code>(rdb:11) instance_variables.include? &quot;@posts&quot;
+true</code></pre>
+
+<p>Now <code>@posts</code> is included in the instance variables, because the
+line defining it was executed.</p>
+
+<p>TIP: You can also step into <strong>irb</strong> mode with the command
+<code>irb</code> (of course!). This way an irb session will be started
+within the context you invoked it. But be warned: this is an experimental
+feature.</p>
+
+<p>The <code>var</code> method is the most convenient way to show variables
+and their values:</p>
+
+<pre><code>var
+(rdb:1) v[ar] const &lt;object&gt;            show constants of object
+(rdb:1) v[ar] g[lobal]                  show global variables
+(rdb:1) v[ar] i[nstance] &lt;object&gt;       show instance variables of object
+(rdb:1) v[ar] l[ocal]                   show local variables</code></pre>
+
+<p>This is a great way to inspect the values of the current context variables.
+For example:</p>
+
+<pre><code>(rdb:9) var local
+  __dbg_verbose_save =&gt; false
+</code></pre>
+
+<p>You can also inspect for an object method this way:</p>
+
+<pre><code>(rdb:9) var instance Post.new
+@attributes = {&quot;updated_at&quot;=&gt;nil, &quot;body&quot;=&gt;nil, &quot;title&quot;=&gt;nil, &quot;published&quot;=&gt;nil, &quot;created_at&quot;...
+@attributes_cache = {}
+@new_record = true
+</code></pre>
+
+<p>TIP: The commands <code>p</code> (print) and <code>pp</code> (pretty print)
+can be used to evaluate Ruby expressions and display the value of variables
+to the console.</p>
+
+<p>You can use also <code>display</code> to start watching variables. This is
+a good way of tracking the values of a variable while the execution goes
+on.</p>
+
+<pre><code>(rdb:1) display @recent_comments
+1: @recent_comments =</code></pre>
+
+<p>The variables inside the displaying list will be printed with their values
+after you move in the stack. To stop displaying a variable use
+<code>undisplay <em>n</em></code> where <em>n</em> is the variable number
+(1 in the last example).</p>
+
+<h3 id="label-Step+by+Step"><a href="../../../../classes/Step.html">Step</a> by <a href="../../../../classes/Step.html">Step</a></h3>
+
+<p>Now you should know where you are in the running trace and be able to print
+the available variables. But lets continue and move on with the application
+execution.</p>
+
+<p>Use <code>step</code> (abbreviated <code>s</code>) to continue running your
+program until the next logical stopping point and return control to the
+debugger.</p>
+
+<p>TIP: You can also use <code>step+ n</code> and <code>step- n</code> to move
+forward or backward <code>n</code> steps respectively.</p>
+
+<p>You may also use <code>next</code> which is similar to step, but function
+or method calls that appear within the line of code are executed without
+stopping. As with step, you may use plus sign to move <em>n</em> steps.</p>
+
+<p>The difference between <code>next</code> and <code>step</code> is that
+<code>step</code> stops at the next line of code executed, doing just a
+single step, while <code>next</code> moves to the next line without
+descending inside methods.</p>
+
+<p>For example, consider this block of code with an included
+<code>debugger</code> statement:</p>
+
+<pre><code>class Author &lt; ActiveRecord::Base
+  has_one :editorial
+  has_many :comments
+
+  def find_recent_comments(limit = 10)
+    debugger
+    @recent_comments ||= comments.where(&quot;created_at &gt; ?&quot;, 1.week.ago).limit(limit)
+  end
+end
+</code></pre>
+
+<p>TIP: You can use the debugger while using <code>rails console</code>. Just
+remember to <code>require &quot;debugger&quot;</code> before calling the
+<code>debugger</code> method.</p>
+
+<pre><code>$ rails console
+Loading development environment (Rails 3.1.0)
+&gt;&gt; require &quot;debugger&quot;
+=&gt; []
+&gt;&gt; author = Author.first
+=&gt; #&lt;Author id: 1, first_name: &quot;Bob&quot;, last_name: &quot;Smith&quot;, created_at: &quot;2008-07-31 12:46:10&quot;, updated_at: &quot;2008-07-31 12:46:10&quot;&gt;
+&gt;&gt; author.find_recent_comments
+/PathTo/project/app/models/author.rb:11
+)
+</code></pre>
+
+<p>With the code stopped, take a look around:</p>
+
+<pre><code>(rdb:1) list
+[2, 9] in /PathTo/project/app/models/author.rb
+   2    has_one :editorial
+   3    has_many :comments
+   4
+   5    def find_recent_comments(limit = 10)
+   6      debugger
+=&gt; 7      @recent_comments ||= comments.where(&quot;created_at &gt; ?&quot;, 1.week.ago).limit(limit)
+   8    end
+   9  end
+</code></pre>
+
+<p>You are at the end of the line, but… was this line executed? You can
+inspect the instance variables.</p>
+
+<pre><code>(rdb:1) var instance
+@attributes = {&quot;updated_at&quot;=&gt;&quot;2008-07-31 12:46:10&quot;, &quot;id&quot;=&gt;&quot;1&quot;, &quot;first_name&quot;=&gt;&quot;Bob&quot;, &quot;las...
+@attributes_cache = {}
+</code></pre>
+
+<p><code>@recent_comments</code> hasn&#39;t been defined yet, so it&#39;s
+clear that this line hasn&#39;t been executed yet. Use the
+<code>next</code> command to move on in the code:</p>
+
+<pre><code>(rdb:1) next
+/PathTo/project/app/models/author.rb:12
+@recent_comments
+(rdb:1) var instance
+@attributes = {&quot;updated_at&quot;=&gt;&quot;2008-07-31 12:46:10&quot;, &quot;id&quot;=&gt;&quot;1&quot;, &quot;first_name&quot;=&gt;&quot;Bob&quot;, &quot;las...
+@attributes_cache = {}
+@comments = []
+@recent_comments = []
+</code></pre>
+
+<p>Now you can see that the <code>@comments</code> relationship was loaded and
+@recent_comments defined because the line was executed.</p>
+
+<p>If you want to go deeper into the stack trace you can move single
+<code>steps</code>, through your calling methods and into <a
+href="../../../../classes/Rails.html">Rails</a> code. This is one of the
+best ways to find bugs in your code, or perhaps in Ruby or <a
+href="../../../../classes/Rails.html">Rails</a>.</p>
+
+<h3 id="label-Breakpoints">Breakpoints</h3>
+
+<p><a href="../../../../classes/A.html">A</a> breakpoint makes your
+application stop whenever a certain point in the program is reached. The
+debugger shell is invoked in that line.</p>
+
+<p>You can add breakpoints dynamically with the command <code>break</code> (or
+just <code>b</code>). There are 3 possible ways of adding breakpoints
+manually:</p>
+<ul><li>
+<p><code>break line</code>: set breakpoint in the <em>line</em> in the current
+source file.</p>
+</li><li>
+<p><code>break file:line [if expression]</code>: set breakpoint in the
+<em>line</em> number inside the <em>file</em>. If an <em>expression</em> is
+given it must evaluated to <em>true</em> to fire up the debugger.</p>
+</li><li>
+<p><code>break class(.|\#)method [if expression]</code>: set breakpoint in
+<em>method</em> (. and # for class and instance method respectively)
+defined in <em>class</em>. The <em>expression</em> works the same way as
+with file:line.</p>
+</li></ul>
+
+<pre><code>(rdb:5) break 10
+Breakpoint 1 file /PathTo/project/vendor/rails/actionpack/lib/action_controller/filters.rb, line 10</code></pre>
+
+<p>Use <code>info breakpoints <em>n</em></code> or <code>info break
+<em>n</em></code> to list breakpoints. If you supply a number, it lists
+that breakpoint. Otherwise it lists all breakpoints.</p>
+
+<pre><code>(rdb:5) info breakpoints
+Num Enb What
+  1 y   at filters.rb:10</code></pre>
+
+<p>To delete breakpoints: use the command <code>delete <em>n</em></code> to
+remove the breakpoint number <em>n</em>. If no number is specified, it
+deletes all breakpoints that are currently active..</p>
+
+<pre><code>(rdb:5) delete 1
+(rdb:5) info breakpoints
+No breakpoints.</code></pre>
+
+<p>You can also enable or disable breakpoints:</p>
+<ul><li>
+<p><code>enable breakpoints</code>: allow a list <em>breakpoints</em> or all
+of them if no list is specified, to stop your program. This is the default
+state when you create a breakpoint.</p>
+</li><li>
+<p><code>disable breakpoints</code>: the <em>breakpoints</em> will have no
+effect on your program.</p>
+</li></ul>
+
+<h3 id="label-Catching+Exceptions">Catching Exceptions</h3>
+
+<p>The command <code>catch exception-name</code> (or just <code>cat
+exception-name</code>) can be used to intercept an exception of type
+<em>exception-name</em> when there would otherwise be is no handler for it.</p>
+
+<p>To list all active catchpoints use <code>catch</code>.</p>
+
+<h3 id="label-Resuming+Execution">Resuming Execution</h3>
+
+<p>There are two ways to resume execution of an application that is stopped in
+the debugger:</p>
+<ul><li>
+<p><code>continue</code> [line-specification] (or <code>c</code>): resume
+program execution, at the address where your script last stopped; any
+breakpoints set at that address are bypassed. The optional argument
+line-specification allows you to specify a line number to set a one-time
+breakpoint which is deleted when that breakpoint is reached.</p>
+</li><li>
+<p><code>finish</code> [frame-number] (or <code>fin</code>): execute until the
+selected stack frame returns. If no frame number is given, the application
+will run until the currently selected frame returns. The currently selected
+frame starts out the most-recent frame or 0 if no frame positioning (e.g
+up, down or frame) has been performed. If a frame number is given it will
+run until the specified frame returns.</p>
+</li></ul>
+
+<h3 id="label-Editing">Editing</h3>
+
+<p>Two commands allow you to open code from the debugger into an editor:</p>
+<ul><li>
+<p><code>edit [file:line]</code>: edit <em>file</em> using the editor
+specified by the EDITOR environment variable. <a
+href="../../../../classes/A.html">A</a> specific <em>line</em> can also be
+given.</p>
+</li><li>
+<p><code>tmate <em>n</em></code> (abbreviated <code>tm</code>): open the
+current file in TextMate. It uses n-th frame if <em>n</em> is specified.</p>
+</li></ul>
+
+<h3 id="label-Quitting">Quitting</h3>
+
+<p>To exit the debugger, use the <code>quit</code> command (abbreviated
+<code>q</code>), or its alias <code>exit</code>.</p>
+
+<p><a href="../../../../classes/A.html">A</a> simple quit tries to terminate
+all threads in effect. Therefore your server will be stopped and you will
+have to start it again.</p>
+
+<h3 id="label-Settings">Settings</h3>
+
+<p>The <code>debugger</code> gem can automatically show the code you&#39;re
+stepping through and reload it when you change it in an editor. Here are a
+few of the available options:</p>
+<ul><li>
+<p><code>set reload</code>: Reload source code when changed.</p>
+</li><li>
+<p><code>set autolist</code>: Execute <code>list</code> command on every
+breakpoint.</p>
+</li><li>
+<p><code>set listsize <em>n</em></code>: Set number of source lines to list by
+default to <em>n</em>.</p>
+</li><li>
+<p><code>set forcestep</code>: Make sure the <code>next</code> and
+<code>step</code> commands always move to a new line</p>
+</li></ul>
+
+<p>You can see the full list by using <code>help set</code>. Use <code>help
+set <em>subcommand</em></code> to learn about a particular <code>set</code>
+command.</p>
+
+<p>TIP: You can save these settings in an <code>.rdebugrc</code> file in your
+home directory. The debugger reads these global settings when it starts.</p>
+
+<p>Here&#39;s a good start for an <code>.rdebugrc</code>:</p>
+
+<pre><code>set autolist
+set forcestep
+set listsize 25</code></pre>
+
+<h2 id="label-Debugging+Memory+Leaks">Debugging Memory Leaks</h2>
+
+<p><a href="../../../../classes/A.html">A</a> Ruby application (on <a
+href="../../../../classes/Rails.html">Rails</a> or not), can leak memory -
+either in the Ruby code or at the C code level.</p>
+
+<p>In this section, you will learn how to find and fix such leaks by using
+tool such as Valgrind.</p>
+
+<h3 id="label-Valgrind">Valgrind</h3>
+
+<p><a href="http://valgrind.org/">Valgrind</a> is a Linux-only application for
+detecting C-based memory leaks and race conditions.</p>
+
+<p>There are Valgrind tools that can automatically detect many memory
+management and threading bugs, and profile your programs in detail. For
+example, a C extension in the interpreter calls <code>malloc()</code> but
+is doesn&#39;t properly call <code>free()</code>, this memory won&#39;t be
+available until the app terminates.</p>
+
+<p>For further information on how to install Valgrind and use with Ruby, refer
+to <a
+href="http://blog.evanweaver.com/articles/2008/02/05/valgrind-and-ruby/">Valgrind
+and Ruby</a> by Evan Weaver.</p>
+
+<h2 id="label-Plugins+for+Debugging">Plugins for Debugging</h2>
+
+<p>There are some <a href="../../../../classes/Rails.html">Rails</a> plugins
+to help you to find errors and debug your application. Here is a list of
+useful plugins for debugging:</p>
+<ul><li>
+<p><a href="https://github.com/josevalim/rails-footnotes:">Footnotes</a> Every
+<a href="../../../../classes/Rails.html">Rails</a> page has footnotes that
+give request information and link back to your source via TextMate.</p>
+</li><li>
+<p><a href="https://github.com/ntalbott/query_trace/tree/master:">Query
+Trace</a> Adds query origin tracing to your logs.</p>
+</li><li>
+<p><a href="https://github.com/nesquena/query_reviewer:">Query Reviewer</a>
+This rails plugin not only runs “EXPLAIN” before each of your select
+queries in development, but provides a small DIV in the rendered output of
+each page with the summary of warnings for each query that it analyzed.</p>
+</li><li>
+<p><a
+href="https://github.com/smartinez87/exception_notification/tree/master:">Exception
+Notifier</a> Provides a mailer object and a default set of templates for
+sending email notifications when errors occur in a <a
+href="../../../../classes/Rails.html">Rails</a> application.</p>
+</li></ul>
+
+<h2 id="label-References">References</h2>
+<ul><li>
+<p><a
+href="http://bashdb.sourceforge.net/ruby-debug/home-page.html">ruby-debug
+Homepage</a></p>
+</li><li>
+<p><a href="https://github.com/cldwalker/debugger">debugger Homepage</a></p>
+</li><li>
+<p><a
+href="http://www.sitepoint.com/article/debug-rails-app-ruby-debug/">Article:
+Debugging a Rails application with ruby-debug</a></p>
+</li><li>
+<p><a
+href="http://brian.maybeyoureinsane.net/blog/2007/05/07/ruby-debug-basics-screencast/">ruby-debug
+Basics screencast</a></p>
+</li><li>
+<p><a href="http://railscasts.com/episodes/54-debugging-ruby-revised">Ryan
+Bates’ debugging ruby (revised) screencast</a></p>
+</li><li>
+<p><a href="http://railscasts.com/episodes/24-the-stack-trace">Ryan Bates’
+stack trace screencast</a></p>
+</li><li>
+<p><a href="http://railscasts.com/episodes/56-the-logger">Ryan Bates’ logger
+screencast</a></p>
+</li><li>
+<p><a href="http://bashdb.sourceforge.net/ruby-debug.html">Debugging with
+ruby-debug</a></p>
+</li><li>
+<p><a href="http://cheat.errtheblog.com/s/rdebug/">ruby-debug cheat sheet</a></p>
+</li><li>
+<p><a
+href="http://wiki.rubyonrails.org/rails/pages/HowtoConfigureLogging">Ruby
+on Rails Wiki: How to Configure Logging</a></p>
+</li></ul>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

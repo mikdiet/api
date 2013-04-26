@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>testing.rake</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>     
+    <div class="banner">
+        
+        <h1>
+            testing.rake
+        </h1>
+        <ul class="files">
+            <li>rails/railties/lib/rails/test_unit/testing.rake</li>
+            <li>Last modified: 2013-04-26 19:51:18 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>require &#39;rbconfig&#39; require &#39;rake/testtask&#39; require
+&#39;rails/test_unit/sub_test_task&#39;</p>
+
+<p>TEST_CHANGES_SINCE = <a
+href="../../../../../../classes/Time.html#method-c-now">Time.now</a> - 600</p>
+
+<p># Look up tests for recently modified sources. def
+recent_tests(source_pattern, test_path, touched_since = 10.minutes.ago)</p>
+
+<pre><code>FileList[source_pattern].map do |path|
+  if File.mtime(path) &gt; touched_since
+    tests = []
+    source_dir = File.dirname(path).split(&quot;/&quot;)
+    source_file = File.basename(path, &#39;.rb&#39;)
+
+    # Support subdirs in app/models and app/controllers
+    modified_test_path = source_dir.length &gt; 2 ? &quot;#{test_path}/&quot; &lt;&lt; source_dir[1..source_dir.length].join(&#39;/&#39;) : test_path
+
+    # For modified files in app/ run the tests for it. ex. /test/controllers/account_controller.rb
+    test = &quot;#{modified_test_path}/#{source_file}_test.rb&quot;
+    tests.push test if File.exist?(test)
+
+    # For modified files in app, run tests in subdirs too. ex. /test/controllers/account  _test.rb
+    test = &quot;#{modified_test_path}/#{File.basename(path, &#39;.rb&#39;).sub(&quot;_controller&quot;,&quot;&quot;)}&quot;
+    FileList[&quot;#{test}  _test.rb&quot;].each { |f| tests.push f } if File.exist?(test)
+
+    return tests
+
+  end
+end.flatten.compact
+</code></pre>
+
+<p>end</p>
+
+<p># Recreated here from Active Support because :uncommitted needs it before
+<a href="../../../../../../classes/Rails.html">Rails</a> is available
+module <a href="../../../../../../classes/Kernel.html">Kernel</a></p>
+
+<pre><code>remove_method :silence_stderr # Removing old method to prevent method redefined warning
+def silence_stderr
+  old_stderr = STDERR.dup
+  STDERR.reopen(RbConfig::CONFIG[&#39;host_os&#39;] =~ /mswin|mingw/ ? &#39;NUL:&#39; : &#39;/dev/null&#39;)
+  STDERR.sync = true
+  yield
+ensure
+  STDERR.reopen(old_stderr)
+end
+</code></pre>
+
+<p>end</p>
+
+<p>task default: :test</p>
+
+<p>desc &#39;Runs test:units, test:functionals, test:integration together&#39;
+task :test do</p>
+
+<pre><code>Rake::Task[ENV[&#39;TEST&#39;] ? &#39;test:single&#39; : &#39;test:run&#39;].invoke</code></pre>
+
+<p>end</p>
+
+<p>namespace :test do</p>
+
+<pre><code>task :prepare do
+  # Placeholder task for other Railtie and plugins to enhance. See Active Record for an example.
+end
+
+task :run do
+  errors = %w(test:units test:functionals test:integration).collect do |task|
+    begin
+      Rake::Task[task].invoke
+      nil
+    rescue =&gt; e
+      { task: task, exception: e }
+    end
+  end.compact
+
+  if errors.any?
+    puts errors.map { |e| &quot;Errors running #{e[:task]}! #{e[:exception].inspect}&quot; }.join(&quot;\n&quot;)
+    abort
+  end
+end
+
+# Inspired by: http://ngauthier.com/2012/02/quick-tests-with-bash.html
+desc &quot;Run tests quickly by merging all types and not resetting db&quot;
+Rake::TestTask.new(:all) do |t|
+  t.libs &lt;&lt; &quot;test&quot;
+  t.pattern = &quot;test/   *_test.rb&quot;
+end
+
+namespace :all do
+  desc &quot;Run tests quickly, but also reset db&quot;
+  task :db =&gt; %w[db:test:prepare test:all]
+end
+
+Rake::TestTask.new(recent: &quot;test:prepare&quot;) do |t|
+  since = TEST_CHANGES_SINCE
+  touched = FileList[&#39;test/   *_test.rb&#39;].select { |path| File.mtime(path) &gt; since } +
+    recent_tests(&#39;app/models/**/*.rb&#39;, &#39;test/models&#39;, since) +
+    recent_tests(&#39;app/models/**/*.rb&#39;, &#39;test/unit&#39;, since) +
+    recent_tests(&#39;app/controllers/**/*.rb&#39;, &#39;test/controllers&#39;, since) +
+    recent_tests(&#39;app/controllers/**/*.rb&#39;, &#39;test/functional&#39;, since)
+
+  t.libs &lt;&lt; &#39;test&#39;
+  t.test_files = touched.uniq
+end
+Rake::Task[&#39;test:recent&#39;].comment = &quot;Test recent changes&quot;
+
+Rake::TestTask.new(uncommitted: &quot;test:prepare&quot;) do |t|
+  def t.file_list
+    if File.directory?(&quot;.svn&quot;)
+      changed_since_checkin = silence_stderr { `svn status` }.split.map { |path| path.chomp[7 .. -1] }
+    elsif system &quot;git rev-parse --git-dir 2&gt;&amp;1 &gt;/dev/null&quot;
+      changed_since_checkin = silence_stderr { `git ls-files --modified --others --exclude-standard` }.split.map { |path| path.chomp }
+    else
+      abort &quot;Not a Subversion or Git checkout.&quot;
+    end
+
+    models      = changed_since_checkin.select { |path| path =~ /app[\\\/]models[\\\/].*\.rb$/ }
+    controllers = changed_since_checkin.select { |path| path =~ /app[\\\/]controllers[\\\/].*\.rb$/ }
+
+    unit_tests       = models.map { |model| &quot;test/models/#{File.basename(model, &#39;.rb&#39;)}_test.rb&quot; } +
+                       models.map { |model| &quot;test/unit/#{File.basename(model, &#39;.rb&#39;)}_test.rb&quot; } +
+    functional_tests = controllers.map { |controller| &quot;test/controllers/#{File.basename(controller, &#39;.rb&#39;)}_test.rb&quot; } +
+                       controllers.map { |controller| &quot;test/functional/#{File.basename(controller, &#39;.rb&#39;)}_test.rb&quot; }
+    (unit_tests + functional_tests).uniq.select { |file| File.exist?(file) }
+  end
+
+  t.libs &lt;&lt; &#39;test&#39;
+end
+Rake::Task[&#39;test:uncommitted&#39;].comment = &quot;Test changes since last checkin (only Subversion and Git)&quot;
+
+Rake::TestTask.new(single: &quot;test:prepare&quot;) do |t|
+  t.libs &lt;&lt; &quot;test&quot;
+end
+
+Rails::SubTestTask.new(models: &quot;test:prepare&quot;) do |t|
+  t.libs &lt;&lt; &quot;test&quot;
+  t.pattern = &#39;test/models/**/*_test.rb&#39;
+end
+
+Rails::SubTestTask.new(helpers: &quot;test:prepare&quot;) do |t|
+  t.libs &lt;&lt; &quot;test&quot;
+  t.pattern = &#39;test/helpers/**/*_test.rb&#39;
+end
+
+Rails::SubTestTask.new(units: &quot;test:prepare&quot;) do |t|
+  t.libs &lt;&lt; &quot;test&quot;
+  t.pattern = &#39;test/{models,helpers,unit}/**/*_test.rb&#39;
+end
+
+Rails::SubTestTask.new(controllers: &quot;test:prepare&quot;) do |t|
+  t.libs &lt;&lt; &quot;test&quot;
+  t.pattern = &#39;test/controllers/**/*_test.rb&#39;
+end
+
+Rails::SubTestTask.new(mailers: &quot;test:prepare&quot;) do |t|
+  t.libs &lt;&lt; &quot;test&quot;
+  t.pattern = &#39;test/mailers/**/*_test.rb&#39;
+end
+
+Rails::SubTestTask.new(functionals: &quot;test:prepare&quot;) do |t|
+  t.libs &lt;&lt; &quot;test&quot;
+  t.pattern = &#39;test/{controllers,mailers,functional}/**/*_test.rb&#39;
+end
+
+Rails::SubTestTask.new(integration: &quot;test:prepare&quot;) do |t|
+  t.libs &lt;&lt; &quot;test&quot;
+  t.pattern = &#39;test/integration/**/*_test.rb&#39;
+end
+</code></pre>
+
+<p>end</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

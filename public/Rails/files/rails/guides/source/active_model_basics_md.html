@@ -1,0 +1,283 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>active_model_basics.md</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>     
+    <div class="banner">
+        
+        <h1>
+            active_model_basics.md
+        </h1>
+        <ul class="files">
+            <li>rails/guides/source/active_model_basics.md</li>
+            <li>Last modified: 2013-04-26 19:46:46 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h1 id="label-Active+Model+Basics">Active Model Basics</h1>
+
+<p>This guide should provide you with all you need to get started using model
+classes. Active Model allows for Action Pack helpers to interact with
+non-Active Record models. Active Model also helps building custom ORMs for
+use outside of the <a href="../../../../classes/Rails.html">Rails</a>
+framework.</p>
+
+<p>After reading this guide, you will know:</p>
+<hr style="height: 1px">
+
+<h2 id="label-Introduction">Introduction</h2>
+
+<p>Active Model is a library containing various modules used in developing
+frameworks that need to interact with the <a
+href="../../../../classes/Rails.html">Rails</a> Action Pack library. Active
+Model provides a known set of interfaces for usage in classes. Some of
+modules are explained below.</p>
+
+<h3 id="label-AttributeMethods">AttributeMethods</h3>
+
+<p>The AttributeMethods module can add custom prefixes and suffixes on methods
+of a class. It is used by defining the prefixes and suffixes, which methods
+on the object will use them.</p>
+
+<pre><code>class Person
+  include ActiveModel::AttributeMethods
+
+  attribute_method_prefix &#39;reset_&#39;
+  attribute_method_suffix &#39;_highest?&#39;
+  define_attribute_methods &#39;age&#39;
+
+  attr_accessor :age
+
+  private
+    def reset_attribute(attribute)
+      send(&quot;#{attribute}=&quot;, 0)
+    end
+
+    def attribute_highest?(attribute)
+      send(attribute) &gt; 100
+    end
+end
+
+person = Person.new
+person.age = 110
+person.age_highest?  # true
+person.reset_age     # 0
+person.age_highest?  # false
+</code></pre>
+
+<h3 id="label-Callbacks">Callbacks</h3>
+
+<p>Callbacks gives Active Record style callbacks. This provides the ability to
+define the callbacks and those will run at appropriate time. After defining
+a callbacks you can wrap with before, after and around custom methods.</p>
+
+<pre><code>class Person
+  extend ActiveModel::Callbacks
+
+  define_model_callbacks :update
+
+  before_update :reset_me
+
+  def update
+    run_callbacks(:update) do
+      # This will call when we are trying to call update on object.
+    end
+  end
+
+  def reset_me
+    # This method will call when you are calling update on object as a before_update callback as defined.
+  end
+end
+</code></pre>
+
+<h3 id="label-Conversion">Conversion</h3>
+
+<p>If a class defines <code>persisted?</code> and <code>id</code> methods then
+you can include <code>Conversion</code> module in that class and you can
+able to call <a href="../../../../classes/Rails.html">Rails</a> conversion
+methods to objects of that class.</p>
+
+<pre><code>class Person
+  include ActiveModel::Conversion
+
+  def persisted?
+    false
+  end
+
+  def id
+    nil
+  end
+end
+
+person = Person.new
+person.to_model == person  # =&gt; true
+person.to_key              # =&gt; nil
+person.to_param            # =&gt; nil
+</code></pre>
+
+<h3 id="label-Dirty">Dirty</h3>
+
+<p>An object becomes dirty when it has gone through one or more changes to its
+attributes and has not been saved. This gives the ability to check whether
+an object has been changed or not. It also has attribute based accessor
+methods. Let&#39;s consider a <a
+href="../../../../classes/Person.html">Person</a> class with attributes
+<code>first_name</code> and <code>last_name</code>:</p>
+
+<pre><code>require &#39;active_model&#39;
+
+class Person
+  include ActiveModel::Dirty
+  define_attribute_methods :first_name, :last_name
+
+  def first_name
+    @first_name
+  end
+
+  def first_name=(value)
+    first_name_will_change!
+    @first_name = value
+  end
+
+  def last_name
+    @last_name
+  end
+
+  def last_name=(value)
+    last_name_will_change!
+    @last_name = value
+  end
+
+  def save
+    @previously_changed = changes
+    # do save work...
+  end
+end
+</code></pre>
+
+<h4 id="label-Querying+object+directly+for+its+list+of+all+changed+attributes.">Querying object directly for its list of all changed attributes.</h4>
+
+<pre><code>person = Person.new
+person.changed? # =&gt; false
+
+person.first_name = &quot;First Name&quot;
+person.first_name # =&gt; &quot;First Name&quot;
+
+# returns if any attribute has changed.
+person.changed? # =&gt; true
+
+# returns a list of attributes that have changed before saving.
+person.changed # =&gt; [&quot;first_name&quot;]
+
+# returns a hash of the attributes that have changed with their original values.
+person.changed_attributes # =&gt; {&quot;first_name&quot;=&gt;nil}
+
+# returns a hash of changes, with the attribute names as the keys, and the values will be an array of the old and new value for that field.
+person.changes # =&gt; {&quot;first_name&quot;=&gt;[nil, &quot;First Name&quot;]}
+</code></pre>
+
+<h4 id="label-Attribute+based+accessor+methods">Attribute based accessor methods</h4>
+
+<p>Track whether the particular attribute has been changed or not.</p>
+
+<pre><code># attr_name_changed?
+person.first_name # =&gt; &quot;First Name&quot;
+person.first_name_changed? # =&gt; true
+</code></pre>
+
+<p>Track what was the previous value of the attribute.</p>
+
+<pre><code># attr_name_was accessor
+person.first_name_was # =&gt; &quot;First Name&quot;
+</code></pre>
+
+<p>Track both previous and current value of the changed attribute. Returns an
+array if changed, else returns nil.</p>
+
+<pre><code># attr_name_change
+person.first_name_change # =&gt; [nil, &quot;First Name&quot;]
+person.last_name_change # =&gt; nil
+</code></pre>
+
+<h3 id="label-Validations">Validations</h3>
+
+<p>Validations module adds the ability to class objects to validate them in
+Active Record style.</p>
+
+<pre><code>class Person
+  include ActiveModel::Validations
+
+  attr_accessor :name, :email, :token
+
+  validates :name, presence: true
+  validates_format_of :email, with: /\A([^\s]+)((?:[-a-z0-9]\.)[a-z]{2,})\z/i
+  validates! :token, presence: true
+end
+
+person = Person.new(token: &quot;2b1f325&quot;)
+person.valid?                        # =&gt; false
+person.name = &#39;vishnu&#39;
+person.email = &#39;me&#39;
+person.valid?                        # =&gt; false
+person.email = &#39;me@vishnuatrai.com&#39;
+person.valid?                        # =&gt; true
+person.token = nil
+person.valid?                        # =&gt; raises ActiveModel::StrictValidationFailed
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

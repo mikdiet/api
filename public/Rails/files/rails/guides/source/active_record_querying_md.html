@@ -1,0 +1,1838 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>active_record_querying.md</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>     
+    <div class="banner">
+        
+        <h1>
+            active_record_querying.md
+        </h1>
+        <ul class="files">
+            <li>rails/guides/source/active_record_querying.md</li>
+            <li>Last modified: 2013-04-26 19:51:18 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h1 id="label-Active+Record+Query+Interface">Active Record Query Interface</h1>
+
+<p>This guide covers different ways to retrieve data from the database using
+Active Record.</p>
+
+<p>After reading this guide, you will know:</p>
+<ul><li>
+<p>How to find records using a variety of methods and conditions.</p>
+</li><li>
+<p>How to specify the order, retrieved attributes, grouping, and other
+properties of the found records.</p>
+</li><li>
+<p>How to use eager loading to reduce the number of database queries needed
+for data retrieval.</p>
+</li><li>
+<p>How to use dynamic finders methods.</p>
+</li><li>
+<p>How to check for the existence of particular records.</p>
+</li><li>
+<p>How to perform various calculations on Active Record models.</p>
+</li><li>
+<p>How to run EXPLAIN on relations.</p>
+</li></ul>
+<hr style="height: 1px">
+
+<p>If you&#39;re used to using raw SQL to find database records, then you will
+generally find that there are better ways to carry out the same operations
+in <a href="../../../../classes/Rails.html">Rails</a>. Active Record
+insulates you from the need to use SQL in most cases.</p>
+
+<p>Code examples throughout this guide will refer to one or more of the
+following models:</p>
+
+<p>TIP: All of the following models use <code>id</code> as the primary key,
+unless specified otherwise.</p>
+
+<pre><code>class Client &lt; ActiveRecord::Base
+  has_one :address
+  has_many :orders
+  has_and_belongs_to_many :roles
+end
+</code></pre>
+
+<pre><code>class Address &lt; ActiveRecord::Base
+  belongs_to :client
+end
+</code></pre>
+
+<pre><code>class Order &lt; ActiveRecord::Base
+  belongs_to :client, counter_cache: true
+end
+</code></pre>
+
+<pre><code>class Role &lt; ActiveRecord::Base
+  has_and_belongs_to_many :clients
+end
+</code></pre>
+
+<p>Active Record will perform queries on the database for you and is
+compatible with most database systems (MySQL, PostgreSQL and SQLite to name
+a few). Regardless of which database system you&#39;re using, the Active
+Record method format will always be the same.</p>
+
+<h2 id="label-Retrieving+Objects+from+the+Database">Retrieving Objects from the Database</h2>
+
+<p>To retrieve objects from the database, Active Record provides several
+finder methods. Each finder method allows you to pass arguments into it to
+perform certain queries on your database without writing raw SQL.</p>
+
+<p>The methods are:</p>
+<ul><li>
+<p><code>bind</code></p>
+</li><li>
+<p><code>create_with</code></p>
+</li><li>
+<p><code>eager_load</code></p>
+</li><li>
+<p><code>extending</code></p>
+</li><li>
+<p><code>from</code></p>
+</li><li>
+<p><code>group</code></p>
+</li><li>
+<p><code>having</code></p>
+</li><li>
+<p><code>includes</code></p>
+</li><li>
+<p><code>joins</code></p>
+</li><li>
+<p><code>limit</code></p>
+</li><li>
+<p><code>lock</code></p>
+</li><li>
+<p><code>none</code></p>
+</li><li>
+<p><code>offset</code></p>
+</li><li>
+<p><code>order</code></p>
+</li><li>
+<p><code>preload</code></p>
+</li><li>
+<p><code>readonly</code></p>
+</li><li>
+<p><code>references</code></p>
+</li><li>
+<p><code>reorder</code></p>
+</li><li>
+<p><code>reverse_order</code></p>
+</li><li>
+<p><code>select</code></p>
+</li><li>
+<p><code>uniq</code></p>
+</li><li>
+<p><code>where</code></p>
+</li></ul>
+
+<p>All of the above methods return an instance of
+<code>ActiveRecord::Relation</code>.</p>
+
+<p>The primary operation of <code>Model.find(options)</code> can be summarized
+as:</p>
+<ul><li>
+<p>Convert the supplied options to an equivalent SQL query.</p>
+</li><li>
+<p>Fire the SQL query and retrieve the corresponding results from the
+database.</p>
+</li><li>
+<p>Instantiate the equivalent Ruby object of the appropriate model for every
+resulting row.</p>
+</li><li>
+<p>Run <code>after_find</code> callbacks, if any.</p>
+</li></ul>
+
+<h3 id="label-Retrieving+a+Single+Object">Retrieving a Single <a href="../../../../classes/Object.html">Object</a></h3>
+
+<p>Active Record provides five different ways of retrieving a single object.</p>
+
+<h4 id="label-Using+a+Primary+Key">Using a Primary Key</h4>
+
+<p>Using <code>Model.find(primary_key)</code>, you can retrieve the object
+corresponding to the specified <em>primary key</em> that matches any
+supplied options. For example:</p>
+
+<pre><code># Find the client with primary key (id) 10.
+client = Client.find(10)
+# =&gt; #&lt;Client id: 10, first_name: &quot;Ryan&quot;&gt;
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients WHERE (clients.id = 10) LIMIT 1</code></pre>
+
+<p><code>Model.find(primary_key)</code> will raise an
+<code>ActiveRecord::RecordNotFound</code> exception if no matching record
+is found.</p>
+
+<h4 id="label-take"><code>take</code></h4>
+
+<p><code>Model.take</code> retrieves a record without any implicit ordering.
+For example:</p>
+
+<pre><code>client = Client.take
+# =&gt; #&lt;Client id: 1, first_name: &quot;Lifo&quot;&gt;
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients LIMIT 1</code></pre>
+
+<p><code>Model.take</code> returns <code>nil</code> if no record is found and
+no exception will be raised.</p>
+
+<p>TIP: The retrieved record may vary depending on the database engine.</p>
+
+<h4 id="label-first"><code>first</code></h4>
+
+<p><code>Model.first</code> finds the first record ordered by the primary key.
+For example:</p>
+
+<pre><code>client = Client.first
+# =&gt; #&lt;Client id: 1, first_name: &quot;Lifo&quot;&gt;
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients ORDER BY clients.id ASC LIMIT 1</code></pre>
+
+<p><code>Model.first</code> returns <code>nil</code> if no matching record is
+found and no exception will be raised.</p>
+
+<h4 id="label-last"><code>last</code></h4>
+
+<p><code>Model.last</code> finds the last record ordered by the primary key.
+For example:</p>
+
+<pre><code>client = Client.last
+# =&gt; #&lt;Client id: 221, first_name: &quot;Russel&quot;&gt;
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients ORDER BY clients.id DESC LIMIT 1</code></pre>
+
+<p><code>Model.last</code> returns <code>nil</code> if no matching record is
+found and no exception will be raised.</p>
+
+<h4 id="label-find_by"><code>find_by</code></h4>
+
+<p><code>Model.find_by</code> finds the first record matching some conditions.
+For example:</p>
+
+<pre><code>Client.find_by first_name: &#39;Lifo&#39;
+# =&gt; #&lt;Client id: 1, first_name: &quot;Lifo&quot;&gt;
+
+Client.find_by first_name: &#39;Jon&#39;
+# =&gt; nil
+</code></pre>
+
+<p>It is equivalent to writing:</p>
+
+<pre><code>Client.where(first_name: &#39;Lifo&#39;).take
+</code></pre>
+
+<h4 id="label-take%21"><code>take!</code></h4>
+
+<p><code>Model.take!</code> retrieves a record without any implicit ordering.
+For example:</p>
+
+<pre><code>client = Client.take!
+# =&gt; #&lt;Client id: 1, first_name: &quot;Lifo&quot;&gt;
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients LIMIT 1</code></pre>
+
+<p><code>Model.take!</code> raises <code>ActiveRecord::RecordNotFound</code>
+if no matching record is found.</p>
+
+<h4 id="label-first%21"><code>first!</code></h4>
+
+<p><code>Model.first!</code> finds the first record ordered by the primary
+key. For example:</p>
+
+<pre><code>client = Client.first!
+# =&gt; #&lt;Client id: 1, first_name: &quot;Lifo&quot;&gt;
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients ORDER BY clients.id ASC LIMIT 1</code></pre>
+
+<p><code>Model.first!</code> raises <code>ActiveRecord::RecordNotFound</code>
+if no matching record is found.</p>
+
+<h4 id="label-last%21"><code>last!</code></h4>
+
+<p><code>Model.last!</code> finds the last record ordered by the primary key.
+For example:</p>
+
+<pre><code>client = Client.last!
+# =&gt; #&lt;Client id: 221, first_name: &quot;Russel&quot;&gt;
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients ORDER BY clients.id DESC LIMIT 1</code></pre>
+
+<p><code>Model.last!</code> raises <code>ActiveRecord::RecordNotFound</code>
+if no matching record is found.</p>
+
+<h4 id="label-find_by%21"><code>find_by!</code></h4>
+
+<p><code>Model.find_by!</code> finds the first record matching some
+conditions. It raises <code>ActiveRecord::RecordNotFound</code> if no
+matching record is found. For example:</p>
+
+<pre><code>Client.find_by! first_name: &#39;Lifo&#39;
+# =&gt; #&lt;Client id: 1, first_name: &quot;Lifo&quot;&gt;
+
+Client.find_by! first_name: &#39;Jon&#39;
+# =&gt; ActiveRecord::RecordNotFound
+</code></pre>
+
+<p>It is equivalent to writing:</p>
+
+<pre><code>Client.where(first_name: &#39;Lifo&#39;).take!
+</code></pre>
+
+<h3 id="label-Retrieving+Multiple+Objects">Retrieving Multiple Objects</h3>
+
+<h4 id="label-Using+Multiple+Primary+Keys">Using Multiple Primary Keys</h4>
+
+<p><code>Model.find(array_of_primary_key)</code> accepts an array of
+<em>primary keys</em>, returning an array containing all of the matching
+records for the supplied <em>primary keys</em>. For example:</p>
+
+<pre><code># Find the clients with primary keys 1 and 10.
+client = Client.find([1, 10]) # Or even Client.find(1, 10)
+# =&gt; [#&lt;Client id: 1, first_name: &quot;Lifo&quot;&gt;, #&lt;Client id: 10, first_name: &quot;Ryan&quot;&gt;]
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients WHERE (clients.id IN (1,10))</code></pre>
+
+<p>WARNING: <code>Model.find(array_of_primary_key)</code> will raise an
+<code>ActiveRecord::RecordNotFound</code> exception unless a matching
+record is found for <strong>all</strong> of the supplied primary keys.</p>
+
+<h4 id="label-take">take</h4>
+
+<p><code>Model.take(limit)</code> retrieves the first number of records
+specified by <code>limit</code> without any explicit ordering:</p>
+
+<pre><code>Client.take(2)
+# =&gt; [#&lt;Client id: 1, first_name: &quot;Lifo&quot;&gt;,
+      #&lt;Client id: 2, first_name: &quot;Raf&quot;&gt;]
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients LIMIT 2</code></pre>
+
+<h4 id="label-first">first</h4>
+
+<p><code>Model.first(limit)</code> finds the first number of records specified
+by <code>limit</code> ordered by primary key:</p>
+
+<pre><code>Client.first(2)
+# =&gt; [#&lt;Client id: 1, first_name: &quot;Lifo&quot;&gt;,
+      #&lt;Client id: 2, first_name: &quot;Raf&quot;&gt;]
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients LIMIT 2</code></pre>
+
+<h4 id="label-last">last</h4>
+
+<p><code>Model.last(limit)</code> finds the number of records specified by
+<code>limit</code> ordered by primary key in descending order:</p>
+
+<pre><code>Client.last(2)
+# =&gt; [#&lt;Client id: 10, first_name: &quot;Ryan&quot;&gt;,
+      #&lt;Client id: 9, first_name: &quot;John&quot;&gt;]
+</code></pre>
+
+<p>The SQL equivalent of the above is:</p>
+
+<pre><code>SELECT * FROM clients ORDER By id DESC LIMIT 2</code></pre>
+
+<h3 id="label-Retrieving+Multiple+Objects+in+Batches">Retrieving Multiple Objects in Batches</h3>
+
+<p>We often need to iterate over a large set of records, as when we send a
+newsletter to a large set of users, or when we export data.</p>
+
+<p>This may appear straightforward:</p>
+
+<pre><code># This is very inefficient when the users table has thousands of rows.
+User.all.each do |user|
+  NewsLetter.weekly_deliver(user)
+end
+</code></pre>
+
+<p>But this approach becomes increasingly impractical as the table size
+increases, since <code>User.all.each</code> instructs Active Record to
+fetch <em>the entire table</em> in a single pass, build a model object per
+row, and then keep the entire array of model objects in memory. Indeed, if
+we have a large number of records, the entire collection may exceed the
+amount of memory available.</p>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> provides two methods
+that address this problem by dividing records into memory-friendly batches
+for processing. The first method, <code>find_each</code>, retrieves a batch
+of records and then yields <em>each</em> record to the block individually
+as a model. The second method, <code>find_in_batches</code>, retrieves a
+batch of records and then yields <em>the entire batch</em> to the block as
+an array of models.</p>
+
+<p>TIP: The <code>find_each</code> and <code>find_in_batches</code> methods
+are intended for use in the batch processing of a large number of records
+that wouldn&#39;t fit in memory all at once. If you just need to loop over
+a thousand records the regular find methods are the preferred option.</p>
+
+<h4 id="label-find_each"><code>find_each</code></h4>
+
+<p>The <code>find_each</code> method retrieves a batch of records and then
+yields <em>each</em> record to the block individually as a model. In the
+following example, <code>find_each</code> will retrieve 1000 records (the
+current default for both <code>find_each</code> and
+<code>find_in_batches</code>) and then yield each record individually to
+the block as a model. This process is repeated until all of the records
+have been processed:</p>
+
+<pre><code>User.find_each do |user|
+  NewsLetter.weekly_deliver(user)
+end
+</code></pre>
+
+<h5 id="label-Options+for+find_each">Options for <code>find_each</code></h5>
+
+<p>The <code>find_each</code> method accepts most of the options allowed by
+the regular <code>find</code> method, except for <code>:order</code> and
+<code>:limit</code>, which are reserved for internal use by
+<code>find_each</code>.</p>
+
+<p>Two additional options, <code>:batch_size</code> and <code>:start</code>,
+are available as well.</p>
+
+<p><strong><code>:batch_size</code></strong></p>
+
+<p>The <code>:batch_size</code> option allows you to specify the number of
+records to be retrieved in each batch, before being passed individually to
+the block. For example, to retrieve records in batches of 5000:</p>
+
+<pre><code>User.find_each(batch_size: 5000) do |user|
+  NewsLetter.weekly_deliver(user)
+end
+</code></pre>
+
+<p><strong><code>:start</code></strong></p>
+
+<p>By default, records are fetched in ascending order of the primary key,
+which must be an integer. The <code>:start</code> option allows you to
+configure the first ID of the sequence whenever the lowest ID is not the
+one you need. This would be useful, for example, if you wanted to resume an
+interrupted batch process, provided you saved the last processed ID as a
+checkpoint.</p>
+
+<p>For example, to send newsletters only to users with the primary key
+starting from 2000, and to retrieve them in batches of 5000:</p>
+
+<pre><code>User.find_each(start: 2000, batch_size: 5000) do |user|
+  NewsLetter.weekly_deliver(user)
+end
+</code></pre>
+
+<p><a href="../../../../classes/Another.html">Another</a> example would be if
+you wanted multiple workers handling the same processing queue. You could
+have each worker handle 10000 records by setting the appropriate
+<code>:start</code> option on each worker.</p>
+
+<h4 id="label-find_in_batches"><code>find_in_batches</code></h4>
+
+<p>The <code>find_in_batches</code> method is similar to
+<code>find_each</code>, since both retrieve batches of records. The
+difference is that <code>find_in_batches</code> yields <em>batches</em> to
+the block as an array of models, instead of individually. The following
+example will yield to the supplied block an array of up to 1000 invoices at
+a time, with the final block containing any remaining invoices:</p>
+
+<pre><code># Give add_invoices an array of 1000 invoices at a time
+Invoice.find_in_batches(include: :invoice_lines) do |invoices|
+  export.add_invoices(invoices)
+end
+</code></pre>
+
+<p>NOTE: The <code>:include</code> option allows you to name associations that
+should be loaded alongside with the models.</p>
+
+<h5 id="label-Options+for+find_in_batches">Options for <code>find_in_batches</code></h5>
+
+<p>The <code>find_in_batches</code> method accepts the same
+<code>:batch_size</code> and <code>:start</code> options as
+<code>find_each</code>, as well as most of the options allowed by the
+regular <code>find</code> method, except for <code>:order</code> and
+<code>:limit</code>, which are reserved for internal use by
+<code>find_in_batches</code>.</p>
+
+<h2 id="label-Conditions">Conditions</h2>
+
+<p>The <code>where</code> method allows you to specify conditions to limit the
+records returned, representing the <code>WHERE</code>-part of the SQL
+statement. Conditions can either be specified as a string, array, or hash.</p>
+
+<h3 id="label-Pure+String+Conditions">Pure <a href="../../../../classes/String.html">String</a> Conditions</h3>
+
+<p>If you&#39;d like to add conditions to your find, you could just specify
+them in there, just like <code>Client.where(&quot;orders_count =
+&#39;2&#39;&quot;)</code>. This will find all clients where the
+<code>orders_count</code> field&#39;s value is 2.</p>
+
+<p>WARNING: Building your own conditions as pure strings can leave you
+vulnerable to SQL injection exploits. For example,
+<code>Client.where(&quot;first_name LIKE
+&#39;%#{params[:first_name]}%&#39;&quot;)</code> is not safe. See the next
+section for the preferred way to handle conditions using an array.</p>
+
+<h3 id="label-Array+Conditions"><a href="../../../../classes/Array.html">Array</a> Conditions</h3>
+
+<p>Now what if that number could vary, say as an argument from somewhere? The
+find would then take the form:</p>
+
+<pre><code>Client.where(&quot;orders_count = ?&quot;, params[:orders])
+</code></pre>
+
+<p>Active Record will go through the first element in the conditions value and
+any additional elements will replace the question marks <code>(?)</code> in
+the first element.</p>
+
+<p>If you want to specify multiple conditions:</p>
+
+<pre><code>Client.where(&quot;orders_count = ? AND locked = ?&quot;, params[:orders], false)
+</code></pre>
+
+<p>In this example, the first question mark will be replaced with the value in
+<code>params[:orders]</code> and the second will be replaced with the SQL
+representation of <code>false</code>, which depends on the adapter.</p>
+
+<p>This code is highly preferable:</p>
+
+<pre><code>Client.where(&quot;orders_count = ?&quot;, params[:orders])
+</code></pre>
+
+<p>to this code:</p>
+
+<pre><code>Client.where(&quot;orders_count = #{params[:orders]}&quot;)
+</code></pre>
+
+<p>because of argument safety. Putting the variable directly into the
+conditions string will pass the variable to the database
+<strong>as-is</strong>. This means that it will be an unescaped variable
+directly from a user who may have malicious intent. If you do this, you put
+your entire database at risk because once a user finds out he or she can
+exploit your database they can do just about anything to it. Never ever put
+your arguments directly inside the conditions string.</p>
+
+<p>TIP: For more information on the dangers of SQL injection, see the <a
+href="http://security.html#sql-injection">Ruby on Rails Security Guide</a>.</p>
+
+<h4 id="label-Placeholder+Conditions">Placeholder Conditions</h4>
+
+<p>Similar to the <code>(?)</code> replacement style of params, you can also
+specify keys/values hash in your array conditions:</p>
+
+<pre><code>Client.where(&quot;created_at &gt;= :start_date AND created_at &lt;= :end_date&quot;,
+  {start_date: params[:start_date], end_date: params[:end_date]})
+</code></pre>
+
+<p>This makes for clearer readability if you have a large number of variable
+conditions.</p>
+
+<h3 id="label-Hash+Conditions"><a href="../../../../classes/Hash.html">Hash</a> Conditions</h3>
+
+<p>Active Record also allows you to pass in hash conditions which can increase
+the readability of your conditions syntax. With hash conditions, you pass
+in a hash with keys of the fields you want conditionalised and the values
+of how you want to conditionalise them:</p>
+
+<p>NOTE: Only equality, range and subset checking are possible with <a
+href="../../../../classes/Hash.html">Hash</a> conditions.</p>
+
+<h4 id="label-Equality+Conditions">Equality Conditions</h4>
+
+<pre><code>Client.where(locked: true)
+</code></pre>
+
+<p>The field name can also be a string:</p>
+
+<pre><code>Client.where(&#39;locked&#39; =&gt; true)
+</code></pre>
+
+<p>In the case of a belongs_to relationship, an association key can be used to
+specify the model if an Active Record object is used as the value. This
+method works with polymorphic relationships as well.</p>
+
+<pre><code>Post.where(author: author)
+Author.joins(:posts).where(posts: {author: author})
+</code></pre>
+
+<p>NOTE: The values cannot be symbols. For example, you cannot do
+<code>Client.where(status: :active)</code>.</p>
+
+<h4 id="label-Range+Conditions"><a href="../../../../classes/Range.html">Range</a> Conditions</h4>
+
+<pre><code>Client.where(created_at: (Time.now.midnight - 1.day)..Time.now.midnight)
+</code></pre>
+
+<p>This will find all clients created yesterday by using a
+<code>BETWEEN</code> SQL statement:</p>
+
+<pre><code>SELECT * FROM clients WHERE (clients.created_at BETWEEN &#39;2008-12-21 00:00:00&#39; AND &#39;2008-12-22 00:00:00&#39;)</code></pre>
+
+<p>This demonstrates a shorter syntax for the examples in <a
+href="#array-conditions">Array Conditions</a></p>
+
+<h4 id="label-Subset+Conditions">Subset Conditions</h4>
+
+<p>If you want to find records using the <code>IN</code> expression you can
+pass an array to the conditions hash:</p>
+
+<pre><code>Client.where(orders_count: [1,3,5])
+</code></pre>
+
+<p>This code will generate SQL like this:</p>
+
+<pre><code>SELECT * FROM clients WHERE (clients.orders_count IN (1,3,5))</code></pre>
+
+<h3 id="label-NOT%2C+LIKE%2C+and+NOT+LIKE+Conditions">NOT, LIKE, and NOT LIKE Conditions</h3>
+
+<p><code>NOT</code>, <code>LIKE</code>, and <code>NOT LIKE</code> SQL queries
+can be built by <code>where.not</code>, <code>where.like</code>, and
+<code>where.not_like</code> respectively.</p>
+
+<pre><code>Post.where.not(author: author)
+
+Author.where.like(name: &#39;Nari%&#39;)
+
+Developer.where.not_like(name: &#39;Tenderl%&#39;)
+</code></pre>
+
+<p>In other words, these sort of queries can be generated by calling
+<code>where</code> with no argument, then immediately chain with
+<code>not</code>, <code>like</code>, or <code>not_like</code> passing
+<code>where</code> conditions.</p>
+
+<h2 id="label-Ordering">Ordering</h2>
+
+<p>To retrieve records from the database in a specific order, you can use the
+<code>order</code> method.</p>
+
+<p>For example, if you&#39;re getting a set of records and want to order them
+in ascending order by the <code>created_at</code> field in your table:</p>
+
+<pre><code>Client.order(&quot;created_at&quot;)
+</code></pre>
+
+<p>You could specify <code>ASC</code> or <code>DESC</code> as well:</p>
+
+<pre><code>Client.order(&quot;created_at DESC&quot;)
+# OR
+Client.order(&quot;created_at ASC&quot;)
+</code></pre>
+
+<p>Or ordering by multiple fields:</p>
+
+<pre><code>Client.order(&quot;orders_count ASC, created_at DESC&quot;)
+# OR
+Client.order(&quot;orders_count ASC&quot;, &quot;created_at DESC&quot;)
+</code></pre>
+
+<p>If you want to call <code>order</code> multiple times e.g. in different
+context, new order will prepend previous one</p>
+
+<pre><code>Client.order(&quot;orders_count ASC&quot;).order(&quot;created_at DESC&quot;)
+# SELECT * FROM clients ORDER BY created_at DESC, orders_count ASC
+</code></pre>
+
+<h2 id="label-Selecting+Specific+Fields">Selecting Specific Fields</h2>
+
+<p>By default, <code>Model.find</code> selects all the fields from the result
+set using <code>select *</code>.</p>
+
+<p>To select only a subset of fields from the result set, you can specify the
+subset via the <code>select</code> method.</p>
+
+<p>For example, to select only <code>viewable_by</code> and
+<code>locked</code> columns:</p>
+
+<pre><code>Client.select(&quot;viewable_by, locked&quot;)
+</code></pre>
+
+<p>The SQL query used by this find call will be somewhat like:</p>
+
+<pre><code>SELECT viewable_by, locked FROM clients</code></pre>
+
+<p>Be careful because this also means you&#39;re initializing a model object
+with only the fields that you&#39;ve selected. If you attempt to access a
+field that is not in the initialized record you&#39;ll receive:</p>
+
+<pre><code>ActiveModel::MissingAttributeError: missing attribute: &lt;attribute&gt;</code></pre>
+
+<p>Where <code>&lt;attribute&gt;</code> is the attribute you asked for. The
+<code>id</code> method will not raise the
+<code>ActiveRecord::MissingAttributeError</code>, so just be careful when
+working with associations because they need the <code>id</code> method to
+function properly.</p>
+
+<p>If you would like to only grab a single record per unique value in a
+certain field, you can use <code>uniq</code>:</p>
+
+<pre><code>Client.select(:name).uniq
+</code></pre>
+
+<p>This would generate SQL like:</p>
+
+<pre><code>SELECT DISTINCT name FROM clients</code></pre>
+
+<p>You can also remove the uniqueness constraint:</p>
+
+<pre><code>query = Client.select(:name).uniq
+# =&gt; Returns unique names
+
+query.uniq(false)
+# =&gt; Returns all names, even if there are duplicates
+</code></pre>
+
+<h2 id="label-Limit+and+Offset">Limit and Offset</h2>
+
+<p>To apply <code>LIMIT</code> to the SQL fired by the
+<code>Model.find</code>, you can specify the <code>LIMIT</code> using
+<code>limit</code> and <code>offset</code> methods on the relation.</p>
+
+<p>You can use <code>limit</code> to specify the number of records to be
+retrieved, and use <code>offset</code> to specify the number of records to
+skip before starting to return the records. For example</p>
+
+<pre><code>Client.limit(5)
+</code></pre>
+
+<p>will return a maximum of 5 clients and because it specifies no offset it
+will return the first 5 in the table. The SQL it executes looks like this:</p>
+
+<pre><code>SELECT * FROM clients LIMIT 5</code></pre>
+
+<p>Adding <code>offset</code> to that</p>
+
+<pre><code>Client.limit(5).offset(30)
+</code></pre>
+
+<p>will return instead a maximum of 5 clients beginning with the 31st. The SQL
+looks like:</p>
+
+<pre><code>SELECT * FROM clients LIMIT 5 OFFSET 30</code></pre>
+
+<h2 id="label-Group"><a href="../../../../classes/Group.html">Group</a></h2>
+
+<p>To apply a <code>GROUP BY</code> clause to the SQL fired by the finder, you
+can specify the <code>group</code> method on the find.</p>
+
+<p>For example, if you want to find a collection of the dates orders were
+created on:</p>
+
+<pre><code>Order.select(&quot;date(created_at) as ordered_date, sum(price) as total_price&quot;).group(&quot;date(created_at)&quot;)
+</code></pre>
+
+<p>And this will give you a single <code>Order</code> object for each date
+where there are orders in the database.</p>
+
+<p>The SQL that would be executed would be something like this:</p>
+
+<pre><code>SELECT date(created_at) as ordered_date, sum(price) as total_price
+FROM orders
+GROUP BY date(created_at)</code></pre>
+
+<h2 id="label-Having">Having</h2>
+
+<p>SQL uses the <code>HAVING</code> clause to specify conditions on the
+<code>GROUP BY</code> fields. You can add the <code>HAVING</code> clause to
+the SQL fired by the <code>Model.find</code> by adding the
+<code>:having</code> option to the find.</p>
+
+<p>For example:</p>
+
+<pre><code>Order.select(&quot;date(created_at) as ordered_date, sum(price) as total_price&quot;).
+  group(&quot;date(created_at)&quot;).having(&quot;sum(price) &gt; ?&quot;, 100)
+</code></pre>
+
+<p>The SQL that would be executed would be something like this:</p>
+
+<pre><code>SELECT date(created_at) as ordered_date, sum(price) as total_price
+FROM orders
+GROUP BY date(created_at)
+HAVING sum(price) &gt; 100</code></pre>
+
+<p>This will return single order objects for each day, but only those that are
+ordered more than $100 in a day.</p>
+
+<h2 id="label-Overriding+Conditions">Overriding Conditions</h2>
+
+<h3 id="label-except"><code>except</code></h3>
+
+<p>You can specify certain conditions to be excepted by using the
+<code>except</code> method. For example:</p>
+
+<pre><code>Post.where(&#39;id &gt; 10&#39;).limit(20).order(&#39;id asc&#39;).except(:order)
+</code></pre>
+
+<p>The SQL that would be executed:</p>
+
+<pre><code>SELECT * FROM posts WHERE id &gt; 10 LIMIT 20</code></pre>
+
+<h3 id="label-only"><code>only</code></h3>
+
+<p>You can also override conditions using the <code>only</code> method. For
+example:</p>
+
+<pre><code>Post.where(&#39;id &gt; 10&#39;).limit(20).order(&#39;id desc&#39;).only(:order, :where)
+</code></pre>
+
+<p>The SQL that would be executed:</p>
+
+<pre><code>SELECT * FROM posts WHERE id &gt; 10 ORDER BY id DESC</code></pre>
+
+<h3 id="label-reorder"><code>reorder</code></h3>
+
+<p>The <code>reorder</code> method overrides the default scope order. For
+example:</p>
+
+<pre><code>class Post &lt; ActiveRecord::Base
+  ..
+  ..
+  has_many :comments, order: &#39;posted_at DESC&#39;
+end
+
+Post.find(10).comments.reorder(&#39;name&#39;)
+</code></pre>
+
+<p>The SQL that would be executed:</p>
+
+<pre><code>SELECT * FROM posts WHERE id = 10 ORDER BY name</code></pre>
+
+<p>In case the <code>reorder</code> clause is not used, the SQL executed would
+be:</p>
+
+<pre><code>SELECT * FROM posts WHERE id = 10 ORDER BY posted_at DESC</code></pre>
+
+<h3 id="label-reverse_order"><code>reverse_order</code></h3>
+
+<p>The <code>reverse_order</code> method reverses the ordering clause if
+specified.</p>
+
+<pre><code>Client.where(&quot;orders_count &gt; 10&quot;).order(:name).reverse_order
+</code></pre>
+
+<p>The SQL that would be executed:</p>
+
+<pre><code>SELECT * FROM clients WHERE orders_count &gt; 10 ORDER BY name DESC</code></pre>
+
+<p>If no ordering clause is specified in the query, the
+<code>reverse_order</code> orders by the primary key in reverse order.</p>
+
+<pre><code>Client.where(&quot;orders_count &gt; 10&quot;).reverse_order
+</code></pre>
+
+<p>The SQL that would be executed:</p>
+
+<pre><code>SELECT * FROM clients WHERE orders_count &gt; 10 ORDER BY clients.id DESC</code></pre>
+
+<p>This method accepts <strong>no</strong> arguments.</p>
+
+<h2 id="label-Null+Relation">Null Relation</h2>
+
+<p>The <code>none</code> method returns a chainable relation with no records.
+Any subsequent conditions chained to the returned relation will continue
+generating empty relations. This is useful in scenarios where you need a
+chainable response to a method or a scope that could return zero results.</p>
+
+<pre><code>Post.none # returns an empty Relation and fires no queries.
+</code></pre>
+
+<pre><code># The visible_posts method below is expected to return a Relation.
+@posts = current_user.visible_posts.where(name: params[:name])
+
+def visible_posts
+  case role
+  when &#39;Country Manager&#39;
+    Post.where(country: country)
+  when &#39;Reviewer&#39;
+    Post.published
+  when &#39;Bad User&#39;
+    Post.none # =&gt; returning [] or nil breaks the caller code in this case
+  end
+end
+</code></pre>
+
+<h2 id="label-Readonly+Objects">Readonly Objects</h2>
+
+<p>Active Record provides <code>readonly</code> method on a relation to
+explicitly disallow modification of any of the returned objects. Any
+attempt to alter a readonly record will not succeed, raising an
+<code>ActiveRecord::ReadOnlyRecord</code> exception.</p>
+
+<pre><code>client = Client.readonly.first
+client.visits += 1
+client.save
+</code></pre>
+
+<p>As <code>client</code> is explicitly set to be a readonly object, the above
+code will raise an <code>ActiveRecord::ReadOnlyRecord</code> exception when
+calling <code>client.save</code> with an updated value of <em>visits</em>.</p>
+
+<h2 id="label-Locking+Records+for+Update">Locking Records for Update</h2>
+
+<p>Locking is helpful for preventing race conditions when updating records in
+the database and ensuring atomic updates.</p>
+
+<p>Active Record provides two locking mechanisms:</p>
+<ul><li>
+<p>Optimistic Locking</p>
+</li><li>
+<p>Pessimistic Locking</p>
+</li></ul>
+
+<h3 id="label-Optimistic+Locking">Optimistic Locking</h3>
+
+<p>Optimistic locking allows multiple users to access the same record for
+edits, and assumes a minimum of conflicts with the data. It does this by
+checking whether another process has made changes to a record since it was
+opened. An <code>ActiveRecord::StaleObjectError</code> exception is thrown
+if that has occurred and the update is ignored.</p>
+
+<p><strong>Optimistic locking column</strong></p>
+
+<p>In order to use optimistic locking, the table needs to have a column called
+<code>lock_version</code> of type integer. Each time the record is updated,
+Active Record increments the <code>lock_version</code> column. If an update
+request is made with a lower value in the <code>lock_version</code> field
+than is currently in the <code>lock_version</code> column in the database,
+the update request will fail with an
+<code>ActiveRecord::StaleObjectError</code>. Example:</p>
+
+<pre><code>c1 = Client.find(1)
+c2 = Client.find(1)
+
+c1.first_name = &quot;Michael&quot;
+c1.save
+
+c2.name = &quot;should fail&quot;
+c2.save # Raises an ActiveRecord::StaleObjectError
+</code></pre>
+
+<p>You&#39;re then responsible for dealing with the conflict by rescuing the
+exception and either rolling back, merging, or otherwise apply the business
+logic needed to resolve the conflict.</p>
+
+<p>This behavior can be turned off by setting
+<code>ActiveRecord::Base.lock_optimistically = false</code>.</p>
+
+<p>To override the name of the <code>lock_version</code> column,
+<code>ActiveRecord::Base</code> provides a class attribute called
+<code>locking_column</code>:</p>
+
+<pre><code>class Client &lt; ActiveRecord::Base
+  self.locking_column = :lock_client_column
+end
+</code></pre>
+
+<h3 id="label-Pessimistic+Locking">Pessimistic Locking</h3>
+
+<p>Pessimistic locking uses a locking mechanism provided by the underlying
+database. Using <code>lock</code> when building a relation obtains an
+exclusive lock on the selected rows. Relations using <code>lock</code> are
+usually wrapped inside a transaction for preventing deadlock conditions.</p>
+
+<p>For example:</p>
+
+<pre><code>Item.transaction do
+  i = Item.lock.first
+  i.name = &#39;Jones&#39;
+  i.save
+end
+</code></pre>
+
+<p>The above session produces the following SQL for a MySQL backend:</p>
+
+<pre><code>SQL (0.2ms)   BEGIN
+Item Load (0.3ms)   SELECT * FROM `items` LIMIT 1 FOR UPDATE
+Item Update (0.4ms)   UPDATE `items` SET `updated_at` = &#39;2009-02-07 18:05:56&#39;, `name` = &#39;Jones&#39; WHERE `id` = 1
+SQL (0.8ms)   COMMIT</code></pre>
+
+<p>You can also pass raw SQL to the <code>lock</code> method for allowing
+different types of locks. For example, MySQL has an expression called
+<code>LOCK IN SHARE MODE</code> where you can lock a record but still allow
+other queries to read it. To specify this expression just pass it in as the
+lock option:</p>
+
+<pre><code>Item.transaction do
+  i = Item.lock(&quot;LOCK IN SHARE MODE&quot;).find(1)
+  i.increment!(:views)
+end
+</code></pre>
+
+<p>If you already have an instance of your model, you can start a transaction
+and acquire the lock in one go using the following code:</p>
+
+<pre><code>item = Item.first
+item.with_lock do
+  # This block is called within a transaction,
+  # item is already locked.
+  item.increment!(:views)
+end
+</code></pre>
+
+<h2 id="label-Joining+Tables">Joining Tables</h2>
+
+<p>Active Record provides a finder method called <code>joins</code> for
+specifying <code>JOIN</code> clauses on the resulting SQL. There are
+multiple ways to use the <code>joins</code> method.</p>
+
+<h3 id="label-Using+a+String+SQL+Fragment">Using a <a href="../../../../classes/String.html">String</a> SQL Fragment</h3>
+
+<p>You can just supply the raw SQL specifying the <code>JOIN</code> clause to
+<code>joins</code>:</p>
+
+<pre><code>Client.joins(&#39;LEFT OUTER JOIN addresses ON addresses.client_id = clients.id&#39;)
+</code></pre>
+
+<p>This will result in the following SQL:</p>
+
+<pre><code>SELECT clients.* FROM clients LEFT OUTER JOIN addresses ON addresses.client_id = clients.id</code></pre>
+
+<h3 id="label-Using+Array%2FHash+of+Named+Associations">Using Array/Hash of Named Associations</h3>
+
+<p>WARNING: This method only works with <code>INNER JOIN</code>.</p>
+
+<p>Active Record lets you use the names of the <a
+href="http://association_basics.html">associations</a> defined on the model
+as a shortcut for specifying <code>JOIN</code> clause for those
+associations when using the <code>joins</code> method.</p>
+
+<p>For example, consider the following <code>Category</code>,
+<code>Post</code>, <code>Comments</code> and <code>Guest</code> models:</p>
+
+<pre><code>class Category &lt; ActiveRecord::Base
+  has_many :posts
+end
+
+class Post &lt; ActiveRecord::Base
+  belongs_to :category
+  has_many :comments
+  has_many :tags
+end
+
+class Comment &lt; ActiveRecord::Base
+  belongs_to :post
+  has_one :guest
+end
+
+class Guest &lt; ActiveRecord::Base
+  belongs_to :comment
+end
+
+class Tag &lt; ActiveRecord::Base
+  belongs_to :post
+end
+</code></pre>
+
+<p>Now all of the following will produce the expected join queries using
+<code>INNER JOIN</code>:</p>
+
+<h4 id="label-Joining+a+Single+Association">Joining a Single Association</h4>
+
+<pre><code>Category.joins(:posts)
+</code></pre>
+
+<p>This produces:</p>
+
+<pre><code>SELECT categories.* FROM categories
+  INNER JOIN posts ON posts.category_id = categories.id</code></pre>
+
+<p>Or, in English: “return a <a
+href="../../../../classes/Category.html">Category</a> object for all
+categories with posts”. Note that you will see duplicate categories if more
+than one post has the same category. If you want unique categories, you can
+use
+<code>Category.joins(:posts).select(&quot;distinct(categories.id)&quot;)</code>.</p>
+
+<h4 id="label-Joining+Multiple+Associations">Joining Multiple Associations</h4>
+
+<pre><code>Post.joins(:category, :comments)
+</code></pre>
+
+<p>This produces:</p>
+
+<pre><code>SELECT posts.* FROM posts
+  INNER JOIN categories ON posts.category_id = categories.id
+  INNER JOIN comments ON comments.post_id = posts.id</code></pre>
+
+<p>Or, in English: “return all posts that have a category and at least one
+comment”. Note again that posts with multiple comments will show up
+multiple times.</p>
+
+<h4 id="label-Joining+Nested+Associations+%28Single+Level%29">Joining <a href="../../../../classes/Nested.html">Nested</a> Associations (Single Level)</h4>
+
+<pre><code>Post.joins(comments: :guest)
+</code></pre>
+
+<p>This produces:</p>
+
+<pre><code>SELECT posts.* FROM posts
+  INNER JOIN comments ON comments.post_id = posts.id
+  INNER JOIN guests ON guests.comment_id = comments.id</code></pre>
+
+<p>Or, in English: “return all posts that have a comment made by a guest.”</p>
+
+<h4 id="label-Joining+Nested+Associations+%28Multiple+Level%29">Joining <a href="../../../../classes/Nested.html">Nested</a> Associations (Multiple Level)</h4>
+
+<pre><code>Category.joins(posts: [{comments: :guest}, :tags])
+</code></pre>
+
+<p>This produces:</p>
+
+<pre><code>SELECT categories.* FROM categories
+  INNER JOIN posts ON posts.category_id = categories.id
+  INNER JOIN comments ON comments.post_id = posts.id
+  INNER JOIN guests ON guests.comment_id = comments.id
+  INNER JOIN tags ON tags.post_id = posts.id</code></pre>
+
+<h3 id="label-Specifying+Conditions+on+the+Joined+Tables">Specifying Conditions on the Joined Tables</h3>
+
+<p>You can specify conditions on the joined tables using the regular <a
+href="#array-conditions">Array</a> and <a
+href="#pure-string-conditions">String</a> conditions. <a
+href="#hash-conditions">Hash conditions</a> provides a special syntax for
+specifying conditions for the joined tables:</p>
+
+<pre><code>time_range = (Time.now.midnight - 1.day)..Time.now.midnight
+Client.joins(:orders).where(&#39;orders.created_at&#39; =&gt; time_range)
+</code></pre>
+
+<p>An alternative and cleaner syntax is to nest the hash conditions:</p>
+
+<pre><code>time_range = (Time.now.midnight - 1.day)..Time.now.midnight
+Client.joins(:orders).where(orders: {created_at: time_range})
+</code></pre>
+
+<p>This will find all clients who have orders that were created yesterday,
+again using a <code>BETWEEN</code> SQL expression.</p>
+
+<h2 id="label-Eager+Loading+Associations">Eager Loading Associations</h2>
+
+<p>Eager loading is the mechanism for loading the associated records of the
+objects returned by <code>Model.find</code> using as few queries as
+possible.</p>
+
+<p><strong>N + 1 queries problem</strong></p>
+
+<p>Consider the following code, which finds 10 clients and prints their
+postcodes:</p>
+
+<pre><code>clients = Client.limit(10)
+
+clients.each do |client|
+  puts client.address.postcode
+end
+</code></pre>
+
+<p>This code looks fine at the first sight. But the problem lies within the
+total number of queries executed. The above code executes 1 (to find 10
+clients) + 10 (one per each client to load the address) =
+<strong>11</strong> queries in total.</p>
+
+<p><strong>Solution to N + 1 queries problem</strong></p>
+
+<p>Active Record lets you specify in advance all the associations that are
+going to be loaded. This is possible by specifying the
+<code>includes</code> method of the <code>Model.find</code> call. With
+<code>includes</code>, Active Record ensures that all of the specified
+associations are loaded using the minimum possible number of queries.</p>
+
+<p>Revisiting the above case, we could rewrite <code>Client.limit(10)</code>
+to use eager load addresses:</p>
+
+<pre><code>clients = Client.includes(:address).limit(10)
+
+clients.each do |client|
+  puts client.address.postcode
+end
+</code></pre>
+
+<p>The above code will execute just <strong>2</strong> queries, as opposed to
+<strong>11</strong> queries in the previous case:</p>
+
+<pre><code>SELECT * FROM clients LIMIT 10
+SELECT addresses.* FROM addresses
+  WHERE (addresses.client_id IN (1,2,3,4,5,6,7,8,9,10))</code></pre>
+
+<h3 id="label-Eager+Loading+Multiple+Associations">Eager Loading Multiple Associations</h3>
+
+<p>Active Record lets you eager load any number of associations with a single
+<code>Model.find</code> call by using an array, hash, or a nested hash of
+array/hash with the <code>includes</code> method.</p>
+
+<h4 id="label-Array+of+Multiple+Associations"><a href="../../../../classes/Array.html">Array</a> of Multiple Associations</h4>
+
+<pre><code>Post.includes(:category, :comments)
+</code></pre>
+
+<p>This loads all the posts and the associated category and comments for each
+post.</p>
+
+<h4 id="label-Nested+Associations+Hash"><a href="../../../../classes/Nested.html">Nested</a> Associations <a href="../../../../classes/Hash.html">Hash</a></h4>
+
+<pre><code>Category.includes(posts: [{comments: :guest}, :tags]).find(1)
+</code></pre>
+
+<p>This will find the category with id 1 and eager load all of the associated
+posts, the associated posts&#39; tags and comments, and every comment&#39;s
+guest association.</p>
+
+<h3 id="label-Specifying+Conditions+on+Eager+Loaded+Associations">Specifying Conditions on Eager Loaded Associations</h3>
+
+<p>Even though Active Record lets you specify conditions on the eager loaded
+associations just like <code>joins</code>, the recommended way is to use <a
+href="#joining-tables">joins</a> instead.</p>
+
+<p>However if you must do this, you may use <code>where</code> as you would
+normally.</p>
+
+<pre><code>Post.includes(:comments).where(&quot;comments.visible&quot; =&gt; true)
+</code></pre>
+
+<p>This would generate a query which contains a <code>LEFT OUTER JOIN</code>
+whereas the <code>joins</code> method would generate one using the
+<code>INNER JOIN</code> function instead.</p>
+
+<pre><code>SELECT &quot;posts&quot;.&quot;id&quot; AS t0_r0, ... &quot;comments&quot;.&quot;updated_at&quot; AS t1_r5 FROM &quot;posts&quot; LEFT OUTER JOIN &quot;comments&quot; ON &quot;comments&quot;.&quot;post_id&quot; = &quot;posts&quot;.&quot;id&quot; WHERE (comments.visible = 1)
+</code></pre>
+
+<p>If there was no <code>where</code> condition, this would generate the
+normal set of two queries.</p>
+
+<p>If, in the case of this <code>includes</code> query, there were no comments
+for any posts, all the posts would still be loaded. By using
+<code>joins</code> (an INNER JOIN), the join conditions
+<strong>must</strong> match, otherwise no records will be returned.</p>
+
+<h2 id="label-Scopes">Scopes</h2>
+
+<p>Scoping allows you to specify commonly-used queries which can be referenced
+as method calls on the association objects or models. With these scopes,
+you can use every method previously covered such as <code>where</code>,
+<code>joins</code> and <code>includes</code>. All scope methods will return
+an <code>ActiveRecord::Relation</code> object which will allow for further
+methods (such as other scopes) to be called on it.</p>
+
+<p>To define a simple scope, we use the <code>scope</code> method inside the
+class, passing the query that we&#39;d like to run when this scope is
+called:</p>
+
+<pre><code>class Post &lt; ActiveRecord::Base
+  scope :published, -&gt; { where(published: true) }
+end
+</code></pre>
+
+<p>This is exactly the same as defining a class method, and which you use is a
+matter of personal preference:</p>
+
+<pre><code>class Post &lt; ActiveRecord::Base
+  def self.published
+    where(published: true)
+  end
+end
+</code></pre>
+
+<p>Scopes are also chainable within scopes:</p>
+
+<pre><code>class Post &lt; ActiveRecord::Base
+  scope :published,               -&gt; { where(published: true) }
+  scope :published_and_commented, -&gt; { published.where(&quot;comments_count &gt; 0&quot;) }
+end
+</code></pre>
+
+<p>To call this <code>published</code> scope we can call it on either the
+class:</p>
+
+<pre><code>Post.published # =&gt; [published posts]
+</code></pre>
+
+<p>Or on an association consisting of <code>Post</code> objects:</p>
+
+<pre><code>category = Category.first
+category.posts.published # =&gt; [published posts belonging to this category]
+</code></pre>
+
+<h3 id="label-Passing+in+arguments">Passing in arguments</h3>
+
+<p>Your scope can take arguments:</p>
+
+<pre><code>class Post &lt; ActiveRecord::Base
+  scope :created_before, -&gt;(time) { where(&quot;created_at &lt; ?&quot;, time) }
+end
+</code></pre>
+
+<p>This may then be called using this:</p>
+
+<pre><code>Post.created_before(Time.zone.now)
+</code></pre>
+
+<p>However, this is just duplicating the functionality that would be provided
+to you by a class method.</p>
+
+<pre><code>class Post &lt; ActiveRecord::Base
+  def self.created_before(time)
+    where(&quot;created_at &lt; ?&quot;, time)
+  end
+end
+</code></pre>
+
+<p>Using a class method is the preferred way to accept arguments for scopes.
+These methods will still be accessible on the association objects:</p>
+
+<pre><code>category.posts.created_before(time)
+</code></pre>
+
+<h3 id="label-Applying+a+default+scope">Applying a default scope</h3>
+
+<p>If we wish for a scope to be applied across all queries to the model we can
+use the <code>default_scope</code> method within the model itself.</p>
+
+<pre><code>class Client &lt; ActiveRecord::Base
+  default_scope { where(&quot;removed_at IS NULL&quot;) }
+end
+</code></pre>
+
+<p>When queries are executed on this model, the SQL query will now look
+something like this:</p>
+
+<pre><code>SELECT * FROM clients WHERE removed_at IS NULL</code></pre>
+
+<p>If you need to do more complex things with a default scope, you can
+alternatively define it as a class method:</p>
+
+<pre><code>class Client &lt; ActiveRecord::Base
+  def self.default_scope
+    # Should return an ActiveRecord::Relation.
+  end
+end
+</code></pre>
+
+<h3 id="label-Removing+All+Scoping">Removing All Scoping</h3>
+
+<p>If we wish to remove scoping for any reason we can use the
+<code>unscoped</code> method. This is especially useful if a
+<code>default_scope</code> is specified in the model and should not be
+applied for this particular query.</p>
+
+<pre><code>Client.unscoped.all
+</code></pre>
+
+<p>This method removes all scoping and will do a normal query on the table.</p>
+
+<p>Note that chaining <code>unscoped</code> with a <code>scope</code> does not
+work. In these cases, it is recommended that you use the block form of
+<code>unscoped</code>:</p>
+
+<pre><code>Client.unscoped {
+  Client.created_before(Time.zome.now)
+}
+</code></pre>
+
+<h2 id="label-Dynamic+Finders">Dynamic Finders</h2>
+
+<p>For every field (also known as an attribute) you define in your table,
+Active Record provides a finder method. If you have a field called
+<code>first_name</code> on your <code>Client</code> model for example, you
+get <code>find_by_first_name</code> for free from Active Record. If you
+have a <code>locked</code> field on the <code>Client</code> model, you also
+get <code>find_by_locked</code> and methods.</p>
+
+<p>You can specify an exclamation point (<code>!</code>) on the end of the
+dynamic finders to get them to raise an
+<code>ActiveRecord::RecordNotFound</code> error if they do not return any
+records, like <code>Client.find_by_name!(&quot;Ryan&quot;)</code></p>
+
+<p>If you want to find both by name and locked, you can chain these finders
+together by simply typing “<code>and</code>” between the fields. For
+example, <code>Client.find_by_first_name_and_locked(&quot;Ryan&quot;,
+true)</code>.</p>
+
+<h2 id="label-Find+or+Build+a+New+Object">Find or <a href="../../../../classes/Build.html">Build</a> a New <a href="../../../../classes/Object.html">Object</a></h2>
+
+<p>It&#39;s common that you need to find a record or create it if it
+doesn&#39;t exist. You can do that with the <code>find_or_create_by</code>
+and <code>find_or_create_by!</code> methods.</p>
+
+<h3 id="label-find_or_create_by"><code>find_or_create_by</code></h3>
+
+<p>The <code>find_or_create_by</code> method checks whether a record with the
+attributes exists. If it doesn&#39;t, then <code>create</code> is called.
+Let&#39;s see an example.</p>
+
+<p>Suppose you want to find a client named &#39;Andy&#39;, and if there&#39;s
+none, create one. You can do so by running:</p>
+
+<pre><code>Client.find_or_create_by(first_name: &#39;Andy&#39;)
+# =&gt; #&lt;Client id: 1, first_name: &quot;Andy&quot;, orders_count: 0, locked: true, created_at: &quot;2011-08-30 06:09:27&quot;, updated_at: &quot;2011-08-30 06:09:27&quot;&gt;
+</code></pre>
+
+<p>The SQL generated by this method looks like this:</p>
+
+<pre><code>SELECT * FROM clients WHERE (clients.first_name = &#39;Andy&#39;) LIMIT 1
+BEGIN
+INSERT INTO clients (created_at, first_name, locked, orders_count, updated_at) VALUES (&#39;2011-08-30 05:22:57&#39;, &#39;Andy&#39;, 1, NULL, &#39;2011-08-30 05:22:57&#39;)
+COMMIT</code></pre>
+
+<p><code>find_or_create_by</code> returns either the record that already
+exists or the new record. In our case, we didn&#39;t already have a client
+named Andy so the record is created and returned.</p>
+
+<p>The new record might not be saved to the database; that depends on whether
+validations passed or not (just like <code>create</code>).</p>
+
+<p>Suppose we want to set the &#39;locked&#39; attribute to true if we&#39;re
+creating a new record, but we don&#39;t want to include it in the query. So
+we want to find the client named “Andy”, or if that client doesn&#39;t
+exist, create a client named “Andy” which is not locked.</p>
+
+<p>We can achieve this in two ways. The first is to use
+<code>create_with</code>:</p>
+
+<pre><code>Client.create_with(locked: false).find_or_create_by(first_name: &#39;Andy&#39;)
+</code></pre>
+
+<p>The second way is using a block:</p>
+
+<pre><code>Client.find_or_create_by(first_name: &#39;Andy&#39;) do |c|
+  c.locked = false
+end
+</code></pre>
+
+<p>The block will only be executed if the client is being created. The second
+time we run this code, the block will be ignored.</p>
+
+<h3 id="label-find_or_create_by%21"><code>find_or_create_by!</code></h3>
+
+<p>You can also use <code>find_or_create_by!</code> to raise an exception if
+the new record is invalid. Validations are not covered on this guide, but
+let&#39;s assume for a moment that you temporarily add</p>
+
+<pre><code>validates :orders_count, presence: true
+</code></pre>
+
+<p>to your <code>Client</code> model. If you try to create a new
+<code>Client</code> without passing an <code>orders_count</code>, the
+record will be invalid and an exception will be raised:</p>
+
+<pre><code>Client.find_or_create_by!(first_name: &#39;Andy&#39;)
+# =&gt; ActiveRecord::RecordInvalid: Validation failed: Orders count can&#39;t be blank
+</code></pre>
+
+<h3 id="label-find_or_initialize_by"><code>find_or_initialize_by</code></h3>
+
+<p>The <code>find_or_initialize_by</code> method will work just like
+<code>find_or_create_by</code> but it will call <code>new</code> instead of
+<code>create</code>. This means that a new model instance will be created
+in memory but won&#39;t be saved to the database. Continuing with the
+<code>find_or_create_by</code> example, we now want the client named
+&#39;Nick&#39;:</p>
+
+<pre><code>nick = Client.find_or_initialize_by(first_name: &#39;Nick&#39;)
+# =&gt; &lt;Client id: nil, first_name: &quot;Nick&quot;, orders_count: 0, locked: true, created_at: &quot;2011-08-30 06:09:27&quot;, updated_at: &quot;2011-08-30 06:09:27&quot;&gt;
+
+nick.persisted?
+# =&gt; false
+
+nick.new_record?
+# =&gt; true
+</code></pre>
+
+<p>Because the object is not yet stored in the database, the SQL generated
+looks like this:</p>
+
+<pre><code>SELECT * FROM clients WHERE (clients.first_name = &#39;Nick&#39;) LIMIT 1</code></pre>
+
+<p>When you want to save it to the database, just call <code>save</code>:</p>
+
+<pre><code>nick.save
+# =&gt; true
+</code></pre>
+
+<h2 id="label-Finding+by+SQL">Finding by SQL</h2>
+
+<p>If you&#39;d like to use your own SQL to find records in a table you can
+use <code>find_by_sql</code>. The <code>find_by_sql</code> method will
+return an array of objects even if the underlying query returns just a
+single record. For example you could run this query:</p>
+
+<pre><code>Client.find_by_sql(&quot;SELECT * FROM clients
+  INNER JOIN orders ON clients.id = orders.client_id
+  ORDER clients.created_at desc&quot;)
+</code></pre>
+
+<p><code>find_by_sql</code> provides you with a simple way of making custom
+calls to the database and retrieving instantiated objects.</p>
+
+<h3 id="label-select_all"><code>select_all</code></h3>
+
+<p><code>find_by_sql</code> has a close relative called
+<code>connection#select_all</code>. <code>select_all</code> will retrieve
+objects from the database using custom SQL just like
+<code>find_by_sql</code> but will not instantiate them. Instead, you will
+get an array of hashes where each hash indicates a record.</p>
+
+<pre><code>Client.connection.select_all(&quot;SELECT * FROM clients WHERE id = &#39;1&#39;&quot;)
+</code></pre>
+
+<h3 id="label-pluck"><code>pluck</code></h3>
+
+<p><code>pluck</code> can be used to query a single or multiple columns from
+the underlying table of a model. It accepts a list of column names as
+argument and returns an array of values of the specified columns with the
+corresponding data type.</p>
+
+<pre><code>Client.where(active: true).pluck(:id)
+# SELECT id FROM clients WHERE active = 1
+# =&gt; [1, 2, 3]
+
+Client.uniq.pluck(:role)
+# SELECT DISTINCT role FROM clients
+# =&gt; [&#39;admin&#39;, &#39;member&#39;, &#39;guest&#39;]
+
+Client.pluck(:id, :name)
+# SELECT clients.id, clients.name FROM clients
+# =&gt; [[1, &#39;David&#39;], [2, &#39;Jeremy&#39;], [3, &#39;Jose&#39;]]
+</code></pre>
+
+<p><code>pluck</code> makes it possible to replace code like</p>
+
+<pre><code>Client.select(:id).map { |c| c.id }
+# or
+Client.select(:id).map(&amp;:id)
+# or
+Client.select(:id).map { |c| [c.id, c.name] }
+</code></pre>
+
+<p>with</p>
+
+<pre><code>Client.pluck(:id)
+# or
+Client.pluck(:id, :name)
+</code></pre>
+
+<h3 id="label-ids"><code>ids</code></h3>
+
+<p><code>ids</code> can be used to pluck all the IDs for the relation using
+the table&#39;s primary key.</p>
+
+<pre><code>Person.ids
+# SELECT id FROM people
+</code></pre>
+
+<pre><code>class Person &lt; ActiveRecord::Base
+  self.primary_key = &quot;person_id&quot;
+end
+
+Person.ids
+# SELECT person_id FROM people
+</code></pre>
+
+<h2 id="label-Existence+of+Objects">Existence of Objects</h2>
+
+<p>If you simply want to check for the existence of the object there&#39;s a
+method called <code>exists?</code>. This method will query the database
+using the same query as <code>find</code>, but instead of returning an
+object or collection of objects it will return either <code>true</code> or
+<code>false</code>.</p>
+
+<pre><code>Client.exists?(1)
+</code></pre>
+
+<p>The <code>exists?</code> method also takes multiple ids, but the catch is
+that it will return true if any one of those records exists.</p>
+
+<pre><code>Client.exists?(1,2,3)
+# or
+Client.exists?([1,2,3])
+</code></pre>
+
+<p>It&#39;s even possible to use <code>exists?</code> without any arguments on
+a model or a relation.</p>
+
+<pre><code>Client.where(first_name: &#39;Ryan&#39;).exists?
+</code></pre>
+
+<p>The above returns <code>true</code> if there is at least one client with
+the <code>first_name</code> &#39;Ryan&#39; and <code>false</code>
+otherwise.</p>
+
+<pre><code>Client.exists?
+</code></pre>
+
+<p>The above returns <code>false</code> if the <code>clients</code> table is
+empty and <code>true</code> otherwise.</p>
+
+<p>You can also use <code>any?</code> and <code>many?</code> to check for
+existence on a model or relation.</p>
+
+<pre><code># via a model
+Post.any?
+Post.many?
+
+# via a named scope
+Post.recent.any?
+Post.recent.many?
+
+# via a relation
+Post.where(published: true).any?
+Post.where(published: true).many?
+
+# via an association
+Post.first.categories.any?
+Post.first.categories.many?
+</code></pre>
+
+<h2 id="label-Calculations">Calculations</h2>
+
+<p>This section uses count as an example method in this preamble, but the
+options described apply to all sub-sections.</p>
+
+<p>All calculation methods work directly on a model:</p>
+
+<pre><code>Client.count
+# SELECT count(*) AS count_all FROM clients
+</code></pre>
+
+<p>Or on a relation:</p>
+
+<pre><code>Client.where(first_name: &#39;Ryan&#39;).count
+# SELECT count(*) AS count_all FROM clients WHERE (first_name = &#39;Ryan&#39;)
+</code></pre>
+
+<p>You can also use various finder methods on a relation for performing
+complex calculations:</p>
+
+<pre><code>Client.includes(&quot;orders&quot;).where(first_name: &#39;Ryan&#39;, orders: {status: &#39;received&#39;}).count
+</code></pre>
+
+<p>Which will execute:</p>
+
+<pre><code>SELECT count(DISTINCT clients.id) AS count_all FROM clients
+  LEFT OUTER JOIN orders ON orders.client_id = client.id WHERE
+  (clients.first_name = &#39;Ryan&#39; AND orders.status = &#39;received&#39;)</code></pre>
+
+<h3 id="label-Count">Count</h3>
+
+<p>If you want to see how many records are in your model&#39;s table you could
+call <code>Client.count</code> and that will return the number. If you want
+to be more specific and find all the clients with their age present in the
+database you can use <code>Client.count(:age)</code>.</p>
+
+<p>For options, please see the parent section, <a
+href="#calculations">Calculations</a>.</p>
+
+<h3 id="label-Average">Average</h3>
+
+<p>If you want to see the average of a certain number in one of your tables
+you can call the <code>average</code> method on the class that relates to
+the table. This method call will look something like this:</p>
+
+<pre><code>Client.average(&quot;orders_count&quot;)
+</code></pre>
+
+<p>This will return a number (possibly a floating point number such as
+3.14159265) representing the average value in the field.</p>
+
+<p>For options, please see the parent section, <a
+href="#calculations">Calculations</a>.</p>
+
+<h3 id="label-Minimum">Minimum</h3>
+
+<p>If you want to find the minimum value of a field in your table you can call
+the <code>minimum</code> method on the class that relates to the table.
+This method call will look something like this:</p>
+
+<pre><code>Client.minimum(&quot;age&quot;)
+</code></pre>
+
+<p>For options, please see the parent section, <a
+href="#calculations">Calculations</a>.</p>
+
+<h3 id="label-Maximum">Maximum</h3>
+
+<p>If you want to find the maximum value of a field in your table you can call
+the <code>maximum</code> method on the class that relates to the table.
+This method call will look something like this:</p>
+
+<pre><code>Client.maximum(&quot;age&quot;)
+</code></pre>
+
+<p>For options, please see the parent section, <a
+href="#calculations">Calculations</a>.</p>
+
+<h3 id="label-Sum">Sum</h3>
+
+<p>If you want to find the sum of a field for all records in your table you
+can call the <code>sum</code> method on the class that relates to the
+table. This method call will look something like this:</p>
+
+<pre><code>Client.sum(&quot;orders_count&quot;)
+</code></pre>
+
+<p>For options, please see the parent section, <a
+href="#calculations">Calculations</a>.</p>
+
+<h2 id="label-Running+EXPLAIN">Running EXPLAIN</h2>
+
+<p>You can run EXPLAIN on the queries triggered by relations. For example,</p>
+
+<pre><code>User.where(id: 1).joins(:posts).explain
+</code></pre>
+
+<p>may yield</p>
+
+<pre><code>EXPLAIN for: SELECT `users`.* FROM `users` INNER JOIN `posts` ON `posts`.`user_id` = `users`.`id` WHERE `users`.`id` = 1
++----+-------------+-------+-------+---------------+---------+---------+-------+------+-------------+
+| id | select_type | table | type  | possible_keys | key     | key_len | ref   | rows | Extra       |
++----+-------------+-------+-------+---------------+---------+---------+-------+------+-------------+
+|  1 | SIMPLE      | users | const | PRIMARY       | PRIMARY | 4       | const |    1 |             |
+|  1 | SIMPLE      | posts | ALL   | NULL          | NULL    | NULL    | NULL  |    1 | Using where |
++----+-------------+-------+-------+---------------+---------+---------+-------+------+-------------+
+2 rows in set (0.00 sec)</code></pre>
+
+<p>under MySQL.</p>
+
+<p>Active Record performs a pretty printing that emulates the one of the
+database shells. So, the same query running with the PostgreSQL adapter
+would yield instead</p>
+
+<pre><code>EXPLAIN for: SELECT &quot;users&quot;.* FROM &quot;users&quot; INNER JOIN &quot;posts&quot; ON &quot;posts&quot;.&quot;user_id&quot; = &quot;users&quot;.&quot;id&quot; WHERE &quot;users&quot;.&quot;id&quot; = 1
+                                  QUERY PLAN
+------------------------------------------------------------------------------
+ Nested Loop Left Join  (cost=0.00..37.24 rows=8 width=0)
+   Join Filter: (posts.user_id = users.id)
+   -&gt;  Index Scan using users_pkey on users  (cost=0.00..8.27 rows=1 width=4)
+         Index Cond: (id = 1)
+   -&gt;  Seq Scan on posts  (cost=0.00..28.88 rows=8 width=4)
+         Filter: (posts.user_id = 1)
+(6 rows)</code></pre>
+
+<p>Eager loading may trigger more than one query under the hood, and some
+queries may need the results of previous ones. Because of that,
+<code>explain</code> actually executes the query, and then asks for the
+query plans. For example,</p>
+
+<pre><code>User.where(id: 1).includes(:posts).explain
+</code></pre>
+
+<p>yields</p>
+
+<pre><code>EXPLAIN for: SELECT `users`.* FROM `users`  WHERE `users`.`id` = 1
++----+-------------+-------+-------+---------------+---------+---------+-------+------+-------+
+| id | select_type | table | type  | possible_keys | key     | key_len | ref   | rows | Extra |
++----+-------------+-------+-------+---------------+---------+---------+-------+------+-------+
+|  1 | SIMPLE      | users | const | PRIMARY       | PRIMARY | 4       | const |    1 |       |
++----+-------------+-------+-------+---------------+---------+---------+-------+------+-------+
+1 row in set (0.00 sec)
+
+EXPLAIN for: SELECT `posts`.* FROM `posts`  WHERE `posts`.`user_id` IN (1)
++----+-------------+-------+------+---------------+------+---------+------+------+-------------+
+| id | select_type | table | type | possible_keys | key  | key_len | ref  | rows | Extra       |
++----+-------------+-------+------+---------------+------+---------+------+------+-------------+
+|  1 | SIMPLE      | posts | ALL  | NULL          | NULL | NULL    | NULL |    1 | Using where |
++----+-------------+-------+------+---------------+------+---------+------+------+-------------+
+1 row in set (0.00 sec)</code></pre>
+
+<p>under MySQL.</p>
+
+<h3 id="label-Interpreting+EXPLAIN">Interpreting EXPLAIN</h3>
+
+<p>Interpretation of the output of EXPLAIN is beyond the scope of this guide.
+The following pointers may be helpful:</p>
+<ul><li>
+<p>SQLite3: <a href="http://www.sqlite.org/eqp.html">EXPLAIN QUERY PLAN</a></p>
+</li><li>
+<p>MySQL: <a
+href="http://dev.mysql.com/doc/refman/5.6/en/explain-output.html">EXPLAIN
+Output Format</a></p>
+</li><li>
+<p>PostgreSQL: <a
+href="http://www.postgresql.org/docs/current/static/using-explain.html">Using
+EXPLAIN</a></p>
+</li></ul>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

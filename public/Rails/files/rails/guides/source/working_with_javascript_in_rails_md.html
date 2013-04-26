@@ -1,0 +1,454 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>working_with_javascript_in_rails.md</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>     
+    <div class="banner">
+        
+        <h1>
+            working_with_javascript_in_rails.md
+        </h1>
+        <ul class="files">
+            <li>rails/guides/source/working_with_javascript_in_rails.md</li>
+            <li>Last modified: 2013-04-26 19:51:18 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h1 id="label-Working+with+JavaScript+in+Rails">Working with JavaScript in <a href="../../../../classes/Rails.html">Rails</a></h1>
+
+<p>This guide covers the built-in Ajax/JavaScript functionality of <a
+href="../../../../classes/Rails.html">Rails</a> (and more); it will enable
+you to create rich and dynamic Ajax applications with ease!</p>
+
+<p>After reading this guide, you will know:</p>
+<ul><li>
+<p>The basics of Ajax.</p>
+</li><li>
+<p>Unobtrusive JavaScript.</p>
+</li><li>
+<p>How Rails&#39; built-in helpers assist you.</p>
+</li><li>
+<p>How to handle Ajax on the server side.</p>
+</li><li>
+<p>The Turbolinks gem.</p>
+</li></ul>
+<hr style="height: 1px">
+
+<h2 id="label-An+Introduction+to+Ajax">An Introduction to Ajax</h2>
+
+<p>In order to understand Ajax, you must first understand what a web browser
+does normally.</p>
+
+<p>When you type <code>http://localhost:3000</code> into your browser&#39;s
+address bar and hit &#39;Go,&#39; the browser (your &#39;client&#39;) makes
+a request to the server. It parses the response, then fetches all
+associated assets, like JavaScript files, stylesheets and images. It then
+assembles the page. If you click a link, it does the same process: fetch
+the page, fetch the assets, put it all together, show you the results. This
+is called the &#39;request response cycle.&#39;</p>
+
+<p>JavaScript can also make requests to the server, and parse the response. It
+also has the ability to update information on the page. Combining these two
+powers, a JavaScript writer can make a web page that can update just parts
+of itself, without needing to get the full page data from the server. This
+is a powerful technique that we call Ajax.</p>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> ships with CoffeeScript
+by default, and so the rest of the examples in this guide will be in
+CoffeeScript. All of these lessons, of course, apply to vanilla JavaScript
+as well.</p>
+
+<p>As an example, here&#39;s some CoffeeScript code that makes an Ajax request
+using the jQuery library:</p>
+
+<pre><code>$.ajax(url: &quot;/test&quot;).done (html) -&gt;
+  $(&quot;#results&quot;).append html</code></pre>
+
+<p>This code fetches data from “/test”, and then appends the result to the
+<code>div</code> with an id of <code>results</code>.</p>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> provides quite a bit of
+built-in support for building web pages with this technique. You rarely
+have to write this code yourself. The rest of this guide will show you how
+<a href="../../../../classes/Rails.html">Rails</a> can help you write
+websites in this way, but it&#39;s all built on top of this fairly simple
+technique.</p>
+
+<h2 id="label-Unobtrusive+JavaScript">Unobtrusive JavaScript</h2>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> uses a technique called
+“Unobtrusive JavaScript” to handle attaching JavaScript to the DOM. This is
+generally considered to be a best-practice within the frontend community,
+but you may occasionally read tutorials that demonstrate other ways.</p>
+
+<p>Here&#39;s the simplest way to write JavaScript. You may see it referred to
+as &#39;inline JavaScript&#39;:</p>
+
+<pre><code>&lt;a href=&quot;#&quot; onclick=&quot;this.style.backgroundColor=&#39;#990000&#39;&quot;&gt;Paint it red&lt;/a&gt;</code></pre>
+
+<p>When clicked, the link background will become red. Here&#39;s the problem:
+what happens when we have lots of JavaScript we want to execute on a click?</p>
+
+<pre><code>&lt;a href=&quot;#&quot; onclick=&quot;this.style.backgroundColor=&#39;#009900&#39;;this.style.color=&#39;#FFFFFF&#39;;&quot;&gt;Paint it green&lt;/a&gt;</code></pre>
+
+<p>Awkward, right? We could pull the function definition out of the click
+handler, and turn it into CoffeeScript:</p>
+
+<pre><code>paintIt = (element, backgroundColor, textColor) -&gt;
+  element.style.backgroundColor = backgroundColor
+  if textColor?
+    element.style.color = textColor</code></pre>
+
+<p>And then on our page:</p>
+
+<pre><code>&lt;a href=&quot;#&quot; onclick=&quot;paintIt(this, &#39;#990000&#39;)&quot;&gt;Paint it red&lt;/a&gt;</code></pre>
+
+<p>That&#39;s a little bit better, but what about multiple links that have the
+same effect?</p>
+
+<pre><code>&lt;a href=&quot;#&quot; onclick=&quot;paintIt(this, &#39;#990000&#39;)&quot;&gt;Paint it red&lt;/a&gt;
+&lt;a href=&quot;#&quot; onclick=&quot;paintIt(this, &#39;#009900&#39;, &#39;#FFFFFF&#39;)&quot;&gt;Paint it green&lt;/a&gt;
+&lt;a href=&quot;#&quot; onclick=&quot;paintIt(this, &#39;#000099&#39;, &#39;#FFFFFF&#39;)&quot;&gt;Paint it blue&lt;/a&gt;</code></pre>
+
+<p>Not very DRY, eh? We can fix this by using events instead. We&#39;ll add a
+<code>data-*</code> attribute to our link, and then bind a handler to the
+click event of every link that has that attribute:</p>
+
+<pre><code>paintIt = (element, backgroundColor, textColor) -&gt;
+  element.style.backgroundColor = backgroundColor
+  if textColor?
+    element.style.color = textColor
+
+$ -&gt;
+  $(&quot;a[data-background-color]&quot;).click -&gt;
+    backgroundColor = $(this).data(&quot;background-color&quot;)
+    textColor = $(this).data(&quot;text-color&quot;)
+    paintIt(this, backgroundColor, textColor)</code></pre>
+
+<pre><code>&lt;a href=&quot;#&quot; data-background-color=&quot;#990000&quot;&gt;Paint it red&lt;/a&gt;
+&lt;a href=&quot;#&quot; data-background-color=&quot;#009900&quot; data-text-color=&quot;#FFFFFF&quot;&gt;Paint it green&lt;/a&gt;
+&lt;a href=&quot;#&quot; data-background-color=&quot;#000099&quot; data-text-color=&quot;#FFFFFF&quot;&gt;Paint it blue&lt;/a&gt;</code></pre>
+
+<p>We call this &#39;unobtrusive&#39; JavaScript because we&#39;re no longer
+mixing our JavaScript into our <a
+href="../../../../classes/HTML.html">HTML</a>. We&#39;ve properly separated
+our concerns, making future change easy. We can easily add behavior to any
+link by adding the data attribute. We can run all of our JavaScript through
+a minimizer and concatenator. We can serve our entire JavaScript bundle on
+every page, which means that it&#39;ll get downloaded on the first page
+load and then be cached on every page after that. Lots of little benefits
+really add up.</p>
+
+<p>The <a href="../../../../classes/Rails.html">Rails</a> team strongly
+encourages you to write your CoffeeScript (and JavaScript) in this style,
+and you can expect that many libraries will also follow this pattern.</p>
+
+<h2 id="label-Built-in+Helpers">Built-in Helpers</h2>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> provides a bunch of view
+helper methods written in Ruby to assist you in generating <a
+href="../../../../classes/HTML.html">HTML</a>. Sometimes, you want to add a
+little Ajax to those elements, and <a
+href="../../../../classes/Rails.html">Rails</a> has got your back in those
+cases.</p>
+
+<p>Because of Unobtrusive JavaScript, the <a
+href="../../../../classes/Rails.html">Rails</a> “Ajax helpers” are actually
+in two parts: the JavaScript half and the Ruby half.</p>
+
+<p><a
+href="https://github.com/rails/jquery-ujs/blob/master/src/rails.js">rails.js</a>
+provides the JavaScript half, and the regular Ruby view helpers add
+appropriate tags to your DOM. The CoffeeScript in rails.js then listens for
+these attributes, and attaches appropriate handlers.</p>
+
+<h3 id="label-form_for">form_for</h3>
+
+<p><a
+href="http://api.rubyonrails.org/classes/ActionView/Helpers/FormHelper.html#method-i-form_for">form_for</a>
+is a helper that assists with writing forms. <code>form_for</code> takes a
+<code>:remote</code> option. It works like this:</p>
+
+<pre><code>&lt;%= form_for(@post, remote: true) do |f| %&gt;
+  ...
+&lt;% end %&gt;</code></pre>
+
+<p>This will generate the following HTML:</p>
+
+<pre><code>&lt;form accept-charset=&quot;UTF-8&quot; action=&quot;/posts&quot; class=&quot;new_post&quot; data-remote=&quot;true&quot; id=&quot;new_post&quot; method=&quot;post&quot;&gt;
+  ...
+&lt;/form&gt;</code></pre>
+
+<p>Note the <code>data-remote=&#39;true&#39;</code>. Now, the form will be
+submitted by Ajax rather than by the browser&#39;s normal submit mechanism.</p>
+
+<p>You probably don&#39;t want to just sit there with a filled out
+<code>&lt;form&gt;</code>, though. You probably want to do something upon a
+successful submission. To do that, bind to the <code>ajax:success</code>
+event. On failure, use <code>ajax:error</code>. Check it out:</p>
+
+<pre><code>$(document).ready -&gt;
+  $(&quot;#new_post&quot;).on(&quot;ajax:success&quot;, (e, data, status, xhr) -&gt;
+    $(&quot;#new_post&quot;).append xhr.responseText
+  ).bind &quot;ajax:error&quot;, (e, xhr, status, error) -&gt;
+    $(&quot;#new_post&quot;).append &quot;&lt;p&gt;ERROR&lt;/p&gt;&quot;</code></pre>
+
+<p>Obviously, you&#39;ll want to be a bit more sophisticated than that, but
+it&#39;s a start.</p>
+
+<h3 id="label-form_tag">form_tag</h3>
+
+<p><a
+href="http://api.rubyonrails.org/classes/ActionView/Helpers/FormTagHelper.html#method-i-form_tag">form_tag</a>
+is very similar to <code>form_for</code>. It has a <code>:remote</code>
+option that you can use like this:</p>
+
+<pre><code>&lt;%= form_tag(&#39;/posts&#39;, remote: true) %&gt;</code></pre>
+
+<p>Everything else is the same as <code>form_for</code>. See its documentation
+for full details.</p>
+
+<h3 id="label-link_to">link_to</h3>
+
+<p><a
+href="http://api.rubyonrails.org/classes/ActionView/Helpers/UrlHelper.html#method-i-link_to">link_to</a>
+is a helper that assists with generating links. It has a
+<code>:remote</code> option you can use like this:</p>
+
+<pre><code>&lt;%= link_to &quot;a post&quot;, @post, remote: true %&gt;</code></pre>
+
+<p>which generates</p>
+
+<pre><code>&lt;a href=&quot;/posts/1&quot; data-remote=&quot;true&quot;&gt;a post&lt;/a&gt;</code></pre>
+
+<p>You can bind to the same Ajax events as <code>form_for</code>. Here&#39;s
+an example. Let&#39;s assume that we have a list of posts that can be
+deleted with just one click. We would generate some <a
+href="../../../../classes/HTML.html">HTML</a> like this:</p>
+
+<pre><code>&lt;%= link_to &quot;Delete post&quot;, @post, remote: true, method: :delete %&gt;</code></pre>
+
+<p>and write some CoffeeScript like this:</p>
+
+<pre><code>$ -&gt;
+  $(&quot;a[data-remote]&quot;).on &quot;ajax:success&quot;, (e, data, status, xhr) -&gt;
+    alert &quot;The post was deleted.&quot;</code></pre>
+
+<h3 id="label-button_to">button_to</h3>
+
+<p><a
+href="http://api.rubyonrails.org/classes/ActionView/Helpers/UrlHelper.html#method-i-button_to">button_to</a>
+is a helper that helps you create buttons. It has a <code>:remote</code>
+option that you can call like this:</p>
+
+<pre><code>&lt;%= button_to &quot;A post&quot;, @post, remote: true %&gt;</code></pre>
+
+<p>this generates</p>
+
+<pre><code>&lt;form action=&quot;/posts/1&quot; class=&quot;button_to&quot; data-remote=&quot;true&quot; method=&quot;post&quot;&gt;
+  &lt;div&gt;&lt;input type=&quot;submit&quot; value=&quot;A post&quot;&gt;&lt;/div&gt;
+&lt;/form&gt;</code></pre>
+
+<p>Since it&#39;s just a <code>&lt;form&gt;</code>, all of the information on
+<code>form_for</code> also applies.</p>
+
+<h2 id="label-Server-Side+Concerns">Server-Side Concerns</h2>
+
+<p>Ajax isn&#39;t just client-side, you also need to do some work on the
+server side to support it. Often, people like their Ajax requests to return
+JSON rather than <a href="../../../../classes/HTML.html">HTML</a>.
+Let&#39;s discuss what it takes to make that happen.</p>
+
+<h3 id="label-A+Simple+Example"><a href="../../../../classes/A.html">A</a> Simple Example</h3>
+
+<p>Imagine you have a series of users that you would like to display and
+provide a form on that same page to create a new user. The index action of
+your controller looks like this:</p>
+
+<pre><code>class UsersController &lt; ApplicationController
+  def index
+    @users = User.all
+    @user = User.new
+  end
+  # ...
+</code></pre>
+
+<p>The index view (<code>app/views/users/index.html.erb</code>) contains:</p>
+
+<pre><code>&lt;b&gt;Users&lt;/b&gt;
+
+&lt;ul id=&quot;users&quot;&gt;
+&lt;% @users.each do |user| %&gt;
+  &lt;%= render user %&gt;
+&lt;% end %&gt;
+&lt;/ul&gt;
+
+&lt;br&gt;
+
+&lt;%= form_for(@user, remote: true) do |f| %&gt;
+  &lt;%= f.label :name %&gt;&lt;br&gt;
+  &lt;%= f.text_field :name %&gt;
+  &lt;%= f.submit %&gt;
+&lt;% end %&gt;</code></pre>
+
+<p>The <code>app/views/users/_user.html.erb</code> partial contains the
+following:</p>
+
+<pre><code>&lt;li&gt;&lt;%= user.name %&gt;&lt;/li&gt;</code></pre>
+
+<p>The top portion of the index page displays the users. The bottom portion
+provides a form to create a new user.</p>
+
+<p>The bottom form will call the create action on the Users controller.
+Because the form&#39;s remote option is set to true, the request will be
+posted to the users controller as an Ajax request, looking for JavaScript.
+In order to service that request, the create action of your controller
+would look like this:</p>
+
+<pre><code># app/controllers/users_controller.rb
+  # ......
+  def create
+    @user = User.new(params[:user])
+
+    respond_to do |format|
+      if @user.save
+        format.html { redirect_to @user, notice: &#39;User was successfully created.&#39; }
+        format.js   {}
+        format.json { render json: @user, status: :created, location: @user }
+      else
+        format.html { render action: &quot;new&quot; }
+        format.json { render json: @user.errors, status: :unprocessable_entity }
+      end
+    end
+  end
+</code></pre>
+
+<p>Notice the format.js in the <code>respond_to</code> block; that allows the
+controller to respond to your Ajax request. You then have a corresponding
+<code>app/views/users/create.js.erb</code> view file that generates the
+actual JavaScript code that will be sent and executed on the client side.</p>
+
+<pre><code>$(&quot;&lt;%= escape_javascript(render @user) %&gt;&quot;).appendTo(&quot;#users&quot;);</code></pre>
+
+<h2 id="label-Turbolinks">Turbolinks</h2>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> 4 ships with the <a
+href="https://github.com/rails/turbolinks">Turbolinks gem</a>. This gem
+uses Ajax to speed up page rendering in most applications.</p>
+
+<h3 id="label-How+Turbolinks+Works">How Turbolinks Works</h3>
+
+<p>Turbolinks attaches a click handler to all <code>&lt;a&gt;</code> on the
+page. If your browser supports <a
+href="https://developer.mozilla.org/en-US/docs/DOM/Manipulating_the_browser_history#The_pushState(\).C2.A0method">PushState</a>,
+Turbolinks will make an Ajax request for the page, parse the response, and
+replace the entire <code>&lt;body&gt;</code> of the page with the
+<code>&lt;body&gt;</code> of the response. It will then use PushState to
+change the URL to the correct one, preserving refresh semantics and giving
+you pretty URLs.</p>
+
+<p>The only thing you have to do to enable Turbolinks is have it in your <a
+href="../../Gemfile.html">Gemfile</a>, and put <code>//= require
+turbolinks</code> in your CoffeeScript manifest, which is usually
+<code>app/assets/javascripts/application.js</code>.</p>
+
+<p>If you want to disable Turbolinks for certain links, add a
+<code>data-no-turbolink</code> attribute to the tag:</p>
+
+<pre><code>&lt;a href=&quot;...&quot; data-no-turbolink&gt;No turbolinks here&lt;/a&gt;.</code></pre>
+
+<h3 id="label-Page+Change+Events">Page Change Events</h3>
+
+<p>When writing CoffeeScript, you&#39;ll often want to do some sort of
+processing upon page load. With jQuery, you&#39;d write something like
+this:</p>
+
+<pre><code>$(document).ready -&gt;
+  alert &quot;page has loaded!&quot;</code></pre>
+
+<p>However, because Turbolinks overrides the normal page loading process, the
+event that this relies on will not be fired. If you have code that looks
+like this, you must change your code to do this instead:</p>
+
+<pre><code>$(document).on &quot;page:change&quot;, -&gt;
+  alert &quot;page has loaded!&quot;</code></pre>
+
+<p>For more details, including other events you can bind to, check out <a
+href="https://github.com/rails/turbolinks/blob/master/README.md">the
+Turbolinks README</a>.</p>
+
+<h2 id="label-Other+Resources">Other Resources</h2>
+
+<p>Here are some helpful links to help you learn even more:</p>
+<ul><li>
+<p><a href="https://github.com/rails/jquery-ujs/wiki">jquery-ujs wiki</a></p>
+</li><li>
+<p><a
+href="https://github.com/rails/jquery-ujs/wiki/External-articles">jquery-ujs
+list of external articles</a></p>
+</li><li>
+<p><a
+href="http://www.alfajango.com/blog/rails-3-remote-links-and-forms/">Rails
+3 Remote Links and Forms: A Definitive Guide</a></p>
+</li><li>
+<p><a
+href="http://railscasts.com/episodes/205-unobtrusive-javascript">Railscasts:
+Unobtrusive JavaScript</a></p>
+</li></ul>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

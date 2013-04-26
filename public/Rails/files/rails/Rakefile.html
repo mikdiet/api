@@ -1,0 +1,271 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Rakefile</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../css/github.css" type="text/css" media="screen" />
+<script src="../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>     
+    <div class="banner">
+        
+        <h1>
+            Rakefile
+        </h1>
+        <ul class="files">
+            <li>rails/Rakefile</li>
+            <li>Last modified: 2013-04-26 19:51:17 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>require &#39;rdoc/task&#39; require &#39;sdoc&#39; require
+&#39;net/http&#39;</p>
+
+<p>$:.unshift File.expand_path(&#39;..&#39;, __FILE__) require “tasks/release”</p>
+
+<p>desc “Build gem files for all projects” task :build =&gt; “all:build”</p>
+
+<p>desc “Release all gems to gemcutter and create a tag” task :release =&gt;
+“all:release”</p>
+
+<p>PROJECTS = %w(activesupport activemodel actionpack actionmailer
+activerecord railties)</p>
+
+<p>desc &#39;Run all tests by default&#39; task :default =&gt; %w(test
+test:isolated)</p>
+
+<p>%w(test test:isolated package gem).each do |task_name|</p>
+
+<pre><code>desc &quot;Run #{task_name} task for all projects&quot;
+task task_name do
+  errors = []
+  PROJECTS.each do |project|
+    system(%(cd #{project} &amp;&amp; #{$0} #{task_name})) || errors &lt;&lt; project
+  end
+  fail(&quot;Errors in #{errors.join(&#39;, &#39;)}&quot;) unless errors.empty?
+end
+</code></pre>
+
+<p>end</p>
+
+<p>desc “Smoke-test all projects” task :smoke do</p>
+
+<pre><code>(PROJECTS - %w(activerecord)).each do |project|
+  system %(cd #{project} &amp;&amp; #{$0} test:isolated)
+end
+system %(cd activerecord &amp;&amp; #{$0} sqlite3:isolated_test)
+</code></pre>
+
+<p>end</p>
+
+<p>desc “Install gems for all projects.” task :install =&gt; :gem do</p>
+
+<pre><code>version = File.read(&quot;RAILS_VERSION&quot;).strip
+(PROJECTS - [&quot;railties&quot;]).each do |project|
+  puts &quot;INSTALLING #{project}&quot;
+  system(&quot;gem install #{project}/pkg/#{project}-#{version}.gem --local --no-ri --no-rdoc&quot;)
+end
+system(&quot;gem install railties/pkg/railties-#{version}.gem --local --no-ri --no-rdoc&quot;)
+system(&quot;gem install pkg/rails-#{version}.gem --local --no-ri --no-rdoc&quot;)
+</code></pre>
+
+<p>end</p>
+
+<p>desc “Generate documentation for the <a
+href="../../classes/Rails.html">Rails</a> framework” RDoc::Task.new do
+|rdoc|</p>
+
+<pre><code>RDOC_MAIN = &#39;RDOC_MAIN.rdoc&#39;
+
+# This is a hack.
+#
+# Backslashes are needed to prevent RDoc from autolinking &quot;Rails&quot; to the
+# documentation of the Rails module. On the other hand, as of this
+# writing README.rdoc is displayed in the front page of the project in
+# GitHub, where backslashes are shown and look weird.
+#
+# The temporary solution is to have a README.rdoc without backslashes for
+# GitHub, and gsub it to generate the main page of the API.
+#
+# Also, relative links in GitHub have to point to blobs, whereas in the API
+# they need to point to files.
+#
+# The idea for the future is to have totally different files, since the
+# API is no longer a generic entry point to Rails and deserves a
+# dedicated main page specifically thought as an API entry point.
+rdoc.before_running_rdoc do
+  rdoc_main = File.read(&#39;README.rdoc&#39;)
+
+  # The ^(?=\S) assertion prevents code blocks from being processed,
+  # since no autolinking happens there and RDoc displays the backslash
+  # otherwise.
+  rdoc_main.gsub!(/^(?=\S).*?\b(?=Rails)\b/) { &quot;#$&amp;\\&quot; }
+  rdoc_main.gsub!(%r{link:/rails/rails/blob/master/(\w+)/README\.rdoc}, &quot;link:files/\\1/README_rdoc.html&quot;)
+
+  # Remove Travis and Gemnasium status images from API pages. Only the GitHub
+  # README page gets these images. Travis&#39;s HTTPS build image is used to
+  # avoid GitHub caching: http://about.travis-ci.org/docs/user/status-images
+  rdoc_main.gsub!(/^== Code Status(\n(?!==).*)  , &#39;&#39;)
+
+  File.open(RDOC_MAIN, &#39;w&#39;) do |f|
+    f.write(rdoc_main)
+  end
+
+  rdoc.rdoc_files.include(RDOC_MAIN)
+end
+
+rdoc.rdoc_dir = &#39;doc/rdoc&#39;
+rdoc.title    = &quot;Ruby on Rails Documentation&quot;
+
+rdoc.options &lt;&lt; &#39;-f&#39; &lt;&lt; &#39;sdoc&#39;
+rdoc.options &lt;&lt; &#39;-T&#39; &lt;&lt; &#39;rails&#39;
+rdoc.options &lt;&lt; &#39;-e&#39; &lt;&lt; &#39;UTF-8&#39;
+rdoc.options &lt;&lt; &#39;-g&#39; # SDoc flag, link methods to GitHub
+rdoc.options &lt;&lt; &#39;-m&#39; &lt;&lt; RDOC_MAIN
+
+rdoc.rdoc_files.include(&#39;railties/CHANGELOG.md&#39;)
+rdoc.rdoc_files.include(&#39;railties/MIT-LICENSE&#39;)
+rdoc.rdoc_files.include(&#39;railties/README.rdoc&#39;)
+rdoc.rdoc_files.include(&#39;railties/lib     .rb&#39;)
+rdoc.rdoc_files.exclude(&#39;railties/lib/rails/generators/   templates/**/*.rb&#39;)
+
+rdoc.rdoc_files.include(&#39;activerecord/README.rdoc&#39;)
+rdoc.rdoc_files.include(&#39;activerecord/CHANGELOG.md&#39;)
+rdoc.rdoc_files.include(&#39;activerecord/lib/active_record/**/*.rb&#39;)
+rdoc.rdoc_files.exclude(&#39;activerecord/lib/active_record/vendor/*&#39;)
+
+rdoc.rdoc_files.include(&#39;actionpack/README.rdoc&#39;)
+rdoc.rdoc_files.include(&#39;actionpack/CHANGELOG.md&#39;)
+rdoc.rdoc_files.include(&#39;actionpack/lib/abstract_controller/**/*.rb&#39;)
+rdoc.rdoc_files.include(&#39;actionpack/lib/action_controller/**/*.rb&#39;)
+rdoc.rdoc_files.include(&#39;actionpack/lib/action_dispatch/**/*.rb&#39;)
+rdoc.rdoc_files.include(&#39;actionpack/lib/action_view/**/*.rb&#39;)
+rdoc.rdoc_files.exclude(&#39;actionpack/lib/action_controller/vendor/*&#39;)
+
+rdoc.rdoc_files.include(&#39;actionmailer/README.rdoc&#39;)
+rdoc.rdoc_files.include(&#39;actionmailer/CHANGELOG.md&#39;)
+rdoc.rdoc_files.include(&#39;actionmailer/lib/action_mailer/**/*.rb&#39;)
+rdoc.rdoc_files.exclude(&#39;actionmailer/lib/action_mailer/vendor/*&#39;)
+
+rdoc.rdoc_files.include(&#39;activesupport/README.rdoc&#39;)
+rdoc.rdoc_files.include(&#39;activesupport/CHANGELOG.md&#39;)
+rdoc.rdoc_files.include(&#39;activesupport/lib/active_support/**/*.rb&#39;)
+rdoc.rdoc_files.exclude(&#39;activesupport/lib/active_support/vendor/*&#39;)
+
+rdoc.rdoc_files.include(&#39;activemodel/README.rdoc&#39;)
+rdoc.rdoc_files.include(&#39;activemodel/CHANGELOG.md&#39;)
+rdoc.rdoc_files.include(&#39;activemodel/lib/active_model/**/*.rb&#39;)
+</code></pre>
+
+<p>end</p>
+
+<p># Enhance rdoc task to copy referenced images also task :rdoc do</p>
+
+<pre><code>FileUtils.mkdir_p &quot;doc/rdoc/files/examples/&quot;
+FileUtils.copy &quot;activerecord/examples/associations.png&quot;, &quot;doc/rdoc/files/examples/associations.png&quot;</code></pre>
+
+<p>end</p>
+
+<p>desc &#39;Bump all versions to match version.rb&#39; task :update_versions
+do</p>
+
+<pre><code>require File.dirname(__FILE__) + &quot;/version&quot;
+
+File.open(&quot;RAILS_VERSION&quot;, &quot;w&quot;) do |f|
+  f.write Rails::VERSION::STRING + &quot;\n&quot;
+end
+
+constants = {
+  &quot;activesupport&quot;   =&gt; &quot;ActiveSupport&quot;,
+  &quot;activemodel&quot;     =&gt; &quot;ActiveModel&quot;,
+  &quot;actionpack&quot;      =&gt; &quot;ActionPack&quot;,
+  &quot;actionmailer&quot;    =&gt; &quot;ActionMailer&quot;,
+  &quot;activerecord&quot;    =&gt; &quot;ActiveRecord&quot;,
+  &quot;railties&quot;        =&gt; &quot;Rails&quot;
+}
+
+version_file = File.read(&quot;version.rb&quot;)
+
+PROJECTS.each do |project|
+  Dir[&quot;#{project}/lib/*/version.rb&quot;].each do |file|
+    File.open(file, &quot;w&quot;) do |f|
+      f.write version_file.gsub(/Rails/, constants[project])
+    end
+  end
+end
+</code></pre>
+
+<p>end</p>
+
+<p># # We have a webhook configured in Github that gets invoked after pushes.
+# This hook triggers the following tasks: # #   * updates the local
+checkout #   * updates <a href="../../classes/Rails.html">Rails</a>
+Contributors #   * generates and publishes edge docs #   * if there&#39;s a
+new stable tag, generates and publishes stable docs # # Everything is
+automated and you do NOT need to run this task normally. # # We publish a
+new version by tagging, and pushing a tag does not trigger # that webhook.
+Stable docs would be updated by any subsequent regular # push, but if you
+want that to happen right away just run this. # desc &#39;Publishes docs,
+run this AFTER a new stable tag has been pushed&#39; task :publish_docs do</p>
+
+<pre><code>Net::HTTP.new(&#39;api.rubyonrails.org&#39;, 8080).start do |http|
+  request  = Net::HTTP::Post.new(&#39;/rails-master-hook&#39;)
+  response = http.request(request)
+  puts response.body
+end
+</code></pre>
+
+<p>end</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

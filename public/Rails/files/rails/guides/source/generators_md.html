@@ -1,0 +1,805 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>generators.md</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>     
+    <div class="banner">
+        
+        <h1>
+            generators.md
+        </h1>
+        <ul class="files">
+            <li>rails/guides/source/generators.md</li>
+            <li>Last modified: 2013-04-26 19:51:18 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h1 id="label-Creating+and+Customizing+Rails+Generators+%26+Templates">Creating and Customizing <a href="../../../../classes/Rails.html">Rails</a> Generators &amp; Templates</h1>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> generators are an
+essential tool if you plan to improve your workflow. With this guide you
+will learn how to create generators and customize existing ones.</p>
+
+<p>After reading this guide, you will know:</p>
+<ul><li>
+<p>How to see which generators are available in your application.</p>
+</li><li>
+<p>How to create a generator using templates.</p>
+</li><li>
+<p>How <a href="../../../../classes/Rails.html">Rails</a> searches for
+generators before invoking them.</p>
+</li><li>
+<p>How to customize your scaffold by creating new generators.</p>
+</li><li>
+<p>How to customize your scaffold by changing generator templates.</p>
+</li><li>
+<p>How to use fallbacks to avoid overwriting a huge set of generators.</p>
+</li><li>
+<p>How to create an application template.</p>
+</li></ul>
+<hr style="height: 1px">
+
+<h2 id="label-First+Contact">First <a href="../../../../classes/Contact.html">Contact</a></h2>
+
+<p>When you create an application using the <code>rails</code> command, you
+are in fact using a <a href="../../../../classes/Rails.html">Rails</a>
+generator. After that, you can get a list of all available generators by
+just invoking <code>rails generate</code>:</p>
+
+<pre><code>$ rails new myapp
+$ cd myapp
+$ rails generate</code></pre>
+
+<p>You will get a list of all generators that comes with <a
+href="../../../../classes/Rails.html">Rails</a>. If you need a detailed
+description of the helper generator, for example, you can simply do:</p>
+
+<pre><code>$ rails generate helper --help</code></pre>
+
+<h2 id="label-Creating+Your+First+Generator">Creating Your First Generator</h2>
+
+<p>Since <a href="../../../../classes/Rails.html">Rails</a> 3.0, generators
+are built on top of <a href="https://github.com/wycats/thor">Thor</a>. Thor
+provides powerful options parsing and a great API for manipulating files.
+For instance, let&#39;s build a generator that creates an initializer file
+named <code>initializer.rb</code> inside <code>config/initializers</code>.</p>
+
+<p>The first step is to create a file at
+<code>lib/generators/initializer_generator.rb</code> with the following
+content:</p>
+
+<pre><code>class InitializerGenerator &lt; Rails::Generators::Base
+  def create_initializer_file
+    create_file &quot;config/initializers/initializer.rb&quot;, &quot;# Add initialization content here&quot;
+  end
+end
+</code></pre>
+
+<p>NOTE: <code>create_file</code> is a method provided by
+<code>Thor::Actions</code>. Documentation for <code>create_file</code> and
+other Thor methods can be found in <a
+href="http://rdoc.info/github/wycats/thor/master/Thor/Actions.html">Thor’s
+documentation</a></p>
+
+<p>Our new generator is quite simple: it inherits from
+<code>Rails::Generators::Base</code> and has one method definition. When a
+generator is invoked, each public method in the generator is executed
+sequentially in the order that it is defined. Finally, we invoke the
+<code>create_file</code> method that will create a file at the given
+destination with the given content. If you are familiar with the <a
+href="../../../../classes/Rails.html">Rails</a> Application Templates API,
+you&#39;ll feel right at home with the new generators API.</p>
+
+<p>To invoke our new generator, we just need to do:</p>
+
+<pre><code>$ rails generate initializer</code></pre>
+
+<p>Before we go on, let&#39;s see our brand new generator description:</p>
+
+<pre><code>$ rails generate initializer --help</code></pre>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> is usually able to
+generate good descriptions if a generator is namespaced, as
+<code>ActiveRecord::Generators::ModelGenerator</code>, but not in this
+particular case. We can solve this problem in two ways. The first one is
+calling <code>desc</code> inside our generator:</p>
+
+<pre><code>class InitializerGenerator &lt; Rails::Generators::Base
+  desc &quot;This generator creates an initializer file at config/initializers&quot;
+  def create_initializer_file
+    create_file &quot;config/initializers/initializer.rb&quot;, &quot;# Add initialization content here&quot;
+  end
+end
+</code></pre>
+
+<p>Now we can see the new description by invoking <code>--help</code> on the
+new generator. The second way to add a description is by creating a file
+named <code>USAGE</code> in the same directory as our generator. We are
+going to do that in the next step.</p>
+
+<h2 id="label-Creating+Generators+with+Generators">Creating Generators with Generators</h2>
+
+<p>Generators themselves have a generator:</p>
+
+<pre><code>$ rails generate generator initializer
+      create  lib/generators/initializer
+      create  lib/generators/initializer/initializer_generator.rb
+      create  lib/generators/initializer/USAGE
+      create  lib/generators/initializer/templates</code></pre>
+
+<p>This is the generator just created:</p>
+
+<pre><code>class InitializerGenerator &lt; Rails::Generators::NamedBase
+  source_root File.expand_path(&quot;../templates&quot;, __FILE__)
+end
+</code></pre>
+
+<p>First, notice that we are inheriting from
+<code>Rails::Generators::NamedBase</code> instead of
+<code>Rails::Generators::Base</code>. This means that our generator expects
+at least one argument, which will be the name of the initializer, and will
+be available in our code in the variable <code>name</code>.</p>
+
+<p>We can see that by invoking the description of this new generator
+(don&#39;t forget to delete the old generator file):</p>
+
+<pre><code>$ rails generate initializer --help
+Usage:
+  rails generate initializer NAME [options]</code></pre>
+
+<p>We can also see that our new generator has a class method called
+<code>source_root</code>. This method points to where our generator
+templates will be placed, if any, and by default it points to the created
+directory <code>lib/generators/initializer/templates</code>.</p>
+
+<p>In order to understand what a generator template means, let&#39;s create
+the file <code>lib/generators/initializer/templates/initializer.rb</code>
+with the following content:</p>
+
+<pre><code># Add initialization content here
+</code></pre>
+
+<p>And now let&#39;s change the generator to copy this template when invoked:</p>
+
+<pre><code>class InitializerGenerator &lt; Rails::Generators::NamedBase
+  source_root File.expand_path(&quot;../templates&quot;, __FILE__)
+
+  def copy_initializer_file
+    copy_file &quot;initializer.rb&quot;, &quot;config/initializers/#{file_name}.rb&quot;
+  end
+end
+</code></pre>
+
+<p>And let&#39;s execute our generator:</p>
+
+<pre><code>$ rails generate initializer core_extensions</code></pre>
+
+<p>We can see that now an initializer named core_extensions was created at
+<code>config/initializers/core_extensions.rb</code> with the contents of
+our template. That means that <code>copy_file</code> copied a file in our
+source root to the destination path we gave. The method
+<code>file_name</code> is automatically created when we inherit from
+<code>Rails::Generators::NamedBase</code>.</p>
+
+<p>The methods that are available for generators are covered in the <a
+href="#generator-methods">final section</a> of this guide.</p>
+
+<h2 id="label-Generators+Lookup">Generators Lookup</h2>
+
+<p>When you run <code>rails generate initializer core_extensions</code> <a
+href="../../../../classes/Rails.html">Rails</a> requires these files in
+turn until one is found:</p>
+
+<pre><code>rails/generators/initializer/initializer_generator.rb
+generators/initializer/initializer_generator.rb
+rails/generators/initializer_generator.rb
+generators/initializer_generator.rb</code></pre>
+
+<p>If none is found you get an error message.</p>
+
+<p>INFO: The examples above put files under the application&#39;s
+<code>lib</code> because said directory belongs to <code>$LOAD_PATH</code>.</p>
+
+<h2 id="label-Customizing+Your+Workflow">Customizing Your Workflow</h2>
+
+<p><a href="../../../../classes/Rails.html">Rails</a> own generators are
+flexible enough to let you customize scaffolding. They can be configured in
+<code>config/application.rb</code>, these are some defaults:</p>
+
+<pre><code>config.generators do |g|
+  g.orm             :active_record
+  g.template_engine :erb
+  g.test_framework  :test_unit, fixture: true
+end
+</code></pre>
+
+<p>Before we customize our workflow, let&#39;s first see what our scaffold
+looks like:</p>
+
+<pre><code>$ rails generate scaffold User name:string
+      invoke  active_record
+      create    db/migrate/20091120125558_create_users.rb
+      create    app/models/user.rb
+      invoke    test_unit
+      create      test/models/user_test.rb
+      create      test/fixtures/users.yml
+      invoke  resource_route
+       route    resources :users
+      invoke  scaffold_controller
+      create    app/controllers/users_controller.rb
+      invoke    erb
+      create      app/views/users
+      create      app/views/users/index.html.erb
+      create      app/views/users/edit.html.erb
+      create      app/views/users/show.html.erb
+      create      app/views/users/new.html.erb
+      create      app/views/users/_form.html.erb
+      invoke    test_unit
+      create      test/controllers/users_controller_test.rb
+      invoke    helper
+      create      app/helpers/users_helper.rb
+      invoke      test_unit
+      create        test/helpers/users_helper_test.rb
+      invoke  assets
+      invoke    coffee
+      create      app/assets/javascripts/users.js.coffee
+      invoke    scss
+      create      app/assets/stylesheets/users.css.scss
+      invoke  scss
+      create    app/assets/stylesheets/scaffolds.css.scss</code></pre>
+
+<p>Looking at this output, it&#39;s easy to understand how generators work in
+<a href="../../../../classes/Rails.html">Rails</a> 3.0 and above. The
+scaffold generator doesn&#39;t actually generate anything, it just invokes
+others to do the work. This allows us to add/replace/remove any of those
+invocations. For instance, the scaffold generator invokes the
+scaffold_controller generator, which invokes erb, test_unit and helper
+generators. Since each generator has a single responsibility, they are easy
+to reuse, avoiding code duplication.</p>
+
+<p>Our first customization on the workflow will be to stop generating
+stylesheets and test fixtures for scaffolds. We can achieve that by
+changing our configuration to the following:</p>
+
+<pre><code>config.generators do |g|
+  g.orm             :active_record
+  g.template_engine :erb
+  g.test_framework  :test_unit, fixture: false
+  g.stylesheets     false
+end
+</code></pre>
+
+<p>If we generate another resource with the scaffold generator, we can see
+that neither stylesheets nor fixtures are created anymore. If you want to
+customize it further, for example to use DataMapper and RSpec instead of
+Active Record and TestUnit, it&#39;s just a matter of adding their gems to
+your application and configuring your generators.</p>
+
+<p>To demonstrate this, we are going to create a new helper generator that
+simply adds some instance variable readers. First, we create a generator
+within the rails namespace, as this is where rails searches for generators
+used as hooks:</p>
+
+<pre><code>$ rails generate generator rails/my_helper</code></pre>
+
+<p>After that, we can delete both the <code>templates</code> directory and the
+<code>source_root</code> class method from our new generators, because we
+are not going to need them. So our new generator looks like the following:</p>
+
+<pre><code>class Rails::MyHelperGenerator &lt; Rails::Generators::NamedBase
+  def create_helper_file
+    create_file &quot;app/helpers/#{file_name}_helper.rb&quot;, &lt;&lt;-FILE
+module #{class_name}Helper
+  attr_reader :#{plural_name}, :#{plural_name.singularize}
+end
+    FILE
+  end
+end
+</code></pre>
+
+<p>We can try out our new generator by creating a helper for users:</p>
+
+<pre><code>$ rails generate my_helper products</code></pre>
+
+<p>And it will generate the following helper file in <code>app/helpers</code>:</p>
+
+<pre><code>module ProductsHelper
+  attr_reader :products, :product
+end
+</code></pre>
+
+<p>Which is what we expected. We can now tell scaffold to use our new helper
+generator by editing <code>config/application.rb</code> once again:</p>
+
+<pre><code>config.generators do |g|
+  g.orm             :active_record
+  g.template_engine :erb
+  g.test_framework  :test_unit, fixture: false
+  g.stylesheets     false
+  g.helper          :my_helper
+end
+</code></pre>
+
+<p>and see it in action when invoking the generator:</p>
+
+<pre><code>$ rails generate scaffold Post body:text
+      [...]
+      invoke    my_helper
+      create      app/helpers/posts_helper.rb</code></pre>
+
+<p>We can notice on the output that our new helper was invoked instead of the
+<a href="../../../../classes/Rails.html">Rails</a> default. However one
+thing is missing, which is tests for our new generator and to do that, we
+are going to reuse old helpers test generators.</p>
+
+<p>Since <a href="../../../../classes/Rails.html">Rails</a> 3.0, this is easy
+to do due to the hooks concept. Our new helper does not need to be focused
+in one specific test framework, it can simply provide a hook and a test
+framework just needs to implement this hook in order to be compatible.</p>
+
+<p>To do that, we can change the generator this way:</p>
+
+<pre><code>class Rails::MyHelperGenerator &lt; Rails::Generators::NamedBase
+  def create_helper_file
+    create_file &quot;app/helpers/#{file_name}_helper.rb&quot;, &lt;&lt;-FILE
+module #{class_name}Helper
+  attr_reader :#{plural_name}, :#{plural_name.singularize}
+end
+    FILE
+  end
+
+  hook_for :test_framework
+end
+</code></pre>
+
+<p>Now, when the helper generator is invoked and TestUnit is configured as the
+test framework, it will try to invoke both
+<code>Rails::TestUnitGenerator</code> and
+<code>TestUnit::MyHelperGenerator</code>. Since none of those are defined,
+we can tell our generator to invoke
+<code>TestUnit::Generators::HelperGenerator</code> instead, which is
+defined since it&#39;s a <a href="../../../../classes/Rails.html">Rails</a>
+generator. To do that, we just need to add:</p>
+
+<pre><code># Search for :helper instead of :my_helper
+hook_for :test_framework, as: :helper
+</code></pre>
+
+<p>And now you can re-run scaffold for another resource and see it generating
+tests as well!</p>
+
+<h2 id="label-Customizing+Your+Workflow+by+Changing+Generators+Templates">Customizing Your Workflow by Changing Generators Templates</h2>
+
+<p>In the step above we simply wanted to add a line to the generated helper,
+without adding any extra functionality. There is a simpler way to do that,
+and it&#39;s by replacing the templates of already existing generators, in
+that case <code>Rails::Generators::HelperGenerator</code>.</p>
+
+<p>In <a href="../../../../classes/Rails.html">Rails</a> 3.0 and above,
+generators don&#39;t just look in the source root for templates, they also
+search for templates in other paths. And one of them is
+<code>lib/templates</code>. Since we want to customize
+<code>Rails::Generators::HelperGenerator</code>, we can do that by simply
+making a template copy inside <code>lib/templates/rails/helper</code> with
+the name <code>helper.rb</code>. So let&#39;s create that file with the
+following content:</p>
+
+<pre><code>module &lt;%= class_name %&gt;Helper
+  attr_reader :&lt;%= plural_name %&gt;, :&lt;%= plural_name.singularize %&gt;
+end</code></pre>
+
+<p>and revert the last change in <code>config/application.rb</code>:</p>
+
+<pre><code>config.generators do |g|
+  g.orm             :active_record
+  g.template_engine :erb
+  g.test_framework  :test_unit, fixture: false
+  g.stylesheets     false
+end
+</code></pre>
+
+<p>If you generate another resource, you can see that we get exactly the same
+result! This is useful if you want to customize your scaffold templates
+and/or layout by just creating <code>edit.html.erb</code>,
+<code>index.html.erb</code> and so on inside
+<code>lib/templates/erb/scaffold</code>.</p>
+
+<h2 id="label-Adding+Generators+Fallbacks">Adding Generators Fallbacks</h2>
+
+<p><a href="../../../../classes/One.html">One</a> last feature about
+generators which is quite useful for plugin generators is fallbacks. For
+example, imagine that you want to add a feature on top of TestUnit like <a
+href="https://github.com/thoughtbot/shoulda">shoulda</a> does. Since
+TestUnit already implements all generators required by <a
+href="../../../../classes/Rails.html">Rails</a> and shoulda just wants to
+overwrite part of it, there is no need for shoulda to reimplement some
+generators again, it can simply tell <a
+href="../../../../classes/Rails.html">Rails</a> to use a
+<code>TestUnit</code> generator if none was found under the
+<code>Shoulda</code> namespace.</p>
+
+<p>We can easily simulate this behavior by changing our
+<code>config/application.rb</code> once again:</p>
+
+<pre><code>config.generators do |g|
+  g.orm             :active_record
+  g.template_engine :erb
+  g.test_framework  :shoulda, fixture: false
+  g.stylesheets     false
+
+  # Add a fallback!
+  g.fallbacks[:shoulda] = :test_unit
+end
+</code></pre>
+
+<p>Now, if you create a <a href="../../../../classes/Comment.html">Comment</a>
+scaffold, you will see that the shoulda generators are being invoked, and
+at the end, they are just falling back to TestUnit generators:</p>
+
+<pre><code>$ rails generate scaffold Comment body:text
+      invoke  active_record
+      create    db/migrate/20091120151323_create_comments.rb
+      create    app/models/comment.rb
+      invoke    shoulda
+      create      test/models/comment_test.rb
+      create      test/fixtures/comments.yml
+      invoke  resource_route
+       route    resources :comments
+      invoke  scaffold_controller
+      create    app/controllers/comments_controller.rb
+      invoke    erb
+      create      app/views/comments
+      create      app/views/comments/index.html.erb
+      create      app/views/comments/edit.html.erb
+      create      app/views/comments/show.html.erb
+      create      app/views/comments/new.html.erb
+      create      app/views/comments/_form.html.erb
+      invoke    shoulda
+      create      test/controllers/comments_controller_test.rb
+      invoke    my_helper
+      create      app/helpers/comments_helper.rb
+      invoke      shoulda
+      create        test/helpers/comments_helper_test.rb
+      invoke  assets
+      invoke    coffee
+      create      app/assets/javascripts/comments.js.coffee
+      invoke    scss</code></pre>
+
+<p>Fallbacks allow your generators to have a single responsibility, increasing
+code reuse and reducing the amount of duplication.</p>
+
+<h2 id="label-Application+Templates">Application Templates</h2>
+
+<p>Now that you&#39;ve seen how generators can be used <em>inside</em> an
+application, did you know they can also be used to <em>generate</em>
+applications too? This kind of generator is referred as a “template”. This
+is a brief overview of the Templates API. For detailed documentation see
+the <a href="http://rails_application_templates.html">Rails Application
+Templates guide</a>.</p>
+
+<pre><code>gem &quot;rspec-rails&quot;, group: &quot;test&quot;
+gem &quot;cucumber-rails&quot;, group: &quot;test&quot;
+
+if yes?(&quot;Would you like to install Devise?&quot;)
+  gem &quot;devise&quot;
+  generate &quot;devise:install&quot;
+  model_name = ask(&quot;What would you like the user model to be called? [user]&quot;)
+  model_name = &quot;user&quot; if model_name.blank?
+  generate &quot;devise&quot;, model_name
+end
+</code></pre>
+
+<p>In the above template we specify that the application relies on the
+<code>rspec-rails</code> and <code>cucumber-rails</code> gem so these two
+will be added to the <code>test</code> group in the <code>Gemfile</code>.
+Then we pose a question to the user about whether or not they would like to
+install Devise. If the user replies “y” or “yes” to this question, then the
+template will add Devise to the <code>Gemfile</code> outside of any group
+and then runs the <code>devise:install</code> generator. This template then
+takes the users input and runs the <code>devise</code> generator, with the
+user&#39;s answer from the last question being passed to this generator.</p>
+
+<p>Imagine that this template was in a file called <code>template.rb</code>.
+We can use it to modify the outcome of the <code>rails new</code> command
+by using the <code>-m</code> option and passing in the filename:</p>
+
+<pre><code>$ rails new thud -m template.rb</code></pre>
+
+<p>This command will generate the <code>Thud</code> application, and then
+apply the template to the generated output.</p>
+
+<p>Templates don&#39;t have to be stored on the local system, the
+<code>-m</code> option also supports online templates:</p>
+
+<pre><code>$ rails new thud -m https://gist.github.com/radar/722911/raw/</code></pre>
+
+<p>Whilst the final section of this guide doesn&#39;t cover how to generate
+the most awesome template known to man, it will take you through the
+methods available at your disposal so that you can develop it yourself.
+These same methods are also available for generators.</p>
+
+<h2 id="label-Generator+methods">Generator methods</h2>
+
+<p>The following are methods available for both generators and templates for
+<a href="../../../../classes/Rails.html">Rails</a>.</p>
+
+<p>NOTE: Methods provided by Thor are not covered this guide and can be found
+in <a
+href="http://rdoc.info/github/wycats/thor/master/Thor/Actions.html">Thor’s
+documentation</a></p>
+
+<h3 id="label-gem"><code>gem</code></h3>
+
+<p>Specifies a gem dependency of the application.</p>
+
+<pre><code>gem &quot;rspec&quot;, group: &quot;test&quot;, version: &quot;2.1.0&quot;
+gem &quot;devise&quot;, &quot;1.1.5&quot;
+</code></pre>
+
+<p>Available options are:</p>
+<ul><li>
+<p><code>:group</code> - The group in the <code>Gemfile</code> where this gem
+should go.</p>
+</li><li>
+<p><code>:version</code> - The version string of the gem you want to use. Can
+also be specified as the second argument to the method.</p>
+</li><li>
+<p><code>:git</code> - The URL to the git repository for this gem.</p>
+</li></ul>
+
+<p>Any additional options passed to this method are put on the end of the
+line:</p>
+
+<pre><code>gem &quot;devise&quot;, git: &quot;git://github.com/plataformatec/devise&quot;, branch: &quot;master&quot;
+</code></pre>
+
+<p>The above code will put the following line into <code>Gemfile</code>:</p>
+
+<pre><code>gem &quot;devise&quot;, git: &quot;git://github.com/plataformatec/devise&quot;, branch: &quot;master&quot;
+</code></pre>
+
+<h3 id="label-gem_group"><code>gem_group</code></h3>
+
+<p>Wraps gem entries inside a group:</p>
+
+<pre><code>gem_group :development, :test do
+  gem &quot;rspec-rails&quot;
+end
+</code></pre>
+
+<h3 id="label-add_source"><code>add_source</code></h3>
+
+<p>Adds a specified source to <code>Gemfile</code>:</p>
+
+<pre><code>add_source &quot;http://gems.github.com&quot;
+</code></pre>
+
+<h3 id="label-inject_into_file"><code>inject_into_file</code></h3>
+
+<p>Injects a block of code into a defined position in your file.</p>
+
+<pre><code>inject_into_file &#39;name_of_file.rb&#39;, after: &quot;#The code goes below this line. Don&#39;t forget the Line break at the end\n&quot; do &lt;&lt;-&#39;RUBY&#39;
+  puts &quot;Hello World&quot;
+RUBY
+end
+</code></pre>
+
+<h3 id="label-gsub_file"><code>gsub_file</code></h3>
+
+<p>Replaces text inside a file.</p>
+
+<pre><code>gsub_file &#39;name_of_file.rb&#39;, &#39;method.to_be_replaced&#39;, &#39;method.the_replacing_code&#39;
+</code></pre>
+
+<p>Regular Expressions can be used to make this method more precise. You can
+also use append_file and prepend_file in the same way to place code at the
+beginning and end of a file respectively.</p>
+
+<h3 id="label-application"><code>application</code></h3>
+
+<p>Adds a line to <code>config/application.rb</code> directly after the
+application class definition.</p>
+
+<pre><code>application &quot;config.asset_host = &#39;http://example.com&#39;&quot;
+</code></pre>
+
+<p>This method can also take a block:</p>
+
+<pre><code>application do
+  &quot;config.asset_host = &#39;http://example.com&#39;&quot;
+end
+</code></pre>
+
+<p>Available options are:</p>
+<ul><li>
+<p><code>:env</code> - Specify an environment for this configuration option.
+If you wish to use this option with the block syntax the recommended syntax
+is as follows:</p>
+</li></ul>
+
+<pre><code>application(nil, env: &quot;development&quot;) do
+  &quot;config.asset_host = &#39;http://localhost:3000&#39;&quot;
+end
+</code></pre>
+
+<h3 id="label-git"><code>git</code></h3>
+
+<p>Runs the specified git command:</p>
+
+<pre><code>git :init
+git add: &quot;.&quot;
+git commit: &quot;-m First commit!&quot;
+git add: &quot;onefile.rb&quot;, rm: &quot;badfile.cxx&quot;
+</code></pre>
+
+<p>The values of the hash here being the arguments or options passed to the
+specific git command. As per the final example shown here, multiple git
+commands can be specified at a time, but the order of their running is not
+guaranteed to be the same as the order that they were specified in.</p>
+
+<h3 id="label-vendor"><code>vendor</code></h3>
+
+<p>Places a file into <code>vendor</code> which contains the specified code.</p>
+
+<pre><code>vendor &quot;sekrit.rb&quot;, &#39;#top secret stuff&#39;
+</code></pre>
+
+<p>This method also takes a block:</p>
+
+<pre><code>vendor &quot;seeds.rb&quot; do
+  &quot;puts &#39;in ur app, seeding ur database&#39;&quot;
+end
+</code></pre>
+
+<h3 id="label-lib"><code>lib</code></h3>
+
+<p>Places a file into <code>lib</code> which contains the specified code.</p>
+
+<pre><code>lib &quot;special.rb&quot;, &quot;p Rails.root&quot;
+</code></pre>
+
+<p>This method also takes a block:</p>
+
+<pre><code>lib &quot;super_special.rb&quot; do
+  puts &quot;Super special!&quot;
+end
+</code></pre>
+
+<h3 id="label-rakefile"><code>rakefile</code></h3>
+
+<p>Creates a Rake file in the <code>lib/tasks</code> directory of the
+application.</p>
+
+<pre><code>rakefile &quot;test.rake&quot;, &quot;hello there&quot;
+</code></pre>
+
+<p>This method also takes a block:</p>
+
+<pre><code>rakefile &quot;test.rake&quot; do
+  %Q{
+    task rock: :environment do
+      puts &quot;Rockin&#39;&quot;
+    end
+  }
+end
+</code></pre>
+
+<h3 id="label-initializer"><code>initializer</code></h3>
+
+<p>Creates an initializer in the <code>config/initializers</code> directory of
+the application:</p>
+
+<pre><code>initializer &quot;begin.rb&quot;, &quot;puts &#39;this is the beginning&#39;&quot;
+</code></pre>
+
+<p>This method also takes a block:</p>
+
+<pre><code>initializer &quot;begin.rb&quot; do
+  puts &quot;Almost done!&quot;
+end
+</code></pre>
+
+<h3 id="label-generate"><code>generate</code></h3>
+
+<p>Runs the specified generator where the first argument is the generator name
+and the remaining arguments are passed directly to the generator.</p>
+
+<pre><code>generate &quot;scaffold&quot;, &quot;forums title:string description:text&quot;
+</code></pre>
+
+<h3 id="label-rake"><code>rake</code></h3>
+
+<p>Runs the specified Rake task.</p>
+
+<pre><code>rake &quot;db:migrate&quot;
+</code></pre>
+
+<p>Available options are:</p>
+<ul><li>
+<p><code>:env</code> - Specifies the environment in which to run this rake
+task.</p>
+</li><li>
+<p><code>:sudo</code> - Whether or not to run this task using
+<code>sudo</code>. Defaults to <code>false</code>.</p>
+</li></ul>
+
+<h3 id="label-capify%21"><code>capify!</code></h3>
+
+<p>Runs the <code>capify</code> command from Capistrano at the root of the
+application which generates Capistrano configuration.</p>
+
+<pre><code>capify!
+</code></pre>
+
+<h3 id="label-route"><code>route</code></h3>
+
+<p>Adds text to the <code>config/routes.rb</code> file:</p>
+
+<pre><code>route &quot;resources :people&quot;
+</code></pre>
+
+<h3 id="label-readme"><code>readme</code></h3>
+
+<p>Output the contents of a file in the template&#39;s
+<code>source_path</code>, usually a <a
+href="../../README_rdoc.html">README</a>.</p>
+
+<pre><code>readme &quot;README&quot;
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>
