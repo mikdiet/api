@@ -149,7 +149,6 @@ Searchdoc.Panel = function(element, data, tree, frame) {
     this.$view = this.$result.parent();
     this.data = data;
     this.searcher = new Searcher(data.index);
-
     this.tree = new Searchdoc.Tree($('.tree', element), tree, this);
     this.init();
 }
