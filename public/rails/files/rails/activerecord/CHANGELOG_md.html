@@ -26,10 +26,8 @@
             <li>
                 rails/activerecord/CHANGELOG.md
                 
-                    <a href="https://github.com/rails/rails/blob/e691272628ea1bc5b860fbfb5ffc76f1997a5364/activerecord/CHANGELOG.md" target="_blank" class="github_url">on GitHub</a>
-                
             </li>
-            <li>Last modified: 2013-06-09 13:25:50 +0300</li>
+            <li>Last modified: 2013-08-18 00:29:44 +0300</li>
         </ul>
     </div>
 
@@ -38,8 +36,71 @@
   
     <div class="description">
       
-<h2 id="label-Rails+4.0.0+%28unreleased%29"><a href="../../../classes/Rails.html">Rails</a> 4.0.0 (unreleased)</h2>
+<h2 id="label-Rails+4.0.0+%28June+25%2C+2013%29"><a href="../../../classes/Rails.html">Rails</a> 4.0.0 (June 25, 2013)</h2>
 <ul><li>
+<p>Fix <code>add_column</code> with <code>array</code> option when using
+PostgreSQL. Fixes #10432</p>
+</li><li>
+<p>Do not overwrite manually built records during one-to-one nested attribute
+assignment</p>
+
+<p>For one-to-one nested associations, if you build the new (in-memory) child
+object yourself before assignment, then the NestedAttributes module will
+not overwrite it, e.g.:</p>
+
+<pre><code>class Member &lt; ActiveRecord::Base
+  has_one :avatar
+  accepts_nested_attributes_for :avatar
+
+  def avatar
+    super || build_avatar(width: 200)
+  end
+end
+
+member = Member.new
+member.avatar_attributes = {icon: &#39;sad&#39;}
+member.avatar.width # =&gt; 200
+</code></pre>
+
+<p><em>Olek Janiszewski</em></p>
+</li><li>
+<p>fixes bug introduced by #3329. Now, when autosaving associations, deletions
+happen before inserts and saves. This prevents a &#39;duplicate unique
+value&#39; database error that would occur if a record being created had
+the same value on a unique indexed field as that of a record being
+destroyed.</p>
+
+<p><em>Adam Anderson</em></p>
+</li><li>
+<p>Fix pending migrations error when loading schema and
+<code>ActiveRecord::Base.table_name_prefix</code> is not blank.</p>
+
+<p>Call <code>assume_migrated_upto_version</code> on connection to prevent it
+from first being picked up in <code>method_missing</code>.</p>
+
+<p>In the base class, <code>Migration</code>, <code>method_missing</code>
+expects the argument to be a table name, and calls
+<code>proper_table_name</code> on the arguments before sending to
+<code>connection</code>. If <code>table_name_prefix</code> or
+<code>table_name_suffix</code> is used, the schema version changes to
+<code>prefix_version_suffix</code>, breaking <code>rake
+test:prepare</code>.</p>
+
+<p>Fixes #10411.</p>
+
+<p><em>Kyle Stevens</em></p>
+</li><li>
+<p>Mute <code>psql</code> output when running rake db:schema:load.</p>
+
+<p><em>Godfrey Chan</em></p>
+</li><li>
+<p>Trigger a save on <code>has_one association=(associate)</code> when the
+associate contents have changed.</p>
+
+<p>Fix #8856.</p>
+
+<p><em>Chris Thompson</em></p>
+</li><li>
 <p>Allow to use databases.rake tasks without having
 <code>Rails.application</code>.</p>
 
@@ -601,10 +662,7 @@ where the order was given with a symbol. Fixes #9275.</p>
 
 <pre><code># This will expand the order :name to &quot;authors&quot;.name.
 Author.joins(:books).where(&#39;books.published = 1&#39;).order(:name)</code></pre>
-</li></ul>
-
-<h2 id="label-Rails+4.0.0.beta1+%28February+25%2C+2013%29"><a href="../../../classes/Rails.html">Rails</a> 4.0.0.beta1 (February 25, 2013)</h2>
-<ul><li>
+</li><li>
 <p>Fix overriding of attributes by <code>default_scope</code> on
 <code>ActiveRecord::Base#dup</code>.</p>
 
@@ -1033,6 +1091,12 @@ href="http://dev.mysql.com/doc/refman/5.0/en/set-statement.html">dev.mysql.com/d
 href="http://www.postgresql.org/docs/8.3/static/sql-set.html">www.postgresql.org/docs/8.3/static/sql-set.html</a></p>
 
 <p><em>Aaron Stone</em></p>
+</li><li>
+<p>Allow setting of all libpq connection parameters through the PostgreSQL
+adapter. See also: <a
+href="http://www.postgresql.org/docs/9.2/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS">www.postgresql.org/docs/9.2/static/libpq-connect.html#LIBPQ-PARAMKEYWORDS</a></p>
+
+<p><em>Lars Kanis</em></p>
 </li><li>
 <p>Allow <code>Relation#where</code> with no arguments to be chained with new
 <code>not</code> query method.</p>

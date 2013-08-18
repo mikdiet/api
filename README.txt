@@ -1,4 +1,4 @@
 git fetch -t
-bundle exec sdoc ruby --template=rails -o rubydoc --main=README -G --debug
-bundle exec sdoc rails --template=rails -o railsdoc -G --main=README.md --exclude=test --debug
-bundle exec sdoc-merge --title "Ruby v2.0.0p247, Rails v4.0.0" --op public --names "rails, ruby" railsdoc rubydoc
+SDOC_FORCE_MAIN_PAGE='ruby/README' bundle exec sdoc --template=rails -o rubydoc -g --debug ruby
+SDOC_FORCE_MAIN_PAGE='rails/README.md' bundle exec sdoc --template=rails -o railsdoc -g --exclude=test --debug rails
+bundle exec sdoc-merge --title "Rails v4.0.0, Ruby v2.0.0p247" --op public --names "rails, ruby" railsdoc rubydoc
