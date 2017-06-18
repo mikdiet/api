@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            UDPSocket 
+            <span class="type">Class</span>
+            UDPSocket
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="IPSocket.html">IPSocket</a>
                     
@@ -30,6 +30,8 @@
             
         </h1>
         <ul class="files">
+            
+            <li><a href="../files/ruby/ext/socket/lib/socket_rb.html">ruby/ext/socket/lib/socket.rb</a></li>
             
             <li><a href="../files/ruby/ext/socket/udpsocket_c.html">ruby/ext/socket/udpsocket.c</a></li>
             
@@ -154,7 +156,7 @@
             
             <a href="../classes/UDPSocket.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Creates a new <a href="UDPSocket.html">UDPSocket</a> object.</p>
@@ -162,20 +164,24 @@
 <p><em>address_family</em> should be an integer, a string or a symbol:
 Socket::AF_INET, “AF_INET”, :INET, etc.</p>
 
-<pre><code>UDPSocket.new                   #=&gt; #&lt;UDPSocket:fd 3&gt;
+<pre><code>require &#39;socket&#39;
+
+UDPSocket.new                   #=&gt; #&lt;UDPSocket:fd 3&gt;
 UDPSocket.new(Socket::AF_INET6) #=&gt; #&lt;UDPSocket:fd 4&gt;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -187,7 +193,6 @@ udp_init(int argc, VALUE *argv, VALUE sock)
     int family = AF_INET;
     int fd;
 
-    rb_secure(3);
     if (rb_scan_args(argc, argv, &quot;01&quot;, &amp;arg) == 1) {
         family = rsock_family_arg(arg);
     }
@@ -213,7 +218,7 @@ udp_init(int argc, VALUE *argv, VALUE sock)
             
             <a href="../classes/UDPSocket.html#method-i-bind" name="method-i-bind" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Binds <em>udpsocket</em> to <em>host</em>:<em>port</em>.</p>
@@ -225,15 +230,17 @@ p u1.recvfrom(10) #=&gt; [&quot;message-to&quot;, [&quot;AF_INET&quot;, 4913, &q
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-bind_source')" id="l_method-i-bind_source">show</a>
                 
               </p>
@@ -241,21 +248,14 @@ p u1.recvfrom(10) #=&gt; [&quot;message-to&quot;, [&quot;AF_INET&quot;, 4913, &q
                 <pre>static VALUE
 udp_bind(VALUE sock, VALUE host, VALUE port)
 {
-    rb_io_t *fptr;
-    struct addrinfo *res0, *res;
+    struct udp_arg arg;
+    VALUE ret;
 
-    rb_secure(3);
-    res0 = rsock_addrinfo(host, port, SOCK_DGRAM, 0);
-    GetOpenFile(sock, fptr);
-    for (res = res0; res; res = res-&gt;ai_next) {
-        if (bind(fptr-&gt;fd, res-&gt;ai_addr, res-&gt;ai_addrlen) &lt; 0) {
-            continue;
-        }
-        freeaddrinfo(res0);
-        return INT2FIX(0);
-    }
-    freeaddrinfo(res0);
-    rb_sys_fail(&quot;bind(2)&quot;);
+    GetOpenFile(sock, arg.fptr);
+    arg.res = rsock_addrinfo(host, port, rsock_fd_family(arg.fptr-&gt;fd), SOCK_DGRAM, 0);
+    ret = rb_ensure(udp_bind_internal, (VALUE)&amp;arg,
+                    rsock_freeaddrinfo, (VALUE)arg.res);
+    if (!ret) rsock_sys_fail_host_port(&quot;bind(2)&quot;, host, port);
     return INT2FIX(0);
 }</pre>
               </div>
@@ -271,7 +271,7 @@ udp_bind(VALUE sock, VALUE host, VALUE port)
             
             <a href="../classes/UDPSocket.html#method-i-connect" name="method-i-connect" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Connects <em>udpsocket</em> to <em>host</em>:<em>port</em>.</p>
@@ -287,15 +287,17 @@ p u1.recvfrom(10) #=&gt; [&quot;uuuu&quot;, [&quot;AF_INET&quot;, 33230, &quot;l
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-connect_source')" id="l_method-i-connect_source">show</a>
                 
               </p>
@@ -303,17 +305,14 @@ p u1.recvfrom(10) #=&gt; [&quot;uuuu&quot;, [&quot;AF_INET&quot;, 33230, &quot;l
                 <pre>static VALUE
 udp_connect(VALUE sock, VALUE host, VALUE port)
 {
-    rb_io_t *fptr;
     struct udp_arg arg;
     VALUE ret;
 
-    rb_secure(3);
-    arg.res = rsock_addrinfo(host, port, SOCK_DGRAM, 0);
-    GetOpenFile(sock, fptr);
-    arg.fd = fptr-&gt;fd;
+    GetOpenFile(sock, arg.fptr);
+    arg.res = rsock_addrinfo(host, port, rsock_fd_family(arg.fptr-&gt;fd), SOCK_DGRAM, 0);
     ret = rb_ensure(udp_connect_internal, (VALUE)&amp;arg,
                     rsock_freeaddrinfo, (VALUE)arg.res);
-    if (!ret) rb_sys_fail(&quot;connect(2)&quot;);
+    if (!ret) rsock_sys_fail_host_port(&quot;connect(2)&quot;, host, port);
     return INT2FIX(0);
 }</pre>
               </div>
@@ -324,21 +323,20 @@ udp_connect(VALUE sock, VALUE host, VALUE port)
         <div class="method">
           <div class="title method-title" id="method-i-recvfrom_nonblock">
             
-              <b>udpsocket.recvfrom_nonblock(maxlen) => [mesg, sender_inet_addr]
-udpsocket.recvfrom_nonblock(maxlen, flags) => [mesg, sender_inet_addr]
+              <b>udpsocket.recvfrom_nonblock(maxlen [, flags[, outbuf [, options]]]) => [mesg, sender_inet_addr]
 </b>
             
             <a href="../classes/UDPSocket.html#method-i-recvfrom_nonblock" name="method-i-recvfrom_nonblock" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Receives up to <em>maxlen</em> bytes from <code>udpsocket</code> using
-recvfrom(2) after O_NONBLOCK is set for the underlying file descriptor. If
-<em>maxlen</em> is omitted, its default value is 65536. <em>flags</em> is
-zero or more of the <code>MSG_</code> options. The first element of the
-results, <em>mesg</em>, is the data received. The second element,
-<em>sender_inet_addr</em>, is an array to represent the sender address.</p>
+recvfrom(2) after O_NONBLOCK is set for the underlying file descriptor.
+<em>flags</em> is zero or more of the <code>MSG_</code> options. The first
+element of the results, <em>mesg</em>, is the data received. The second
+element, <em>sender_inet_addr</em>, is an array to represent the sender
+address.</p>
 
 <p>When recvfrom(2) returns 0, <a
 href="Socket.html#method-i-recvfrom_nonblock">Socket#recvfrom_nonblock</a>
@@ -349,6 +347,10 @@ returns an empty string as data. It means an empty packet.</p>
 <p><code>maxlen</code> - the number of bytes to receive from the socket</p>
 </li><li>
 <p><code>flags</code> - zero or more of the <code>MSG_</code> options</p>
+</li><li>
+<p><code>outbuf</code> - destination String buffer</p>
+</li><li>
+<p><code>options</code> - keyword hash, supporting `exception: false`</p>
 </li></ul>
 
 <h3 id="method-i-recvfrom_nonblock-label-Example">Example</h3>
@@ -377,10 +379,16 @@ fails.</p>
 may raise any error corresponding to recvfrom(2) failure, including
 Errno::EWOULDBLOCK.</p>
 
-<p>If the exception is Errno::EWOULDBLOCK or Errno::AGAIN, it is extended by
+<p>If the exception is Errno::EWOULDBLOCK or Errno::EAGAIN, it is extended by
 <a href="IO/WaitReadable.html">IO::WaitReadable</a>. So <a
 href="IO/WaitReadable.html">IO::WaitReadable</a> can be used to rescue the
 exceptions for retrying recvfrom_nonblock.</p>
+
+<p>By specifying a keyword argument <em>exception</em> to <code>false</code>,
+you can indicate that <a
+href="UDPSocket.html#method-i-recvfrom_nonblock">#recvfrom_nonblock</a>
+should not raise an <a href="IO/WaitReadable.html">IO::WaitReadable</a>
+exception, but return the symbol <code>:wait_readable</code> instead.</p>
 
 <h3 id="method-i-recvfrom_nonblock-label-See">See</h3>
 <ul><li>
@@ -388,24 +396,27 @@ exceptions for retrying recvfrom_nonblock.</p>
 </li></ul>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-recvfrom_nonblock_source')" id="l_method-i-recvfrom_nonblock_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/3eaded77007e1b8f6c256eca662b11639560c1e3/ext/socket/lib/socket.rb#L1255" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-recvfrom_nonblock_source" class="dyn-source">
-                <pre>static VALUE
-udp_recvfrom_nonblock(int argc, VALUE *argv, VALUE sock)
-{
-    return rsock_s_recvfrom_nonblock(sock, argc, argv, RECV_IP);
-}</pre>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1255</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">recvfrom_nonblock</span>(<span class="ruby-identifier">len</span>, <span class="ruby-identifier">flag</span> = <span class="ruby-number">0</span>, <span class="ruby-identifier">outbuf</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">exception</span><span class="ruby-operator">:</span> <span class="ruby-keyword">true</span>)
+  <span class="ruby-identifier">__recvfrom_nonblock</span>(<span class="ruby-identifier">len</span>, <span class="ruby-identifier">flag</span>, <span class="ruby-identifier">outbuf</span>, <span class="ruby-identifier">exception</span>)
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -414,14 +425,12 @@ udp_recvfrom_nonblock(int argc, VALUE *argv, VALUE sock)
         <div class="method">
           <div class="title method-title" id="method-i-send">
             
-              <b>udpsocket.send(mesg, flags, host, port)  => numbytes_sent
-udpsocket.send(mesg, flags, sockaddr_to) => numbytes_sent
-udpsocket.send(mesg, flags)              => numbytes_sent
+              <b>udpsocket.send(mesg, flags, host, port)  => numbytes_sent<br />udpsocket.send(mesg, flags, sockaddr_to) => numbytes_sent<br />udpsocket.send(mesg, flags)              => numbytes_sent
 </b>
             
             <a href="../classes/UDPSocket.html#method-i-send" name="method-i-send" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Sends <em>mesg</em> via <em>udpsocket</em>.</p>
@@ -441,15 +450,17 @@ p u2.recv(100) #=&gt; &quot;hi&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-send_source')" id="l_method-i-send_source">show</a>
                 
               </p>
@@ -458,39 +469,23 @@ p u2.recv(100) #=&gt; &quot;hi&quot;
 udp_send(int argc, VALUE *argv, VALUE sock)
 {
     VALUE flags, host, port;
-    rb_io_t *fptr;
-    int n;
-    struct addrinfo *res0, *res;
-    struct rsock_send_arg arg;
+    struct udp_send_arg arg;
+    VALUE ret;
 
     if (argc == 2 || argc == 3) {
         return rsock_bsock_send(argc, argv, sock);
     }
-    rb_secure(4);
-    rb_scan_args(argc, argv, &quot;4&quot;, &amp;arg.mesg, &amp;flags, &amp;host, &amp;port);
+    rb_scan_args(argc, argv, &quot;4&quot;, &amp;arg.sarg.mesg, &amp;flags, &amp;host, &amp;port);
 
-    StringValue(arg.mesg);
-    res0 = rsock_addrinfo(host, port, SOCK_DGRAM, 0);
-    GetOpenFile(sock, fptr);
-    arg.fd = fptr-&gt;fd;
-    arg.flags = NUM2INT(flags);
-    for (res = res0; res; res = res-&gt;ai_next) {
-      retry:
-        arg.to = res-&gt;ai_addr;
-        arg.tolen = res-&gt;ai_addrlen;
-        rb_thread_fd_writable(arg.fd);
-        n = (int)BLOCKING_REGION_FD(rsock_sendto_blocking, &amp;arg);
-        if (n &gt;= 0) {
-            freeaddrinfo(res0);
-            return INT2FIX(n);
-        }
-        if (rb_io_wait_writable(fptr-&gt;fd)) {
-            goto retry;
-        }
-    }
-    freeaddrinfo(res0);
-    rb_sys_fail(&quot;sendto(2)&quot;);
-    return INT2FIX(n);
+    StringValue(arg.sarg.mesg);
+    GetOpenFile(sock, arg.fptr);
+    arg.sarg.fd = arg.fptr-&gt;fd;
+    arg.sarg.flags = NUM2INT(flags);
+    arg.res = rsock_addrinfo(host, port, rsock_fd_family(arg.fptr-&gt;fd), SOCK_DGRAM, 0);
+    ret = rb_ensure(udp_send_internal, (VALUE)&amp;arg,
+                    rsock_freeaddrinfo, (VALUE)arg.res);
+    if (!ret) rsock_sys_fail_host_port(&quot;sendto(2)&quot;, host, port);
+    return ret;
 }</pre>
               </div>
             </div>
@@ -500,4 +495,4 @@ udp_send(int argc, VALUE *argv, VALUE sock)
 
     </div>
   </body>
-</html>    
+</html>

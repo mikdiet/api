@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            ActiveSupport::Notifications 
+            <span class="type">Module</span>
+            ActiveSupport::Notifications
             
         </h1>
         <ul class="files">
@@ -40,27 +40,28 @@
   
     <div class="description">
       
-<h1 id="label-Notifications"><a href="Notifications.html">Notifications</a></h1>
+<h1 id="module-ActiveSupport::Notifications-label-Notifications"><a href="Notifications.html">Notifications</a></h1>
 
 <p><code>ActiveSupport::Notifications</code> provides an instrumentation API
 for Ruby.</p>
 
-<h2 id="label-Instrumenters">Instrumenters</h2>
+<h2 id="module-ActiveSupport::Notifications-label-Instrumenters">Instrumenters</h2>
 
 <p>To instrument an event you just need to do:</p>
 
 <pre><code>ActiveSupport::Notifications.instrument(&#39;render&#39;, extra: :information) do
-  render text: &#39;Foo&#39;
-end</code></pre>
+  render plain: &#39;Foo&#39;
+end
+</code></pre>
 
-<p>That executes the block first and notifies all subscribers once done.</p>
+<p>That first executes the block and then notifies all subscribers once done.</p>
 
 <p>In the example above <code>render</code> is the name of the event, and the
 rest is called the <em>payload</em>. The payload is a mechanism that allows
 instrumenters to pass extra information to subscribers. Payloads consist of
 a hash whose contents are arbitrary and generally depend on the event.</p>
 
-<h2 id="label-Subscribers">Subscribers</h2>
+<h2 id="module-ActiveSupport::Notifications-label-Subscribers">Subscribers</h2>
 
 <p>You can consume those events and the information they provide by
 registering a subscriber.</p>
@@ -88,7 +89,7 @@ The block is saved and will be called whenever someone instruments
 “render”:</p>
 
 <pre><code>ActiveSupport::Notifications.instrument(&#39;render&#39;, extra: :information) do
-  render text: &#39;Foo&#39;
+  render plain: &#39;Foo&#39;
 end
 
 event = events.first
@@ -105,15 +106,17 @@ in that order.</p>
 <p>If an exception happens during that particular instrumentation the payload
 will have a key <code>:exception</code> with an array of two elements as
 value: a string with the name of the exception class, and the exception
-message.</p>
+message. The <code>:exception_object</code> key of the payload will have
+the exception itself as the value.</p>
 
 <p>As the previous example depicts, the class
 <code>ActiveSupport::Notifications::Event</code> is able to take the
 arguments as they come and provide an object-oriented interface to that
 data.</p>
 
-<p>It is also possible to pass an object as the second parameter passed to the
-<code>subscribe</code> method instead of a block:</p>
+<p>It is also possible to pass an object which responds to <code>call</code>
+method as the second parameter to the <code>subscribe</code> method instead
+of a block:</p>
 
 <pre><code>module ActionController
   class PageRequest
@@ -139,20 +142,18 @@ payload:</p>
    status: 200,
    view_runtime: 279.3080806732178,
    db_runtime: 40.053
- }
-</code></pre>
+ }</code></pre>
 
 <p>You can also subscribe to all events whose name matches a certain regexp:</p>
 
 <pre><code>ActiveSupport::Notifications.subscribe(/render/) do |*args|
   ...
-end
-</code></pre>
+end</code></pre>
 
 <p>and even pass no argument to <code>subscribe</code>, in which case you are
 subscribing to all events.</p>
 
-<h2 id="label-Temporary+Subscriptions">Temporary Subscriptions</h2>
+<h2 id="module-ActiveSupport::Notifications-label-Temporary+Subscriptions">Temporary Subscriptions</h2>
 
 <p>Sometimes you do not want to subscribe to an event for the entire life of
 the application. There are two ways to unsubscribe.</p>
@@ -161,7 +162,7 @@ the application. There are two ways to unsubscribe.</p>
 subscribers, use this feature sparingly because it wipes some internal
 caches and that has a negative impact on performance.</p>
 
-<h3 id="label-Subscribe+While+a+Block+Runs">Subscribe While a Block Runs</h3>
+<h3 id="module-ActiveSupport::Notifications-label-Subscribe+While+a+Block+Runs">Subscribe While a Block Runs</h3>
 
 <p>You can subscribe to some event temporarily while some block runs. For
 example, in</p>
@@ -169,32 +170,37 @@ example, in</p>
 <pre><code>callback = lambda {|*args| ... }
 ActiveSupport::Notifications.subscribed(callback, &quot;sql.active_record&quot;) do
   ...
-end
-</code></pre>
+end</code></pre>
 
 <p>the callback will be called for all “sql.active_record” events instrumented
 during the execution of the block. The callback is unsubscribed
 automatically after that.</p>
 
-<h3 id="label-Manual+Unsubscription">Manual Unsubscription</h3>
+<h3 id="module-ActiveSupport::Notifications-label-Manual+Unsubscription">Manual Unsubscription</h3>
 
 <p>The <code>subscribe</code> method returns a subscriber object:</p>
 
 <pre><code>subscriber = ActiveSupport::Notifications.subscribe(&quot;render&quot;) do |*args|
   ...
-end
-</code></pre>
+end</code></pre>
 
 <p>To prevent that block from being called anymore, just unsubscribe passing
 that reference:</p>
 
-<pre><code>ActiveSupport::Notifications.unsubscribe(subscriber)</code></pre>
+<pre><code>ActiveSupport::Notifications.unsubscribe(subscriber)
+</code></pre>
 
-<h2 id="label-Default+Queue">Default Queue</h2>
+<p>You can also unsubscribe by passing the name of the subscriber object. Note
+that this will unsubscribe all subscriptions with the given name:</p>
+
+<pre><code>ActiveSupport::Notifications.unsubscribe(&quot;render&quot;)
+</code></pre>
+
+<h2 id="module-ActiveSupport::Notifications-label-Default+Queue">Default Queue</h2>
 
 <p><a href="Notifications.html">Notifications</a> ships with a queue
-implementation that consumes and publish events to log subscribers in a
-thread. You can use any queue implementation you want.</p>
+implementation that consumes and publishes events to all log subscribers.
+You can use any queue implementation you want.</p>
 
     </div>
   
@@ -338,26 +344,30 @@ thread. You can use any queue implementation you want.</p>
             
             <a href="../../classes/ActiveSupport/Notifications.html#method-c-instrument" name="method-c-instrument" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-instrument_source')" id="l_method-c-instrument_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/0eae8dd4b859c109919e5da0d6e74ffc6dc8a258/activesupport/lib/active_support/notifications.rb#L164" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-instrument_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 157</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 164</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">instrument</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">payload</span> = {})
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">notifier</span>.<span class="ruby-identifier">listening?</span>(<span class="ruby-identifier">name</span>)
     <span class="ruby-identifier">instrumenter</span>.<span class="ruby-identifier">instrument</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">payload</span>) { <span class="ruby-keyword">yield</span> <span class="ruby-identifier">payload</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">block_given?</span> }
@@ -377,28 +387,32 @@ thread. You can use any queue implementation you want.</p>
             
             <a href="../../classes/ActiveSupport/Notifications.html#method-c-instrumenter" name="method-c-instrumenter" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-instrumenter_source')" id="l_method-c-instrumenter_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/0eae8dd4b859c109919e5da0d6e74ffc6dc8a258/activesupport/lib/active_support/notifications.rb#L187" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-instrumenter_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 180</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 187</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">instrumenter</span>
-  <span class="ruby-constant">InstrumentationRegistry</span>.<span class="ruby-identifier">instrumenter_for</span>(<span class="ruby-identifier">notifier</span>)
+  <span class="ruby-constant">InstrumentationRegistry</span>.<span class="ruby-identifier">instance</span>.<span class="ruby-identifier">instrumenter_for</span>(<span class="ruby-identifier">notifier</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -412,26 +426,30 @@ thread. You can use any queue implementation you want.</p>
             
             <a href="../../classes/ActiveSupport/Notifications.html#method-c-publish" name="method-c-publish" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-publish_source')" id="l_method-c-publish_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/0eae8dd4b859c109919e5da0d6e74ffc6dc8a258/activesupport/lib/active_support/notifications.rb#L160" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-publish_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 153</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 160</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">publish</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
   <span class="ruby-identifier">notifier</span>.<span class="ruby-identifier">publish</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -447,26 +465,30 @@ thread. You can use any queue implementation you want.</p>
             
             <a href="../../classes/ActiveSupport/Notifications.html#method-c-subscribe" name="method-c-subscribe" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-subscribe_source')" id="l_method-c-subscribe_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/0eae8dd4b859c109919e5da0d6e74ffc6dc8a258/activesupport/lib/active_support/notifications.rb#L172" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-subscribe_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 165</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 172</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">subscribe</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-identifier">notifier</span>.<span class="ruby-identifier">subscribe</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -482,26 +504,30 @@ thread. You can use any queue implementation you want.</p>
             
             <a href="../../classes/ActiveSupport/Notifications.html#method-c-subscribed" name="method-c-subscribed" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-subscribed_source')" id="l_method-c-subscribed_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/0eae8dd4b859c109919e5da0d6e74ffc6dc8a258/activesupport/lib/active_support/notifications.rb#L176" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-subscribed_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 169</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 176</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">subscribed</span>(<span class="ruby-identifier">callback</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-identifier">subscriber</span> = <span class="ruby-identifier">subscribe</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">callback</span>)
   <span class="ruby-keyword">yield</span>
@@ -516,32 +542,36 @@ thread. You can use any queue implementation you want.</p>
         <div class="method">
           <div class="title method-title" id="method-c-unsubscribe">
             
-              <b>unsubscribe</b>(args)
+              <b>unsubscribe</b>(subscriber_or_name)
             
             <a href="../../classes/ActiveSupport/Notifications.html#method-c-unsubscribe" name="method-c-unsubscribe" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-unsubscribe_source')" id="l_method-c-unsubscribe_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/0eae8dd4b859c109919e5da0d6e74ffc6dc8a258/activesupport/lib/active_support/notifications.rb#L183" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-unsubscribe_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 176</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">unsubscribe</span>(<span class="ruby-identifier">args</span>)
-  <span class="ruby-identifier">notifier</span>.<span class="ruby-identifier">unsubscribe</span>(<span class="ruby-identifier">args</span>)
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/notifications.rb, line 183</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">unsubscribe</span>(<span class="ruby-identifier">subscriber_or_name</span>)
+  <span class="ruby-identifier">notifier</span>.<span class="ruby-identifier">unsubscribe</span>(<span class="ruby-identifier">subscriber_or_name</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -551,4 +581,4 @@ thread. You can use any queue implementation you want.</p>
 
     </div>
   </body>
-</html>    
+</html>

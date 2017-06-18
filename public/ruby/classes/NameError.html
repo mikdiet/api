@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            NameError 
+            <span class="type">Class</span>
+            NameError
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="StandardError.html">StandardError</a>
                     
@@ -42,7 +42,8 @@
       
 <p>Raised when a given name is invalid or undefined.</p>
 
-<pre><code>puts foo</code></pre>
+<pre><code>puts foo
+</code></pre>
 
 <p><em>raises the exception:</em></p>
 
@@ -50,7 +51,8 @@
 
 <p>Since constant names must start with a capital:</p>
 
-<pre><code>Fixnum.const_set :answer, 42</code></pre>
+<pre><code>Integer.const_set :answer, 42
+</code></pre>
 
 <p><em>raises the exception:</em></p>
 
@@ -75,6 +77,18 @@
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
       
+        <dt>L</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-local_variables">local_variables</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>N</dt>
         <dd>
           <ul>
@@ -92,13 +106,13 @@
           </ul>
         </dd>
       
-        <dt>T</dt>
+        <dt>R</dt>
         <dd>
           <ul>
             
               
               <li>
-                <a href="#method-i-to_s">to_s</a>
+                <a href="#method-i-receiver">receiver</a>
               </li>
             
           </ul>
@@ -130,12 +144,12 @@
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>NameError.new(msg [, name])  &rarr; name_error
+              <b>NameError.new([msg, *, name])  &rarr; name_error
 </b>
             
             <a href="../classes/NameError.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Construct a new <a href="NameError.html">NameError</a> exception. If given
@@ -143,15 +157,17 @@ the <em>name</em> parameter may subsequently be examined using the
 <code>NameError.name</code> method.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -160,10 +176,18 @@ the <em>name</em> parameter may subsequently be examined using the
 name_err_initialize(int argc, VALUE *argv, VALUE self)
 {
     VALUE name;
+    VALUE iseqw = Qnil;
 
     name = (argc &gt; 1) ? argv[--argc] : Qnil;
     rb_call_super(argc, argv);
-    rb_iv_set(self, &quot;name&quot;, name);
+    rb_ivar_set(self, id_name, name);
+    {
+        rb_thread_t *th = GET_THREAD();
+        rb_control_frame_t *cfp =
+            rb_vm_get_ruby_level_next_cfp(th, RUBY_VM_PREVIOUS_CONTROL_FRAME(th-&gt;cfp));
+        if (cfp) iseqw = rb_iseqw_new(cfp-&gt;iseq);
+    }
+    rb_ivar_set(self, id_iseq, iseqw);
     return self;
 }</pre>
               </div>
@@ -174,37 +198,49 @@ name_err_initialize(int argc, VALUE *argv, VALUE self)
       <div class="sectiontitle">Instance Public methods</div>
       
         <div class="method">
-          <div class="title method-title" id="method-i-name">
+          <div class="title method-title" id="method-i-local_variables">
             
-              <b>name_error.name    &rarr;  string or nil
+              <b>name_error.local_variables  &rarr;  array
 </b>
             
-            <a href="../classes/NameError.html#method-i-name" name="method-i-name" class="permalink">Link</a>
+            <a href="../classes/NameError.html#method-i-local_variables" name="method-i-local_variables" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Return the name associated with this <a href="NameError.html">NameError</a>
-exception.</p>
+              <p>Return a list of the local variable names defined where this <a
+href="NameError.html">NameError</a> exception was raised.</p>
+
+<p>Internal use only.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
-                <a href="javascript:toggleSource('method-i-name_source')" id="l_method-i-name_source">show</a>
+                Source:
+                <a href="javascript:toggleSource('method-i-local_variables_source')" id="l_method-i-local_variables_source">show</a>
                 
               </p>
-              <div id="method-i-name_source" class="dyn-source">
+              <div id="method-i-local_variables_source" class="dyn-source">
                 <pre>static VALUE
-name_err_name(VALUE self)
+name_err_local_variables(VALUE self)
 {
-    return rb_attr_get(self, rb_intern(&quot;name&quot;));
+    VALUE vars = rb_attr_get(self, id_local_variables);
+
+    if (NIL_P(vars)) {
+        VALUE iseqw = rb_attr_get(self, id_iseq);
+        if (!NIL_P(iseqw)) vars = rb_iseqw_local_variables(iseqw);
+        if (NIL_P(vars)) vars = rb_ary_new();
+        rb_ivar_set(self, id_local_variables, vars);
+    }
+    return vars;
 }</pre>
               </div>
             </div>
@@ -212,41 +248,89 @@ name_err_name(VALUE self)
           </div>
         
         <div class="method">
-          <div class="title method-title" id="method-i-to_s">
+          <div class="title method-title" id="method-i-name">
             
-              <b>name_error.to_s   &rarr; string
+              <b>name_error.name    &rarr;  string or nil
 </b>
             
-            <a href="../classes/NameError.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
+            <a href="../classes/NameError.html#method-i-name" name="method-i-name" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Produce a nicely-formatted string representing the <code>NameError</code>.</p>
+              <p>Return the name associated with this <a href="NameError.html">NameError</a>
+exception.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
-                <a href="javascript:toggleSource('method-i-to_s_source')" id="l_method-i-to_s_source">show</a>
+                Source:
+                <a href="javascript:toggleSource('method-i-name_source')" id="l_method-i-name_source">show</a>
                 
               </p>
-              <div id="method-i-to_s_source" class="dyn-source">
+              <div id="method-i-name_source" class="dyn-source">
                 <pre>static VALUE
-name_err_to_s(VALUE exc)
+name_err_name(VALUE self)
 {
-    VALUE mesg = rb_attr_get(exc, rb_intern(&quot;mesg&quot;));
-    VALUE str = mesg;
+    return rb_attr_get(self, id_name);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-receiver">
+            
+              <b>name_error.receiver  &rarr; object
+</b>
+            
+            <a href="../classes/NameError.html#method-i-receiver" name="method-i-receiver" class="permalink">Link</a>
+          </div>
 
-    if (NIL_P(mesg)) return rb_class_name(CLASS_OF(exc));
-    StringValue(str);
-    return str;
+          
+            <div class="description">
+              <p>Return the receiver associated with this <a
+href="NameError.html">NameError</a> exception.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-receiver_source')" id="l_method-i-receiver_source">show</a>
+                
+              </p>
+              <div id="method-i-receiver_source" class="dyn-source">
+                <pre>static VALUE
+name_err_receiver(VALUE self)
+{
+    VALUE *ptr, recv, mesg;
+
+    recv = rb_ivar_lookup(self, id_receiver, Qundef);
+    if (recv != Qundef) return recv;
+
+    mesg = rb_attr_get(self, id_mesg);
+    if (!rb_typeddata_is_kind_of(mesg, &amp;name_err_mesg_data_type)) {
+        rb_raise(rb_eArgError, &quot;no receiver is available&quot;);
+    }
+    ptr = DATA_PTR(mesg);
+    return ptr[NAME_ERR_MESG__RECV];
 }</pre>
               </div>
             </div>
@@ -256,4 +340,4 @@ name_err_to_s(VALUE exc)
 
     </div>
   </body>
-</html>    
+</html>

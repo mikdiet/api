@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            ActionController::RequestForgeryProtection::ClassMethods 
+            <span class="type">Module</span>
+            ActionController::RequestForgeryProtection::ClassMethods
             
         </h1>
         <ul class="files">
@@ -91,28 +91,44 @@
             
             <a href="../../../classes/ActionController/RequestForgeryProtection/ClassMethods.html#method-i-protect_from_forgery" name="method-i-protect_from_forgery" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Turn on request forgery protection. Bear in mind that only non-GET,
-HTML/JavaScript requests are checked.</p>
+              <p>Turn on request forgery protection. Bear in mind that GET and HEAD requests
+are not checked.</p>
 
-<pre><code>class FooController &lt; ApplicationController
+<pre><code>class ApplicationController &lt; ActionController::Base
+  protect_from_forgery
+end
+
+class FooController &lt; ApplicationController
   protect_from_forgery except: :index
+end
 </code></pre>
 
-<p>You can disable csrf protection on controller-by-controller basis:</p>
+<p>You can disable forgery protection on controller by skipping the
+verification before_action:</p>
 
-<pre><code>skip_before_action :verify_authenticity_token</code></pre>
-
-<p>It can also be disabled for specific controller actions:</p>
-
-<pre><code>skip_before_action :verify_authenticity_token, except: [:create]</code></pre>
+<pre><code>skip_before_action :verify_authenticity_token
+</code></pre>
 
 <p>Valid Options:</p>
 <ul><li>
-<p><code>:only/:except</code> - Passed to the <code>before_action</code> call.
-Set which actions are verified.</p>
+<p><code>:only/:except</code> - Only apply forgery protection to a subset of
+actions. For example <code>only: [ :create, :create_all ]</code>.</p>
+</li><li>
+<p><code>:if/:unless</code> - Turn off the forgery protection entirely
+depending on the passed Proc or method reference.</p>
+</li><li>
+<p><code>:prepend</code> - By default, the verification of the authentication
+token will be added at the position of the <a
+href="ClassMethods.html#method-i-protect_from_forgery">#protect_from_forgery</a>
+call in your application. This means any callbacks added before are run
+first. This is useful when you want your forgery protection to depend on
+other callbacks, like authentication methods (Oauth vs Cookie auth).</p>
+
+<p>If you need to add verification to the beginning of the callback chain, use
+<code>prepend: true</code>.</p>
 </li><li>
 <p><code>:with</code> - Set the method to handle unverified request.</p>
 </li></ul>
@@ -130,24 +146,31 @@ option is not specified.</p>
 </li></ul>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-protect_from_forgery_source')" id="l_method-i-protect_from_forgery_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/470c189874a4cca896bbb1ab5eecc875ecd08a29/actionpack/lib/action_controller/metal/request_forgery_protection.rb#L122" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-protect_from_forgery_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_controller/metal/request_forgery_protection.rb, line 88</span>
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_controller/metal/request_forgery_protection.rb, line 122</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">protect_from_forgery</span>(<span class="ruby-identifier">options</span> = {})
+  <span class="ruby-identifier">options</span> = <span class="ruby-identifier">options</span>.<span class="ruby-identifier">reverse_merge</span>(<span class="ruby-identifier">prepend</span><span class="ruby-operator">:</span> <span class="ruby-keyword">false</span>)
+
   <span class="ruby-keyword">self</span>.<span class="ruby-identifier">forgery_protection_strategy</span> = <span class="ruby-identifier">protection_method_class</span>(<span class="ruby-identifier">options</span>[<span class="ruby-value">:with</span>] <span class="ruby-operator">||</span> <span class="ruby-value">:null_session</span>)
   <span class="ruby-keyword">self</span>.<span class="ruby-identifier">request_forgery_protection_token</span> <span class="ruby-operator">||=</span> <span class="ruby-value">:authenticity_token</span>
-  <span class="ruby-identifier">prepend_before_action</span> <span class="ruby-value">:verify_authenticity_token</span>, <span class="ruby-identifier">options</span>
+  <span class="ruby-identifier">before_action</span> <span class="ruby-value">:verify_authenticity_token</span>, <span class="ruby-identifier">options</span>
+  <span class="ruby-identifier">append_after_action</span> <span class="ruby-value">:verify_same_origin_request</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -157,4 +180,4 @@ option is not specified.</p>
 
     </div>
   </body>
-</html>    
+</html>

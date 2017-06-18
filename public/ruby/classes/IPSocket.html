@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            IPSocket 
+            <span class="type">Class</span>
+            IPSocket
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="BasicSocket.html">BasicSocket</a>
                     
@@ -142,29 +142,33 @@ href="UDPSocket.html">UDPSocket</a>.</p>
             
             <a href="../classes/IPSocket.html#method-c-getaddress" name="method-c-getaddress" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Lookups the IP address of <em>host</em>.</p>
 
-<pre><code>IPSocket.getaddress(&quot;localhost&quot;)     #=&gt; &quot;127.0.0.1&quot;
+<pre><code>require &#39;socket&#39;
+
+IPSocket.getaddress(&quot;localhost&quot;)     #=&gt; &quot;127.0.0.1&quot;
 IPSocket.getaddress(&quot;ip6-localhost&quot;) #=&gt; &quot;::1&quot;
 </code></pre>
             </div>
           
-          
+
           
             <div class="aka">
               Also aliased as: <a href="IPSocket.html#method-c-getaddress_orig">getaddress_orig</a>
             </div>
           
+
           
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-getaddress_source')" id="l_method-c-getaddress_source">show</a>
                 
               </p>
@@ -172,14 +176,15 @@ IPSocket.getaddress(&quot;ip6-localhost&quot;) #=&gt; &quot;::1&quot;
                 <pre>static VALUE
 ip_s_getaddress(VALUE obj, VALUE host)
 {
-    struct sockaddr_storage addr;
-    struct addrinfo *res = rsock_addrinfo(host, Qnil, SOCK_STREAM, 0);
+    union_sockaddr addr;
+    struct rb_addrinfo *res = rsock_addrinfo(host, Qnil, AF_UNSPEC, SOCK_STREAM, 0);
+    socklen_t len = res-&gt;ai-&gt;ai_addrlen;
 
     /* just take the first one */
-    memcpy(&amp;addr, res-&gt;ai_addr, res-&gt;ai_addrlen);
-    freeaddrinfo(res);
+    memcpy(&amp;addr, res-&gt;ai-&gt;ai_addr, len);
+    rb_freeaddrinfo(res);
 
-    return rsock_make_ipaddr((struct sockaddr*)&amp;addr);
+    return rsock_make_ipaddr(&amp;addr.addr, len);
 }</pre>
               </div>
             </div>
@@ -196,7 +201,7 @@ ip_s_getaddress(VALUE obj, VALUE host)
             
             <a href="../classes/IPSocket.html#method-i-addr" name="method-i-addr" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the local address as an array which contains address_family, port,
@@ -206,7 +211,7 @@ hostname and numeric_address.</p>
 <code>:hostname</code>, hostname is obtained from numeric_address using
 reverse lookup. Or if it is <code>false</code>, or <code>:numeric</code>,
 hostname is same as numeric_address. Or if it is <code>nil</code> or
-ommitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See
+omitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See
 <code>Socket.getaddrinfo</code> also.</p>
 
 <pre><code>TCPSocket.open(&quot;www.ruby-lang.org&quot;, 80) {|sock|
@@ -219,15 +224,17 @@ ommitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-addr_source')" id="l_method-i-addr_source">show</a>
                 
               </p>
@@ -236,7 +243,7 @@ ommitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See
 ip_addr(int argc, VALUE *argv, VALUE sock)
 {
     rb_io_t *fptr;
-    struct sockaddr_storage addr;
+    union_sockaddr addr;
     socklen_t len = (socklen_t)sizeof addr;
     int norevlookup;
 
@@ -244,9 +251,9 @@ ip_addr(int argc, VALUE *argv, VALUE sock)
 
     if (argc &lt; 1 || !rsock_revlookup_flag(argv[0], &amp;norevlookup))
         norevlookup = fptr-&gt;mode &amp; FMODE_NOREVLOOKUP;
-    if (getsockname(fptr-&gt;fd, (struct sockaddr*)&amp;addr, &amp;len) &lt; 0)
+    if (getsockname(fptr-&gt;fd, &amp;addr.addr, &amp;len) &lt; 0)
         rb_sys_fail(&quot;getsockname(2)&quot;);
-    return rsock_ipaddr((struct sockaddr*)&amp;addr, norevlookup);
+    return rsock_ipaddr(&amp;addr.addr, len, norevlookup);
 }</pre>
               </div>
             </div>
@@ -261,7 +268,7 @@ ip_addr(int argc, VALUE *argv, VALUE sock)
             
             <a href="../classes/IPSocket.html#method-i-peeraddr" name="method-i-peeraddr" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the remote address as an array which contains address_family, port,
@@ -272,7 +279,7 @@ such as <a href="TCPSocket.html">TCPSocket</a>.</p>
 <code>:hostname</code>, hostname is obtained from numeric_address using
 reverse lookup. Or if it is <code>false</code>, or <code>:numeric</code>,
 hostname is same as numeric_address. Or if it is <code>nil</code> or
-ommitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See
+omitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See
 <code>Socket.getaddrinfo</code> also.</p>
 
 <pre><code>TCPSocket.open(&quot;www.ruby-lang.org&quot;, 80) {|sock|
@@ -285,15 +292,17 @@ ommitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-peeraddr_source')" id="l_method-i-peeraddr_source">show</a>
                 
               </p>
@@ -302,7 +311,7 @@ ommitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See
 ip_peeraddr(int argc, VALUE *argv, VALUE sock)
 {
     rb_io_t *fptr;
-    struct sockaddr_storage addr;
+    union_sockaddr addr;
     socklen_t len = (socklen_t)sizeof addr;
     int norevlookup;
 
@@ -310,9 +319,9 @@ ip_peeraddr(int argc, VALUE *argv, VALUE sock)
 
     if (argc &lt; 1 || !rsock_revlookup_flag(argv[0], &amp;norevlookup))
         norevlookup = fptr-&gt;mode &amp; FMODE_NOREVLOOKUP;
-    if (getpeername(fptr-&gt;fd, (struct sockaddr*)&amp;addr, &amp;len) &lt; 0)
+    if (getpeername(fptr-&gt;fd, &amp;addr.addr, &amp;len) &lt; 0)
         rb_sys_fail(&quot;getpeername(2)&quot;);
-    return rsock_ipaddr((struct sockaddr*)&amp;addr, norevlookup);
+    return rsock_ipaddr(&amp;addr.addr, len, norevlookup);
 }</pre>
               </div>
             </div>
@@ -322,13 +331,12 @@ ip_peeraddr(int argc, VALUE *argv, VALUE sock)
         <div class="method">
           <div class="title method-title" id="method-i-recvfrom">
             
-              <b>ipsocket.recvfrom(maxlen)        => [mesg, ipaddr]
-ipsocket.recvfrom(maxlen, flags) => [mesg, ipaddr]
+              <b>ipsocket.recvfrom(maxlen)        => [mesg, ipaddr]<br />ipsocket.recvfrom(maxlen, flags) => [mesg, ipaddr]
 </b>
             
             <a href="../classes/IPSocket.html#method-i-recvfrom" name="method-i-recvfrom" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Receives a message and return the message as a string and an address which
@@ -348,15 +356,17 @@ p u1.recvfrom(10) #=&gt; [&quot;uuuu&quot;, [&quot;AF_INET&quot;, 33230, &quot;l
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-recvfrom_source')" id="l_method-i-recvfrom_source">show</a>
                 
               </p>
@@ -374,4 +384,4 @@ ip_recvfrom(int argc, VALUE *argv, VALUE sock)
 
     </div>
   </body>
-</html>    
+</html>

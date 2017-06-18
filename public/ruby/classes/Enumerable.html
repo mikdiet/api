@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            Enumerable 
+            <span class="type">Module</span>
+            Enumerable
             
         </h1>
         <ul class="files">
@@ -89,6 +89,11 @@ rely on an ordering between members of the collection.</p>
               
               <li>
                 <a href="#method-i-chunk">chunk</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-chunk_while">chunk_while</a>,
               </li>
             
               
@@ -212,6 +217,11 @@ rely on an ordering between members of the collection.</p>
               
               <li>
                 <a href="#method-i-grep">grep</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-grep_v">grep_v</a>,
               </li>
             
               
@@ -367,7 +377,17 @@ rely on an ordering between members of the collection.</p>
             
               
               <li>
+                <a href="#method-i-slice_after">slice_after</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-slice_before">slice_before</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-slice_when">slice_when</a>,
               </li>
             
               
@@ -377,7 +397,12 @@ rely on an ordering between members of the collection.</p>
             
               
               <li>
-                <a href="#method-i-sort_by">sort_by</a>
+                <a href="#method-i-sort_by">sort_by</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-sum">sum</a>
               </li>
             
           </ul>
@@ -404,7 +429,24 @@ rely on an ordering between members of the collection.</p>
             
               
               <li>
+                <a href="#method-i-to_h">to_h</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-to_set">to_set</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>U</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-uniq">uniq</a>
               </li>
             
           </ul>
@@ -453,7 +495,7 @@ rely on an ordering between members of the collection.</p>
             
             <a href="../classes/Enumerable.html#method-i-all-3F" name="method-i-all-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Passes each element of the collection to the given block. The method
@@ -467,18 +509,21 @@ when none of the collection members are <code>false</code> or
 <pre><code>%w[ant bear cat].all? { |word| word.length &gt;= 3 } #=&gt; true
 %w[ant bear cat].all? { |word| word.length &gt;= 4 } #=&gt; false
 [nil, true, 99].all?                              #=&gt; false
+[].all?                                           #=&gt; true
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-all-3F_source')" id="l_method-i-all-3F_source">show</a>
                 
               </p>
@@ -486,9 +531,9 @@ when none of the collection members are <code>false</code> or
                 <pre>static VALUE
 enum_all(VALUE obj)
 {
-    NODE *memo = NEW_MEMO(Qtrue, 0, 0);
+    struct MEMO *memo = MEMO_NEW(Qtrue, 0, 0);
     rb_block_call(obj, id_each, 0, 0, ENUMFUNC(all), (VALUE)memo);
-    return memo-&gt;u1.value;
+    return memo-&gt;v1;
 }</pre>
               </div>
             </div>
@@ -503,7 +548,7 @@ enum_all(VALUE obj)
             
             <a href="../classes/Enumerable.html#method-i-any-3F" name="method-i-any-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Passes each element of the collection to the given block. The method
@@ -517,18 +562,21 @@ if at least one of the collection members is not <code>false</code> or
 <pre><code>%w[ant bear cat].any? { |word| word.length &gt;= 3 } #=&gt; true
 %w[ant bear cat].any? { |word| word.length &gt;= 4 } #=&gt; true
 [nil, true, 99].any?                              #=&gt; true
+[].any?                                           #=&gt; false
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-any-3F_source')" id="l_method-i-any-3F_source">show</a>
                 
               </p>
@@ -536,9 +584,9 @@ if at least one of the collection members is not <code>false</code> or
                 <pre>static VALUE
 enum_any(VALUE obj)
 {
-    NODE *memo = NEW_MEMO(Qfalse, 0, 0);
+    struct MEMO *memo = MEMO_NEW(Qfalse, 0, 0);
     rb_block_call(obj, id_each, 0, 0, ENUMFUNC(any), (VALUE)memo);
-    return memo-&gt;u1.value;
+    return memo-&gt;v1;
 }</pre>
               </div>
             </div>
@@ -549,12 +597,11 @@ enum_any(VALUE obj)
           <div class="title method-title" id="method-i-chunk">
             
               <b>enum.chunk { |elt| ... }                       &rarr; an_enumerator
-enum.chunk(initial_state) { |elt, state| ... } &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-chunk" name="method-i-chunk" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Enumerates over the items, chunking them together based on the return value
@@ -604,7 +651,7 @@ itself.</p>
 <p>Any other symbols that begin with an underscore will raise an error:</p>
 
 <pre><code>items.chunk { |item| :_underscore }
-#=&gt; RuntimeError: symbol begins with an underscore is reserved
+#=&gt; RuntimeError: symbols beginning with an underscore are reserved
 </code></pre>
 
 <p><code>nil</code> and <code>:_separator</code> can be used to ignore some
@@ -653,41 +700,132 @@ open(filename) { |f|
 }
 </code></pre>
 
-<p>If the block needs to maintain state over multiple elements, an
-<code>initial_state</code> argument can be used. If a non-nil value is
-given, a reference to it is passed as the 2nd argument of the block for the
-<code>chunk</code> method, so state-changes to it persist across block
-calls.</p>
+<p>If no block is given, an enumerator to `chunk` is returned instead.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-chunk_source')" id="l_method-i-chunk_source">show</a>
                 
               </p>
               <div id="method-i-chunk_source" class="dyn-source">
                 <pre>static VALUE
-enum_chunk(int argc, VALUE *argv, VALUE enumerable)
+enum_chunk(VALUE enumerable)
 {
-    VALUE initial_state;
     VALUE enumerator;
 
-    if (!rb_block_given_p())
-        rb_raise(rb_eArgError, &quot;no block given&quot;);
-    rb_scan_args(argc, argv, &quot;01&quot;, &amp;initial_state);
+    RETURN_SIZED_ENUMERATOR(enumerable, 0, 0, enum_size);
 
     enumerator = rb_obj_alloc(rb_cEnumerator);
     rb_ivar_set(enumerator, rb_intern(&quot;chunk_enumerable&quot;), enumerable);
     rb_ivar_set(enumerator, rb_intern(&quot;chunk_categorize&quot;), rb_block_proc());
-    rb_ivar_set(enumerator, rb_intern(&quot;chunk_initial_state&quot;), initial_state);
     rb_block_call(enumerator, idInitialize, 0, 0, chunk_i, enumerator);
+    return enumerator;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-chunk_while">
+            
+              <b>enum.chunk_while {|elt_before, elt_after| bool } &rarr; an_enumerator
+</b>
+            
+            <a href="../classes/Enumerable.html#method-i-chunk_while" name="method-i-chunk_while" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Creates an enumerator for each chunked elements. The beginnings of chunks
+are defined by the block.</p>
+
+<p>This method split each chunk using adjacent elements, <em>elt_before</em>
+and <em>elt_after</em>, in the receiver enumerator. This method split
+chunks between <em>elt_before</em> and <em>elt_after</em> where the block
+returns <code>false</code>.</p>
+
+<p>The block is called the length of the receiver enumerator minus one.</p>
+
+<p>The result enumerator yields the chunked elements as an array. So
+<code>each</code> method can be called as follows:</p>
+
+<pre><code>enum.chunk_while { |elt_before, elt_after| bool }.each { |ary| ... }</code></pre>
+
+<p>Other methods of the <a href="Enumerator.html">Enumerator</a> class and <a
+href="Enumerable.html">Enumerable</a> module, such as <code>to_a</code>,
+<code>map</code>, etc., are also usable.</p>
+
+<p>For example, one-by-one increasing subsequence can be chunked as follows:</p>
+
+<pre><code>a = [1,2,4,9,10,11,12,15,16,19,20,21]
+b = a.chunk_while {|i, j| i+1 == j }
+p b.to_a #=&gt; [[1, 2], [4], [9, 10, 11, 12], [15, 16], [19, 20, 21]]
+c = b.map {|a| a.length &lt; 3 ? a : &quot;#{a.first}-#{a.last}&quot; }
+p c #=&gt; [[1, 2], [4], &quot;9-12&quot;, [15, 16], &quot;19-21&quot;]
+d = c.join(&quot;,&quot;)
+p d #=&gt; &quot;1,2,4,9-12,15,16,19-21&quot;
+</code></pre>
+
+<p>Increasing (non-decreasing) subsequence can be chunked as follows:</p>
+
+<pre><code>a = [0, 9, 2, 2, 3, 2, 7, 5, 9, 5]
+p a.chunk_while {|i, j| i &lt;= j }.to_a
+#=&gt; [[0, 9], [2, 2, 3], [2, 7], [5, 9], [5]]
+</code></pre>
+
+<p>Adjacent evens and odds can be chunked as follows: (Enumerable#chunk is
+another way to do it.)</p>
+
+<pre><code>a = [7, 5, 9, 2, 0, 7, 9, 4, 2, 0]
+p a.chunk_while {|i, j| i.even? == j.even? }.to_a
+#=&gt; [[7, 5, 9], [2, 0], [7, 9], [4, 2, 0]]
+</code></pre>
+
+<p><a href="Enumerable.html#method-i-slice_when">#slice_when</a> does the
+same, except splitting when the block returns <code>true</code> instead of
+<code>false</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-chunk_while_source')" id="l_method-i-chunk_while_source">show</a>
+                
+              </p>
+              <div id="method-i-chunk_while_source" class="dyn-source">
+                <pre>static VALUE
+enum_chunk_while(VALUE enumerable)
+{
+    VALUE enumerator;
+    VALUE pred;
+
+    pred = rb_block_proc();
+
+    enumerator = rb_obj_alloc(rb_cEnumerator);
+    rb_ivar_set(enumerator, rb_intern(&quot;slicewhen_enum&quot;), enumerable);
+    rb_ivar_set(enumerator, rb_intern(&quot;slicewhen_pred&quot;), pred);
+    rb_ivar_set(enumerator, rb_intern(&quot;slicewhen_inverted&quot;), Qtrue);
+
+    rb_block_call(enumerator, idInitialize, 0, 0, slicewhen_i, enumerator);
     return enumerator;
 }</pre>
               </div>
@@ -698,12 +836,11 @@ enum_chunk(int argc, VALUE *argv, VALUE enumerable)
         <div class="method">
           <div class="title method-title" id="method-i-collect">
             
-              <b>enum.collect { |obj| block } &rarr; array
-enum.collect                 &rarr; an_enumerator</b>
+              <b>enum.collect { |obj| block } &rarr; array<br />enum.collect                 &rarr; an_enumerator</b>
             
             <a href="../classes/Enumerable.html#method-i-collect" name="method-i-collect" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a new array with the results of running <em>block</em> once for
@@ -711,20 +848,22 @@ every element in <em>enum</em>.</p>
 
 <p>If no block is given, an enumerator is returned instead.</p>
 
-<pre><code>(1..4).collect { |i| i*i }  #=&gt; [1, 4, 9, 16]
+<pre><code>(1..4).map { |i| i*i }      #=&gt; [1, 4, 9, 16]
 (1..4).collect { &quot;cat&quot;  }   #=&gt; [&quot;cat&quot;, &quot;cat&quot;, &quot;cat&quot;, &quot;cat&quot;]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-collect_source')" id="l_method-i-collect_source">show</a>
                 
               </p>
@@ -749,12 +888,11 @@ enum_collect(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-collect_concat">
             
-              <b>enum.collect_concat { |obj| block } &rarr; array
-enum.collect_concat                 &rarr; an_enumerator</b>
+              <b>enum.collect_concat { |obj| block } &rarr; array<br />enum.collect_concat                 &rarr; an_enumerator</b>
             
             <a href="../classes/Enumerable.html#method-i-collect_concat" name="method-i-collect_concat" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a new array with the concatenated results of running <em>block</em>
@@ -767,15 +905,17 @@ once for every element in <em>enum</em>.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-collect_concat_source')" id="l_method-i-collect_concat_source">show</a>
                 
               </p>
@@ -800,14 +940,12 @@ enum_flat_map(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-count">
             
-              <b>enum.count                 &rarr; int
-enum.count(item)           &rarr; int
-enum.count { |obj| block } &rarr; int
+              <b>enum.count                 &rarr; int<br />enum.count(item)           &rarr; int<br />enum.count { |obj| block } &rarr; int
 </b>
             
             <a href="../classes/Enumerable.html#method-i-count" name="method-i-count" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the number of items in <code>enum</code> through enumeration. If an
@@ -822,15 +960,17 @@ ary.count{ |x| x%2==0 } #=&gt; 3
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-count_source')" id="l_method-i-count_source">show</a>
                 
               </p>
@@ -839,7 +979,7 @@ ary.count{ |x| x%2==0 } #=&gt; 3
 enum_count(int argc, VALUE *argv, VALUE obj)
 {
     VALUE item = Qnil;
-    NODE *memo;
+    struct MEMO *memo;
     rb_block_call_func *func;
 
     if (argc == 0) {
@@ -858,7 +998,7 @@ enum_count(int argc, VALUE *argv, VALUE obj)
         func = count_i;
     }
 
-    memo = NEW_MEMO(item, 0, 0);
+    memo = MEMO_NEW(item, 0, 0);
     rb_block_call(obj, id_each, 0, 0, func, (VALUE)memo);
     return INT2NUM(memo-&gt;u3.cnt);
 }</pre>
@@ -870,13 +1010,12 @@ enum_count(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-cycle">
             
-              <b>enum.cycle(n=nil) { |obj| block }  &rarr;  nil
-enum.cycle(n=nil)                  &rarr;  an_enumerator
+              <b>enum.cycle(n=nil) { |obj| block }  &rarr;  nil<br />enum.cycle(n=nil)                  &rarr;  an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-cycle" name="method-i-cycle" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Calls <em>block</em> for each element of <em>enum</em> repeatedly
@@ -897,15 +1036,17 @@ a.cycle(2) { |x| puts x }  # print, a, b, c, a, b, c.
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-cycle_source')" id="l_method-i-cycle_source">show</a>
                 
               </p>
@@ -928,13 +1069,13 @@ enum_cycle(int argc, VALUE *argv, VALUE obj)
         if (n &lt;= 0) return Qnil;
     }
     ary = rb_ary_new();
-    RBASIC(ary)-&gt;klass = 0;
+    RBASIC_CLEAR_CLASS(ary);
     rb_block_call(obj, id_each, 0, 0, cycle_i, ary);
     len = RARRAY_LEN(ary);
     if (len == 0) return Qnil;
     while (n &lt; 0 || 0 &lt; --n) {
         for (i=0; i&lt;len; i++) {
-            rb_yield(RARRAY_PTR(ary)[i]);
+            enum_yield_array(RARRAY_AREF(ary, i));
         }
     }
     return Qnil;
@@ -947,12 +1088,11 @@ enum_cycle(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-detect">
             
-              <b>enum.detect(ifnone = nil) { |obj| block } &rarr; obj or nil
-enum.detect(ifnone = nil)                 &rarr; an_enumerator</b>
+              <b>enum.detect(ifnone = nil) { |obj| block } &rarr; obj or nil<br />enum.detect(ifnone = nil)                 &rarr; an_enumerator</b>
             
             <a href="../classes/Enumerable.html#method-i-detect" name="method-i-detect" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Passes each entry in <em>enum</em> to <em>block</em>. Returns the first for
@@ -962,20 +1102,26 @@ which <em>block</em> is not false.  If no object matches, calls
 
 <p>If no block is given, an enumerator is returned instead.</p>
 
-<pre><code>(1..10).detect  { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; nil
-(1..100).detect { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; 35
-</code></pre>
+<pre><code>(1..100).detect  =&gt; #&lt;Enumerator: 1..100:detect&gt;
+(1..100).find    =&gt; #&lt;Enumerator: 1..100:find&gt;
+
+(1..10).detect   { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; nil
+(1..10).find     { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; nil
+(1..100).detect  { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; 35
+(1..100).find    { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; 35</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-detect_source')" id="l_method-i-detect_source">show</a>
                 
               </p>
@@ -983,18 +1129,18 @@ which <em>block</em> is not false.  If no object matches, calls
                 <pre>static VALUE
 enum_find(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo;
+    struct MEMO *memo;
     VALUE if_none;
 
     rb_scan_args(argc, argv, &quot;01&quot;, &amp;if_none);
     RETURN_ENUMERATOR(obj, argc, argv);
-    memo = NEW_MEMO(Qundef, 0, 0);
+    memo = MEMO_NEW(Qundef, 0, 0);
     rb_block_call(obj, id_each, 0, 0, find_i, (VALUE)memo);
     if (memo-&gt;u3.cnt) {
-        return memo-&gt;u1.value;
+        return memo-&gt;v1;
     }
     if (!NIL_P(if_none)) {
-        return rb_funcall(if_none, id_call, 0, 0);
+        return rb_funcallv(if_none, id_call, 0, 0);
     }
     return Qnil;
 }</pre>
@@ -1011,7 +1157,7 @@ enum_find(int argc, VALUE *argv, VALUE obj)
             
             <a href="../classes/Enumerable.html#method-i-drop" name="method-i-drop" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Drops first n elements from <em>enum</em>, and returns rest elements in an
@@ -1022,15 +1168,17 @@ a.drop(3)             #=&gt; [4, 5, 0]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-drop_source')" id="l_method-i-drop_source">show</a>
                 
               </p>
@@ -1039,7 +1187,7 @@ a.drop(3)             #=&gt; [4, 5, 0]
 enum_drop(VALUE obj, VALUE n)
 {
     VALUE result;
-    NODE *memo;
+    struct MEMO *memo;
     long len = NUM2LONG(n);
 
     if (len &lt; 0) {
@@ -1047,7 +1195,7 @@ enum_drop(VALUE obj, VALUE n)
     }
 
     result = rb_ary_new();
-    memo = NEW_MEMO(result, 0, len);
+    memo = MEMO_NEW(result, 0, len);
     rb_block_call(obj, id_each, 0, 0, drop_i, (VALUE)memo);
     return result;
 }</pre>
@@ -1059,13 +1207,12 @@ enum_drop(VALUE obj, VALUE n)
         <div class="method">
           <div class="title method-title" id="method-i-drop_while">
             
-              <b>enum.drop_while { |arr| block }  &rarr; array
-enum.drop_while                  &rarr; an_enumerator
+              <b>enum.drop_while { |obj| block }  &rarr; array<br />enum.drop_while                  &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-drop_while" name="method-i-drop_while" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Drops elements up to, but not including, the first element for which the
@@ -1079,15 +1226,17 @@ a.drop_while { |i| i &lt; 3 }   #=&gt; [3, 4, 5, 0]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-drop_while_source')" id="l_method-i-drop_while_source">show</a>
                 
               </p>
@@ -1096,11 +1245,11 @@ a.drop_while { |i| i &lt; 3 }   #=&gt; [3, 4, 5, 0]
 enum_drop_while(VALUE obj)
 {
     VALUE result;
-    NODE *memo;
+    struct MEMO *memo;
 
     RETURN_ENUMERATOR(obj, 0, 0);
     result = rb_ary_new();
-    memo = NEW_MEMO(result, 0, FALSE);
+    memo = MEMO_NEW(result, 0, FALSE);
     rb_block_call(obj, id_each, 0, 0, drop_while_i, (VALUE)memo);
     return result;
 }</pre>
@@ -1112,13 +1261,12 @@ enum_drop_while(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-each_cons">
             
-              <b>enum.each_cons(n) { ... } &rarr;  nil
-enum.each_cons(n)         &rarr;  an_enumerator
+              <b>enum.each_cons(n) { ... } &rarr;  nil<br />enum.each_cons(n)         &rarr;  an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-each_cons" name="method-i-each_cons" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Iterates the given block for each array of consecutive &lt;n&gt; elements. 
@@ -1139,15 +1287,17 @@ If no block is given, returns an enumerator.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-each_cons_source')" id="l_method-i-each_cons_source">show</a>
                 
               </p>
@@ -1156,11 +1306,14 @@ If no block is given, returns an enumerator.</p>
 enum_each_cons(VALUE obj, VALUE n)
 {
     long size = NUM2LONG(n);
-    NODE *memo;
+    struct MEMO *memo;
+    int arity;
 
     if (size &lt;= 0) rb_raise(rb_eArgError, &quot;invalid size&quot;);
     RETURN_SIZED_ENUMERATOR(obj, 1, &amp;n, enum_each_cons_size);
-    memo = NEW_MEMO(rb_ary_new2(size), 0, size);
+    arity = rb_block_arity();
+    if (enum_size_over_p(obj, size)) return Qnil;
+    memo = MEMO_NEW(rb_ary_new2(size), dont_recycle_block_arg(arity), size);
     rb_block_call(obj, id_each, 0, 0, each_cons_i, (VALUE)memo);
 
     return Qnil;
@@ -1173,13 +1326,12 @@ enum_each_cons(VALUE obj, VALUE n)
         <div class="method">
           <div class="title method-title" id="method-i-each_entry">
             
-              <b>enum.each_entry { |obj| block }  &rarr; enum
-enum.each_entry                  &rarr; an_enumerator
+              <b>enum.each_entry { |obj| block }  &rarr; enum<br />enum.each_entry                  &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-each_entry" name="method-i-each_entry" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Calls <em>block</em> once for each element in <code>self</code>, passing
@@ -1203,18 +1355,21 @@ Foo.new.each_entry{ |o| p o }
 
 <pre><code>1
 [1, 2]
-nil</code></pre>
+nil
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-each_entry_source')" id="l_method-i-each_entry_source">show</a>
                 
               </p>
@@ -1234,13 +1389,12 @@ enum_each_entry(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-each_slice">
             
-              <b>enum.each_slice(n) { ... }  &rarr;  nil
-enum.each_slice(n)          &rarr;  an_enumerator
+              <b>enum.each_slice(n) { ... }  &rarr;  nil<br />enum.each_slice(n)          &rarr;  an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-each_slice" name="method-i-each_slice" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Iterates the given block for each slice of &lt;n&gt; elements.  If no block
@@ -1255,15 +1409,17 @@ is given, returns an enumerator.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-each_slice_source')" id="l_method-i-each_slice_source">show</a>
                 
               </p>
@@ -1273,14 +1429,17 @@ enum_each_slice(VALUE obj, VALUE n)
 {
     long size = NUM2LONG(n);
     VALUE ary;
-    NODE *memo;
+    struct MEMO *memo;
+    int arity;
 
     if (size &lt;= 0) rb_raise(rb_eArgError, &quot;invalid slice size&quot;);
     RETURN_SIZED_ENUMERATOR(obj, 1, &amp;n, enum_each_slice_size);
+    size = limit_by_enum_size(obj, size);
     ary = rb_ary_new2(size);
-    memo = NEW_MEMO(ary, 0, size);
+    arity = rb_block_arity();
+    memo = MEMO_NEW(ary, dont_recycle_block_arg(arity), size);
     rb_block_call(obj, id_each, 0, 0, each_slice_i, (VALUE)memo);
-    ary = memo-&gt;u1.value;
+    ary = memo-&gt;v1;
     if (RARRAY_LEN(ary) &gt; 0) rb_yield(ary);
 
     return Qnil;
@@ -1293,13 +1452,12 @@ enum_each_slice(VALUE obj, VALUE n)
         <div class="method">
           <div class="title method-title" id="method-i-each_with_index">
             
-              <b>enum.each_with_index(*args) { |obj, i| block } &rarr;  enum
-enum.each_with_index(*args)                    &rarr;  an_enumerator
+              <b>enum.each_with_index(*args) { |obj, i| block } &rarr;  enum<br />enum.each_with_index(*args)                    &rarr;  an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-each_with_index" name="method-i-each_with_index" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Calls <em>block</em> with two arguments, the item and its index, for each
@@ -1315,15 +1473,17 @@ hash   #=&gt; {&quot;cat&quot;=&gt;0, &quot;dog&quot;=&gt;1, &quot;wombat&quot;=
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-each_with_index_source')" id="l_method-i-each_with_index_source">show</a>
                 
               </p>
@@ -1331,11 +1491,11 @@ hash   #=&gt; {&quot;cat&quot;=&gt;0, &quot;dog&quot;=&gt;1, &quot;wombat&quot;=
                 <pre>static VALUE
 enum_each_with_index(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo;
+    struct MEMO *memo;
 
     RETURN_SIZED_ENUMERATOR(obj, argc, argv, enum_size);
 
-    memo = NEW_MEMO(0, 0, 0);
+    memo = MEMO_NEW(0, 0, 0);
     rb_block_call(obj, id_each, argc, argv, each_with_index_i, (VALUE)memo);
     return obj;
 }</pre>
@@ -1347,13 +1507,12 @@ enum_each_with_index(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-each_with_object">
             
-              <b>enum.each_with_object(obj) { |(*args), memo_obj| ... }  &rarr;  obj
-enum.each_with_object(obj)                              &rarr;  an_enumerator
+              <b>enum.each_with_object(obj) { |(*args), memo_obj| ... }  &rarr;  obj<br />enum.each_with_object(obj)                              &rarr;  an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-each_with_object" name="method-i-each_with_object" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Iterates the given block for each element with an arbitrary object given,
@@ -1366,15 +1525,17 @@ and returns the initially given object.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-each_with_object_source')" id="l_method-i-each_with_object_source">show</a>
                 
               </p>
@@ -1396,29 +1557,34 @@ enum_each_with_object(VALUE obj, VALUE memo)
         <div class="method">
           <div class="title method-title" id="method-i-entries">
             
-              <b>enum.entries   &rarr; array</b>
+              <b>enum.entries(*args)   &rarr; array</b>
             
             <a href="../classes/Enumerable.html#method-i-entries" name="method-i-entries" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns an array containing the items in <em>enum</em>.</p>
 
 <pre><code>(1..7).to_a                       #=&gt; [1, 2, 3, 4, 5, 6, 7]
 { &#39;a&#39;=&gt;1, &#39;b&#39;=&gt;2, &#39;c&#39;=&gt;3 }.to_a   #=&gt; [[&quot;a&quot;, 1], [&quot;b&quot;, 2], [&quot;c&quot;, 3]]
+
+require &#39;prime&#39;
+Prime.entries 10                  #=&gt; [2, 3, 5, 7]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-entries_source')" id="l_method-i-entries_source">show</a>
                 
               </p>
@@ -1441,12 +1607,11 @@ enum_to_a(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-find">
             
-              <b>enum.find(ifnone = nil)   { |obj| block } &rarr; obj or nil
-enum.find(ifnone = nil)                   &rarr; an_enumerator</b>
+              <b>enum.find(ifnone = nil)   { |obj| block } &rarr; obj or nil<br />enum.find(ifnone = nil)                   &rarr; an_enumerator</b>
             
             <a href="../classes/Enumerable.html#method-i-find" name="method-i-find" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Passes each entry in <em>enum</em> to <em>block</em>. Returns the first for
@@ -1456,20 +1621,26 @@ which <em>block</em> is not false.  If no object matches, calls
 
 <p>If no block is given, an enumerator is returned instead.</p>
 
-<pre><code>(1..10).detect  { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; nil
-(1..100).detect { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; 35
-</code></pre>
+<pre><code>(1..100).detect  =&gt; #&lt;Enumerator: 1..100:detect&gt;
+(1..100).find    =&gt; #&lt;Enumerator: 1..100:find&gt;
+
+(1..10).detect   { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; nil
+(1..10).find     { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; nil
+(1..100).detect  { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; 35
+(1..100).find    { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; 35</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-find_source')" id="l_method-i-find_source">show</a>
                 
               </p>
@@ -1477,18 +1648,18 @@ which <em>block</em> is not false.  If no object matches, calls
                 <pre>static VALUE
 enum_find(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo;
+    struct MEMO *memo;
     VALUE if_none;
 
     rb_scan_args(argc, argv, &quot;01&quot;, &amp;if_none);
     RETURN_ENUMERATOR(obj, argc, argv);
-    memo = NEW_MEMO(Qundef, 0, 0);
+    memo = MEMO_NEW(Qundef, 0, 0);
     rb_block_call(obj, id_each, 0, 0, find_i, (VALUE)memo);
     if (memo-&gt;u3.cnt) {
-        return memo-&gt;u1.value;
+        return memo-&gt;v1;
     }
     if (!NIL_P(if_none)) {
-        return rb_funcall(if_none, id_call, 0, 0);
+        return rb_funcallv(if_none, id_call, 0, 0);
     }
     return Qnil;
 }</pre>
@@ -1500,12 +1671,11 @@ enum_find(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-find_all">
             
-              <b>enum.find_all { |obj| block } &rarr; array
-enum.find_all                 &rarr; an_enumerator</b>
+              <b>enum.find_all { |obj| block } &rarr; array<br />enum.find_all                 &rarr; an_enumerator</b>
             
             <a href="../classes/Enumerable.html#method-i-find_all" name="method-i-find_all" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns an array containing all elements of <code>enum</code> for which the
@@ -1522,15 +1692,17 @@ returned instead.</p>
 <p>See also <a href="Enumerable.html#method-i-reject">#reject</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-find_all_source')" id="l_method-i-find_all_source">show</a>
                 
               </p>
@@ -1555,14 +1727,12 @@ enum_find_all(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-find_index">
             
-              <b>enum.find_index(value)          &rarr; int or nil
-enum.find_index { |obj| block } &rarr; int or nil
-enum.find_index                 &rarr; an_enumerator
+              <b>enum.find_index(value)          &rarr; int or nil<br />enum.find_index { |obj| block } &rarr; int or nil<br />enum.find_index                 &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-find_index" name="method-i-find_index" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Compares each entry in <em>enum</em> with <em>value</em> or passes to
@@ -1577,15 +1747,17 @@ value is non-false.  If no object matches, returns <code>nil</code></p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-find_index_source')" id="l_method-i-find_index_source">show</a>
                 
               </p>
@@ -1593,7 +1765,7 @@ value is non-false.  If no object matches, returns <code>nil</code></p>
                 <pre>static VALUE
 enum_find_index(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo; /* [return value, current index, ] */
+    struct MEMO *memo;  /* [return value, current index, ] */
     VALUE condition_value = Qnil;
     rb_block_call_func *func;
 
@@ -1609,9 +1781,9 @@ enum_find_index(int argc, VALUE *argv, VALUE obj)
         func = find_index_i;
     }
 
-    memo = NEW_MEMO(Qnil, condition_value, 0);
+    memo = MEMO_NEW(Qnil, condition_value, 0);
     rb_block_call(obj, id_each, 0, 0, func, (VALUE)memo);
-    return memo-&gt;u1.value;
+    return memo-&gt;v1;
 }</pre>
               </div>
             </div>
@@ -1621,13 +1793,12 @@ enum_find_index(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-first">
             
-              <b>enum.first       &rarr;  obj or nil
-enum.first(n)    &rarr;  an_array
+              <b>enum.first       &rarr;  obj or nil<br />enum.first(n)    &rarr;  an_array
 </b>
             
             <a href="../classes/Enumerable.html#method-i-first" name="method-i-first" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the first element, or the first <code>n</code> elements, of the
@@ -1638,18 +1809,21 @@ enumerable. If the enumerable is empty, the first form returns
 %w[foo bar baz].first(2)  #=&gt; [&quot;foo&quot;, &quot;bar&quot;]
 %w[foo bar baz].first(10) #=&gt; [&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;]
 [].first                  #=&gt; nil
+[].first(10)              #=&gt; []
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-first_source')" id="l_method-i-first_source">show</a>
                 
               </p>
@@ -1657,15 +1831,15 @@ enumerable. If the enumerable is empty, the first form returns
                 <pre>static VALUE
 enum_first(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo;
+    struct MEMO *memo;
     rb_check_arity(argc, 0, 1);
     if (argc &gt; 0) {
         return enum_take(obj, argv[0]);
     }
     else {
-        memo = NEW_MEMO(Qnil, 0, 0);
+        memo = MEMO_NEW(Qnil, 0, 0);
         rb_block_call(obj, id_each, 0, 0, first_i, (VALUE)memo);
-        return memo-&gt;u1.value;
+        return memo-&gt;v1;
     }
 }</pre>
               </div>
@@ -1676,12 +1850,11 @@ enum_first(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-flat_map">
             
-              <b>enum.flat_map       { |obj| block } &rarr; array
-enum.flat_map                       &rarr; an_enumerator</b>
+              <b>enum.flat_map       { |obj| block } &rarr; array<br />enum.flat_map                       &rarr; an_enumerator</b>
             
             <a href="../classes/Enumerable.html#method-i-flat_map" name="method-i-flat_map" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a new array with the concatenated results of running <em>block</em>
@@ -1694,15 +1867,17 @@ once for every element in <em>enum</em>.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-flat_map_source')" id="l_method-i-flat_map_source">show</a>
                 
               </p>
@@ -1727,13 +1902,12 @@ enum_flat_map(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-grep">
             
-              <b>enum.grep(pattern)                  &rarr; array
-enum.grep(pattern) { |obj| block }  &rarr; array
+              <b>enum.grep(pattern)                  &rarr; array<br />enum.grep(pattern) { |obj| block }  &rarr; array
 </b>
             
             <a href="../classes/Enumerable.html#method-i-grep" name="method-i-grep" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns an array of every element in <em>enum</em> for which <code>Pattern
@@ -1749,15 +1923,17 @@ res                    #=&gt; [0, 1, 2]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-grep_source')" id="l_method-i-grep_source">show</a>
                 
               </p>
@@ -1766,7 +1942,58 @@ res                    #=&gt; [0, 1, 2]
 enum_grep(VALUE obj, VALUE pat)
 {
     VALUE ary = rb_ary_new();
-    NODE *memo = NEW_MEMO(pat, ary, 0);
+    struct MEMO *memo = MEMO_NEW(pat, ary, Qtrue);
+
+    rb_block_call(obj, id_each, 0, 0, rb_block_given_p() ? grep_iter_i : grep_i, (VALUE)memo);
+
+    return ary;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-grep_v">
+            
+              <b>enum.grep_v(pattern)                  &rarr; array<br />enum.grep_v(pattern) { |obj| block }  &rarr; array
+</b>
+            
+            <a href="../classes/Enumerable.html#method-i-grep_v" name="method-i-grep_v" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Inverted version of <a href="Enumerable.html#method-i-grep">#grep</a>.
+Returns an array of every element in <em>enum</em> for which not
+<code>Pattern === element</code>.</p>
+
+<pre><code>(1..10).grep_v 2..5   #=&gt; [1, 6, 7, 8, 9, 10]
+res =(1..10).grep_v(2..5) { |v| v * 2 }
+res                    #=&gt; [2, 12, 14, 16, 18, 20]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-grep_v_source')" id="l_method-i-grep_v_source">show</a>
+                
+              </p>
+              <div id="method-i-grep_v_source" class="dyn-source">
+                <pre>static VALUE
+enum_grep_v(VALUE obj, VALUE pat)
+{
+    VALUE ary = rb_ary_new();
+    struct MEMO *memo = MEMO_NEW(pat, ary, Qfalse);
 
     rb_block_call(obj, id_each, 0, 0, rb_block_given_p() ? grep_iter_i : grep_i, (VALUE)memo);
 
@@ -1780,13 +2007,12 @@ enum_grep(VALUE obj, VALUE pat)
         <div class="method">
           <div class="title method-title" id="method-i-group_by">
             
-              <b>enum.group_by { |obj| block } &rarr; a_hash
-enum.group_by                 &rarr; an_enumerator
+              <b>enum.group_by { |obj| block } &rarr; a_hash<br />enum.group_by                 &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-group_by" name="method-i-group_by" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Groups the collection by result of the block.  Returns a hash where the
@@ -1799,15 +2025,17 @@ elements in the collection that correspond to the key.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-group_by_source')" id="l_method-i-group_by_source">show</a>
                 
               </p>
@@ -1837,7 +2065,7 @@ enum_group_by(VALUE obj)
             
             <a href="../classes/Enumerable.html#method-i-include-3F" name="method-i-include-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns <code>true</code> if any member of <em>enum</em> equals
@@ -1845,18 +2073,22 @@ enum_group_by(VALUE obj)
 
 <pre><code>IO.constants.include? :SEEK_SET          #=&gt; true
 IO.constants.include? :SEEK_NO_FURTHER   #=&gt; false
+IO.constants.member? :SEEK_SET          #=&gt; true
+IO.constants.member? :SEEK_NO_FURTHER   #=&gt; false
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-include-3F_source')" id="l_method-i-include-3F_source">show</a>
                 
               </p>
@@ -1864,10 +2096,10 @@ IO.constants.include? :SEEK_NO_FURTHER   #=&gt; false
                 <pre>static VALUE
 enum_member(VALUE obj, VALUE val)
 {
-    NODE *memo = NEW_MEMO(val, Qfalse, 0);
+    struct MEMO *memo = MEMO_NEW(val, Qfalse, 0);
 
     rb_block_call(obj, id_each, 0, 0, member_i, (VALUE)memo);
-    return memo-&gt;u2.value;
+    return memo-&gt;v2;
 }</pre>
               </div>
             </div>
@@ -1877,18 +2109,18 @@ enum_member(VALUE obj, VALUE val)
         <div class="method">
           <div class="title method-title" id="method-i-inject">
             
-              <b>enum.inject(initial, sym) &rarr; obj
-enum.inject(sym)          &rarr; obj
-enum.inject(initial) { |memo, obj| block }  &rarr; obj
-enum.inject          { |memo, obj| block }  &rarr; obj</b>
+              <b>enum.inject(initial, sym) &rarr; obj<br />enum.inject(sym)          &rarr; obj<br />enum.inject(initial) { |memo, obj| block }  &rarr; obj<br />enum.inject          { |memo, obj| block }  &rarr; obj</b>
             
             <a href="../classes/Enumerable.html#method-i-inject" name="method-i-inject" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Combines all elements of <em>enum</em> by applying a binary operation,
 specified by a block or a symbol that names a method or operator.</p>
+
+<p>The <em>inject</em> and <em>reduce</em> methods are aliases. There is no
+performance benefit to either.</p>
 
 <p>If you specify a block, then for each element in <em>enum</em> the block is
 passed an accumulator value (<em>memo</em>) and the element. If you specify
@@ -1917,15 +2149,17 @@ longest                                        #=&gt; &quot;sheep&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-inject_source')" id="l_method-i-inject_source">show</a>
                 
               </p>
@@ -1933,33 +2167,45 @@ longest                                        #=&gt; &quot;sheep&quot;
                 <pre>static VALUE
 enum_inject(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo;
+    struct MEMO *memo;
     VALUE init, op;
-    VALUE (*iter)(VALUE, VALUE, int, VALUE*) = inject_i;
+    rb_block_call_func *iter = inject_i;
+    ID id;
 
     switch (rb_scan_args(argc, argv, &quot;02&quot;, &amp;init, &amp;op)) {
       case 0:
+        init = Qundef;
         break;
       case 1:
         if (rb_block_given_p()) {
             break;
         }
-        op = (VALUE)rb_to_id(init);
-        argc = 0;
-        init = Qnil;
+        id = rb_check_id(&amp;init);
+        op = id ? ID2SYM(id) : init;
+        init = Qundef;
         iter = inject_op_i;
         break;
       case 2:
         if (rb_block_given_p()) {
             rb_warning(&quot;given block not used&quot;);
         }
-        op = (VALUE)rb_to_id(op);
+        id = rb_check_id(&amp;op);
+        if (id) op = ID2SYM(id);
         iter = inject_op_i;
         break;
     }
-    memo = NEW_MEMO(init, argc, op);
+
+    if (iter == inject_op_i &amp;&amp;
+        SYMBOL_P(op) &amp;&amp;
+        RB_TYPE_P(obj, T_ARRAY) &amp;&amp;
+        rb_method_basic_definition_p(CLASS_OF(obj), id_each)) {
+        return ary_inject_op(obj, init, op);
+    }
+
+    memo = MEMO_NEW(init, Qnil, op);
     rb_block_call(obj, id_each, 0, 0, iter, (VALUE)memo);
-    return memo-&gt;u1.value;
+    if (memo-&gt;v1 == Qundef) return Qnil;
+    return memo-&gt;v1;
 }</pre>
               </div>
             </div>
@@ -1974,15 +2220,16 @@ enum_inject(int argc, VALUE *argv, VALUE obj)
             
             <a href="../classes/Enumerable.html#method-i-lazy" name="method-i-lazy" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a lazy enumerator, whose methods map/collect,
-flat_map/collect_concat, select/find_all, reject, grep, zip, take, <a
-href="Enumerable.html#method-i-take_while">#take_while</a>, drop, <a
-href="Enumerable.html#method-i-drop_while">#drop_while</a>, and cycle
-enumerate values only on an as-needed basis.  However, if a block is given
-to zip or cycle, values are enumerated immediately.</p>
+flat_map/collect_concat, select/find_all, reject, grep, <a
+href="Enumerable.html#method-i-grep_v">#grep_v</a>, zip, take, <a
+href="Enumerable.html#method-i-take_while">#take_while</a>, drop, and <a
+href="Enumerable.html#method-i-drop_while">#drop_while</a> enumerate values
+only on an as-needed basis.  However, if a block is given to zip, values
+are enumerated immediately.</p>
 
 <h3 id="method-i-lazy-label-Example">Example</h3>
 
@@ -2007,15 +2254,17 @@ p pythagorean_triples.take_while { |*, z| z &lt; 100 }.force
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-lazy_source')" id="l_method-i-lazy_source">show</a>
                 
               </p>
@@ -2023,7 +2272,7 @@ p pythagorean_triples.take_while { |*, z| z &lt; 100 }.force
                 <pre>static VALUE
 enumerable_lazy(VALUE obj)
 {
-    VALUE result = lazy_to_enum_i(obj, sym_each, 0, 0, enum_size);
+    VALUE result = lazy_to_enum_i(obj, sym_each, 0, 0, lazyenum_size);
     /* Qfalse indicates that the Enumerator::Lazy has no method name */
     rb_ivar_set(result, id_method, Qfalse);
     return result;
@@ -2036,12 +2285,11 @@ enumerable_lazy(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-map">
             
-              <b>enum.map     { |obj| block } &rarr; array
-enum.map                     &rarr; an_enumerator</b>
+              <b>enum.map     { |obj| block } &rarr; array<br />enum.map                     &rarr; an_enumerator</b>
             
             <a href="../classes/Enumerable.html#method-i-map" name="method-i-map" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a new array with the results of running <em>block</em> once for
@@ -2049,20 +2297,22 @@ every element in <em>enum</em>.</p>
 
 <p>If no block is given, an enumerator is returned instead.</p>
 
-<pre><code>(1..4).collect { |i| i*i }  #=&gt; [1, 4, 9, 16]
+<pre><code>(1..4).map { |i| i*i }      #=&gt; [1, 4, 9, 16]
 (1..4).collect { &quot;cat&quot;  }   #=&gt; [&quot;cat&quot;, &quot;cat&quot;, &quot;cat&quot;, &quot;cat&quot;]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-map_source')" id="l_method-i-map_source">show</a>
                 
               </p>
@@ -2087,13 +2337,12 @@ enum_collect(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-max">
             
-              <b>enum.max                  &rarr; obj
-enum.max { |a, b| block } &rarr; obj
+              <b>enum.max                     &rarr; obj<br />enum.max { |a, b| block }    &rarr; obj<br />enum.max(n)                  &rarr; array<br />enum.max(n) { |a, b| block } &rarr; array
 </b>
             
             <a href="../classes/Enumerable.html#method-i-max" name="method-i-max" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the object in <em>enum</em> with the maximum value. The first form
@@ -2104,34 +2353,55 @@ block to return <em>a &lt;=&gt; b</em>.</p>
 a.max                                   #=&gt; &quot;horse&quot;
 a.max { |a, b| a.length &lt;=&gt; b.length }  #=&gt; &quot;albatross&quot;
 </code></pre>
+
+<p>If the <code>n</code> argument is given, maximum <code>n</code> elements
+are returned as an array, sorted in descending order.</p>
+
+<pre><code>a = %w[albatross dog horse]
+a.max(2)                                  #=&gt; [&quot;horse&quot;, &quot;dog&quot;]
+a.max(2) {|a, b| a.length &lt;=&gt; b.length }  #=&gt; [&quot;albatross&quot;, &quot;horse&quot;]
+[5, 1, 3, 4, 2].max(3)                    #=&gt; [5, 4, 3]
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-max_source')" id="l_method-i-max_source">show</a>
                 
               </p>
               <div id="method-i-max_source" class="dyn-source">
                 <pre>static VALUE
-enum_max(VALUE obj)
+enum_max(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo = NEW_MEMO(Qundef, 0, 0);
+    VALUE memo;
+    struct max_t *m = NEW_CMP_OPT_MEMO(struct max_t, memo);
     VALUE result;
+    VALUE num;
 
+    rb_scan_args(argc, argv, &quot;01&quot;, &amp;num);
+
+    if (!NIL_P(num))
+       return rb_nmin_run(obj, num, 0, 1, 0);
+
+    m-&gt;max = Qundef;
+    m-&gt;cmp_opt.opt_methods = 0;
+    m-&gt;cmp_opt.opt_inited = 0;
     if (rb_block_given_p()) {
         rb_block_call(obj, id_each, 0, 0, max_ii, (VALUE)memo);
     }
     else {
         rb_block_call(obj, id_each, 0, 0, max_i, (VALUE)memo);
     }
-    result = memo-&gt;u1.value;
+    result = m-&gt;max;
     if (result == Qundef) return Qnil;
     return result;
 }</pre>
@@ -2143,13 +2413,12 @@ enum_max(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-max_by">
             
-              <b>enum.max_by { |obj| block } &rarr; obj
-enum.max_by                 &rarr; an_enumerator
+              <b>enum.max_by {|obj| block }      &rarr; obj<br />enum.max_by                     &rarr; an_enumerator<br />enum.max_by(n) {|obj| block }   &rarr; obj<br />enum.max_by(n)                  &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-max_by" name="method-i-max_by" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the object in <em>enum</em> that gives the maximum value from the
@@ -2160,31 +2429,92 @@ given block.</p>
 <pre><code>a = %w(albatross dog horse)
 a.max_by { |x| x.length }   #=&gt; &quot;albatross&quot;
 </code></pre>
+
+<p>If the <code>n</code> argument is given, maximum <code>n</code> elements
+are returned as an array. These <code>n</code> elements are sorted by the
+value from the given block, in descending order.</p>
+
+<pre><code>a = %w[albatross dog horse]
+a.max_by(2) {|x| x.length } #=&gt; [&quot;albatross&quot;, &quot;horse&quot;]
+</code></pre>
+
+<p>enum.max_by(n) can be used to implement weighted random sampling. Following
+example implements and use Enumerable#wsample.</p>
+
+<pre><code>module Enumerable
+  # weighted random sampling.
+  #
+  # Pavlos S. Efraimidis, Paul G. Spirakis
+  # Weighted random sampling with a reservoir
+  # Information Processing Letters
+  # Volume 97, Issue 5 (16 March 2006)
+  def wsample(n)
+    self.max_by(n) {|v| rand ** (1.0/yield(v)) }
+  end
+end
+e = (-20..20).to_a*10000
+a = e.wsample(20000) {|x|
+  Math.exp(-(x/5.0)**2) # normal distribution
+}
+# a is 20000 samples from e.
+p a.length #=&gt; 20000
+h = a.group_by {|x| x }
+-10.upto(10) {|x| puts &quot;*&quot; * (h[x].length/30.0).to_i if h[x] }
+#=&gt; *
+#   ***
+#   ******
+#   ***********
+#   ******************
+#   *****************************
+#   *****************************************
+#   ****************************************************
+#   ***************************************************************
+#   ********************************************************************
+#   ***********************************************************************
+#   ***********************************************************************
+#   **************************************************************
+#   ****************************************************
+#   ***************************************
+#   ***************************
+#   ******************
+#   ***********
+#   *******
+#   ***
+#   *
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-max_by_source')" id="l_method-i-max_by_source">show</a>
                 
               </p>
               <div id="method-i-max_by_source" class="dyn-source">
                 <pre>static VALUE
-enum_max_by(VALUE obj)
+enum_max_by(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo;
+    struct MEMO *memo;
+    VALUE num;
 
-    RETURN_SIZED_ENUMERATOR(obj, 0, 0, enum_size);
+    rb_scan_args(argc, argv, &quot;01&quot;, &amp;num);
 
-    memo = NEW_MEMO(Qundef, Qnil, 0);
+    RETURN_SIZED_ENUMERATOR(obj, argc, argv, enum_size);
+
+    if (!NIL_P(num))
+        return rb_nmin_run(obj, num, 1, 1, 0);
+
+    memo = MEMO_NEW(Qundef, Qnil, 0);
     rb_block_call(obj, id_each, 0, 0, max_by_i, (VALUE)memo);
-    return memo-&gt;u2.value;
+    return memo-&gt;v2;
 }</pre>
               </div>
             </div>
@@ -2198,7 +2528,7 @@ enum_max_by(VALUE obj)
             
             <a href="../classes/Enumerable.html#method-i-member-3F" name="method-i-member-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns <code>true</code> if any member of <em>enum</em> equals
@@ -2206,18 +2536,22 @@ enum_max_by(VALUE obj)
 
 <pre><code>IO.constants.include? :SEEK_SET          #=&gt; true
 IO.constants.include? :SEEK_NO_FURTHER   #=&gt; false
+IO.constants.member? :SEEK_SET          #=&gt; true
+IO.constants.member? :SEEK_NO_FURTHER   #=&gt; false
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-member-3F_source')" id="l_method-i-member-3F_source">show</a>
                 
               </p>
@@ -2225,10 +2559,10 @@ IO.constants.include? :SEEK_NO_FURTHER   #=&gt; false
                 <pre>static VALUE
 enum_member(VALUE obj, VALUE val)
 {
-    NODE *memo = NEW_MEMO(val, Qfalse, 0);
+    struct MEMO *memo = MEMO_NEW(val, Qfalse, 0);
 
     rb_block_call(obj, id_each, 0, 0, member_i, (VALUE)memo);
-    return memo-&gt;u2.value;
+    return memo-&gt;v2;
 }</pre>
               </div>
             </div>
@@ -2238,13 +2572,12 @@ enum_member(VALUE obj, VALUE val)
         <div class="method">
           <div class="title method-title" id="method-i-min">
             
-              <b>enum.min                 &rarr; obj
-enum.min { |a, b| block } &rarr; obj
+              <b>enum.min                     &rarr; obj<br />enum.min { |a, b| block }    &rarr; obj<br />enum.min(n)                  &rarr; array<br />enum.min(n) { |a, b| block } &rarr; array
 </b>
             
             <a href="../classes/Enumerable.html#method-i-min" name="method-i-min" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the object in <em>enum</em> with the minimum value. The first form
@@ -2255,34 +2588,55 @@ block to return <em>a &lt;=&gt; b</em>.</p>
 a.min                                   #=&gt; &quot;albatross&quot;
 a.min { |a, b| a.length &lt;=&gt; b.length }  #=&gt; &quot;dog&quot;
 </code></pre>
+
+<p>If the <code>n</code> argument is given, minimum <code>n</code> elements
+are returned as a sorted array.</p>
+
+<pre><code>a = %w[albatross dog horse]
+a.min(2)                                  #=&gt; [&quot;albatross&quot;, &quot;dog&quot;]
+a.min(2) {|a, b| a.length &lt;=&gt; b.length }  #=&gt; [&quot;dog&quot;, &quot;horse&quot;]
+[5, 1, 3, 4, 2].min(3)                    #=&gt; [1, 2, 3]
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-min_source')" id="l_method-i-min_source">show</a>
                 
               </p>
               <div id="method-i-min_source" class="dyn-source">
                 <pre>static VALUE
-enum_min(VALUE obj)
+enum_min(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo = NEW_MEMO(Qundef, 0, 0);
+    VALUE memo;
+    struct min_t *m = NEW_CMP_OPT_MEMO(struct min_t, memo);
     VALUE result;
+    VALUE num;
 
+    rb_scan_args(argc, argv, &quot;01&quot;, &amp;num);
+
+    if (!NIL_P(num))
+       return rb_nmin_run(obj, num, 0, 0, 0);
+
+    m-&gt;min = Qundef;
+    m-&gt;cmp_opt.opt_methods = 0;
+    m-&gt;cmp_opt.opt_inited = 0;
     if (rb_block_given_p()) {
-        rb_block_call(obj, id_each, 0, 0, min_ii, (VALUE)memo);
+        rb_block_call(obj, id_each, 0, 0, min_ii, memo);
     }
     else {
-        rb_block_call(obj, id_each, 0, 0, min_i, (VALUE)memo);
+        rb_block_call(obj, id_each, 0, 0, min_i, memo);
     }
-    result = memo-&gt;u1.value;
+    result = m-&gt;min;
     if (result == Qundef) return Qnil;
     return result;
 }</pre>
@@ -2294,13 +2648,12 @@ enum_min(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-min_by">
             
-              <b>enum.min_by { |obj| block } &rarr; obj
-enum.min_by                 &rarr; an_enumerator
+              <b>enum.min_by {|obj| block }      &rarr; obj<br />enum.min_by                     &rarr; an_enumerator<br />enum.min_by(n) {|obj| block }   &rarr; array<br />enum.min_by(n)                  &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-min_by" name="method-i-min_by" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the object in <em>enum</em> that gives the minimum value from the
@@ -2311,31 +2664,47 @@ given block.</p>
 <pre><code>a = %w(albatross dog horse)
 a.min_by { |x| x.length }   #=&gt; &quot;dog&quot;
 </code></pre>
+
+<p>If the <code>n</code> argument is given, minimum <code>n</code> elements
+are returned as an array. These <code>n</code> elements are sorted by the
+value from the given block.</p>
+
+<pre><code>a = %w[albatross dog horse]
+p a.min_by(2) {|x| x.length } #=&gt; [&quot;dog&quot;, &quot;horse&quot;]
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-min_by_source')" id="l_method-i-min_by_source">show</a>
                 
               </p>
               <div id="method-i-min_by_source" class="dyn-source">
                 <pre>static VALUE
-enum_min_by(VALUE obj)
+enum_min_by(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo;
+    struct MEMO *memo;
+    VALUE num;
 
-    RETURN_SIZED_ENUMERATOR(obj, 0, 0, enum_size);
+    rb_scan_args(argc, argv, &quot;01&quot;, &amp;num);
 
-    memo = NEW_MEMO(Qundef, Qnil, 0);
+    RETURN_SIZED_ENUMERATOR(obj, argc, argv, enum_size);
+
+    if (!NIL_P(num))
+        return rb_nmin_run(obj, num, 1, 0, 0);
+
+    memo = MEMO_NEW(Qundef, Qnil, 0);
     rb_block_call(obj, id_each, 0, 0, min_by_i, (VALUE)memo);
-    return memo-&gt;u2.value;
+    return memo-&gt;v2;
 }</pre>
               </div>
             </div>
@@ -2345,17 +2714,16 @@ enum_min_by(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-minmax">
             
-              <b>enum.minmax                  &rarr; [min, max]
-enum.minmax { |a, b| block } &rarr; [min, max]
+              <b>enum.minmax                  &rarr; [min, max]<br />enum.minmax { |a, b| block } &rarr; [min, max]
 </b>
             
             <a href="../classes/Enumerable.html#method-i-minmax" name="method-i-minmax" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns two elements array which contains the minimum and the maximum value
-in the enumerable.  The first form assumes all objects implement
+              <p>Returns a two element array which contains the minimum and the maximum
+value in the enumerable.  The first form assumes all objects implement
 <code>Comparable</code>; the second uses the block to return <em>a
 &lt;=&gt; b</em>.</p>
 
@@ -2365,15 +2733,17 @@ a.minmax { |a, b| a.length &lt;=&gt; b.length } #=&gt; [&quot;dog&quot;, &quot;a
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-minmax_source')" id="l_method-i-minmax_source">show</a>
                 
               </p>
@@ -2381,27 +2751,27 @@ a.minmax { |a, b| a.length &lt;=&gt; b.length } #=&gt; [&quot;dog&quot;, &quot;a
                 <pre>static VALUE
 enum_minmax(VALUE obj)
 {
-    NODE *memo = NEW_MEMO(Qundef, Qundef, Qundef);
-    struct minmax_t *m = (struct minmax_t *)&amp;memo-&gt;u1.value;
-    VALUE ary = rb_ary_new3(2, Qnil, Qnil);
+    VALUE memo;
+    struct minmax_t *m = NEW_CMP_OPT_MEMO(struct minmax_t, memo);
 
     m-&gt;min = Qundef;
     m-&gt;last = Qundef;
+    m-&gt;cmp_opt.opt_methods = 0;
+    m-&gt;cmp_opt.opt_inited = 0;
     if (rb_block_given_p()) {
-        rb_block_call(obj, id_each, 0, 0, minmax_ii, (VALUE)memo);
+        rb_block_call(obj, id_each, 0, 0, minmax_ii, memo);
         if (m-&gt;last != Qundef)
             minmax_ii_update(m-&gt;last, m-&gt;last, m);
     }
     else {
-        rb_block_call(obj, id_each, 0, 0, minmax_i, (VALUE)memo);
+        rb_block_call(obj, id_each, 0, 0, minmax_i, memo);
         if (m-&gt;last != Qundef)
             minmax_i_update(m-&gt;last, m-&gt;last, m);
     }
     if (m-&gt;min != Qundef) {
-        rb_ary_store(ary, 0, m-&gt;min);
-        rb_ary_store(ary, 1, m-&gt;max);
+        return rb_assoc_new(m-&gt;min, m-&gt;max);
     }
-    return ary;
+    return rb_assoc_new(Qnil, Qnil);
 }</pre>
               </div>
             </div>
@@ -2411,13 +2781,12 @@ enum_minmax(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-minmax_by">
             
-              <b>enum.minmax_by { |obj| block } &rarr; [min, max]
-enum.minmax_by                 &rarr; an_enumerator
+              <b>enum.minmax_by { |obj| block } &rarr; [min, max]<br />enum.minmax_by                 &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-minmax_by" name="method-i-minmax_by" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a two element array containing the objects in <em>enum</em> that
@@ -2431,15 +2800,17 @@ a.minmax_by { |x| x.length }   #=&gt; [&quot;dog&quot;, &quot;albatross&quot;]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-minmax_by_source')" id="l_method-i-minmax_by_source">show</a>
                 
               </p>
@@ -2477,7 +2848,7 @@ enum_minmax_by(VALUE obj)
             
             <a href="../classes/Enumerable.html#method-i-none-3F" name="method-i-none-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Passes each element of the collection to the given block. The method
@@ -2490,18 +2861,21 @@ all elements. If the block is not given, <code>none?</code> will return
 [].none?                                           #=&gt; true
 [nil].none?                                        #=&gt; true
 [nil, false].none?                                 #=&gt; true
+[nil, false, true].none?                           #=&gt; false
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-none-3F_source')" id="l_method-i-none-3F_source">show</a>
                 
               </p>
@@ -2509,9 +2883,9 @@ all elements. If the block is not given, <code>none?</code> will return
                 <pre>static VALUE
 enum_none(VALUE obj)
 {
-    NODE *memo = NEW_MEMO(Qtrue, 0, 0);
+    struct MEMO *memo = MEMO_NEW(Qtrue, 0, 0);
     rb_block_call(obj, id_each, 0, 0, ENUMFUNC(none), (VALUE)memo);
-    return memo-&gt;u1.value;
+    return memo-&gt;v1;
 }</pre>
               </div>
             </div>
@@ -2526,7 +2900,7 @@ enum_none(VALUE obj)
             
             <a href="../classes/Enumerable.html#method-i-one-3F" name="method-i-one-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Passes each element of the collection to the given block. The method
@@ -2542,15 +2916,17 @@ once. If the block is not given, <code>one?</code> will return
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-one-3F_source')" id="l_method-i-one-3F_source">show</a>
                 
               </p>
@@ -2558,11 +2934,11 @@ once. If the block is not given, <code>one?</code> will return
                 <pre>static VALUE
 enum_one(VALUE obj)
 {
-    NODE *memo = NEW_MEMO(Qundef, 0, 0);
+    struct MEMO *memo = MEMO_NEW(Qundef, 0, 0);
     VALUE result;
 
     rb_block_call(obj, id_each, 0, 0, ENUMFUNC(one), (VALUE)memo);
-    result = memo-&gt;u1.value;
+    result = memo-&gt;v1;
     if (result == Qundef) return Qfalse;
     return result;
 }</pre>
@@ -2574,13 +2950,12 @@ enum_one(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-partition">
             
-              <b>enum.partition { |obj| block } &rarr; [ true_array, false_array ]
-enum.partition                 &rarr; an_enumerator
+              <b>enum.partition { |obj| block } &rarr; [ true_array, false_array ]<br />enum.partition                 &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-partition" name="method-i-partition" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns two arrays, the first containing the elements of <em>enum</em> for
@@ -2592,15 +2967,17 @@ which the block evaluates to true, the second containing the rest.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-partition_source')" id="l_method-i-partition_source">show</a>
                 
               </p>
@@ -2608,14 +2985,14 @@ which the block evaluates to true, the second containing the rest.</p>
                 <pre>static VALUE
 enum_partition(VALUE obj)
 {
-    NODE *memo;
+    struct MEMO *memo;
 
     RETURN_SIZED_ENUMERATOR(obj, 0, 0, enum_size);
 
-    memo = NEW_MEMO(rb_ary_new(), rb_ary_new(), 0);
+    memo = MEMO_NEW(rb_ary_new(), rb_ary_new(), 0);
     rb_block_call(obj, id_each, 0, 0, partition_i, (VALUE)memo);
 
-    return rb_assoc_new(memo-&gt;u1.value, memo-&gt;u2.value);
+    return rb_assoc_new(memo-&gt;v1, memo-&gt;v2);
 }</pre>
               </div>
             </div>
@@ -2625,18 +3002,18 @@ enum_partition(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-reduce">
             
-              <b>enum.reduce(initial, sym) &rarr; obj
-enum.reduce(sym)          &rarr; obj
-enum.reduce(initial) { |memo, obj| block }  &rarr; obj
-enum.reduce          { |memo, obj| block }  &rarr; obj</b>
+              <b>enum.reduce(initial, sym) &rarr; obj<br />enum.reduce(sym)          &rarr; obj<br />enum.reduce(initial) { |memo, obj| block }  &rarr; obj<br />enum.reduce          { |memo, obj| block }  &rarr; obj</b>
             
             <a href="../classes/Enumerable.html#method-i-reduce" name="method-i-reduce" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Combines all elements of <em>enum</em> by applying a binary operation,
 specified by a block or a symbol that names a method or operator.</p>
+
+<p>The <em>inject</em> and <em>reduce</em> methods are aliases. There is no
+performance benefit to either.</p>
 
 <p>If you specify a block, then for each element in <em>enum</em> the block is
 passed an accumulator value (<em>memo</em>) and the element. If you specify
@@ -2665,15 +3042,17 @@ longest                                        #=&gt; &quot;sheep&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-reduce_source')" id="l_method-i-reduce_source">show</a>
                 
               </p>
@@ -2681,33 +3060,45 @@ longest                                        #=&gt; &quot;sheep&quot;
                 <pre>static VALUE
 enum_inject(int argc, VALUE *argv, VALUE obj)
 {
-    NODE *memo;
+    struct MEMO *memo;
     VALUE init, op;
-    VALUE (*iter)(VALUE, VALUE, int, VALUE*) = inject_i;
+    rb_block_call_func *iter = inject_i;
+    ID id;
 
     switch (rb_scan_args(argc, argv, &quot;02&quot;, &amp;init, &amp;op)) {
       case 0:
+        init = Qundef;
         break;
       case 1:
         if (rb_block_given_p()) {
             break;
         }
-        op = (VALUE)rb_to_id(init);
-        argc = 0;
-        init = Qnil;
+        id = rb_check_id(&amp;init);
+        op = id ? ID2SYM(id) : init;
+        init = Qundef;
         iter = inject_op_i;
         break;
       case 2:
         if (rb_block_given_p()) {
             rb_warning(&quot;given block not used&quot;);
         }
-        op = (VALUE)rb_to_id(op);
+        id = rb_check_id(&amp;op);
+        if (id) op = ID2SYM(id);
         iter = inject_op_i;
         break;
     }
-    memo = NEW_MEMO(init, argc, op);
+
+    if (iter == inject_op_i &amp;&amp;
+        SYMBOL_P(op) &amp;&amp;
+        RB_TYPE_P(obj, T_ARRAY) &amp;&amp;
+        rb_method_basic_definition_p(CLASS_OF(obj), id_each)) {
+        return ary_inject_op(obj, init, op);
+    }
+
+    memo = MEMO_NEW(init, Qnil, op);
     rb_block_call(obj, id_each, 0, 0, iter, (VALUE)memo);
-    return memo-&gt;u1.value;
+    if (memo-&gt;v1 == Qundef) return Qnil;
+    return memo-&gt;v1;
 }</pre>
               </div>
             </div>
@@ -2717,17 +3108,16 @@ enum_inject(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-reject">
             
-              <b>enum.reject { |obj| block } &rarr; array
-enum.reject                 &rarr; an_enumerator
+              <b>enum.reject { |obj| block } &rarr; array<br />enum.reject                 &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-reject" name="method-i-reject" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns an array for all elements of <code>enum</code> for which the given
-<code>block</code> returns false.</p>
+<code>block</code> returns <code>false</code>.</p>
 
 <p>If no block is given, an <a href="Enumerator.html">Enumerator</a> is
 returned instead.</p>
@@ -2740,15 +3130,17 @@ returned instead.</p>
 <p>See also <a href="Enumerable.html#method-i-find_all">#find_all</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-reject_source')" id="l_method-i-reject_source">show</a>
                 
               </p>
@@ -2773,13 +3165,12 @@ enum_reject(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-reverse_each">
             
-              <b>enum.reverse_each(*args) { |item| block } &rarr;  enum
-enum.reverse_each(*args)                  &rarr;  an_enumerator
+              <b>enum.reverse_each(*args) { |item| block } &rarr;  enum<br />enum.reverse_each(*args)                  &rarr;  an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-reverse_each" name="method-i-reverse_each" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Builds a temporary array and traverses that array in reverse order.</p>
@@ -2792,19 +3183,20 @@ produces:
 
   3
   2
-  1
-</code></pre>
+  1</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-reverse_each_source')" id="l_method-i-reverse_each_source">show</a>
                 
               </p>
@@ -2820,7 +3212,7 @@ enum_reverse_each(int argc, VALUE *argv, VALUE obj)
     ary = enum_to_a(argc, argv, obj);
 
     for (i = RARRAY_LEN(ary); --i &gt;= 0; ) {
-        rb_yield(RARRAY_PTR(ary)[i]);
+        rb_yield(RARRAY_AREF(ary, i));
     }
 
     return obj;
@@ -2833,12 +3225,11 @@ enum_reverse_each(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-select">
             
-              <b>enum.select   { |obj| block } &rarr; array
-enum.select                   &rarr; an_enumerator</b>
+              <b>enum.select   { |obj| block } &rarr; array<br />enum.select                   &rarr; an_enumerator</b>
             
             <a href="../classes/Enumerable.html#method-i-select" name="method-i-select" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns an array containing all elements of <code>enum</code> for which the
@@ -2855,15 +3246,17 @@ returned instead.</p>
 <p>See also <a href="Enumerable.html#method-i-reject">#reject</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-select_source')" id="l_method-i-select_source">show</a>
                 
               </p>
@@ -2886,16 +3279,100 @@ enum_find_all(VALUE obj)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-i-slice_after">
+            
+              <b>enum.slice_after(pattern)       &rarr; an_enumerator<br />enum.slice_after { |elt| bool } &rarr; an_enumerator
+</b>
+            
+            <a href="../classes/Enumerable.html#method-i-slice_after" name="method-i-slice_after" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Creates an enumerator for each chunked elements. The ends of chunks are
+defined by <em>pattern</em> and the block.</p>
+
+<p>If <code><em>pattern</em> === <em>elt</em></code> returns <code>true</code>
+or the block returns <code>true</code> for the element, the element is end
+of a chunk.</p>
+
+<p>The <code>===</code> and <em>block</em> is called from the first element to
+the last element of <em>enum</em>.</p>
+
+<p>The result enumerator yields the chunked elements as an array. So
+<code>each</code> method can be called as follows:</p>
+
+<pre><code>enum.slice_after(pattern).each { |ary| ... }
+enum.slice_after { |elt| bool }.each { |ary| ... }</code></pre>
+
+<p>Other methods of the <a href="Enumerator.html">Enumerator</a> class and <a
+href="Enumerable.html">Enumerable</a> module, such as <code>map</code>,
+etc., are also usable.</p>
+
+<p>For example, continuation lines (lines end with backslash) can be
+concatenated as follows:</p>
+
+<pre><code>lines = [&quot;foo\n&quot;, &quot;bar\\\n&quot;, &quot;baz\n&quot;, &quot;\n&quot;, &quot;qux\n&quot;]
+e = lines.slice_after(/(?&lt;!\\)\n\z/)
+p e.to_a
+#=&gt; [[&quot;foo\n&quot;], [&quot;bar\\\n&quot;, &quot;baz\n&quot;], [&quot;\n&quot;], [&quot;qux\n&quot;]]
+p e.map {|ll| ll[0...-1].map {|l| l.sub(/\\\n\z/, &quot;&quot;) }.join + ll.last }
+#=&gt;[&quot;foo\n&quot;, &quot;barbaz\n&quot;, &quot;\n&quot;, &quot;qux\n&quot;]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-slice_after_source')" id="l_method-i-slice_after_source">show</a>
+                
+              </p>
+              <div id="method-i-slice_after_source" class="dyn-source">
+                <pre>static VALUE
+enum_slice_after(int argc, VALUE *argv, VALUE enumerable)
+{
+    VALUE enumerator;
+    VALUE pat = Qnil, pred = Qnil;
+
+    if (rb_block_given_p()) {
+        if (0 &lt; argc)
+            rb_raise(rb_eArgError, &quot;both pattern and block are given&quot;);
+        pred = rb_block_proc();
+    }
+    else {
+        rb_scan_args(argc, argv, &quot;1&quot;, &amp;pat);
+    }
+
+    enumerator = rb_obj_alloc(rb_cEnumerator);
+    rb_ivar_set(enumerator, rb_intern(&quot;sliceafter_enum&quot;), enumerable);
+    rb_ivar_set(enumerator, rb_intern(&quot;sliceafter_pat&quot;), pat);
+    rb_ivar_set(enumerator, rb_intern(&quot;sliceafter_pred&quot;), pred);
+
+    rb_block_call(enumerator, idInitialize, 0, 0, sliceafter_i, enumerator);
+    return enumerator;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-i-slice_before">
             
-              <b>enum.slice_before(pattern)                             &rarr; an_enumerator
-enum.slice_before { |elt| bool }                       &rarr; an_enumerator
-enum.slice_before(initial_state) { |elt, state| bool } &rarr; an_enumerator
+              <b>enum.slice_before(pattern)                             &rarr; an_enumerator<br />enum.slice_before { |elt| bool }                       &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-slice_before" name="method-i-slice_before" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Creates an enumerator for each chunked elements. The beginnings of chunks
@@ -2913,17 +3390,14 @@ ignored.</p>
 <code>each</code> method can be called as follows:</p>
 
 <pre><code>enum.slice_before(pattern).each { |ary| ... }
-enum.slice_before { |elt| bool }.each { |ary| ... }
-enum.slice_before(initial_state) { |elt, state| bool }.each { |ary| ... }
-</code></pre>
+enum.slice_before { |elt| bool }.each { |ary| ... }</code></pre>
 
 <p>Other methods of the <a href="Enumerator.html">Enumerator</a> class and <a
-href="Enumerable.html">Enumerable</a> module, such as map, etc., are also
-usable.</p>
+href="Enumerable.html">Enumerable</a> module, such as <code>to_a</code>,
+<code>map</code>, etc., are also usable.</p>
 
-<p>For example, iteration over <a
-href="../files/ruby/ChangeLog.html">ChangeLog</a> entries can be
-implemented as follows:</p>
+<p>For example, iteration over ChangeLog entries can be implemented as
+follows:</p>
 
 <pre><code># iterate over ChangeLog entries.
 open(&quot;ChangeLog&quot;) { |f|
@@ -2951,7 +3425,8 @@ chunked as follows:</p>
 
 <p>If the block needs to maintain state over multiple elements, local
 variables can be used. For example, three or more consecutive increasing
-numbers can be squashed as follows:</p>
+numbers can be squashed as follows (see <code>chunk_while</code> for a
+better way):</p>
 
 <pre><code>a = [0, 2, 3, 4, 6, 7, 9]
 prev = a[0]
@@ -2964,35 +3439,43 @@ p a.slice_before { |e|
 #=&gt; &quot;0,2-4,6,7,9&quot;
 </code></pre>
 
-<p>However local variables are not appropriate to maintain state if the result
-enumerator is used twice or more. In such a case, the last state of the 1st
-<code>each</code> is used in the 2nd <code>each</code>. The
-<em>initial_state</em> argument can be used to avoid this problem. If
-non-nil value is given as <em>initial_state</em>, it is duplicated for each
-<code>each</code> method invocation of the enumerator. The duplicated
-object is passed to 2nd argument of the block for <code>slice_before</code>
-method.</p>
+<p>However local variables should be used carefully if the result enumerator
+is enumerated twice or more. The local variables should be initialized for
+each enumeration. <a href="Enumerator.html#method-c-new">Enumerator.new</a>
+can be used to do it.</p>
 
 <pre><code># Word wrapping.  This assumes all characters have same width.
 def wordwrap(words, maxwidth)
-  # if cols is a local variable, 2nd &quot;each&quot; may start with non-zero cols.
-  words.slice_before(cols: 0) { |w, h|
-    h[:cols] += 1 if h[:cols] != 0
-    h[:cols] += w.length
-    if maxwidth &lt; h[:cols]
-      h[:cols] = w.length
-      true
-    else
-      false
-    end
+  Enumerator.new {|y|
+    # cols is initialized in Enumerator.new.
+    cols = 0
+    words.slice_before { |w|
+      cols += 1 if cols != 0
+      cols += w.length
+      if maxwidth &lt; cols
+        cols = w.length
+        true
+      else
+        false
+      end
+    }.each {|ws| y.yield ws }
   }
 end
 text = (1..20).to_a.join(&quot; &quot;)
 enum = wordwrap(text.split(/\s+/), 10)
 puts &quot;-&quot;*10
-enum.each { |ws| puts ws.join(&quot; &quot;) }
+enum.each { |ws| puts ws.join(&quot; &quot;) } # first enumeration.
+puts &quot;-&quot;*10
+enum.each { |ws| puts ws.join(&quot; &quot;) } # second enumeration generates same result as the first.
 puts &quot;-&quot;*10
 #=&gt; ----------
+#   1 2 3 4 5
+#   6 7 8 9 10
+#   11 12 13
+#   14 15 16
+#   17 18 19
+#   20
+#   ----------
 #   1 2 3 4 5
 #   6 7 8 9 10
 #   11 12 13
@@ -3024,9 +3507,10 @@ open(&quot;mbox&quot;) { |f|
 
 # split mails in mbox (slice before Unix From line after an empty line)
 open(&quot;mbox&quot;) { |f|
-  f.slice_before(emp: true) { |line, h|
-    prevemp = h[:emp]
-    h[:emp] = line == &quot;\n&quot;
+  emp = true
+  f.slice_before { |line|
+    prevemp = emp
+    emp = line == &quot;\n&quot;
     prevemp &amp;&amp; line.start_with?(&quot;From &quot;)
   }.each { |mail|
     mail.pop if mail.last == &quot;\n&quot;
@@ -3036,15 +3520,17 @@ open(&quot;mbox&quot;) { |f|
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-slice_before_source')" id="l_method-i-slice_before_source">show</a>
                 
               </p>
@@ -3055,11 +3541,10 @@ enum_slice_before(int argc, VALUE *argv, VALUE enumerable)
     VALUE enumerator;
 
     if (rb_block_given_p()) {
-        VALUE initial_state;
-        rb_scan_args(argc, argv, &quot;01&quot;, &amp;initial_state);
+        if (argc != 0)
+            rb_error_arity(argc, 0, 0);
         enumerator = rb_obj_alloc(rb_cEnumerator);
         rb_ivar_set(enumerator, rb_intern(&quot;slicebefore_sep_pred&quot;), rb_block_proc());
-        rb_ivar_set(enumerator, rb_intern(&quot;slicebefore_initial_state&quot;), initial_state);
     }
     else {
         VALUE sep_pat;
@@ -3077,39 +3562,164 @@ enum_slice_before(int argc, VALUE *argv, VALUE enumerable)
           </div>
         
         <div class="method">
-          <div class="title method-title" id="method-i-sort">
+          <div class="title method-title" id="method-i-slice_when">
             
-              <b>enum.sort                  &rarr; array
-enum.sort { |a, b| block } &rarr; array
+              <b>enum.slice_when {|elt_before, elt_after| bool } &rarr; an_enumerator
 </b>
             
-            <a href="../classes/Enumerable.html#method-i-sort" name="method-i-sort" class="permalink">Link</a>
+            <a href="../classes/Enumerable.html#method-i-slice_when" name="method-i-slice_when" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns an array containing the items in <em>enum</em> sorted, either
-according to their own <code>&lt;=&gt;</code> method, or by using the
-results of the supplied block. The block should return -1, 0, or +1
-depending on the comparison between <em>a</em> and <em>b</em>. As of Ruby
-1.8, the method <code>Enumerable#sort_by</code> implements a built-in
-Schwartzian Transform, useful when key computation or comparison is
-expensive.</p>
+              <p>Creates an enumerator for each chunked elements. The beginnings of chunks
+are defined by the block.</p>
 
-<pre><code>%w(rhea kea flea).sort          #=&gt; [&quot;flea&quot;, &quot;kea&quot;, &quot;rhea&quot;]
-(1..10).sort { |a, b| b &lt;=&gt; a }  #=&gt; [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+<p>This method split each chunk using adjacent elements, <em>elt_before</em>
+and <em>elt_after</em>, in the receiver enumerator. This method split
+chunks between <em>elt_before</em> and <em>elt_after</em> where the block
+returns <code>true</code>.</p>
+
+<p>The block is called the length of the receiver enumerator minus one.</p>
+
+<p>The result enumerator yields the chunked elements as an array. So
+<code>each</code> method can be called as follows:</p>
+
+<pre><code>enum.slice_when { |elt_before, elt_after| bool }.each { |ary| ... }</code></pre>
+
+<p>Other methods of the <a href="Enumerator.html">Enumerator</a> class and <a
+href="Enumerable.html">Enumerable</a> module, such as <code>to_a</code>,
+<code>map</code>, etc., are also usable.</p>
+
+<p>For example, one-by-one increasing subsequence can be chunked as follows:</p>
+
+<pre><code>a = [1,2,4,9,10,11,12,15,16,19,20,21]
+b = a.slice_when {|i, j| i+1 != j }
+p b.to_a #=&gt; [[1, 2], [4], [9, 10, 11, 12], [15, 16], [19, 20, 21]]
+c = b.map {|a| a.length &lt; 3 ? a : &quot;#{a.first}-#{a.last}&quot; }
+p c #=&gt; [[1, 2], [4], &quot;9-12&quot;, [15, 16], &quot;19-21&quot;]
+d = c.join(&quot;,&quot;)
+p d #=&gt; &quot;1,2,4,9-12,15,16,19-21&quot;
 </code></pre>
+
+<p>Near elements (threshold: 6) in sorted array can be chunked as follows:</p>
+
+<pre><code>a = [3, 11, 14, 25, 28, 29, 29, 41, 55, 57]
+p a.slice_when {|i, j| 6 &lt; j - i }.to_a
+#=&gt; [[3], [11, 14], [25, 28, 29, 29], [41], [55, 57]]
+</code></pre>
+
+<p>Increasing (non-decreasing) subsequence can be chunked as follows:</p>
+
+<pre><code>a = [0, 9, 2, 2, 3, 2, 7, 5, 9, 5]
+p a.slice_when {|i, j| i &gt; j }.to_a
+#=&gt; [[0, 9], [2, 2, 3], [2, 7], [5, 9], [5]]
+</code></pre>
+
+<p>Adjacent evens and odds can be chunked as follows: (Enumerable#chunk is
+another way to do it.)</p>
+
+<pre><code>a = [7, 5, 9, 2, 0, 7, 9, 4, 2, 0]
+p a.slice_when {|i, j| i.even? != j.even? }.to_a
+#=&gt; [[7, 5, 9], [2, 0], [7, 9], [4, 2, 0]]
+</code></pre>
+
+<p>Paragraphs (non-empty lines with trailing empty lines) can be chunked as
+follows: (See <a href="Enumerable.html#method-i-chunk">#chunk</a> to ignore
+empty lines.)</p>
+
+<pre><code>lines = [&quot;foo\n&quot;, &quot;bar\n&quot;, &quot;\n&quot;, &quot;baz\n&quot;, &quot;qux\n&quot;]
+p lines.slice_when {|l1, l2| /\A\s*\z/ =~ l1 &amp;&amp; /\S/ =~ l2 }.to_a
+#=&gt; [[&quot;foo\n&quot;, &quot;bar\n&quot;, &quot;\n&quot;], [&quot;baz\n&quot;, &quot;qux\n&quot;]]
+</code></pre>
+
+<p><a href="Enumerable.html#method-i-chunk_while">#chunk_while</a> does the
+same, except splitting when the block returns <code>false</code> instead of
+<code>true</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
+                <a href="javascript:toggleSource('method-i-slice_when_source')" id="l_method-i-slice_when_source">show</a>
+                
+              </p>
+              <div id="method-i-slice_when_source" class="dyn-source">
+                <pre>static VALUE
+enum_slice_when(VALUE enumerable)
+{
+    VALUE enumerator;
+    VALUE pred;
+
+    pred = rb_block_proc();
+
+    enumerator = rb_obj_alloc(rb_cEnumerator);
+    rb_ivar_set(enumerator, rb_intern(&quot;slicewhen_enum&quot;), enumerable);
+    rb_ivar_set(enumerator, rb_intern(&quot;slicewhen_pred&quot;), pred);
+    rb_ivar_set(enumerator, rb_intern(&quot;slicewhen_inverted&quot;), Qfalse);
+
+    rb_block_call(enumerator, idInitialize, 0, 0, slicewhen_i, enumerator);
+    return enumerator;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-sort">
+            
+              <b>enum.sort                  &rarr; array<br />enum.sort { |a, b| block } &rarr; array
+</b>
+            
+            <a href="../classes/Enumerable.html#method-i-sort" name="method-i-sort" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns an array containing the items in <em>enum</em> sorted.</p>
+
+<p>Comparisons for the sort will be done using the items&#39; own
+<code>&lt;=&gt;</code> operator or using an optional code block.</p>
+
+<p>The block must implement a comparison between <code>a</code> and
+<code>b</code> and return an integer less than 0 when <code>b</code>
+follows <code>a</code>, <code>0</code> when <code>a</code> and
+<code>b</code> are equivalent, or an integer greater than 0 when
+<code>a</code> follows <code>b</code>.</p>
+
+<p>The result is not guaranteed to be stable.  When the comparison of two
+elements returns <code>0</code>, the order of the elements is
+unpredictable.</p>
+
+<pre><code>%w(rhea kea flea).sort           #=&gt; [&quot;flea&quot;, &quot;kea&quot;, &quot;rhea&quot;]
+(1..10).sort { |a, b| b &lt;=&gt; a }  #=&gt; [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+</code></pre>
+
+<p>See also <a href="Enumerable.html#method-i-sort_by">#sort_by</a>. It
+implements a Schwartzian transform which is useful when key computation or
+comparison is expensive.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
                 <a href="javascript:toggleSource('method-i-sort_source')" id="l_method-i-sort_source">show</a>
                 
               </p>
@@ -3117,7 +3727,7 @@ expensive.</p>
                 <pre>static VALUE
 enum_sort(VALUE obj)
 {
-    return rb_ary_sort(enum_to_a(0, 0, obj));
+    return rb_ary_sort_bang(enum_to_a(0, 0, obj));
 }</pre>
               </div>
             </div>
@@ -3127,21 +3737,23 @@ enum_sort(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-sort_by">
             
-              <b>enum.sort_by { |obj| block }   &rarr; array
-enum.sort_by                   &rarr; an_enumerator
+              <b>enum.sort_by { |obj| block }   &rarr; array<br />enum.sort_by                   &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-sort_by" name="method-i-sort_by" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Sorts <em>enum</em> using a set of keys generated by mapping the values in
 <em>enum</em> through the given block.</p>
 
+<p>The result is not guaranteed to be stable.  When two keys are equal, the
+order of the corresponding elements is unpredictable.</p>
+
 <p>If no block is given, an enumerator is returned instead.</p>
 
-<pre><code>%w{apple pear fig}.sort_by { |word| word.length}
+<pre><code>%w{apple pear fig}.sort_by { |word| word.length }
               #=&gt; [&quot;fig&quot;, &quot;pear&quot;, &quot;apple&quot;]
 </code></pre>
 
@@ -3190,7 +3802,7 @@ sorted   #=&gt; [&quot;mon&quot;, &quot;tues&quot;, &quot;wed&quot;, &quot;thurs
 <p>This still generates many unnecessary <code>Time</code> objects. A more
 efficient technique is to cache the sort keys (modification times in this
 case) before the sort. Perl users often call this approach a Schwartzian
-Transform, after Randal Schwartz. We construct a temporary array, where
+transform, after Randal Schwartz. We construct a temporary array, where
 each element is an array containing our sort key along with the filename.
 We sort this array, and then extract the filename from the result.</p>
 
@@ -3207,15 +3819,17 @@ sorted   #=&gt; [&quot;mon&quot;, &quot;tues&quot;, &quot;wed&quot;, &quot;thurs
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-sort_by_source')" id="l_method-i-sort_by_source">show</a>
                 
               </p>
@@ -3224,7 +3838,7 @@ sorted   #=&gt; [&quot;mon&quot;, &quot;tues&quot;, &quot;wed&quot;, &quot;thurs
 enum_sort_by(VALUE obj)
 {
     VALUE ary, buf;
-    NODE *memo;
+    struct MEMO *memo;
     long i;
     struct sort_by_data *data;
 
@@ -3236,14 +3850,14 @@ enum_sort_by(VALUE obj)
     else {
         ary = rb_ary_new();
     }
-    RBASIC(ary)-&gt;klass = 0;
+    RBASIC_CLEAR_CLASS(ary);
     buf = rb_ary_tmp_new(SORT_BY_BUFSIZE*2);
     rb_ary_store(buf, SORT_BY_BUFSIZE*2-1, Qnil);
-    memo = NEW_MEMO(0, 0, 0);
+    memo = MEMO_NEW(0, 0, 0);
     OBJ_INFECT(memo, obj);
-    data = (struct sort_by_data *)&amp;memo-&gt;u1;
-    data-&gt;ary = ary;
-    data-&gt;buf = buf;
+    data = (struct sort_by_data *)&amp;memo-&gt;v1;
+    RB_OBJ_WRITE(memo, &amp;data-&gt;ary, ary);
+    RB_OBJ_WRITE(memo, &amp;data-&gt;buf, buf);
     data-&gt;n = 0;
     rb_block_call(obj, id_each, 0, 0, sort_by_i, (VALUE)memo);
     ary = data-&gt;ary;
@@ -3253,20 +3867,129 @@ enum_sort_by(VALUE obj)
         rb_ary_concat(ary, buf);
     }
     if (RARRAY_LEN(ary) &gt; 2) {
-        ruby_qsort(RARRAY_PTR(ary), RARRAY_LEN(ary)/2, 2*sizeof(VALUE),
-                   sort_by_cmp, (void *)ary);
+        RARRAY_PTR_USE(ary, ptr,
+                      ruby_qsort(ptr, RARRAY_LEN(ary)/2, 2*sizeof(VALUE),
+                                 sort_by_cmp, (void *)ary));
     }
     if (RBASIC(ary)-&gt;klass) {
         rb_raise(rb_eRuntimeError, &quot;sort_by reentered&quot;);
     }
     for (i=1; i&lt;RARRAY_LEN(ary); i+=2) {
-        RARRAY_PTR(ary)[i/2] = RARRAY_PTR(ary)[i];
+        RARRAY_ASET(ary, i/2, RARRAY_AREF(ary, i));
     }
     rb_ary_resize(ary, RARRAY_LEN(ary)/2);
-    RBASIC(ary)-&gt;klass = rb_cArray;
+    RBASIC_SET_CLASS_RAW(ary, rb_cArray);
     OBJ_INFECT(ary, memo);
 
     return ary;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-sum">
+            
+              <b>enum.sum(init=0)                   &rarr; number<br />enum.sum(init=0) {|e| expr }       &rarr; number
+</b>
+            
+            <a href="../classes/Enumerable.html#method-i-sum" name="method-i-sum" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the sum of elements in an <a href="Enumerable.html">Enumerable</a>.</p>
+
+<p>If a block is given, the block is applied to each element before addition.</p>
+
+<p>If <em>enum</em> is empty, it returns <em>init</em>.</p>
+
+<p>For example:</p>
+
+<pre><code>{ 1 =&gt; 10, 2 =&gt; 20 }.sum {|k, v| k * v }  #=&gt; 50
+(1..10).sum                               #=&gt; 55
+(1..10).sum {|v| v * 2 }                  #=&gt; 110
+[Object.new].each.sum                     #=&gt; TypeError
+</code></pre>
+
+<p>This method can be used for non-numeric objects by explicit <em>init</em>
+argument.</p>
+
+<pre><code>{ 1 =&gt; 10, 2 =&gt; 20 }.sum([])                   #=&gt; [1, 10, 2, 20]
+&quot;a\nb\nc&quot;.each_line.lazy.map(&amp;:chomp).sum(&quot;&quot;)  #=&gt; &quot;abc&quot;
+</code></pre>
+
+<p><a href="Enumerable.html#method-i-sum">#sum</a> method may not respect
+method redefinition of “+” methods such as Integer#+.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-sum_source')" id="l_method-i-sum_source">show</a>
+                
+              </p>
+              <div id="method-i-sum_source" class="dyn-source">
+                <pre>static VALUE
+enum_sum(int argc, VALUE* argv, VALUE obj)
+{
+    struct enum_sum_memo memo;
+    VALUE beg, end;
+    int excl;
+
+    if (rb_scan_args(argc, argv, &quot;01&quot;, &amp;memo.v) == 0)
+        memo.v = LONG2FIX(0);
+
+    memo.block_given = rb_block_given_p();
+
+    memo.n = 0;
+    memo.r = Qundef;
+
+    if ((memo.float_value = RB_FLOAT_TYPE_P(memo.v))) {
+        memo.f = RFLOAT_VALUE(memo.v);
+        memo.c = 0.0;
+    }
+
+    if (RTEST(rb_range_values(obj, &amp;beg, &amp;end, &amp;excl))) {
+        if (!memo.block_given &amp;&amp; !memo.float_value &amp;&amp;
+                (FIXNUM_P(beg) || RB_TYPE_P(beg, T_BIGNUM)) &amp;&amp;
+                (FIXNUM_P(end) || RB_TYPE_P(end, T_BIGNUM))) {
+            return int_range_sum(beg, end, excl, memo.v);
+        }
+    }
+
+    if (RB_TYPE_P(obj, T_HASH) &amp;&amp;
+            rb_method_basic_definition_p(CLASS_OF(obj), id_each))
+        hash_sum(obj, &amp;memo);
+    else
+        rb_block_call(obj, id_each, 0, 0, enum_sum_i, (VALUE)&amp;memo);
+
+    if (memo.float_value) {
+        return DBL2NUM(memo.f + memo.c);
+    }
+    else {
+        if (memo.n != 0)
+            memo.v = rb_fix_plus(LONG2FIX(memo.n), memo.v);
+        if (memo.r != Qundef) {
+            /* r can be an Integer when mathn is loaded */
+            if (FIXNUM_P(memo.r))
+                memo.v = rb_fix_plus(memo.r, memo.v);
+            else if (RB_TYPE_P(memo.r, T_BIGNUM))
+                memo.v = rb_big_plus(memo.r, memo.v);
+            else
+                memo.v = rb_rational_plus(memo.r, memo.v);
+        }
+        return memo.v;
+    }
 }</pre>
               </div>
             </div>
@@ -3281,25 +4004,28 @@ enum_sort_by(VALUE obj)
             
             <a href="../classes/Enumerable.html#method-i-take" name="method-i-take" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns first n elements from <em>enum</em>.</p>
 
 <pre><code>a = [1, 2, 3, 4, 5, 0]
 a.take(3)             #=&gt; [1, 2, 3]
+a.take(30)            #=&gt; [1, 2, 3, 4, 5, 0]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-take_source')" id="l_method-i-take_source">show</a>
                 
               </p>
@@ -3307,7 +4033,7 @@ a.take(3)             #=&gt; [1, 2, 3]
                 <pre>static VALUE
 enum_take(VALUE obj, VALUE n)
 {
-    NODE *memo;
+    struct MEMO *memo;
     VALUE result;
     long len = NUM2LONG(n);
 
@@ -3317,7 +4043,7 @@ enum_take(VALUE obj, VALUE n)
 
     if (len == 0) return rb_ary_new2(0);
     result = rb_ary_new2(len);
-    memo = NEW_MEMO(result, 0, len);
+    memo = MEMO_NEW(result, 0, len);
     rb_block_call(obj, id_each, 0, 0, take_i, (VALUE)memo);
     return result;
 }</pre>
@@ -3329,13 +4055,12 @@ enum_take(VALUE obj, VALUE n)
         <div class="method">
           <div class="title method-title" id="method-i-take_while">
             
-              <b>enum.take_while { |arr| block } &rarr; array
-enum.take_while                 &rarr; an_enumerator
+              <b>enum.take_while { |obj| block } &rarr; array<br />enum.take_while                 &rarr; an_enumerator
 </b>
             
             <a href="../classes/Enumerable.html#method-i-take_while" name="method-i-take_while" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Passes elements to the block until the block returns <code>nil</code> or
@@ -3349,15 +4074,17 @@ a.take_while { |i| i &lt; 3 }   #=&gt; [1, 2]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-take_while_source')" id="l_method-i-take_while_source">show</a>
                 
               </p>
@@ -3380,29 +4107,34 @@ enum_take_while(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-to_a">
             
-              <b>enum.to_a      &rarr; array</b>
+              <b>enum.to_a(*args)      &rarr; array</b>
             
             <a href="../classes/Enumerable.html#method-i-to_a" name="method-i-to_a" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns an array containing the items in <em>enum</em>.</p>
 
 <pre><code>(1..7).to_a                       #=&gt; [1, 2, 3, 4, 5, 6, 7]
 { &#39;a&#39;=&gt;1, &#39;b&#39;=&gt;2, &#39;c&#39;=&gt;3 }.to_a   #=&gt; [[&quot;a&quot;, 1], [&quot;b&quot;, 2], [&quot;c&quot;, 3]]
+
+require &#39;prime&#39;
+Prime.entries 10                  #=&gt; [2, 3, 5, 7]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_a_source')" id="l_method-i-to_a_source">show</a>
                 
               </p>
@@ -3423,33 +4155,84 @@ enum_to_a(int argc, VALUE *argv, VALUE obj)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-i-to_h">
+            
+              <b>enum.to_h(*args)  &rarr; hash
+</b>
+            
+            <a href="../classes/Enumerable.html#method-i-to_h" name="method-i-to_h" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the result of interpreting <em>enum</em> as a list of <code>[key,
+value]</code> pairs.</p>
+
+<pre><code>%i[hello world].each_with_index.to_h
+  # =&gt; {:hello =&gt; 0, :world =&gt; 1}
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_h_source')" id="l_method-i-to_h_source">show</a>
+                
+              </p>
+              <div id="method-i-to_h_source" class="dyn-source">
+                <pre>static VALUE
+enum_to_h(int argc, VALUE *argv, VALUE obj)
+{
+    VALUE hash = rb_hash_new();
+    rb_block_call(obj, id_each, argc, argv, enum_to_h_i, hash);
+    OBJ_INFECT(hash, obj);
+    return hash;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-i-to_set">
             
               <b>to_set</b>(klass = Set, *args, &amp;block)
             
             <a href="../classes/Enumerable.html#method-i-to_set" name="method-i-to_set" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Makes a set from the enumerable object with given arguments. Needs to
 +require “set”+ to use this method.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_set_source')" id="l_method-i-to_set_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/76977611dd68e384fdce8c546efda5e1931e67a6/lib/set.rb#L727" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_set_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/set.rb, line 635</span>
+                <pre><span class="ruby-comment"># File ruby/lib/set.rb, line 727</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">to_set</span>(<span class="ruby-identifier">klass</span> = <span class="ruby-constant">Set</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -3459,15 +4242,63 @@ enum_to_a(int argc, VALUE *argv, VALUE obj)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-i-uniq">
+            
+              <b>enum.uniq                &rarr; new_ary<br />enum.uniq { |item| ... } &rarr; new_ary
+</b>
+            
+            <a href="../classes/Enumerable.html#method-i-uniq" name="method-i-uniq" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a new array by removing duplicate values in <code>self</code>.</p>
+
+<p>See also <a href="Array.html#method-i-uniq">Array#uniq</a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-uniq_source')" id="l_method-i-uniq_source">show</a>
+                
+              </p>
+              <div id="method-i-uniq_source" class="dyn-source">
+                <pre>static VALUE
+enum_uniq(VALUE obj)
+{
+    VALUE hash, ret;
+    rb_block_call_func *const func =
+        rb_block_given_p() ? uniq_iter : uniq_func;
+
+    hash = rb_obj_hide(rb_hash_new());
+    rb_block_call(obj, id_each, 0, 0, func, hash);
+    ret = rb_hash_values(hash);
+    rb_hash_clear(hash);
+    return ret;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-i-zip">
             
-              <b>enum.zip(arg, ...)                  &rarr; an_array_of_array
-enum.zip(arg, ...) { |arr| block }  &rarr; nil
+              <b>enum.zip(arg, ...)                  &rarr; an_array_of_array<br />enum.zip(arg, ...) { |arr| block }  &rarr; nil
 </b>
             
             <a href="../classes/Enumerable.html#method-i-zip" name="method-i-zip" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Takes one element from <em>enum</em> and merges corresponding elements from
@@ -3481,21 +4312,28 @@ array, otherwise an array of arrays is returned.</p>
 <pre><code>a = [ 4, 5, 6 ]
 b = [ 7, 8, 9 ]
 
+a.zip(b)                 #=&gt; [[4, 7], [5, 8], [6, 9]]
 [1, 2, 3].zip(a, b)      #=&gt; [[1, 4, 7], [2, 5, 8], [3, 6, 9]]
 [1, 2].zip(a, b)         #=&gt; [[1, 4, 7], [2, 5, 8]]
 a.zip([1, 2], [8])       #=&gt; [[4, 1, 8], [5, 2, nil], [6, nil, nil]]
+
+c = []
+a.zip(b) { |x, y| c &lt;&lt; x + y }  #=&gt; nil
+c                               #=&gt; [11, 13, 15]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-zip_source')" id="l_method-i-zip_source">show</a>
                 
               </p>
@@ -3505,7 +4343,7 @@ enum_zip(int argc, VALUE *argv, VALUE obj)
 {
     int i;
     ID conv;
-    NODE *memo;
+    struct MEMO *memo;
     VALUE result = Qnil;
     VALUE args = rb_ary_new4(argc, argv);
     int allary = TRUE;
@@ -3523,8 +4361,8 @@ enum_zip(int argc, VALUE *argv, VALUE obj)
         CONST_ID(conv, &quot;to_enum&quot;);
         for (i=0; i&lt;argc; i++) {
             if (!rb_respond_to(argv[i], id_each)) {
-                rb_raise(rb_eTypeError, &quot;wrong argument type %s (must respond to :each)&quot;,
-                    rb_obj_classname(argv[i]));
+                rb_raise(rb_eTypeError, &quot;wrong argument type %&quot;PRIsVALUE&quot; (must respond to :each)&quot;,
+                         rb_obj_class(argv[i]));
             }
             argv[i] = rb_funcall(argv[i], conv, 1, ID2SYM(id_each));
         }
@@ -3532,8 +4370,9 @@ enum_zip(int argc, VALUE *argv, VALUE obj)
     if (!rb_block_given_p()) {
         result = rb_ary_new();
     }
-    /* use NODE_DOT2 as memo(v, v, -) */
-    memo = rb_node_newnode(NODE_DOT2, result, args, 0);
+
+    /* TODO: use NODE_DOT2 as memo(v, v, -) */
+    memo = MEMO_NEW(result, args, 0);
     rb_block_call(obj, id_each, 0, 0, allary ? zip_ary : zip_i, (VALUE)memo);
 
     return result;
@@ -3546,4 +4385,4 @@ enum_zip(int argc, VALUE *argv, VALUE obj)
 
     </div>
   </body>
-</html>    
+</html>

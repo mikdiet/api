@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            Queue 
+            <span class="type">Class</span>
+            Queue
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Object.html">Object</a>
                     
@@ -31,7 +31,7 @@
         </h1>
         <ul class="files">
             
-            <li><a href="../files/ruby/lib/thread_rb.html">ruby/lib/thread.rb</a></li>
+            <li><a href="../files/ruby/thread_sync_c.html">ruby/thread_sync.c</a></li>
             
         </ul>
     </div>
@@ -40,31 +40,35 @@
   
     <div class="description">
       
-<p>This class provides a way to synchronize communication between threads.</p>
+<p>The <a href="Queue.html">Queue</a> class implements multi-producer,
+multi-consumer queues. It is especially useful in threaded programming when
+information must be exchanged safely between multiple threads. The <a
+href="Queue.html">Queue</a> class implements all the required locking
+semantics.</p>
+
+<p>The class implements FIFO type of queue. In a FIFO queue, the first tasks
+added are the first retrieved.</p>
 
 <p>Example:</p>
 
 <pre><code>require &#39;thread&#39;
-
 queue = Queue.new
 
 producer = Thread.new do
   5.times do |i|
-    sleep rand(i) # simulate expense
-    queue &lt;&lt; i
-    puts &quot;#{i} produced&quot;
+     sleep rand(i) # simulate expense
+     queue &lt;&lt; i
+     puts &quot;#{i} produced&quot;
   end
 end
 
 consumer = Thread.new do
   5.times do |i|
-    value = queue.pop
-    sleep rand(i/2) # simulate expense
-    puts &quot;consumed #{value}&quot;
+     value = queue.pop
+     sleep rand(i/2) # simulate expense
+     puts &quot;consumed #{value}&quot;
   end
 end
-
-consumer.join
 </code></pre>
 
     </div>
@@ -104,7 +108,17 @@ consumer.join
             
               
               <li>
-                <a href="#method-i-clear">clear</a>
+                <a href="#method-i-clear">clear</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-close">close</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-closed-3F">closed?</a>
               </li>
             
           </ul>
@@ -232,34 +246,34 @@ consumer.join
             
             <a href="../classes/Queue.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Creates a new queue.</p>
+              <p>Creates a new queue instance.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 150</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">initialize</span>
-  <span class="ruby-ivar">@que</span> = []
-  <span class="ruby-ivar">@que</span>.<span class="ruby-identifier">taint</span>          <span class="ruby-comment"># enable tainted communication</span>
-  <span class="ruby-ivar">@num_waiting</span> = <span class="ruby-number">0</span>
-  <span class="ruby-keyword">self</span>.<span class="ruby-identifier">taint</span>
-  <span class="ruby-ivar">@mutex</span> = <span class="ruby-constant">Mutex</span>.<span class="ruby-identifier">new</span>
-  <span class="ruby-ivar">@cond</span> = <span class="ruby-constant">ConditionVariable</span>.<span class="ruby-identifier">new</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_queue_initialize(VALUE self)
+{
+    RSTRUCT_SET(self, QUEUE_QUE, ary_buf_new());
+    RSTRUCT_SET(self, QUEUE_WAITERS, ary_buf_new());
+    return self;
+}</pre>
               </div>
             </div>
             
@@ -270,19 +284,25 @@ consumer.join
         <div class="method">
           <div class="title method-title" id="method-i-3C-3C">
             
-              <b>&lt;&lt;</b>(obj)
+              <b>&lt;&lt;</b>(p1)
             
             <a href="../classes/Queue.html#method-i-3C-3C" name="method-i-3C-3C" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Alias of push</p>
+              
             </div>
           
+
           
+
           
+            <div class="aka">
+              Alias for: <a href="Queue.html#method-i-push">push</a>
+            </div>
           
+
           
           </div>
         
@@ -293,29 +313,137 @@ consumer.join
             
             <a href="../classes/Queue.html#method-i-clear" name="method-i-clear" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Removes all objects from the queue.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-clear_source')" id="l_method-i-clear_source">show</a>
                 
               </p>
               <div id="method-i-clear_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 229</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">clear</span>
-  <span class="ruby-ivar">@que</span>.<span class="ruby-identifier">clear</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_queue_clear(VALUE self)
+{
+    rb_ary_clear(GET_QUEUE_QUE(self));
+    return self;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-close">
+            
+              <b>close
+</b>
+            
+            <a href="../classes/Queue.html#method-i-close" name="method-i-close" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Closes the queue. A closed queue cannot be re-opened.</p>
+
+<p>After the call to close completes, the following are true:</p>
+<ul><li>
+<p><code>closed?</code> will return true</p>
+</li><li>
+<p><code>close</code> will be ignored.</p>
+</li><li>
+<p>calling enq/push/&lt;&lt; will return nil.</p>
+</li><li>
+<p>when <code>empty?</code> is false, calling deq/pop/shift will return an
+object from the queue as usual.</p>
+</li></ul>
+
+<p><a href="ClosedQueueError.html">ClosedQueueError</a> is inherited from <a
+href="StopIteration.html">StopIteration</a>, so that you can break loop
+block.</p>
+
+<pre><code>Example:
+
+    q = Queue.new
+    Thread.new{
+      while e = q.deq # wait for nil to break loop
+        # ...
+      end
+    }
+    q.close</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-close_source')" id="l_method-i-close_source">show</a>
+                
+              </p>
+              <div id="method-i-close_source" class="dyn-source">
+                <pre>static VALUE
+rb_queue_close(VALUE self)
+{
+    return queue_do_close(self, FALSE);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-closed-3F">
+            
+              <b>closed?
+</b>
+            
+            <a href="../classes/Queue.html#method-i-closed-3F" name="method-i-closed-3F" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns <code>true</code> if the queue is closed.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-closed-3F_source')" id="l_method-i-closed-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-closed-3F_source" class="dyn-source">
+                <pre>static VALUE
+rb_queue_closed_p(VALUE self)
+{
+    return queue_closed_p(self) ? Qtrue : Qfalse;
+}</pre>
               </div>
             </div>
             
@@ -324,52 +452,62 @@ consumer.join
         <div class="method">
           <div class="title method-title" id="method-i-deq">
             
-              <b>deq</b>(non_block=false)
+              <b>deq</b>(*args)
             
             <a href="../classes/Queue.html#method-i-deq" name="method-i-deq" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Alias of pop</p>
+              
             </div>
           
+
           
+
           
+            <div class="aka">
+              Alias for: <a href="Queue.html#method-i-pop">pop</a>
+            </div>
           
+
           
           </div>
         
         <div class="method">
           <div class="title method-title" id="method-i-empty-3F">
             
-              <b>empty?</b>()
+              <b>empty?
+</b>
             
             <a href="../classes/Queue.html#method-i-empty-3F" name="method-i-empty-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns <code>true</code> if the queue is empty.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-empty-3F_source')" id="l_method-i-empty-3F_source">show</a>
                 
               </p>
               <div id="method-i-empty-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 222</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">empty?</span>
-  <span class="ruby-ivar">@que</span>.<span class="ruby-identifier">empty?</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_queue_empty_p(VALUE self)
+{
+    return queue_length(self) == 0 ? Qtrue : Qfalse;
+}</pre>
               </div>
             </div>
             
@@ -378,56 +516,67 @@ consumer.join
         <div class="method">
           <div class="title method-title" id="method-i-enq">
             
-              <b>enq</b>(obj)
+              <b>enq</b>(p1)
             
             <a href="../classes/Queue.html#method-i-enq" name="method-i-enq" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Alias of push</p>
+              
             </div>
           
+
           
+
           
+            <div class="aka">
+              Alias for: <a href="Queue.html#method-i-push">push</a>
+            </div>
           
+
           
           </div>
         
         <div class="method">
           <div class="title method-title" id="method-i-length">
             
-              <b>length</b>()
+              <b>length<br />size
+</b>
             
             <a href="../classes/Queue.html#method-i-length" name="method-i-length" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the length of the queue.</p>
             </div>
           
-          
+
           
             <div class="aka">
               Also aliased as: <a href="Queue.html#method-i-size">size</a>
             </div>
           
+
           
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-length_source')" id="l_method-i-length_source">show</a>
                 
               </p>
               <div id="method-i-length_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 236</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">length</span>
-  <span class="ruby-ivar">@que</span>.<span class="ruby-identifier">length</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_queue_length(VALUE self)
+{
+    unsigned long len = queue_length(self);
+    return ULONG2NUM(len);
+}</pre>
               </div>
             </div>
             
@@ -440,29 +589,33 @@ consumer.join
             
             <a href="../classes/Queue.html#method-i-num_waiting" name="method-i-num_waiting" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the number of threads waiting on the queue.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-num_waiting_source')" id="l_method-i-num_waiting_source">show</a>
                 
               </p>
               <div id="method-i-num_waiting_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 248</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">num_waiting</span>
-  <span class="ruby-ivar">@num_waiting</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_queue_num_waiting(VALUE self)
+{
+    unsigned long len = queue_num_waiting(self);
+    return ULONG2NUM(len);
+}</pre>
               </div>
             </div>
             
@@ -471,59 +624,46 @@ consumer.join
         <div class="method">
           <div class="title method-title" id="method-i-pop">
             
-              <b>pop</b>(non_block=false)
+              <b>pop(non_block=false)<br />deq(non_block=false)<br />shift(non_block=false)
+</b>
             
             <a href="../classes/Queue.html#method-i-pop" name="method-i-pop" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Retrieves data from the queue.  If the queue is empty, the calling thread
-is suspended until data is pushed onto the queue.  If
-<code>non_block</code> is true, the thread isn&#39;t suspended, and an
-exception is raised.</p>
+              <p>Retrieves data from the queue.</p>
+
+<p>If the queue is empty, the calling thread is suspended until data is pushed
+onto the queue. If <code>non_block</code> is true, the thread isn&#39;t
+suspended, and <code>ThreadError</code> is raised.</p>
             </div>
           
-          
+
           
             <div class="aka">
-              Also aliased as: <a href="Queue.html#method-i-shift">shift</a>, <a href="Queue.html#method-i-deq">deq</a>
+              Also aliased as: <a href="Queue.html#method-i-deq">deq</a>, <a href="Queue.html#method-i-shift">shift</a>
             </div>
           
+
           
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-pop_source')" id="l_method-i-pop_source">show</a>
                 
               </p>
               <div id="method-i-pop_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 186</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">pop</span>(<span class="ruby-identifier">non_block</span>=<span class="ruby-keyword">false</span>)
-  <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">handle_interrupt</span>(<span class="ruby-constant">StandardError</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value">:on_blocking</span>) <span class="ruby-keyword">do</span>
-    <span class="ruby-ivar">@mutex</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
-      <span class="ruby-keyword">while</span> <span class="ruby-keyword">true</span>
-        <span class="ruby-keyword">if</span> <span class="ruby-ivar">@que</span>.<span class="ruby-identifier">empty?</span>
-          <span class="ruby-keyword">if</span> <span class="ruby-identifier">non_block</span>
-            <span class="ruby-identifier">raise</span> <span class="ruby-constant">ThreadError</span>, <span class="ruby-string">&quot;queue empty&quot;</span>
-          <span class="ruby-keyword">else</span>
-            <span class="ruby-keyword">begin</span>
-              <span class="ruby-ivar">@num_waiting</span> <span class="ruby-operator">+=</span> <span class="ruby-number">1</span>
-              <span class="ruby-ivar">@cond</span>.<span class="ruby-identifier">wait</span> <span class="ruby-ivar">@mutex</span>
-            <span class="ruby-keyword">ensure</span>
-              <span class="ruby-ivar">@num_waiting</span> <span class="ruby-operator">-=</span> <span class="ruby-number">1</span>
-            <span class="ruby-keyword">end</span>
-          <span class="ruby-keyword">end</span>
-        <span class="ruby-keyword">else</span>
-          <span class="ruby-keyword">return</span> <span class="ruby-ivar">@que</span>.<span class="ruby-identifier">shift</span>
-        <span class="ruby-keyword">end</span>
-      <span class="ruby-keyword">end</span>
-    <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">end</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_queue_pop(int argc, VALUE *argv, VALUE self)
+{
+    int should_block = queue_pop_should_block(argc, argv);
+    return queue_do_pop(self, should_block);
+}</pre>
               </div>
             </div>
             
@@ -532,42 +672,41 @@ exception is raised.</p>
         <div class="method">
           <div class="title method-title" id="method-i-push">
             
-              <b>push</b>(obj)
+              <b>push(object)<br />enq(object)<br /><<(object)
+</b>
             
             <a href="../classes/Queue.html#method-i-push" name="method-i-push" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Pushes <code>obj</code> to the queue.</p>
+              <p>Pushes the given <code>object</code> to the queue.</p>
             </div>
           
-          
+
           
             <div class="aka">
-              Also aliased as: <a href="Queue.html#method-i-3C-3C">&lt;&lt;</a>, <a href="Queue.html#method-i-enq">enq</a>
+              Also aliased as: <a href="Queue.html#method-i-enq">enq</a>, <a href="Queue.html#method-i-3C-3C">&lt;&lt;</a>
             </div>
           
+
           
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-push_source')" id="l_method-i-push_source">show</a>
                 
               </p>
               <div id="method-i-push_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 162</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">push</span>(<span class="ruby-identifier">obj</span>)
-  <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">handle_interrupt</span>(<span class="ruby-constant">StandardError</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value">:on_blocking</span>) <span class="ruby-keyword">do</span>
-    <span class="ruby-ivar">@mutex</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
-      <span class="ruby-ivar">@que</span>.<span class="ruby-identifier">push</span> <span class="ruby-identifier">obj</span>
-      <span class="ruby-ivar">@cond</span>.<span class="ruby-identifier">signal</span>
-    <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">end</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_queue_push(VALUE self, VALUE obj)
+{
+    return queue_do_push(self, obj);
+}</pre>
               </div>
             </div>
             
@@ -576,19 +715,25 @@ exception is raised.</p>
         <div class="method">
           <div class="title method-title" id="method-i-shift">
             
-              <b>shift</b>(non_block=false)
+              <b>shift</b>(*args)
             
             <a href="../classes/Queue.html#method-i-shift" name="method-i-shift" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Alias of pop</p>
+              
             </div>
           
+
           
+
           
+            <div class="aka">
+              Alias for: <a href="Queue.html#method-i-pop">pop</a>
+            </div>
           
+
           
           </div>
         
@@ -599,19 +744,25 @@ exception is raised.</p>
             
             <a href="../classes/Queue.html#method-i-size" name="method-i-size" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Alias of length.</p>
+              
             </div>
           
+
           
+
           
+            <div class="aka">
+              Alias for: <a href="Queue.html#method-i-length">length</a>
+            </div>
           
+
           
           </div>
                     </div>
 
     </div>
   </body>
-</html>    
+</html>

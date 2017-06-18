@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            TCPServer 
+            <span class="type">Class</span>
+            TCPServer
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="TCPSocket.html">TCPSocket</a>
                     
@@ -30,6 +30,8 @@
             
         </h1>
         <ul class="files">
+            
+            <li><a href="../files/ruby/ext/socket/lib/socket_rb.html">ruby/ext/socket/lib/socket.rb</a></li>
             
             <li><a href="../files/ruby/ext/socket/tcpserver_c.html">ruby/ext/socket/tcpserver.c</a></li>
             
@@ -167,12 +169,12 @@ end
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>TCPServer.new([hostname,] port)                    => tcpserver
+              <b>TCPServer.new([hostname,] port) => tcpserver
 </b>
             
             <a href="../classes/TCPServer.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Creates a new server socket bound to <em>port</em>.</p>
@@ -182,18 +184,27 @@ end
 <pre><code>serv = TCPServer.new(&quot;127.0.0.1&quot;, 28561)
 s = serv.accept
 s.puts Time.now
-s.close</code></pre>
+s.close
+</code></pre>
+
+<p>Internally, <a href="TCPServer.html#method-c-new">::new</a> calls
+getaddrinfo() function to obtain addresses. If getaddrinfo() returns
+multiple addresses, <a href="TCPServer.html#method-c-new">::new</a> tries
+to create a server socket for each address and returns first one that is
+successful.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -221,27 +232,31 @@ tcp_svr_init(int argc, VALUE *argv, VALUE sock)
             
             <a href="../classes/TCPServer.html#method-i-accept" name="method-i-accept" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p><a href="IO.html#method-c-open">IO.open</a>(“127.0.0.1”, 14641) {|serv|</p>
+              <p>Accepts an incoming connection. It returns a new <a
+href="TCPSocket.html">TCPSocket</a> object.</p>
 
-<pre><code>s = serv.accept
-s.puts Time.now
-s.close</code></pre>
-
-<p>}</p>
+<pre><code>TCPServer.open(&quot;127.0.0.1&quot;, 14641) {|serv|
+  s = serv.accept
+  s.puts Time.now
+  s.close
+}
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-accept_source')" id="l_method-i-accept_source">show</a>
                 
               </p>
@@ -250,13 +265,12 @@ s.close</code></pre>
 tcp_accept(VALUE sock)
 {
     rb_io_t *fptr;
-    struct sockaddr_storage from;
+    union_sockaddr from;
     socklen_t fromlen;
 
     GetOpenFile(sock, fptr);
     fromlen = (socklen_t)sizeof(from);
-    return rsock_s_accept(rb_cTCPSocket, fptr-&gt;fd,
-                          (struct sockaddr*)&amp;from, &amp;fromlen);
+    return rsock_s_accept(rb_cTCPSocket, fptr-&gt;fd, &amp;from.addr, &amp;fromlen);
 }</pre>
               </div>
             </div>
@@ -266,12 +280,12 @@ tcp_accept(VALUE sock)
         <div class="method">
           <div class="title method-title" id="method-i-accept_nonblock">
             
-              <b>tcpserver.accept_nonblock => tcpsocket
+              <b>tcpserver.accept_nonblock([options]) => tcpsocket
 </b>
             
             <a href="../classes/TCPServer.html#method-i-accept_nonblock" name="method-i-accept_nonblock" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Accepts an incoming connection using accept(2) after O_NONBLOCK is set for
@@ -299,12 +313,18 @@ href="TCPServer.html#method-i-accept_nonblock">#accept_nonblock</a> fails.</p>
 raise any error corresponding to accept(2) failure, including
 Errno::EWOULDBLOCK.</p>
 
-<p>If the exception is Errno::EWOULDBLOCK, Errno::AGAIN, <a
+<p>If the exception is Errno::EWOULDBLOCK, Errno::EAGAIN, <a
 href="Errno/ECONNABORTED.html">Errno::ECONNABORTED</a>, <a
 href="Errno/EPROTO.html">Errno::EPROTO</a>, it is extended by <a
 href="IO/WaitReadable.html">IO::WaitReadable</a>. So <a
 href="IO/WaitReadable.html">IO::WaitReadable</a> can be used to rescue the
 exceptions for retrying accept_nonblock.</p>
+
+<p>By specifying a keyword argument <em>exception</em> to <code>false</code>,
+you can indicate that <a
+href="TCPServer.html#method-i-accept_nonblock">#accept_nonblock</a> should
+not raise an <a href="IO/WaitReadable.html">IO::WaitReadable</a> exception,
+but return the symbol <code>:wait_readable</code> instead.</p>
 
 <h3 id="method-i-accept_nonblock-label-See">See</h3>
 <ul><li>
@@ -314,31 +334,27 @@ exceptions for retrying accept_nonblock.</p>
 </li></ul>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-accept_nonblock_source')" id="l_method-i-accept_nonblock_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/3eaded77007e1b8f6c256eca662b11639560c1e3/ext/socket/lib/socket.rb#L1297" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-accept_nonblock_source" class="dyn-source">
-                <pre>static VALUE
-tcp_accept_nonblock(VALUE sock)
-{
-    rb_io_t *fptr;
-    struct sockaddr_storage from;
-    socklen_t fromlen;
-
-    GetOpenFile(sock, fptr);
-    fromlen = (socklen_t)sizeof(from);
-    return rsock_s_accept_nonblock(rb_cTCPSocket, fptr,
-                                   (struct sockaddr *)&amp;from, &amp;fromlen);
-}</pre>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1297</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">accept_nonblock</span>(<span class="ruby-identifier">exception</span><span class="ruby-operator">:</span> <span class="ruby-keyword">true</span>)
+  <span class="ruby-identifier">__accept_nonblock</span>(<span class="ruby-identifier">exception</span>)
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -352,7 +368,7 @@ tcp_accept_nonblock(VALUE sock)
             
             <a href="../classes/TCPServer.html#method-i-listen" name="method-i-listen" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Listens for connections, using the specified <code>int</code> as the
@@ -375,7 +391,7 @@ socket.bind( sockaddr )
 socket.listen( 5 )
 </code></pre>
 
-<h3 id="method-i-listen-label-Example+2+%28listening+on+an+arbitrary+port%2C+unix-based+systems+only%29%3A">Example 2 (listening on an arbitrary port, unix-based systems only):</h3>
+<h3 id="method-i-listen-label-Example+2+-28listening+on+an+arbitrary+port-2C+unix-based+systems+only-29-3A">Example 2 (listening on an arbitrary port, unix-based systems only):</h3>
 
 <pre><code>require &#39;socket&#39;
 include Socket::Constants
@@ -455,15 +471,17 @@ supports the <em>listen</em> method</p>
 </li></ul>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-listen_source')" id="l_method-i-listen_source">show</a>
                 
               </p>
@@ -474,7 +492,6 @@ rsock_sock_listen(VALUE sock, VALUE log)
     rb_io_t *fptr;
     int backlog;
 
-    rb_secure(4);
     backlog = NUM2INT(log);
     GetOpenFile(sock, fptr);
     if (listen(fptr-&gt;fd, backlog) &lt; 0)
@@ -495,7 +512,7 @@ rsock_sock_listen(VALUE sock, VALUE log)
             
             <a href="../classes/TCPServer.html#method-i-sysaccept" name="method-i-sysaccept" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a file descriptor of a accepted connection.</p>
@@ -509,15 +526,17 @@ rsock_sock_listen(VALUE sock, VALUE log)
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-sysaccept_source')" id="l_method-i-sysaccept_source">show</a>
                 
               </p>
@@ -526,12 +545,12 @@ rsock_sock_listen(VALUE sock, VALUE log)
 tcp_sysaccept(VALUE sock)
 {
     rb_io_t *fptr;
-    struct sockaddr_storage from;
+    union_sockaddr from;
     socklen_t fromlen;
 
     GetOpenFile(sock, fptr);
     fromlen = (socklen_t)sizeof(from);
-    return rsock_s_accept(0, fptr-&gt;fd, (struct sockaddr*)&amp;from, &amp;fromlen);
+    return rsock_s_accept(0, fptr-&gt;fd, &amp;from.addr, &amp;fromlen);
 }</pre>
               </div>
             </div>
@@ -541,4 +560,4 @@ tcp_sysaccept(VALUE sock)
 
     </div>
   </body>
-</html>    
+</html>

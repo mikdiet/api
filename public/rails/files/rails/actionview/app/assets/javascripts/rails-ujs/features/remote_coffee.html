@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>remote.coffee</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>
+    <div class="banner">
+        
+        <h1>
+            remote.coffee
+        </h1>
+        <ul class="files">
+            
+            <li>
+                rails/actionview/app/assets/javascripts/rails-ujs/features/remote.coffee
+                
+                    <a href="https://github.com/rails/rails/blob/154c879e097ba088a8eee1d55f4d9703b70680b7/actionview/app/assets/javascripts/rails-ujs/features/remote.coffee" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2017-06-18 10:05:10 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>#= require_tree ../utils</p>
+
+<p>{</p>
+
+<pre><code>matches, getData, setData
+fire, stopEverything
+ajax, isCrossDomain
+serializeElement</code></pre>
+
+<p>} = <a href="../../../../../../../../classes/Rails.html">Rails</a></p>
+
+<p># Checks “data-remote” if true to handle the request through a XHR request.
+isRemote = (element) -&gt;</p>
+
+<pre><code>value = element.getAttribute(&#39;data-remote&#39;)
+value? and value isnt &#39;false&#39;
+</code></pre>
+
+<p># Submits “remote” forms and links with ajax Rails.handleRemote = (e) -&gt;</p>
+
+<pre><code>element = this
+
+return true unless isRemote(element)
+unless fire(element, &#39;ajax:before&#39;)
+  fire(element, &#39;ajax:stopped&#39;)
+  return false
+
+withCredentials = element.getAttribute(&#39;data-with-credentials&#39;)
+dataType = element.getAttribute(&#39;data-type&#39;) or &#39;script&#39;
+
+if matches(element, Rails.formSubmitSelector)
+  # memoized value from clicked submit button
+  button = getData(element, &#39;ujs:submit-button&#39;)
+  method = getData(element, &#39;ujs:submit-button-formmethod&#39;) or element.method
+  url = getData(element, &#39;ujs:submit-button-formaction&#39;) or element.getAttribute(&#39;action&#39;) or location.href
+
+  # strip query string if it&#39;s a GET request
+  url = url.replace(/\?.*$/, &#39;&#39;) if method.toUpperCase() is &#39;GET&#39;
+
+  if element.enctype is &#39;multipart/form-data&#39;
+    data = new FormData(element)
+    data.append(button.name, button.value) if button?
+  else
+    data = serializeElement(element, button)
+
+  setData(element, &#39;ujs:submit-button&#39;, null)
+  setData(element, &#39;ujs:submit-button-formmethod&#39;, null)
+  setData(element, &#39;ujs:submit-button-formaction&#39;, null)
+else if matches(element, Rails.buttonClickSelector) or matches(element, Rails.inputChangeSelector)
+  method = element.getAttribute(&#39;data-method&#39;)
+  url = element.getAttribute(&#39;data-url&#39;)
+  data = serializeElement(element, element.getAttribute(&#39;data-params&#39;))
+else
+  method = element.getAttribute(&#39;data-method&#39;)
+  url = Rails.href(element)
+  data = element.getAttribute(&#39;data-params&#39;)
+
+ajax(
+  type: method or &#39;GET&#39;
+  url: url
+  data: data
+  dataType: dataType
+  # stopping the &quot;ajax:beforeSend&quot; event will cancel the ajax request
+  beforeSend: (xhr, options) -&gt;
+    if fire(element, &#39;ajax:beforeSend&#39;, [xhr, options])
+      fire(element, &#39;ajax:send&#39;, [xhr])
+    else
+      fire(element, &#39;ajax:stopped&#39;)
+      xhr.abort()
+  success: (args...) -&gt; fire(element, &#39;ajax:success&#39;, args)
+  error: (args...) -&gt; fire(element, &#39;ajax:error&#39;, args)
+  complete: (args...) -&gt; fire(element, &#39;ajax:complete&#39;, args)
+  crossDomain: isCrossDomain(url)
+  withCredentials: withCredentials? and withCredentials isnt &#39;false&#39;
+)
+stopEverything(e)</code></pre>
+
+<p>Rails.formSubmitButtonClick = (e) -&gt;</p>
+
+<pre><code>button = this
+form = button.form
+return unless form
+# Register the pressed submit button
+setData(form, &#39;ujs:submit-button&#39;, name: button.name, value: button.value) if button.name
+# Save attributes from button
+setData(form, &#39;ujs:formnovalidate-button&#39;, button.formNoValidate)
+setData(form, &#39;ujs:submit-button-formaction&#39;, button.getAttribute(&#39;formaction&#39;))
+setData(form, &#39;ujs:submit-button-formmethod&#39;, button.getAttribute(&#39;formmethod&#39;))
+</code></pre>
+
+<p>Rails.handleMetaClick = (e) -&gt;</p>
+
+<pre><code>link = this
+method = (link.getAttribute(&#39;data-method&#39;) or &#39;GET&#39;).toUpperCase()
+data = link.getAttribute(&#39;data-params&#39;)
+metaClick = e.metaKey or e.ctrlKey
+e.stopImmediatePropagation() if metaClick and method is &#39;GET&#39; and not data
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

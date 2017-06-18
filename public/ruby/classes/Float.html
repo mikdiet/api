@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            Float 
+            <span class="type">Class</span>
+            Float
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Numeric.html">Numeric</a>
                     
@@ -37,13 +37,11 @@
             
             <li><a href="../files/ruby/ext/psych/lib/psych/scalar_scanner_rb.html">ruby/ext/psych/lib/psych/scalar_scanner.rb</a></li>
             
-            <li><a href="../files/ruby/lib/mathn_rb.html">ruby/lib/mathn.rb</a></li>
-            
             <li><a href="../files/ruby/lib/matrix/eigenvalue_decomposition_rb.html">ruby/lib/matrix/eigenvalue_decomposition.rb</a></li>
             
-            <li><a href="../files/ruby/lib/rexml/xpath_parser_rb.html">ruby/lib/rexml/xpath_parser.rb</a></li>
+            <li><a href="../files/ruby/lib/prime_rb.html">ruby/lib/prime.rb</a></li>
             
-            <li><a href="../files/ruby/lib/securerandom_rb.html">ruby/lib/securerandom.rb</a></li>
+            <li><a href="../files/ruby/lib/rexml/xpath_parser_rb.html">ruby/lib/rexml/xpath_parser.rb</a></li>
             
             <li><a href="../files/ruby/numeric_c.html">ruby/numeric.c</a></li>
             
@@ -56,13 +54,19 @@
   
     <div class="description">
       
-<p>When mathn is required, <a href="Float.html">Float</a> is changed to handle
-Complex numbers.</p>
+<p><a href="BigDecimal.html">BigDecimal</a> extends the native <a
+href="Float.html">Float</a> class to provide the <a
+href="Float.html#method-i-to_d">to_d</a> method.</p>
 
-<p><code>Float</code> objects represent inexact real numbers using the native
-architecture&#39;s double-precision floating point representation.</p>
+<p>When you require <a href="BigDecimal.html">BigDecimal</a> in your
+application, this method will be available on <a
+href="Float.html">Float</a> objects.</p>
 
-<p>Floating point has a different arithmetic and is a inexact number. So you
+<p><a href="Float.html">Float</a> objects represent inexact real numbers using
+the native architecture&#39;s double-precision floating point
+representation.</p>
+
+<p>Floating point has a different arithmetic and is an inexact number. So you
 should know its esoteric system. see following:</p>
 <ul><li>
 <p><a
@@ -323,6 +327,16 @@ href="http://en.wikipedia.org/wiki/Floating_point#Accuracy_problems">en.wikipedi
             
               
               <li>
+                <a href="#method-i-negative-3F">negative?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-next_float">next_float</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-numerator">numerator</a>
               </li>
             
@@ -340,7 +354,12 @@ href="http://en.wikipedia.org/wiki/Floating_point#Accuracy_problems">en.wikipedi
             
               
               <li>
-                <a href="#method-i-power-21">power!</a>
+                <a href="#method-i-positive-3F">positive?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-prev_float">prev_float</a>
               </li>
             
           </ul>
@@ -517,7 +536,8 @@ decimal.</p></td>
           
             <tr valign='top'>
               <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"><p>The number of decimal digits in a double-precision floating point.</p>
+              <td colspan="2" class="attr-desc"><p>The minimum number of significant decimal digits in a double-precision
+floating point.</p>
 
 <p>Usually defaults to 15.</p></td>
             </tr>
@@ -589,9 +609,14 @@ raised to this power minus 1.</p>
           
             <tr valign='top'>
               <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"><p>The smallest positive integer in a double-precision floating point.</p>
+              <td colspan="2" class="attr-desc"><p>The smallest positive normalized number in a double-precision floating
+point.</p>
 
-<p>Usually defaults to 2.2250738585072014e-308.</p></td>
+<p>Usually defaults to 2.2250738585072014e-308.</p>
+
+<p>If the platform supports denormalized numbers, there are numbers between
+zero and Float::MIN. 0.0.next_float returns the smallest positive floating
+point number including denormalized numbers.</p></td>
             </tr>
           
         
@@ -618,7 +643,7 @@ raised to this power minus 1.</p>
             <tr valign='top'>
               <td>&nbsp;</td>
               <td colspan="2" class="attr-desc"><p>The difference between 1 and the smallest double-precision floating point
-number.</p>
+number greater than 1.</p>
 
 <p>Usually defaults to 2.2204460492503131e-16.</p></td>
             </tr>
@@ -662,11 +687,11 @@ number.</p>
         <div class="method">
           <div class="title method-title" id="method-i-25">
             
-              <b></b>
+              <b>float % other        &rarr;  float</b>
             
             <a href="../classes/Float.html#method-i-25" name="method-i-25" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Return the modulo after division of <code>float</code> by
@@ -677,15 +702,17 @@ number.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-25_source')" id="l_method-i-25_source">show</a>
                 
               </p>
@@ -695,17 +722,16 @@ flo_mod(VALUE x, VALUE y)
 {
     double fy;
 
-    switch (TYPE(y)) {
-      case T_FIXNUM:
+    if (RB_TYPE_P(y, T_FIXNUM)) {
         fy = (double)FIX2LONG(y);
-        break;
-      case T_BIGNUM:
+    }
+    else if (RB_TYPE_P(y, T_BIGNUM)) {
         fy = rb_big2dbl(y);
-        break;
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         fy = RFLOAT_VALUE(y);
-        break;
-      default:
+    }
+    else {
         return rb_num_coerce_bin(x, y, &#39;%&#39;);
     }
     return DBL2NUM(ruby_float_mod(RFLOAT_VALUE(x), fy));
@@ -723,22 +749,24 @@ flo_mod(VALUE x, VALUE y)
             
             <a href="../classes/Float.html#method-i-2A" name="method-i-2A" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a new float which is the product of <code>float</code> and
 <code>other</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-2A_source')" id="l_method-i-2A_source">show</a>
                 
               </p>
@@ -746,14 +774,16 @@ flo_mod(VALUE x, VALUE y)
                 <pre>static VALUE
 flo_mul(VALUE x, VALUE y)
 {
-    switch (TYPE(y)) {
-      case T_FIXNUM:
+    if (RB_TYPE_P(y, T_FIXNUM)) {
         return DBL2NUM(RFLOAT_VALUE(x) * (double)FIX2LONG(y));
-      case T_BIGNUM:
+    }
+    else if (RB_TYPE_P(y, T_BIGNUM)) {
         return DBL2NUM(RFLOAT_VALUE(x) * rb_big2dbl(y));
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         return DBL2NUM(RFLOAT_VALUE(x) * RFLOAT_VALUE(y));
-      default:
+    }
+    else {
         return rb_num_coerce_bin(x, y, &#39;*&#39;);
     }
 }</pre>
@@ -765,41 +795,58 @@ flo_mul(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-2A-2A">
             
-              <b>**</b>(other)
+              <b>float ** other  &rarr;  float
+</b>
             
             <a href="../classes/Float.html#method-i-2A-2A" name="method-i-2A-2A" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Exponentiate by <code>other</code></p>
+              <p>Raises <code>float</code> to the power of <code>other</code>.</p>
+
+<pre><code>2.0**3      #=&gt; 8.0
+</code></pre>
             </div>
           
+
           
+
           
-            <div class="aka">
-              Also aliased as: <a href="Float.html#method-i-power-21">power!</a>
-            </div>
-          
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-2A-2A_source')" id="l_method-i-2A-2A_source">show</a>
                 
               </p>
               <div id="method-i-2A-2A_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/mathn.rb, line 316</span>
-<span class="ruby-keyword">def</span> <span class="ruby-operator">**</span> (<span class="ruby-keyword ruby-title">other</span>)
-  <span class="ruby-keyword">if</span> <span class="ruby-keyword">self</span> <span class="ruby-operator">&lt;</span> <span class="ruby-number">0</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">round</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">other</span>
-    <span class="ruby-constant">Complex</span>(<span class="ruby-keyword">self</span>, <span class="ruby-number">0.0</span>) <span class="ruby-operator">**</span> <span class="ruby-identifier">other</span>
-  <span class="ruby-keyword">else</span>
-    <span class="ruby-identifier">power!</span>(<span class="ruby-identifier">other</span>)
-  <span class="ruby-keyword">end</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>VALUE
+rb_float_pow(VALUE x, VALUE y)
+{
+    double dx, dy;
+    if (RB_TYPE_P(y, T_FIXNUM)) {
+        dx = RFLOAT_VALUE(x);
+        dy = (double)FIX2LONG(y);
+    }
+    else if (RB_TYPE_P(y, T_BIGNUM)) {
+        dx = RFLOAT_VALUE(x);
+        dy = rb_big2dbl(y);
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
+        dx = RFLOAT_VALUE(x);
+        dy = RFLOAT_VALUE(y);
+        if (dx &lt; 0 &amp;&amp; dy != round(dy))
+            return num_funcall1(rb_complex_raw1(x), idPow, y);
+    }
+    else {
+        return rb_num_coerce_bin(x, y, idPow);
+    }
+    return DBL2NUM(pow(dx, dy));
+}</pre>
               </div>
             </div>
             
@@ -813,22 +860,24 @@ flo_mul(VALUE x, VALUE y)
             
             <a href="../classes/Float.html#method-i-2B" name="method-i-2B" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a new float which is the sum of <code>float</code> and
 <code>other</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-2B_source')" id="l_method-i-2B_source">show</a>
                 
               </p>
@@ -836,14 +885,16 @@ flo_mul(VALUE x, VALUE y)
                 <pre>static VALUE
 flo_plus(VALUE x, VALUE y)
 {
-    switch (TYPE(y)) {
-      case T_FIXNUM:
+    if (RB_TYPE_P(y, T_FIXNUM)) {
         return DBL2NUM(RFLOAT_VALUE(x) + (double)FIX2LONG(y));
-      case T_BIGNUM:
+    }
+    else if (RB_TYPE_P(y, T_BIGNUM)) {
         return DBL2NUM(RFLOAT_VALUE(x) + rb_big2dbl(y));
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         return DBL2NUM(RFLOAT_VALUE(x) + RFLOAT_VALUE(y));
-      default:
+    }
+    else {
         return rb_num_coerce_bin(x, y, &#39;+&#39;);
     }
 }</pre>
@@ -860,22 +911,24 @@ flo_plus(VALUE x, VALUE y)
             
             <a href="../classes/Float.html#method-i-2D" name="method-i-2D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a new float which is the difference of <code>float</code> and
 <code>other</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-2D_source')" id="l_method-i-2D_source">show</a>
                 
               </p>
@@ -883,14 +936,16 @@ flo_plus(VALUE x, VALUE y)
                 <pre>static VALUE
 flo_minus(VALUE x, VALUE y)
 {
-    switch (TYPE(y)) {
-      case T_FIXNUM:
+    if (RB_TYPE_P(y, T_FIXNUM)) {
         return DBL2NUM(RFLOAT_VALUE(x) - (double)FIX2LONG(y));
-      case T_BIGNUM:
+    }
+    else if (RB_TYPE_P(y, T_BIGNUM)) {
         return DBL2NUM(RFLOAT_VALUE(x) - rb_big2dbl(y));
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         return DBL2NUM(RFLOAT_VALUE(x) - RFLOAT_VALUE(y));
-      default:
+    }
+    else {
         return rb_num_coerce_bin(x, y, &#39;-&#39;);
     }
 }</pre>
@@ -907,27 +962,29 @@ flo_minus(VALUE x, VALUE y)
             
             <a href="../classes/Float.html#method-i-2D-40" name="method-i-2D-40" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns float, negated.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-2D-40_source')" id="l_method-i-2D-40_source">show</a>
                 
               </p>
               <div id="method-i-2D-40_source" class="dyn-source">
-                <pre>static VALUE
-flo_uminus(VALUE flt)
+                <pre>VALUE
+rb_float_uminus(VALUE flt)
 {
     return DBL2NUM(-RFLOAT_VALUE(flt));
 }</pre>
@@ -944,22 +1001,24 @@ flo_uminus(VALUE flt)
             
             <a href="../classes/Float.html#method-i-2F" name="method-i-2F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a new float which is the result of dividing <code>float</code> by
 <code>other</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-2F_source')" id="l_method-i-2F_source">show</a>
                 
               </p>
@@ -970,16 +1029,18 @@ flo_div(VALUE x, VALUE y)
     long f_y;
     double d;
 
-    switch (TYPE(y)) {
-      case T_FIXNUM:
+    if (RB_TYPE_P(y, T_FIXNUM)) {
         f_y = FIX2LONG(y);
         return DBL2NUM(RFLOAT_VALUE(x) / (double)f_y);
-      case T_BIGNUM:
+    }
+    else if (RB_TYPE_P(y, T_BIGNUM)) {
         d = rb_big2dbl(y);
         return DBL2NUM(RFLOAT_VALUE(x) / d);
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         return DBL2NUM(RFLOAT_VALUE(x) / RFLOAT_VALUE(y));
-      default:
+    }
+    else {
         return rb_num_coerce_bin(x, y, &#39;/&#39;);
     }
 }</pre>
@@ -991,28 +1052,32 @@ flo_div(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-3C">
             
-              <b>flt < real  &rarr;  true or false
+              <b>float < real  &rarr;  true or false
 </b>
             
             <a href="../classes/Float.html#method-i-3C" name="method-i-3C" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p><code>true</code> if <code>flt</code> is less than <code>real</code>. The
-result of <code>NaN &lt; NaN</code> is undefined, so the
+              <p>Returns <code>true</code> if <code>float</code> is less than
+<code>real</code>.</p>
+
+<p>The result of <code>NaN &lt; NaN</code> is undefined, so the
 implementation-dependent value is returned.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-3C_source')" id="l_method-i-3C_source">show</a>
                 
               </p>
@@ -1023,24 +1088,19 @@ flo_lt(VALUE x, VALUE y)
     double a, b;
 
     a = RFLOAT_VALUE(x);
-    switch (TYPE(y)) {
-      case T_FIXNUM:
-      case T_BIGNUM:
-      {
+    if (RB_TYPE_P(y, T_FIXNUM) || RB_TYPE_P(y, T_BIGNUM)) {
         VALUE rel = rb_integer_float_cmp(y, x);
         if (FIXNUM_P(rel))
             return -FIX2INT(rel) &lt; 0 ? Qtrue : Qfalse;
         return Qfalse;
-      }
-
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         b = RFLOAT_VALUE(y);
 #if defined(_MSC_VER) &amp;&amp; _MSC_VER &lt; 1300
         if (isnan(b)) return Qfalse;
 #endif
-        break;
-
-      default:
+    }
+    else {
         return rb_num_coerce_relop(x, y, &#39;&lt;&#39;);
     }
 #if defined(_MSC_VER) &amp;&amp; _MSC_VER &lt; 1300
@@ -1056,28 +1116,32 @@ flo_lt(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-3C-3D">
             
-              <b>flt <= real  &rarr;  true or false
+              <b>float <= real  &rarr;  true or false
 </b>
             
             <a href="../classes/Float.html#method-i-3C-3D" name="method-i-3C-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p><code>true</code> if <code>flt</code> is less than or equal to
-<code>real</code>. The result of <code>NaN &lt;= NaN</code> is undefined,
-so the implementation-dependent value is returned.</p>
+              <p>Returns <code>true</code> if <code>float</code> is less than or equal to
+<code>real</code>.</p>
+
+<p>The result of <code>NaN &lt;= NaN</code> is undefined, so the
+implementation-dependent value is returned.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-3C-3D_source')" id="l_method-i-3C-3D_source">show</a>
                 
               </p>
@@ -1088,25 +1152,20 @@ flo_le(VALUE x, VALUE y)
     double a, b;
 
     a = RFLOAT_VALUE(x);
-    switch (TYPE(y)) {
-      case T_FIXNUM:
-      case T_BIGNUM:
-      {
+    if (RB_TYPE_P(y, T_FIXNUM) || RB_TYPE_P(y, T_BIGNUM)) {
         VALUE rel = rb_integer_float_cmp(y, x);
         if (FIXNUM_P(rel))
             return -FIX2INT(rel) &lt;= 0 ? Qtrue : Qfalse;
         return Qfalse;
-      }
-
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         b = RFLOAT_VALUE(y);
 #if defined(_MSC_VER) &amp;&amp; _MSC_VER &lt; 1300
         if (isnan(b)) return Qfalse;
 #endif
-        break;
-
-      default:
-        return rb_num_coerce_relop(x, y, rb_intern(&quot;&lt;=&quot;));
+    }
+    else {
+        return rb_num_coerce_relop(x, y, idLE);
     }
 #if defined(_MSC_VER) &amp;&amp; _MSC_VER &lt; 1300
     if (isnan(a)) return Qfalse;
@@ -1126,7 +1185,7 @@ flo_le(VALUE x, VALUE y)
             
             <a href="../classes/Float.html#method-i-3C-3D-3E" name="method-i-3C-3D-3E" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns -1, 0, +1 or nil depending on whether <code>float</code> is less
@@ -1139,15 +1198,17 @@ implementation-dependent value is returned.</p>
 <p><code>nil</code> is returned if the two values are incomparable.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-3C-3D-3E_source')" id="l_method-i-3C-3D-3E_source">show</a>
                 
               </p>
@@ -1160,21 +1221,16 @@ flo_cmp(VALUE x, VALUE y)
 
     a = RFLOAT_VALUE(x);
     if (isnan(a)) return Qnil;
-    switch (TYPE(y)) {
-      case T_FIXNUM:
-      case T_BIGNUM:
-      {
+    if (RB_TYPE_P(y, T_FIXNUM) || RB_TYPE_P(y, T_BIGNUM)) {
         VALUE rel = rb_integer_float_cmp(y, x);
         if (FIXNUM_P(rel))
             return INT2FIX(-FIX2INT(rel));
         return rel;
-      }
-
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         b = RFLOAT_VALUE(y);
-        break;
-
-      default:
+    }
+    else {
         if (isinf(a) &amp;&amp; (i = rb_check_funcall(y, rb_intern(&quot;infinite?&quot;), 0, 0)) != Qundef) {
             if (RTEST(i)) {
                 int j = rb_cmpint(i, x, y);
@@ -1184,7 +1240,7 @@ flo_cmp(VALUE x, VALUE y)
             if (a &gt; 0.0) return INT2FIX(1);
             return INT2FIX(-1);
         }
-        return rb_num_coerce_cmp(x, y, rb_intern(&quot;&lt;=&gt;&quot;));
+        return rb_num_coerce_cmp(x, y, id_cmp);
     }
     return rb_dbl_cmp(a, b);
 }</pre>
@@ -1196,31 +1252,36 @@ flo_cmp(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-3D-3D">
             
-              <b></b>
+              <b>float == obj  &rarr;  true or false</b>
             
             <a href="../classes/Float.html#method-i-3D-3D" name="method-i-3D-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <code>true</code> only if <em>obj</em> has the same value as
-<em>flt</em>. Contrast this with <code>Float#eql?</code>, which requires
-<em>obj</em> to be a <code>Float</code>. The result of <code>NaN ==
-NaN</code> is undefined, so the implementation-dependent value is returned.</p>
+              <p>Returns <code>true</code> only if <code>obj</code> has the same value as
+<code>float</code>. Contrast this with <a
+href="Float.html#method-i-eql-3F">#eql?</a>, which requires obj to be a <a
+href="Float.html">Float</a>.</p>
+
+<p>The result of <code>NaN == NaN</code> is undefined, so the
+implementation-dependent value is returned.</p>
 
 <pre><code>1.0 == 1   #=&gt; true
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-3D-3D_source')" id="l_method-i-3D-3D_source">show</a>
                 
               </p>
@@ -1230,17 +1291,16 @@ flo_eq(VALUE x, VALUE y)
 {
     volatile double a, b;
 
-    switch (TYPE(y)) {
-      case T_FIXNUM:
-      case T_BIGNUM:
+    if (RB_TYPE_P(y, T_FIXNUM) || RB_TYPE_P(y, T_BIGNUM)) {
         return rb_integer_float_eq(y, x);
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         b = RFLOAT_VALUE(y);
 #if defined(_MSC_VER) &amp;&amp; _MSC_VER &lt; 1300
         if (isnan(b)) return Qfalse;
 #endif
-        break;
-      default:
+    }
+    else {
         return num_equal(x, y);
     }
     a = RFLOAT_VALUE(x);
@@ -1257,31 +1317,37 @@ flo_eq(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-3D-3D-3D">
             
-              <b></b>
+              <b>float == obj  &rarr;  true or false
+</b>
             
             <a href="../classes/Float.html#method-i-3D-3D-3D" name="method-i-3D-3D-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <code>true</code> only if <em>obj</em> has the same value as
-<em>flt</em>. Contrast this with <code>Float#eql?</code>, which requires
-<em>obj</em> to be a <code>Float</code>. The result of <code>NaN ==
-NaN</code> is undefined, so the implementation-dependent value is returned.</p>
+              <p>Returns <code>true</code> only if <code>obj</code> has the same value as
+<code>float</code>. Contrast this with <a
+href="Float.html#method-i-eql-3F">#eql?</a>, which requires obj to be a <a
+href="Float.html">Float</a>.</p>
+
+<p>The result of <code>NaN == NaN</code> is undefined, so the
+implementation-dependent value is returned.</p>
 
 <pre><code>1.0 == 1   #=&gt; true
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-3D-3D-3D_source')" id="l_method-i-3D-3D-3D_source">show</a>
                 
               </p>
@@ -1291,17 +1357,16 @@ flo_eq(VALUE x, VALUE y)
 {
     volatile double a, b;
 
-    switch (TYPE(y)) {
-      case T_FIXNUM:
-      case T_BIGNUM:
+    if (RB_TYPE_P(y, T_FIXNUM) || RB_TYPE_P(y, T_BIGNUM)) {
         return rb_integer_float_eq(y, x);
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         b = RFLOAT_VALUE(y);
 #if defined(_MSC_VER) &amp;&amp; _MSC_VER &lt; 1300
         if (isnan(b)) return Qfalse;
 #endif
-        break;
-      default:
+    }
+    else {
         return num_equal(x, y);
     }
     a = RFLOAT_VALUE(x);
@@ -1318,56 +1383,55 @@ flo_eq(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-3E">
             
-              <b>flt > real  &rarr;  true or false
+              <b>float > real  &rarr;  true or false
 </b>
             
             <a href="../classes/Float.html#method-i-3E" name="method-i-3E" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p><code>true</code> if <code>flt</code> is greater than <code>real</code>.
-The result of <code>NaN &gt; NaN</code> is undefined, so the
+              <p>Returns <code>true</code> if <code>float</code> is greater than
+<code>real</code>.</p>
+
+<p>The result of <code>NaN &gt; NaN</code> is undefined, so the
 implementation-dependent value is returned.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-3E_source')" id="l_method-i-3E_source">show</a>
                 
               </p>
               <div id="method-i-3E_source" class="dyn-source">
-                <pre>static VALUE
-flo_gt(VALUE x, VALUE y)
+                <pre>VALUE
+rb_float_gt(VALUE x, VALUE y)
 {
     double a, b;
 
     a = RFLOAT_VALUE(x);
-    switch (TYPE(y)) {
-      case T_FIXNUM:
-      case T_BIGNUM:
-      {
+    if (RB_TYPE_P(y, T_FIXNUM) || RB_TYPE_P(y, T_BIGNUM)) {
         VALUE rel = rb_integer_float_cmp(y, x);
         if (FIXNUM_P(rel))
             return -FIX2INT(rel) &gt; 0 ? Qtrue : Qfalse;
         return Qfalse;
-      }
-
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         b = RFLOAT_VALUE(y);
 #if defined(_MSC_VER) &amp;&amp; _MSC_VER &lt; 1300
         if (isnan(b)) return Qfalse;
 #endif
-        break;
-
-      default:
+    }
+    else {
         return rb_num_coerce_relop(x, y, &#39;&gt;&#39;);
     }
 #if defined(_MSC_VER) &amp;&amp; _MSC_VER &lt; 1300
@@ -1383,28 +1447,32 @@ flo_gt(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-3E-3D">
             
-              <b>flt >= real  &rarr;  true or false
+              <b>float >= real  &rarr;  true or false
 </b>
             
             <a href="../classes/Float.html#method-i-3E-3D" name="method-i-3E-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p><code>true</code> if <code>flt</code> is greater than or equal to
-<code>real</code>. The result of <code>NaN &gt;= NaN</code> is undefined,
-so the implementation-dependent value is returned.</p>
+              <p>Returns <code>true</code> if <code>float</code> is greater than or equal to
+<code>real</code>.</p>
+
+<p>The result of <code>NaN &gt;= NaN</code> is undefined, so the
+implementation-dependent value is returned.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-3E-3D_source')" id="l_method-i-3E-3D_source">show</a>
                 
               </p>
@@ -1415,25 +1483,20 @@ flo_ge(VALUE x, VALUE y)
     double a, b;
 
     a = RFLOAT_VALUE(x);
-    switch (TYPE(y)) {
-      case T_FIXNUM:
-      case T_BIGNUM:
-      {
+    if (RB_TYPE_P(y, T_FIXNUM) || RB_TYPE_P(y, T_BIGNUM)) {
         VALUE rel = rb_integer_float_cmp(y, x);
         if (FIXNUM_P(rel))
             return -FIX2INT(rel) &gt;= 0 ? Qtrue : Qfalse;
         return Qfalse;
-      }
-
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         b = RFLOAT_VALUE(y);
 #if defined(_MSC_VER) &amp;&amp; _MSC_VER &lt; 1300
         if (isnan(b)) return Qfalse;
 #endif
-        break;
-
-      default:
-        return rb_num_coerce_relop(x, y, rb_intern(&quot;&gt;=&quot;));
+    }
+    else {
+        return rb_num_coerce_relop(x, y, idGE);
     }
 #if defined(_MSC_VER) &amp;&amp; _MSC_VER &lt; 1300
     if (isnan(a)) return Qfalse;
@@ -1448,35 +1511,37 @@ flo_ge(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-abs">
             
-              <b>flt.abs        &rarr;  float</b>
+              <b>float.abs        &rarr;  float</b>
             
             <a href="../classes/Float.html#method-i-abs" name="method-i-abs" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns the absolute value of <em>flt</em>.</p>
+              <p>Returns the absolute value of <code>float</code>.</p>
 
 <pre><code>(-34.56).abs   #=&gt; 34.56
 -34.56.abs     #=&gt; 34.56
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-abs_source')" id="l_method-i-abs_source">show</a>
                 
               </p>
               <div id="method-i-abs_source" class="dyn-source">
-                <pre>static VALUE
-flo_abs(VALUE flt)
+                <pre>VALUE
+rb_float_abs(VALUE flt)
 {
     double val = fabs(RFLOAT_VALUE(flt));
     return DBL2NUM(val);
@@ -1493,21 +1558,23 @@ flo_abs(VALUE flt)
             
             <a href="../classes/Float.html#method-i-angle" name="method-i-angle" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns 0 if the value is positive, pi otherwise.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-angle_source')" id="l_method-i-angle_source">show</a>
                 
               </p>
@@ -1533,21 +1600,23 @@ float_arg(VALUE self)
             
             <a href="../classes/Float.html#method-i-arg" name="method-i-arg" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns 0 if the value is positive, pi otherwise.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-arg_source')" id="l_method-i-arg_source">show</a>
                 
               </p>
@@ -1569,48 +1638,76 @@ float_arg(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-ceil">
             
-              <b>flt.ceil  &rarr;  integer
+              <b>float.ceil([ndigits])  &rarr;  integer or float
 </b>
             
             <a href="../classes/Float.html#method-i-ceil" name="method-i-ceil" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns the smallest <code>Integer</code> greater than or equal to
-<em>flt</em>.</p>
+              <p>Returns the smallest number greater than or equal to <code>float</code> in
+decimal digits (default 0 digits).</p>
+
+<p>Precision may be negative.  Returns a floating point number when
+<code>ndigits</code> is positive, <code>self</code> for zero, and ceil up
+for negative.</p>
 
 <pre><code>1.2.ceil      #=&gt; 2
 2.0.ceil      #=&gt; 2
 (-1.2).ceil   #=&gt; -1
 (-2.0).ceil   #=&gt; -2
+1.234567.ceil(2)  #=&gt; 1.24
+1.234567.ceil(3)  #=&gt; 1.235
+1.234567.ceil(4)  #=&gt; 1.2346
+1.234567.ceil(5)  #=&gt; 1.23457
+
+34567.89.ceil(-5) #=&gt; 100000
+34567.89.ceil(-4) #=&gt; 40000
+34567.89.ceil(-3) #=&gt; 35000
+34567.89.ceil(-2) #=&gt; 34600
+34567.89.ceil(-1) #=&gt; 34570
+34567.89.ceil(0)  #=&gt; 34568
+34567.89.ceil(1)  #=&gt; 34567.9
+34567.89.ceil(2)  #=&gt; 34567.89
+34567.89.ceil(3)  #=&gt; 34567.89
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-ceil_source')" id="l_method-i-ceil_source">show</a>
                 
               </p>
               <div id="method-i-ceil_source" class="dyn-source">
                 <pre>static VALUE
-flo_ceil(VALUE num)
+flo_ceil(int argc, VALUE *argv, VALUE num)
 {
-    double f = ceil(RFLOAT_VALUE(num));
-    long val;
+    double number, f;
+    int ndigits = 0;
 
-    if (!FIXABLE(f)) {
-        return rb_dbl2big(f);
+    if (rb_check_arity(argc, 0, 1)) {
+       ndigits = NUM2INT(argv[0]);
     }
-    val = (long)f;
-    return LONG2FIX(val);
+    number = RFLOAT_VALUE(num);
+    if (ndigits &lt; 0) {
+        return rb_int_ceil(dbl2ival(ceil(number)), ndigits);
+    }
+    if (ndigits == 0) {
+        return dbl2ival(ceil(number));
+    }
+    if (float_invariant_round(number, ndigits, &amp;num)) return num;
+    f = pow(10, ndigits);
+    return DBL2NUM(ceil(number * f) / f);
 }</pre>
               </div>
             </div>
@@ -1620,32 +1717,36 @@ flo_ceil(VALUE num)
         <div class="method">
           <div class="title method-title" id="method-i-coerce">
             
-              <b>flt.coerce(numeric)  &rarr;  array
+              <b>float.coerce(numeric)  &rarr;  array
 </b>
             
             <a href="../classes/Float.html#method-i-coerce" name="method-i-coerce" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns an array with both <em>aNumeric</em> and <em>flt</em> represented
-as <code>Float</code> objects. This is achieved by converting
-<em>aNumeric</em> to a <code>Float</code>.</p>
+              <p>Returns an array with both a <code>numeric</code> and a <code>float</code>
+represented as <a href="Float.html">Float</a> objects.</p>
+
+<p>This is achieved by converting a <code>numeric</code> to a <a
+href="Float.html">Float</a>.</p>
 
 <pre><code>1.2.coerce(3)       #=&gt; [3.0, 1.2]
 2.5.coerce(1.1)     #=&gt; [1.1, 2.5]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-coerce_source')" id="l_method-i-coerce_source">show</a>
                 
               </p>
@@ -1667,7 +1768,7 @@ flo_coerce(VALUE x, VALUE y)
             
             <a href="../classes/Float.html#method-i-dclone" name="method-i-dclone" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>provides a unified <code>clone</code> operation, for <a
@@ -1675,20 +1776,24 @@ href="REXML/XPathParser.html">REXML::XPathParser</a> to use across multiple
 <a href="Object.html">Object</a> types</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-dclone_source')" id="l_method-i-dclone_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/449fbfd4d4ce47be227804c22214fed32a5b0124/lib/rexml/xpath_parser.rb#L28" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-dclone_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rexml/xpath_parser.rb, line 27</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rexml/xpath_parser.rb, line 28</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">dclone</span> ; <span class="ruby-keyword">self</span> ; <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1703,7 +1808,7 @@ href="REXML/XPathParser.html">REXML::XPathParser</a> to use across multiple
             
             <a href="../classes/Float.html#method-i-denominator" name="method-i-denominator" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the denominator (always positive).  The result is machine
@@ -1712,15 +1817,17 @@ dependent.</p>
 <p>See numerator.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-denominator_source')" id="l_method-i-denominator_source">show</a>
                 
               </p>
@@ -1731,7 +1838,7 @@ float_denominator(VALUE self)
     double d = RFLOAT_VALUE(self);
     if (isinf(d) || isnan(d))
         return INT2FIX(1);
-    return rb_call_super(0, 0);
+    return nurat_denominator(float_to_r(self));
 }</pre>
               </div>
             </div>
@@ -1746,7 +1853,7 @@ float_denominator(VALUE self)
             
             <a href="../classes/Float.html#method-i-divmod" name="method-i-divmod" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>See <a href="Numeric.html#method-i-divmod">Numeric#divmod</a>.</p>
@@ -1756,15 +1863,17 @@ float_denominator(VALUE self)
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-divmod_source')" id="l_method-i-divmod_source">show</a>
                 
               </p>
@@ -1775,18 +1884,17 @@ flo_divmod(VALUE x, VALUE y)
     double fy, div, mod;
     volatile VALUE a, b;
 
-    switch (TYPE(y)) {
-      case T_FIXNUM:
+    if (RB_TYPE_P(y, T_FIXNUM)) {
         fy = (double)FIX2LONG(y);
-        break;
-      case T_BIGNUM:
+    }
+    else if (RB_TYPE_P(y, T_BIGNUM)) {
         fy = rb_big2dbl(y);
-        break;
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         fy = RFLOAT_VALUE(y);
-        break;
-      default:
-        return rb_num_coerce_bin(x, y, rb_intern(&quot;divmod&quot;));
+    }
+    else {
+        return rb_num_coerce_bin(x, y, id_divmod);
     }
     flodivmod(RFLOAT_VALUE(x), fy, &amp;div, &amp;mod);
     a = dbl2ival(div);
@@ -1801,32 +1909,36 @@ flo_divmod(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-eql-3F">
             
-              <b>flt.eql?(obj)  &rarr;  true or false
+              <b>float.eql?(obj)  &rarr;  true or false
 </b>
             
             <a href="../classes/Float.html#method-i-eql-3F" name="method-i-eql-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <code>true</code> only if <em>obj</em> is a <code>Float</code> with
-the same value as <em>flt</em>. Contrast this with <code>Float#==</code>,
-which performs type conversions. The result of <code>NaN.eql?(NaN)</code>
-is undefined, so the implementation-dependent value is returned.</p>
+              <p>Returns <code>true</code> only if <code>obj</code> is a <a
+href="Float.html">Float</a> with the same value as <code>float</code>.
+Contrast this with Float#==, which performs type conversions.</p>
+
+<p>The result of <code>NaN.eql?(NaN)</code> is undefined, so the
+implementation-dependent value is returned.</p>
 
 <pre><code>1.0.eql?(1)   #=&gt; false
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-eql-3F_source')" id="l_method-i-eql-3F_source">show</a>
                 
               </p>
@@ -1853,25 +1965,27 @@ flo_eql(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-fdiv">
             
-              <b></b>
+              <b>float.fdiv(numeric)  &rarr;  float</b>
             
             <a href="../classes/Float.html#method-i-fdiv" name="method-i-fdiv" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns float / numeric.</p>
+              <p>Returns <code>float / numeric</code>, same as Float#/.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-fdiv_source')" id="l_method-i-fdiv_source">show</a>
                 
               </p>
@@ -1879,7 +1993,7 @@ flo_eql(VALUE x, VALUE y)
                 <pre>static VALUE
 flo_quo(VALUE x, VALUE y)
 {
-    return rb_funcall(x, &#39;/&#39;, 1, y);
+    return num_funcall1(x, &#39;/&#39;, y);
 }</pre>
               </div>
             </div>
@@ -1889,27 +2003,30 @@ flo_quo(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-finite-3F">
             
-              <b>flt.finite?  &rarr;  true or false
+              <b>float.finite?  &rarr;  true or false
 </b>
             
             <a href="../classes/Float.html#method-i-finite-3F" name="method-i-finite-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>flt</em> is a valid IEEE floating point
-number (it is not infinite, and <code>nan?</code> is <code>false</code>).</p>
+              <p>Returns <code>true</code> if <code>float</code> is a valid IEEE floating
+point number (it is not infinite, and <a
+href="Float.html#method-i-nan-3F">#nan?</a> is <code>false</code>).</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-finite-3F_source')" id="l_method-i-finite-3F_source">show</a>
                 
               </p>
@@ -1919,8 +2036,8 @@ flo_is_finite_p(VALUE num)
 {
     double value = RFLOAT_VALUE(num);
 
-#if HAVE_FINITE
-    if (!finite(value))
+#ifdef HAVE_ISFINITE
+    if (!isfinite(value))
         return Qfalse;
 #else
     if (isinf(value) || isnan(value))
@@ -1937,42 +2054,79 @@ flo_is_finite_p(VALUE num)
         <div class="method">
           <div class="title method-title" id="method-i-floor">
             
-              <b>flt.floor  &rarr;  integer
+              <b>float.floor([ndigits])  &rarr;  integer or float
 </b>
             
             <a href="../classes/Float.html#method-i-floor" name="method-i-floor" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns the largest integer less than or equal to <em>flt</em>.</p>
+              <p>Returns the largest number less than or equal to <code>float</code> in
+decimal digits (default 0 digits).</p>
+
+<p>Precision may be negative.  Returns a floating point number when
+<code>ndigits</code> is positive, <code>self</code> for zero, and floor
+down for negative.</p>
 
 <pre><code>1.2.floor      #=&gt; 1
 2.0.floor      #=&gt; 2
 (-1.2).floor   #=&gt; -2
 (-2.0).floor   #=&gt; -2
+
+1.234567.floor(2)  #=&gt; 1.23
+1.234567.floor(3)  #=&gt; 1.234
+1.234567.floor(4)  #=&gt; 1.2345
+1.234567.floor(5)  #=&gt; 1.23456
+
+34567.89.floor(-5) #=&gt; 0
+34567.89.floor(-4) #=&gt; 30000
+34567.89.floor(-3) #=&gt; 34000
+34567.89.floor(-2) #=&gt; 34500
+34567.89.floor(-1) #=&gt; 34560
+34567.89.floor(0)  #=&gt; 34567
+34567.89.floor(1)  #=&gt; 34567.8
+34567.89.floor(2)  #=&gt; 34567.89
+34567.89.floor(3)  #=&gt; 34567.89
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-floor_source')" id="l_method-i-floor_source">show</a>
                 
               </p>
               <div id="method-i-floor_source" class="dyn-source">
                 <pre>static VALUE
-flo_floor(VALUE num)
+flo_floor(int argc, VALUE *argv, VALUE num)
 {
-    double f = floor(RFLOAT_VALUE(num));
+    double number, f;
     long val;
+    int ndigits = 0;
 
+    if (rb_check_arity(argc, 0, 1)) {
+        ndigits = NUM2INT(argv[0]);
+    }
+    if (ndigits &lt; 0) {
+        return rb_int_floor(flo_to_i(num), ndigits);
+    }
+    number = RFLOAT_VALUE(num);
+    if (ndigits &gt; 0) {
+        if (float_invariant_round(number, ndigits, &amp;num)) return num;
+        f = pow(10, ndigits);
+        f = floor(number * f) / f;
+        return DBL2NUM(f);
+    }
+    f = floor(number);
     if (!FIXABLE(f)) {
         return rb_dbl2big(f);
     }
@@ -1987,26 +2141,30 @@ flo_floor(VALUE num)
         <div class="method">
           <div class="title method-title" id="method-i-hash">
             
-              <b>flt.hash  &rarr;  integer
+              <b>float.hash  &rarr;  integer
 </b>
             
             <a href="../classes/Float.html#method-i-hash" name="method-i-hash" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a hash code for this float.</p>
+
+<p>See also <a href="Object.html#method-i-hash">Object#hash</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-hash_source')" id="l_method-i-hash_source">show</a>
                 
               </p>
@@ -2014,14 +2172,7 @@ flo_floor(VALUE num)
                 <pre>static VALUE
 flo_hash(VALUE num)
 {
-    double d;
-    st_index_t hash;
-
-    d = RFLOAT_VALUE(num);
-    /* normalize -0.0 to 0.0 */
-    if (d == 0.0) d = 0.0;
-    hash = rb_memhash(&amp;d, sizeof(d));
-    return LONG2FIX(hash);
+    return rb_dbl_hash(RFLOAT_VALUE(num));
 }</pre>
               </div>
             </div>
@@ -2031,16 +2182,27 @@ flo_hash(VALUE num)
         <div class="method">
           <div class="title method-title" id="method-i-infinite-3F">
             
-              <b>flt.infinite?  &rarr;  nil, -1, +1
+              <b>float.infinite?  &rarr;  nil, -1, +1
 </b>
             
             <a href="../classes/Float.html#method-i-infinite-3F" name="method-i-infinite-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <code>nil</code>, -1, or +1 depending on whether <em>flt</em> is
-finite, -infinity, or +infinity.</p>
+              <p>Return values corresponding to the value of <code>float</code>:</p>
+<dl class="rdoc-list note-list"><dt>finite
+<dd>
+<p><code>nil</code></p>
+</dd><dt>-Infinity
+<dd>
+<p><code>-1</code></p>
+</dd><dt>+<code>Infinity</code>
+<dd>
+<p><code>1</code></p>
+</dd></dl>
+
+<p>For example:</p>
 
 <pre><code>(0.0).infinite?        #=&gt; nil
 (-1.0/0.0).infinite?   #=&gt; -1
@@ -2048,15 +2210,17 @@ finite, -infinity, or +infinity.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-infinite-3F_source')" id="l_method-i-infinite-3F_source">show</a>
                 
               </p>
@@ -2084,50 +2248,58 @@ flo_is_infinite_p(VALUE num)
             
             <a href="../classes/Float.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
+            <div class="aka">
+              Alias for: <a href="Float.html#method-i-to_s">to_s</a>
+            </div>
           
+
           
           </div>
         
         <div class="method">
           <div class="title method-title" id="method-i-magnitude">
             
-              <b>flt.magnitude  &rarr;  float</b>
+              <b>float.magnitude  &rarr;  float</b>
             
             <a href="../classes/Float.html#method-i-magnitude" name="method-i-magnitude" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns the absolute value of <em>flt</em>.</p>
+              <p>Returns the absolute value of <code>float</code>.</p>
 
 <pre><code>(-34.56).abs   #=&gt; 34.56
 -34.56.abs     #=&gt; 34.56
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-magnitude_source')" id="l_method-i-magnitude_source">show</a>
                 
               </p>
               <div id="method-i-magnitude_source" class="dyn-source">
-                <pre>static VALUE
-flo_abs(VALUE flt)
+                <pre>VALUE
+rb_float_abs(VALUE flt)
 {
     double val = fabs(RFLOAT_VALUE(flt));
     return DBL2NUM(val);
@@ -2144,7 +2316,7 @@ flo_abs(VALUE flt)
             
             <a href="../classes/Float.html#method-i-modulo" name="method-i-modulo" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Return the modulo after division of <code>float</code> by
@@ -2155,15 +2327,17 @@ flo_abs(VALUE flt)
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-modulo_source')" id="l_method-i-modulo_source">show</a>
                 
               </p>
@@ -2173,17 +2347,16 @@ flo_mod(VALUE x, VALUE y)
 {
     double fy;
 
-    switch (TYPE(y)) {
-      case T_FIXNUM:
+    if (RB_TYPE_P(y, T_FIXNUM)) {
         fy = (double)FIX2LONG(y);
-        break;
-      case T_BIGNUM:
+    }
+    else if (RB_TYPE_P(y, T_BIGNUM)) {
         fy = rb_big2dbl(y);
-        break;
-      case T_FLOAT:
+    }
+    else if (RB_TYPE_P(y, T_FLOAT)) {
         fy = RFLOAT_VALUE(y);
-        break;
-      default:
+    }
+    else {
         return rb_num_coerce_bin(x, y, &#39;%&#39;);
     }
     return DBL2NUM(ruby_float_mod(RFLOAT_VALUE(x), fy));
@@ -2196,16 +2369,16 @@ flo_mod(VALUE x, VALUE y)
         <div class="method">
           <div class="title method-title" id="method-i-nan-3F">
             
-              <b>flt.nan?  &rarr;  true or false
+              <b>float.nan?  &rarr;  true or false
 </b>
             
             <a href="../classes/Float.html#method-i-nan-3F" name="method-i-nan-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>flt</em> is an invalid IEEE floating point
-number.</p>
+              <p>Returns <code>true</code> if <code>float</code> is an invalid IEEE floating
+point number.</p>
 
 <pre><code>a = -1.0      #=&gt; -1.0
 a.nan?        #=&gt; false
@@ -2214,15 +2387,17 @@ a.nan?        #=&gt; true
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-nan-3F_source')" id="l_method-i-nan-3F_source">show</a>
                 
               </p>
@@ -2240,6 +2415,134 @@ flo_is_nan_p(VALUE num)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-i-negative-3F">
+            
+              <b>float.negative? &rarr;  true or false
+</b>
+            
+            <a href="../classes/Float.html#method-i-negative-3F" name="method-i-negative-3F" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns <code>true</code> if <code>float</code> is less than 0.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-negative-3F_source')" id="l_method-i-negative-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-negative-3F_source" class="dyn-source">
+                <pre>static VALUE
+flo_negative_p(VALUE num)
+{
+    double f = RFLOAT_VALUE(num);
+    return f &lt; 0.0 ? Qtrue : Qfalse;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-next_float">
+            
+              <b>float.next_float  &rarr;  float
+</b>
+            
+            <a href="../classes/Float.html#method-i-next_float" name="method-i-next_float" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the next representable floating-point number.</p>
+
+<p>Float::MAX.next_float and Float::INFINITY.next_float is Float::INFINITY.</p>
+
+<p>Float::NAN.next_float is Float::NAN.</p>
+
+<p>For example:</p>
+
+<pre><code>p 0.01.next_float  #=&gt; 0.010000000000000002
+p 1.0.next_float   #=&gt; 1.0000000000000002
+p 100.0.next_float #=&gt; 100.00000000000001
+
+p 0.01.next_float - 0.01   #=&gt; 1.734723475976807e-18
+p 1.0.next_float - 1.0     #=&gt; 2.220446049250313e-16
+p 100.0.next_float - 100.0 #=&gt; 1.4210854715202004e-14
+
+f = 0.01; 20.times { printf &quot;%-20a %s\n&quot;, f, f.to_s; f = f.next_float }
+#=&gt; 0x1.47ae147ae147bp-7 0.01
+#   0x1.47ae147ae147cp-7 0.010000000000000002
+#   0x1.47ae147ae147dp-7 0.010000000000000004
+#   0x1.47ae147ae147ep-7 0.010000000000000005
+#   0x1.47ae147ae147fp-7 0.010000000000000007
+#   0x1.47ae147ae148p-7  0.010000000000000009
+#   0x1.47ae147ae1481p-7 0.01000000000000001
+#   0x1.47ae147ae1482p-7 0.010000000000000012
+#   0x1.47ae147ae1483p-7 0.010000000000000014
+#   0x1.47ae147ae1484p-7 0.010000000000000016
+#   0x1.47ae147ae1485p-7 0.010000000000000018
+#   0x1.47ae147ae1486p-7 0.01000000000000002
+#   0x1.47ae147ae1487p-7 0.010000000000000021
+#   0x1.47ae147ae1488p-7 0.010000000000000023
+#   0x1.47ae147ae1489p-7 0.010000000000000024
+#   0x1.47ae147ae148ap-7 0.010000000000000026
+#   0x1.47ae147ae148bp-7 0.010000000000000028
+#   0x1.47ae147ae148cp-7 0.01000000000000003
+#   0x1.47ae147ae148dp-7 0.010000000000000031
+#   0x1.47ae147ae148ep-7 0.010000000000000033
+
+f = 0.0
+100.times { f += 0.1 }
+p f                            #=&gt; 9.99999999999998       # should be 10.0 in the ideal world.
+p 10-f                         #=&gt; 1.9539925233402755e-14 # the floating-point error.
+p(10.0.next_float-10)          #=&gt; 1.7763568394002505e-15 # 1 ulp (units in the last place).
+p((10-f)/(10.0.next_float-10)) #=&gt; 11.0                   # the error is 11 ulp.
+p((10-f)/(10*Float::EPSILON))  #=&gt; 8.8                    # approximation of the above.
+p &quot;%a&quot; % f                     #=&gt; &quot;0x1.3fffffffffff5p+3&quot; # the last hex digit is 5.  16 - 5 = 11 ulp.
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-next_float_source')" id="l_method-i-next_float_source">show</a>
+                
+              </p>
+              <div id="method-i-next_float_source" class="dyn-source">
+                <pre>static VALUE
+flo_next_float(VALUE vx)
+{
+    double x, y;
+    x = NUM2DBL(vx);
+    y = nextafter(x, INFINITY);
+    return DBL2NUM(y);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-i-numerator">
             
               <b>flo.numerator  &rarr;  integer
@@ -2247,7 +2550,7 @@ flo_is_nan_p(VALUE num)
             
             <a href="../classes/Float.html#method-i-numerator" name="method-i-numerator" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the numerator.  The result is machine dependent.</p>
@@ -2258,15 +2561,17 @@ n.fdiv(d)            #=&gt; 0.3
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-numerator_source')" id="l_method-i-numerator_source">show</a>
                 
               </p>
@@ -2277,7 +2582,7 @@ float_numerator(VALUE self)
     double d = RFLOAT_VALUE(self);
     if (isinf(d) || isnan(d))
         return self;
-    return rb_call_super(0, 0);
+    return nurat_numerator(float_to_r(self));
 }</pre>
               </div>
             </div>
@@ -2291,21 +2596,23 @@ float_numerator(VALUE self)
             
             <a href="../classes/Float.html#method-i-phase" name="method-i-phase" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns 0 if the value is positive, pi otherwise.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-phase_source')" id="l_method-i-phase_source">show</a>
                 
               </p>
@@ -2325,22 +2632,123 @@ float_arg(VALUE self)
           </div>
         
         <div class="method">
-          <div class="title method-title" id="method-i-power-21">
+          <div class="title method-title" id="method-i-positive-3F">
             
-              <b>power!</b>(other)
+              <b>float.positive? &rarr;  true or false
+</b>
             
-            <a href="../classes/Float.html#method-i-power-21" name="method-i-power-21" class="permalink">Link</a>
+            <a href="../classes/Float.html#method-i-positive-3F" name="method-i-positive-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Returns <code>true</code> if <code>float</code> is greater than 0.</p>
             </div>
           
+
           
+
           
+
           
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-positive-3F_source')" id="l_method-i-positive-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-positive-3F_source" class="dyn-source">
+                <pre>static VALUE
+flo_positive_p(VALUE num)
+{
+    double f = RFLOAT_VALUE(num);
+    return f &gt; 0.0 ? Qtrue : Qfalse;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-prev_float">
+            
+              <b>float.prev_float  &rarr;  float
+</b>
+            
+            <a href="../classes/Float.html#method-i-prev_float" name="method-i-prev_float" class="permalink">Link</a>
+          </div>
+
           
+            <div class="description">
+              <p>Returns the previous representable floating-point number.</p>
+
+<p>(-Float::MAX).prev_float and (-Float::INFINITY).prev_float is
+-Float::INFINITY.</p>
+
+<p>Float::NAN.prev_float is Float::NAN.</p>
+
+<p>For example:</p>
+
+<pre><code>p 0.01.prev_float  #=&gt; 0.009999999999999998
+p 1.0.prev_float   #=&gt; 0.9999999999999999
+p 100.0.prev_float #=&gt; 99.99999999999999
+
+p 0.01 - 0.01.prev_float   #=&gt; 1.734723475976807e-18
+p 1.0 - 1.0.prev_float     #=&gt; 1.1102230246251565e-16
+p 100.0 - 100.0.prev_float #=&gt; 1.4210854715202004e-14
+
+f = 0.01; 20.times { printf &quot;%-20a %s\n&quot;, f, f.to_s; f = f.prev_float }
+#=&gt; 0x1.47ae147ae147bp-7 0.01
+#   0x1.47ae147ae147ap-7 0.009999999999999998
+#   0x1.47ae147ae1479p-7 0.009999999999999997
+#   0x1.47ae147ae1478p-7 0.009999999999999995
+#   0x1.47ae147ae1477p-7 0.009999999999999993
+#   0x1.47ae147ae1476p-7 0.009999999999999992
+#   0x1.47ae147ae1475p-7 0.00999999999999999
+#   0x1.47ae147ae1474p-7 0.009999999999999988
+#   0x1.47ae147ae1473p-7 0.009999999999999986
+#   0x1.47ae147ae1472p-7 0.009999999999999985
+#   0x1.47ae147ae1471p-7 0.009999999999999983
+#   0x1.47ae147ae147p-7  0.009999999999999981
+#   0x1.47ae147ae146fp-7 0.00999999999999998
+#   0x1.47ae147ae146ep-7 0.009999999999999978
+#   0x1.47ae147ae146dp-7 0.009999999999999976
+#   0x1.47ae147ae146cp-7 0.009999999999999974
+#   0x1.47ae147ae146bp-7 0.009999999999999972
+#   0x1.47ae147ae146ap-7 0.00999999999999997
+#   0x1.47ae147ae1469p-7 0.009999999999999969
+#   0x1.47ae147ae1468p-7 0.009999999999999967
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-prev_float_source')" id="l_method-i-prev_float_source">show</a>
+                
+              </p>
+              <div id="method-i-prev_float_source" class="dyn-source">
+                <pre>static VALUE
+flo_prev_float(VALUE vx)
+{
+    double x, y;
+    x = NUM2DBL(vx);
+    y = nextafter(x, -INFINITY);
+    return DBL2NUM(y);
+}</pre>
+              </div>
+            </div>
+            
           </div>
         
         <div class="method">
@@ -2350,21 +2758,23 @@ float_arg(VALUE self)
             
             <a href="../classes/Float.html#method-i-quo" name="method-i-quo" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns float / numeric.</p>
+              <p>Returns <code>float / numeric</code>, same as Float#/.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-quo_source')" id="l_method-i-quo_source">show</a>
                 
               </p>
@@ -2372,7 +2782,7 @@ float_arg(VALUE self)
                 <pre>static VALUE
 flo_quo(VALUE x, VALUE y)
 {
-    return rb_funcall(x, &#39;/&#39;, 1, y);
+    return num_funcall1(x, &#39;/&#39;, y);
 }</pre>
               </div>
             </div>
@@ -2387,7 +2797,7 @@ flo_quo(VALUE x, VALUE y)
             
             <a href="../classes/Float.html#method-i-rationalize" name="method-i-rationalize" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a simpler approximation of the value (flt-|eps| &lt;= result &lt;=
@@ -2402,15 +2812,17 @@ automatically.</p>
 <p>See to_r.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-rationalize_source')" id="l_method-i-rationalize_source">show</a>
                 
               </p>
@@ -2418,53 +2830,20 @@ automatically.</p>
                 <pre>static VALUE
 float_rationalize(int argc, VALUE *argv, VALUE self)
 {
-    VALUE e, a, b, p, q;
+    VALUE e;
+    double d = RFLOAT_VALUE(self);
 
-    if (f_negative_p(self))
-        return f_negate(float_rationalize(argc, argv, f_abs(self)));
+    if (d &lt; 0.0)
+        return rb_rational_uminus(float_rationalize(argc, argv, DBL2NUM(-d)));
 
     rb_scan_args(argc, argv, &quot;01&quot;, &amp;e);
 
     if (argc != 0) {
-        e = f_abs(e);
-        a = f_sub(self, e);
-        b = f_add(self, e);
+        return rb_flt_rationalize_with_prec(self, e);
     }
     else {
-        VALUE f, n;
-
-        float_decode_internal(self, &amp;f, &amp;n);
-        if (f_zero_p(f) || f_positive_p(n))
-            return rb_rational_new1(f_lshift(f, n));
-
-#if FLT_RADIX == 2
-        {
-            VALUE two_times_f, den;
-
-            two_times_f = f_mul(TWO, f);
-            den = f_lshift(ONE, f_sub(ONE, n));
-
-            a = rb_rational_new2(f_sub(two_times_f, ONE), den);
-            b = rb_rational_new2(f_add(two_times_f, ONE), den);
-        }
-#else
-        {
-            VALUE radix_times_f, den;
-
-            radix_times_f = f_mul(INT2FIX(FLT_RADIX), f);
-            den = f_expt(INT2FIX(FLT_RADIX), f_sub(ONE, n));
-
-            a = rb_rational_new2(f_sub(radix_times_f, INT2FIX(FLT_RADIX - 1)), den);
-            b = rb_rational_new2(f_add(radix_times_f, INT2FIX(FLT_RADIX - 1)), den);
-        }
-#endif
+        return rb_flt_rationalize(self);
     }
-
-    if (f_eqeq_p(a, b))
-        return f_to_r(self);
-
-    nurat_rationalize_internal(a, b, &amp;p, &amp;q);
-    return rb_rational_new2(p, q);
 }</pre>
               </div>
             </div>
@@ -2474,17 +2853,19 @@ float_rationalize(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-round">
             
-              <b>flt.round([ndigits])  &rarr;  integer or float
+              <b>float.round([ndigits])  &rarr;  integer or float
 </b>
             
             <a href="../classes/Float.html#method-i-round" name="method-i-round" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Rounds <em>flt</em> to a given precision in decimal digits (default 0
-digits). Precision may be negative.  Returns a floating point number when
-ndigits is more than zero.</p>
+              <p>Rounds <code>float</code> to a given precision in decimal digits (default 0
+digits).</p>
+
+<p>Precision may be negative.  Returns a floating point number when
+<code>ndigits</code> is more than zero.</p>
 
 <pre><code>1.4.round      #=&gt; 1
 1.5.round      #=&gt; 2
@@ -2506,17 +2887,31 @@ ndigits is more than zero.</p>
 34567.89.round(2)  #=&gt; 34567.89
 34567.89.round(3)  #=&gt; 34567.89
 </code></pre>
+
+<p>If <code>half:</code> optional keyword is given, just-half number will be
+rounded according to that value. Supported values for this keyword are
+follows.</p>
+<ul><li>
+<p><code>:up</code> or <code>nil</code>: the result will be rounded away from
+zero</p>
+</li><li>
+<p><code>:even</code>: the result will be rounded to nearest even number</p>
+</li><li>
+<p><code>:down</code>: the result will be rounded close to zero</p>
+</li></ul>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-round_source')" id="l_method-i-round_source">show</a>
                 
               </p>
@@ -2524,50 +2919,27 @@ ndigits is more than zero.</p>
                 <pre>static VALUE
 flo_round(int argc, VALUE *argv, VALUE num)
 {
-    VALUE nd;
-    double number, f;
+    double number, f, x;
+    VALUE nd, opt;
     int ndigits = 0;
-    int binexp;
-    enum {float_dig = DBL_DIG+2};
+    enum ruby_num_rounding_mode mode;
 
-    if (argc &gt; 0 &amp;&amp; rb_scan_args(argc, argv, &quot;01&quot;, &amp;nd) == 1) {
+    if (rb_scan_args(argc, argv, &quot;01:&quot;, &amp;nd, &amp;opt)) {
         ndigits = NUM2INT(nd);
     }
+    mode = rb_num_get_rounding_option(opt);
     if (ndigits &lt; 0) {
-        return int_round_0(flo_truncate(num), ndigits);
+        return rb_int_round(flo_to_i(num), ndigits, mode);
     }
     number  = RFLOAT_VALUE(num);
     if (ndigits == 0) {
-        return dbl2ival(number);
+        x = ROUND_CALL(mode, round, (number, 1.0));
+        return dbl2ival(x);
     }
-    frexp(number, &amp;binexp);
-
-/* Let `exp` be such that `number` is written as:&quot;0.#{digits}e#{exp}&quot;,
-   i.e. such that  10 ** (exp - 1) &lt;= |number| &lt; 10 ** exp
-   Recall that up to float_dig digits can be needed to represent a double,
-   so if ndigits + exp &gt;= float_dig, the intermediate value (number * 10 ** ndigits)
-   will be an integer and thus the result is the original number.
-   If ndigits + exp &lt;= 0, the result is 0 or &quot;1e#{exp}&quot;, so
-   if ndigits + exp &lt; 0, the result is 0.
-   We have:
-        2 ** (binexp-1) &lt;= |number| &lt; 2 ** binexp
-        10 ** ((binexp-1)/log_2(10)) &lt;= |number| &lt; 10 ** (binexp/log_2(10))
-        If binexp &gt;= 0, and since log_2(10) = 3.322259:
-           10 ** (binexp/4 - 1) &lt; |number| &lt; 10 ** (binexp/3)
-           floor(binexp/4) &lt;= exp &lt;= ceil(binexp/3)
-        If binexp &lt;= 0, swap the /4 and the /3
-        So if ndigits + floor(binexp/(4 or 3)) &gt;= float_dig, the result is number
-        If ndigits + ceil(binexp/(3 or 4)) &lt; 0 the result is 0
-*/
-    if (isinf(number) || isnan(number) ||
-        (ndigits &gt;= float_dig - (binexp &gt; 0 ? binexp / 4 : binexp / 3 - 1))) {
-        return num;
-    }
-    if (ndigits &lt; - (binexp &gt; 0 ? binexp / 3 + 1 : binexp / 4)) {
-        return DBL2NUM(0);
-    }
+    if (float_invariant_round(number, ndigits, &amp;num)) return num;
     f = pow(10, ndigits);
-    return DBL2NUM(round(number * f) / f);
+    x = ROUND_CALL(mode, round, (number, f));
+    return DBL2NUM(x / f);
 }</pre>
               </div>
             </div>
@@ -2582,7 +2954,7 @@ flo_round(int argc, VALUE *argv, VALUE num)
             
             <a href="../classes/Float.html#method-i-to_d" name="method-i-to_d" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Convert <code>flt</code> to a <a href="BigDecimal.html">BigDecimal</a> and
@@ -2592,26 +2964,30 @@ return it.</p>
 require &#39;bigdecimal/util&#39;
 
 0.5.to_d
-# =&gt; #&lt;BigDecimal:1dc69e0,&#39;0.5E0&#39;,9(18)&gt;
+# =&gt; 0.5e0
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_d_source')" id="l_method-i-to_d_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/bd288dcc8bd661b51856e95a9d649a1130580627/ext/bigdecimal/lib/bigdecimal/util.rb#L39" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_d_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/bigdecimal/lib/bigdecimal/util.rb, line 30</span>
+                <pre><span class="ruby-comment"># File ruby/ext/bigdecimal/lib/bigdecimal/util.rb, line 39</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">to_d</span>(<span class="ruby-identifier">precision</span>=<span class="ruby-keyword">nil</span>)
-  <span class="ruby-constant">BigDecimal</span>(<span class="ruby-keyword">self</span>, <span class="ruby-identifier">precision</span> <span class="ruby-operator">||</span> <span class="ruby-constant">Float</span><span class="ruby-operator">::</span><span class="ruby-constant">DIG</span><span class="ruby-operator">+</span><span class="ruby-number">1</span>)
+  <span class="ruby-constant">BigDecimal</span>(<span class="ruby-keyword">self</span>, <span class="ruby-identifier">precision</span> <span class="ruby-operator">||</span> <span class="ruby-constant">Float</span><span class="ruby-operator">::</span><span class="ruby-constant">DIG</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -2621,26 +2997,28 @@ require &#39;bigdecimal/util&#39;
         <div class="method">
           <div class="title method-title" id="method-i-to_f">
             
-              <b>flt.to_f  &rarr;  self
+              <b>float.to_f  &rarr;  self
 </b>
             
             <a href="../classes/Float.html#method-i-to_f" name="method-i-to_f" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>As <code>flt</code> is already a float, returns <code>self</code>.</p>
+              <p>Since <code>float</code> is already a float, returns <code>self</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_f_source')" id="l_method-i-to_f_source">show</a>
                 
               </p>
@@ -2658,32 +3036,37 @@ flo_to_f(VALUE num)
         <div class="method">
           <div class="title method-title" id="method-i-to_i">
             
-              <b>flt.to_i      &rarr;  integer
-flt.to_int    &rarr;  integer</b>
+              <b>float.to_i      &rarr;  integer<br />float.to_int    &rarr;  integer</b>
             
             <a href="../classes/Float.html#method-i-to_i" name="method-i-to_i" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <em>flt</em> truncated to an <code>Integer</code>.</p>
+              <p>Returns the <code>float</code> truncated to an <a
+href="Integer.html">Integer</a>.</p>
+
+<p>Synonyms are <a href="Float.html#method-i-to_i">to_i</a> and <a
+href="Float.html#method-i-to_int">to_int</a></p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_i_source')" id="l_method-i-to_i_source">show</a>
                 
               </p>
               <div id="method-i-to_i_source" class="dyn-source">
                 <pre>static VALUE
-flo_truncate(VALUE num)
+flo_to_i(VALUE num)
 {
     double f = RFLOAT_VALUE(num);
     long val;
@@ -2705,31 +3088,37 @@ flo_truncate(VALUE num)
         <div class="method">
           <div class="title method-title" id="method-i-to_int">
             
-              <b>flt.to_int    &rarr;  integer</b>
+              <b>float.to_int    &rarr;  integer</b>
             
             <a href="../classes/Float.html#method-i-to_int" name="method-i-to_int" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <em>flt</em> truncated to an <code>Integer</code>.</p>
+              <p>Returns the <code>float</code> truncated to an <a
+href="Integer.html">Integer</a>.</p>
+
+<p>Synonyms are <a href="Float.html#method-i-to_i">to_i</a> and <a
+href="Float.html#method-i-to_int">to_int</a></p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_int_source')" id="l_method-i-to_int_source">show</a>
                 
               </p>
               <div id="method-i-to_int_source" class="dyn-source">
                 <pre>static VALUE
-flo_truncate(VALUE num)
+flo_to_i(VALUE num)
 {
     double f = RFLOAT_VALUE(num);
     long val;
@@ -2756,7 +3145,7 @@ flo_truncate(VALUE num)
             
             <a href="../classes/Float.html#method-i-to_r" name="method-i-to_r" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the value as a rational.</p>
@@ -2773,15 +3162,17 @@ equivalent to &#39;3/10&#39;.to_r, but the former isn&#39;t so.</p>
 <p>See rationalize.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_r_source')" id="l_method-i-to_r_source">show</a>
                 
               </p>
@@ -2797,14 +3188,17 @@ float_to_r(VALUE self)
         long ln = FIX2LONG(n);
 
         if (ln == 0)
-            return f_to_r(f);
+            return rb_rational_new1(f);
         if (ln &gt; 0)
-            return f_to_r(f_lshift(f, n));
+            return rb_rational_new1(rb_int_lshift(f, n));
         ln = -ln;
-        return rb_rational_new2(f, f_lshift(ONE, INT2FIX(ln)));
+        return rb_rational_new2(f, rb_int_lshift(ONE, INT2FIX(ln)));
     }
 #else
-    return f_to_r(f_mul(f, f_expt(INT2FIX(FLT_RADIX), n)));
+    f = rb_int_mul(f, rb_int_pow(INT2FIX(FLT_RADIX), n));
+    if (RB_TYPE_P(f, T_RATIONAL))
+        return f;
+    return rb_rational_new1(f);
 #endif
 }</pre>
               </div>
@@ -2815,33 +3209,34 @@ float_to_r(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-to_s">
             
-              <b>flt.to_s  &rarr;  string
+              <b>float.to_s  &rarr;  string
 </b>
             
             <a href="../classes/Float.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a string containing a representation of self. As well as a fixed or
-exponential form of the number, the call may return
-“<code>NaN</code>&#39;&#39;, “<code>Infinity</code>&#39;&#39;, and
-“<code>-Infinity</code>&#39;&#39;.</p>
+exponential form of the <code>float</code>, the call may return
+<code>NaN</code>, <code>Infinity</code>, and <code>-Infinity</code>.</p>
             </div>
           
-          
+
           
             <div class="aka">
               Also aliased as: <a href="Float.html#method-i-inspect">inspect</a>
             </div>
           
+
           
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_s_source')" id="l_method-i-to_s_source">show</a>
                 
               </p>
@@ -2849,7 +3244,6 @@ exponential form of the number, the call may return
                 <pre>static VALUE
 flo_to_s(VALUE flt)
 {
-    char *ruby_dtoa(double d_, int mode, int ndigits, int *decpt, int *sign, char **rve);
     enum {decimal_mant = DBL_MANT_DIG-DBL_DIG};
     enum {float_dig = DBL_DIG+1};
     char buf[float_dig + (decimal_mant + CHAR_BIT - 1) / CHAR_BIT + 10];
@@ -2858,8 +3252,11 @@ flo_to_s(VALUE flt)
     char *p, *e;
     int sign, decpt, digs;
 
-    if (isinf(value))
-        return rb_usascii_str_new2(value &lt; 0 ? &quot;-Infinity&quot; : &quot;Infinity&quot;);
+    if (isinf(value)) {
+        static const char minf[] = &quot;-Infinity&quot;;
+        const int pos = (value &gt; 0); /* skip &quot;-&quot; */
+        return rb_usascii_str_new(minf+pos, strlen(minf)-pos);
+    }
     else if (isnan(value))
         return rb_usascii_str_new2(&quot;NaN&quot;);
 
@@ -2922,43 +3319,43 @@ flo_to_s(VALUE flt)
         <div class="method">
           <div class="title method-title" id="method-i-truncate">
             
-              <b>flt.truncate  &rarr;  integer</b>
+              <b>float.truncate([ndigits])  &rarr;  integer or float
+</b>
             
             <a href="../classes/Float.html#method-i-truncate" name="method-i-truncate" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <em>flt</em> truncated to an <code>Integer</code>.</p>
+              <p>Truncates <code>float</code> to a given precision in decimal digits
+(default 0 digits).</p>
+
+<p>Precision may be negative.  Returns a floating point number when
+<code>ndigits</code> is more than zero.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-truncate_source')" id="l_method-i-truncate_source">show</a>
                 
               </p>
               <div id="method-i-truncate_source" class="dyn-source">
                 <pre>static VALUE
-flo_truncate(VALUE num)
+flo_truncate(int argc, VALUE *argv, VALUE num)
 {
-    double f = RFLOAT_VALUE(num);
-    long val;
-
-    if (f &gt; 0.0) f = floor(f);
-    if (f &lt; 0.0) f = ceil(f);
-
-    if (!FIXABLE(f)) {
-        return rb_dbl2big(f);
-    }
-    val = (long)f;
-    return LONG2FIX(val);
+    if (signbit(RFLOAT_VALUE(num)))
+        return flo_ceil(argc, argv, num);
+    else
+        return flo_floor(argc, argv, num);
 }</pre>
               </div>
             </div>
@@ -2968,26 +3365,28 @@ flo_truncate(VALUE num)
         <div class="method">
           <div class="title method-title" id="method-i-zero-3F">
             
-              <b>flt.zero?  &rarr;  true or false
+              <b>float.zero?  &rarr;  true or false
 </b>
             
             <a href="../classes/Float.html#method-i-zero-3F" name="method-i-zero-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>flt</em> is 0.0.</p>
+              <p>Returns <code>true</code> if <code>float</code> is 0.0.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-zero-3F_source')" id="l_method-i-zero-3F_source">show</a>
                 
               </p>
@@ -3008,4 +3407,4 @@ flo_zero_p(VALUE num)
 
     </div>
   </body>
-</html>    
+</html>

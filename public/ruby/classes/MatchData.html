@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            MatchData 
+            <span class="type">Class</span>
+            MatchData
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Object.html">Object</a>
                     
@@ -168,6 +168,11 @@ pattern match, results normally accessed through the special variables
             
               
               <li>
+                <a href="#method-i-named_captures">named_captures</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-names">names</a>
               </li>
             
@@ -197,12 +202,7 @@ pattern match, results normally accessed through the special variables
             
               
               <li>
-                <a href="#method-i-pre_match">pre_match</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-pretty_print">pretty_print</a>
+                <a href="#method-i-pre_match">pre_match</a>
               </li>
             
           </ul>
@@ -292,26 +292,28 @@ pattern match, results normally accessed through the special variables
         <div class="method">
           <div class="title method-title" id="method-i-3D-3D">
             
-              <b></b>
+              <b>mtch == mtch2   &rarr; true or false</b>
             
             <a href="../classes/MatchData.html#method-i-3D-3D" name="method-i-3D-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Equality—Two matchdata are equal if their target strings, patterns, and
 matched positions are identical.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-3D-3D_source')" id="l_method-i-3D-3D_source">show</a>
                 
               </p>
@@ -320,10 +322,12 @@ matched positions are identical.</p>
 match_equal(VALUE match1, VALUE match2)
 {
     const struct re_registers *regs1, *regs2;
+
     if (match1 == match2) return Qtrue;
     if (!RB_TYPE_P(match2, T_MATCH)) return Qfalse;
+    if (!RMATCH(match1)-&gt;regexp || !RMATCH(match2)-&gt;regexp) return Qfalse;
     if (!rb_str_equal(RMATCH(match1)-&gt;str, RMATCH(match2)-&gt;str)) return Qfalse;
-    if (!rb_reg_equal(RMATCH(match1)-&gt;regexp, RMATCH(match2)-&gt;regexp)) return Qfalse;
+    if (!rb_reg_equal(match_regexp(match1), match_regexp(match2))) return Qfalse;
     regs1 = RMATCH_REGS(match1);
     regs2 = RMATCH_REGS(match2);
     if (regs1-&gt;num_regs != regs2-&gt;num_regs) return Qfalse;
@@ -339,15 +343,12 @@ match_equal(VALUE match1, VALUE match2)
         <div class="method">
           <div class="title method-title" id="method-i-5B-5D">
             
-              <b>mtch[i]               &rarr; str or nil
-mtch[start, length]   &rarr; array
-mtch[range]           &rarr; array
-mtch[name]            &rarr; str or nil
+              <b>mtch[i]               &rarr; str or nil<br />mtch[start, length]   &rarr; array<br />mtch[range]           &rarr; array<br />mtch[name]            &rarr; str or nil
 </b>
             
             <a href="../classes/MatchData.html#method-i-5B-5D" name="method-i-5B-5D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Match Reference – <code>MatchData</code> acts as an array, and may be
@@ -371,15 +372,17 @@ m[:foo]    #=&gt; &quot;aaa&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
                 
               </p>
@@ -387,42 +390,44 @@ m[:foo]    #=&gt; &quot;aaa&quot;
                 <pre>static VALUE
 match_aref(int argc, VALUE *argv, VALUE match)
 {
-    VALUE idx, rest;
+    VALUE idx, length;
 
     match_check(match);
-    rb_scan_args(argc, argv, &quot;11&quot;, &amp;idx, &amp;rest);
+    rb_scan_args(argc, argv, &quot;11&quot;, &amp;idx, &amp;length);
 
-    if (NIL_P(rest)) {
+    if (NIL_P(length)) {
         if (FIXNUM_P(idx)) {
-            if (FIX2INT(idx) &gt;= 0) {
-                return rb_reg_nth_match(FIX2INT(idx), match);
-            }
+            return rb_reg_nth_match(FIX2INT(idx), match);
         }
         else {
-            const char *p;
-            int num;
-
-            switch (TYPE(idx)) {
-              case T_SYMBOL:
-                p = rb_id2name(SYM2ID(idx));
-                goto name_to_backref;
-                break;
-              case T_STRING:
-                p = StringValuePtr(idx);
-
-              name_to_backref:
-                num = name_to_backref_number(RMATCH_REGS(match),
-                                             RMATCH(match)-&gt;regexp, p, p + strlen(p));
+            int num = namev_to_backref_number(RMATCH_REGS(match), RMATCH(match)-&gt;regexp, idx);
+            if (num &gt;= 0) {
                 return rb_reg_nth_match(num, match);
-                break;
-
-              default:
-                break;
+            }
+            else {
+                return match_ary_aref(match, idx, Qnil);
             }
         }
     }
-
-    return rb_ary_aref(argc, argv, match_to_a(match));
+    else {
+        long beg = NUM2LONG(idx);
+        long len = NUM2LONG(length);
+        long num_regs = RMATCH_REGS(match)-&gt;num_regs;
+        if (len &lt; 0) {
+            return Qnil;
+        }
+        if (beg &lt; 0) {
+            beg += num_regs;
+            if (beg &lt; 0) return Qnil;
+        }
+        else if (beg &gt; num_regs) {
+            return Qnil;
+        }
+        else if (beg+len &gt; num_regs) {
+            len = num_regs - beg;
+        }
+        return match_ary_subseq(match, beg, len, Qnil);
+    }
 }</pre>
               </div>
             </div>
@@ -437,7 +442,7 @@ match_aref(int argc, VALUE *argv, VALUE match)
             
             <a href="../classes/MatchData.html#method-i-begin" name="method-i-begin" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the offset of the start of the <em>n</em>th element of the match
@@ -454,15 +459,17 @@ p m.begin(:bar)  #=&gt; 2
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-begin_source')" id="l_method-i-begin_source">show</a>
                 
               </p>
@@ -496,7 +503,7 @@ match_begin(VALUE match, VALUE n)
             
             <a href="../classes/MatchData.html#method-i-captures" name="method-i-captures" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the array of captures; equivalent to <code>mtch.to_a[1..-1]</code>.</p>
@@ -509,15 +516,17 @@ f4    #=&gt; &quot;8&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-captures_source')" id="l_method-i-captures_source">show</a>
                 
               </p>
@@ -540,7 +549,7 @@ match_captures(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-end" name="method-i-end" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the offset of the character immediately following the end of the
@@ -557,15 +566,17 @@ p m.end(:bar)    #=&gt; 3
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-end_source')" id="l_method-i-end_source">show</a>
                 
               </p>
@@ -594,26 +605,28 @@ match_end(VALUE match, VALUE n)
         <div class="method">
           <div class="title method-title" id="method-i-eql-3F">
             
-              <b></b>
+              <b>mtch.eql?(mtch2)   &rarr; true or false</b>
             
             <a href="../classes/MatchData.html#method-i-eql-3F" name="method-i-eql-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Equality—Two matchdata are equal if their target strings, patterns, and
 matched positions are identical.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-eql-3F_source')" id="l_method-i-eql-3F_source">show</a>
                 
               </p>
@@ -622,10 +635,12 @@ matched positions are identical.</p>
 match_equal(VALUE match1, VALUE match2)
 {
     const struct re_registers *regs1, *regs2;
+
     if (match1 == match2) return Qtrue;
     if (!RB_TYPE_P(match2, T_MATCH)) return Qfalse;
+    if (!RMATCH(match1)-&gt;regexp || !RMATCH(match2)-&gt;regexp) return Qfalse;
     if (!rb_str_equal(RMATCH(match1)-&gt;str, RMATCH(match2)-&gt;str)) return Qfalse;
-    if (!rb_reg_equal(RMATCH(match1)-&gt;regexp, RMATCH(match2)-&gt;regexp)) return Qfalse;
+    if (!rb_reg_equal(match_regexp(match1), match_regexp(match2))) return Qfalse;
     regs1 = RMATCH_REGS(match1);
     regs2 = RMATCH_REGS(match2);
     if (regs1-&gt;num_regs != regs2-&gt;num_regs) return Qfalse;
@@ -646,22 +661,26 @@ match_equal(VALUE match1, VALUE match2)
             
             <a href="../classes/MatchData.html#method-i-hash" name="method-i-hash" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Produce a hash based on the target string, regexp and matched positions of
 this matchdata.</p>
+
+<p>See also <a href="Object.html#method-i-hash">Object#hash</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-hash_source')" id="l_method-i-hash_source">show</a>
                 
               </p>
@@ -670,15 +689,17 @@ this matchdata.</p>
 match_hash(VALUE match)
 {
     const struct re_registers *regs;
-    st_index_t hashval = rb_hash_start(rb_str_hash(RMATCH(match)-&gt;str));
+    st_index_t hashval;
 
-    rb_hash_uint(hashval, reg_hash(RMATCH(match)-&gt;regexp));
+    match_check(match);
+    hashval = rb_hash_start(rb_str_hash(RMATCH(match)-&gt;str));
+    hashval = rb_hash_uint(hashval, reg_hash(match_regexp(match)));
     regs = RMATCH_REGS(match);
     hashval = rb_hash_uint(hashval, regs-&gt;num_regs);
     hashval = rb_hash_uint(hashval, rb_memhash(regs-&gt;beg, regs-&gt;num_regs * sizeof(*regs-&gt;beg)));
     hashval = rb_hash_uint(hashval, rb_memhash(regs-&gt;end, regs-&gt;num_regs * sizeof(*regs-&gt;end)));
     hashval = rb_hash_end(hashval);
-    return LONG2FIX(hashval);
+    return ST2FIX(hashval);
 }</pre>
               </div>
             </div>
@@ -693,7 +714,7 @@ match_hash(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a printable version of <em>mtch</em>.</p>
@@ -712,15 +733,17 @@ puts /(?&lt;foo&gt;.)(?&lt;bar&gt;.)(?&lt;baz&gt;.)/.match(&quot;hoge&quot;).ins
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
               </p>
@@ -728,7 +751,7 @@ puts /(?&lt;foo&gt;.)(?&lt;bar&gt;.)(?&lt;baz&gt;.)/.match(&quot;hoge&quot;).ins
                 <pre>static VALUE
 match_inspect(VALUE match)
 {
-    const char *cname = rb_obj_classname(match);
+    VALUE cname = rb_class_path(rb_obj_class(match));
     VALUE str;
     int i;
     struct re_registers *regs = RMATCH_REGS(match);
@@ -737,17 +760,21 @@ match_inspect(VALUE match)
     VALUE regexp = RMATCH(match)-&gt;regexp;
 
     if (regexp == 0) {
-        return rb_sprintf(&quot;#&lt;%s:%p&gt;&quot;, cname, (void*)match);
+        return rb_sprintf(&quot;#&lt;%&quot;PRIsVALUE&quot;:%p&gt;&quot;, cname, (void*)match);
+    }
+    else if (NIL_P(regexp)) {
+        return rb_sprintf(&quot;#&lt;%&quot;PRIsVALUE&quot;: %&quot;PRIsVALUE&quot;&gt;&quot;,
+                          cname, rb_reg_nth_match(0, match));
     }
 
     names = ALLOCA_N(struct backref_name_tag, num_regs);
     MEMZERO(names, struct backref_name_tag, num_regs);
 
-    onig_foreach_name(RREGEXP(regexp)-&gt;ptr,
+    onig_foreach_name(RREGEXP_PTR(regexp),
             match_inspect_name_iter, names);
 
     str = rb_str_buf_new2(&quot;#&lt;&quot;);
-    rb_str_buf_cat2(str, cname);
+    rb_str_append(str, cname);
 
     for (i = 0; i &lt; num_regs; i++) {
         VALUE v;
@@ -782,7 +809,7 @@ match_inspect(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-length" name="method-i-length" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the number of elements in the match array.</p>
@@ -793,15 +820,17 @@ m.size     #=&gt; 5
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-length_source')" id="l_method-i-length_source">show</a>
                 
               </p>
@@ -818,6 +847,73 @@ match_size(VALUE match)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-i-named_captures">
+            
+              <b>mtch.named_captures &rarr; hash
+</b>
+            
+            <a href="../classes/MatchData.html#method-i-named_captures" name="method-i-named_captures" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a <a href="Hash.html">Hash</a> using named capture.</p>
+
+<p>A key of the hash is a name of the named captures. A value of the hash is a
+string of last successful capture of corresponding group.</p>
+
+<pre><code>m = /(?&lt;a&gt;.)(?&lt;b&gt;.)/.match(&quot;01&quot;)
+m.named_captures #=&gt; {&quot;a&quot; =&gt; &quot;0&quot;, &quot;b&quot; =&gt; &quot;1&quot;}
+
+m = /(?&lt;a&gt;.)(?&lt;b&gt;.)?/.match(&quot;0&quot;)
+m.named_captures #=&gt; {&quot;a&quot; =&gt; &quot;0&quot;, &quot;b&quot; =&gt; nil}
+
+m = /(?&lt;a&gt;.)(?&lt;a&gt;.)/.match(&quot;01&quot;)
+m.named_captures #=&gt; {&quot;a&quot; =&gt; &quot;1&quot;}
+
+m = /(?&lt;a&gt;x)|(?&lt;a&gt;y)/.match(&quot;x&quot;)
+m.named_captures #=&gt; {&quot;a&quot; =&gt; &quot;x&quot;}
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-named_captures_source')" id="l_method-i-named_captures_source">show</a>
+                
+              </p>
+              <div id="method-i-named_captures_source" class="dyn-source">
+                <pre>static VALUE
+match_named_captures(VALUE match)
+{
+    VALUE hash;
+    struct MEMO *memo;
+
+    match_check(match);
+    if (NIL_P(RMATCH(match)-&gt;regexp))
+        return rb_hash_new();
+
+    hash = rb_hash_new();
+    memo = MEMO_NEW(hash, match, 0);
+
+    onig_foreach_name(RREGEXP(RMATCH(match)-&gt;regexp)-&gt;ptr, match_named_captures_iter, (void*)memo);
+
+    return hash;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-i-names">
             
               <b>mtch.names   &rarr; [name1, name2, ...]
@@ -825,7 +921,7 @@ match_size(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-names" name="method-i-names" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a list of names of captures as an array of strings. It is same as
@@ -839,15 +935,17 @@ m.names                          #=&gt; [&quot;x&quot;, &quot;y&quot;]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-names_source')" id="l_method-i-names_source">show</a>
                 
               </p>
@@ -856,6 +954,8 @@ m.names                          #=&gt; [&quot;x&quot;, &quot;y&quot;]
 match_names(VALUE match)
 {
     match_check(match);
+    if (NIL_P(RMATCH(match)-&gt;regexp))
+        return rb_ary_new_capa(0);
     return rb_reg_names(RMATCH(match)-&gt;regexp);
 }</pre>
               </div>
@@ -871,7 +971,7 @@ match_names(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-offset" name="method-i-offset" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a two-element array containing the beginning and ending offsets of
@@ -888,15 +988,17 @@ p m.offset(:bar) #=&gt; [2, 3]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-offset_source')" id="l_method-i-offset_source">show</a>
                 
               </p>
@@ -931,7 +1033,7 @@ match_offset(VALUE match, VALUE n)
             
             <a href="../classes/MatchData.html#method-i-post_match" name="method-i-post_match" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the portion of the original string after the current match.
@@ -942,15 +1044,17 @@ m.post_match   #=&gt; &quot;: The Movie&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-post_match_source')" id="l_method-i-post_match_source">show</a>
                 
               </p>
@@ -985,7 +1089,7 @@ rb_reg_match_post(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-pre_match" name="method-i-pre_match" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the portion of the original string before the current match.
@@ -996,15 +1100,17 @@ m.pre_match   #=&gt; &quot;T&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-pre_match_source')" id="l_method-i-pre_match_source">show</a>
                 
               </p>
@@ -1029,60 +1135,6 @@ rb_reg_match_pre(VALUE match)
           </div>
         
         <div class="method">
-          <div class="title method-title" id="method-i-pretty_print">
-            
-              <b>pretty_print</b>(q)
-            
-            <a href="../classes/MatchData.html#method-i-pretty_print" name="method-i-pretty_print" class="permalink">Link</a>
-          </div>
-          
-          
-            <div class="description">
-              
-            </div>
-          
-          
-          
-          
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source: 
-                <a href="javascript:toggleSource('method-i-pretty_print_source')" id="l_method-i-pretty_print_source">show</a>
-                
-              </p>
-              <div id="method-i-pretty_print_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pp.rb, line 474</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">pretty_print</span>(<span class="ruby-identifier">q</span>)
-  <span class="ruby-identifier">nc</span> = []
-  <span class="ruby-keyword">self</span>.<span class="ruby-identifier">regexp</span>.<span class="ruby-identifier">named_captures</span>.<span class="ruby-identifier">each</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">name</span>, <span class="ruby-identifier">indexes</span><span class="ruby-operator">|</span>
-    <span class="ruby-identifier">indexes</span>.<span class="ruby-identifier">each</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">i</span><span class="ruby-operator">|</span> <span class="ruby-identifier">nc</span>[<span class="ruby-identifier">i</span>] = <span class="ruby-identifier">name</span> }
-  }
-  <span class="ruby-identifier">q</span>.<span class="ruby-identifier">object_group</span>(<span class="ruby-keyword">self</span>) {
-    <span class="ruby-identifier">q</span>.<span class="ruby-identifier">breakable</span>
-    <span class="ruby-identifier">q</span>.<span class="ruby-identifier">seplist</span>(<span class="ruby-number">0</span><span class="ruby-operator">...</span><span class="ruby-keyword">self</span>.<span class="ruby-identifier">size</span>, <span class="ruby-identifier">lambda</span> { <span class="ruby-identifier">q</span>.<span class="ruby-identifier">breakable</span> }) {<span class="ruby-operator">|</span><span class="ruby-identifier">i</span><span class="ruby-operator">|</span>
-      <span class="ruby-keyword">if</span> <span class="ruby-identifier">i</span> <span class="ruby-operator">==</span> <span class="ruby-number">0</span>
-        <span class="ruby-identifier">q</span>.<span class="ruby-identifier">pp</span> <span class="ruby-keyword">self</span>[<span class="ruby-identifier">i</span>]
-      <span class="ruby-keyword">else</span>
-        <span class="ruby-keyword">if</span> <span class="ruby-identifier">nc</span>[<span class="ruby-identifier">i</span>]
-          <span class="ruby-identifier">q</span>.<span class="ruby-identifier">text</span> <span class="ruby-identifier">nc</span>[<span class="ruby-identifier">i</span>]
-        <span class="ruby-keyword">else</span>
-          <span class="ruby-identifier">q</span>.<span class="ruby-identifier">pp</span> <span class="ruby-identifier">i</span>
-        <span class="ruby-keyword">end</span>
-        <span class="ruby-identifier">q</span>.<span class="ruby-identifier">text</span> <span class="ruby-string">&#39;:&#39;</span>
-        <span class="ruby-identifier">q</span>.<span class="ruby-identifier">pp</span> <span class="ruby-keyword">self</span>[<span class="ruby-identifier">i</span>]
-      <span class="ruby-keyword">end</span>
-    }
-  }
-<span class="ruby-keyword">end</span></pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
           <div class="title method-title" id="method-i-regexp">
             
               <b>mtch.regexp   &rarr; regexp
@@ -1090,7 +1142,7 @@ rb_reg_match_pre(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-regexp" name="method-i-regexp" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the regexp.</p>
@@ -1100,15 +1152,17 @@ m.regexp #=&gt; /a.*b/
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-regexp_source')" id="l_method-i-regexp_source">show</a>
                 
               </p>
@@ -1116,8 +1170,15 @@ m.regexp #=&gt; /a.*b/
                 <pre>static VALUE
 match_regexp(VALUE match)
 {
+    VALUE regexp;
     match_check(match);
-    return RMATCH(match)-&gt;regexp;
+    regexp = RMATCH(match)-&gt;regexp;
+    if (NIL_P(regexp)) {
+        VALUE str = rb_reg_nth_match(0, match);
+        regexp = rb_reg_regcomp(rb_reg_quote(str));
+        RMATCH(match)-&gt;regexp = regexp;
+    }
+    return regexp;
 }</pre>
               </div>
             </div>
@@ -1131,7 +1192,7 @@ match_regexp(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-size" name="method-i-size" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the number of elements in the match array.</p>
@@ -1142,15 +1203,17 @@ m.size     #=&gt; 5
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-size_source')" id="l_method-i-size_source">show</a>
                 
               </p>
@@ -1174,7 +1237,7 @@ match_size(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-string" name="method-i-string" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a frozen copy of the string passed in to <code>match</code>.</p>
@@ -1184,15 +1247,17 @@ m.string   #=&gt; &quot;THX1138.&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-string_source')" id="l_method-i-string_source">show</a>
                 
               </p>
@@ -1216,7 +1281,7 @@ match_string(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-to_a" name="method-i-to_a" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the array of matches.</p>
@@ -1230,7 +1295,7 @@ m.to_a   #=&gt; [&quot;HX1138&quot;, &quot;H&quot;, &quot;X&quot;, &quot;113&quo
 for extracting matched fields. This is slightly slower than accessing the
 fields directly (as an intermediate array is generated).</p>
 
-<pre><code>all,f1,f2,f3 = *(/(.)(.)(\d+)(\d)/.match(&quot;THX1138.&quot;))
+<pre><code>all,f1,f2,f3 = * /(.)(.)(\d+)(\d)/.match(&quot;THX1138.&quot;)
 all   #=&gt; &quot;HX1138&quot;
 f1    #=&gt; &quot;H&quot;
 f2    #=&gt; &quot;X&quot;
@@ -1238,15 +1303,17 @@ f3    #=&gt; &quot;113&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_a_source')" id="l_method-i-to_a_source">show</a>
                 
               </p>
@@ -1269,7 +1336,7 @@ match_to_a(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the entire matched string.</p>
@@ -1279,15 +1346,17 @@ m.to_s   #=&gt; &quot;HX1138&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_s_source')" id="l_method-i-to_s_source">show</a>
                 
               </p>
@@ -1316,7 +1385,7 @@ match_to_s(VALUE match)
             
             <a href="../classes/MatchData.html#method-i-values_at" name="method-i-values_at" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Uses each <em>index</em> to access the matching values, returning an array
@@ -1325,18 +1394,24 @@ of the corresponding matches.</p>
 <pre><code>m = /(.)(.)(\d+)(\d)/.match(&quot;THX1138: The Movie&quot;)
 m.to_a               #=&gt; [&quot;HX1138&quot;, &quot;H&quot;, &quot;X&quot;, &quot;113&quot;, &quot;8&quot;]
 m.values_at(0, 2, -2)   #=&gt; [&quot;HX1138&quot;, &quot;X&quot;, &quot;113&quot;]
+
+m = /(?&lt;a&gt;\d+) *(?&lt;op&gt;[+\-*\/]) *(?&lt;b&gt;\d+)/.match(&quot;1 + 2&quot;)
+m.to_a               #=&gt; [&quot;1 + 2&quot;, &quot;1&quot;, &quot;+&quot;, &quot;2&quot;]
+m.values_at(:a, :b, :op) #=&gt; [&quot;1&quot;, &quot;2&quot;, &quot;+&quot;]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-values_at_source')" id="l_method-i-values_at_source">show</a>
                 
               </p>
@@ -1344,11 +1419,27 @@ m.values_at(0, 2, -2)   #=&gt; [&quot;HX1138&quot;, &quot;X&quot;, &quot;113&quo
                 <pre>static VALUE
 match_values_at(int argc, VALUE *argv, VALUE match)
 {
-    struct re_registers *regs;
+    VALUE result;
+    int i;
 
     match_check(match);
-    regs = RMATCH_REGS(match);
-    return rb_get_values_at(match, regs-&gt;num_regs, argc, argv, match_entry);
+    result = rb_ary_new2(argc);
+
+    for (i=0; i&lt;argc; i++) {
+        if (FIXNUM_P(argv[i])) {
+            rb_ary_push(result, rb_reg_nth_match(FIX2INT(argv[i]), match));
+        }
+        else {
+            int num = namev_to_backref_number(RMATCH_REGS(match), RMATCH(match)-&gt;regexp, argv[i]);
+            if (num &gt;= 0) {
+                rb_ary_push(result, rb_reg_nth_match(num, match));
+            }
+            else {
+                match_ary_aref(match, argv[i], result);
+            }
+        }
+    }
+    return result;
 }</pre>
               </div>
             </div>
@@ -1358,4 +1449,4 @@ match_values_at(int argc, VALUE *argv, VALUE match)
 
     </div>
   </body>
-</html>    
+</html>

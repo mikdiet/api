@@ -15,7 +15,7 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
@@ -26,8 +26,10 @@
             <li>
                 rails/activerecord/Rakefile
                 
+                    <a href="https://github.com/rails/rails/blob/1511f0e738f8e5ab303fc8394b63eebd81090b63/activerecord/Rakefile" target="_blank" class="github_url">on GitHub</a>
+                
             </li>
-            <li>Last modified: 2013-06-09 13:25:50 +0300</li>
+            <li>Last modified: 2017-06-18 10:15:05 +0300</li>
         </ul>
     </div>
 
@@ -36,8 +38,7 @@
   
     <div class="description">
       
-<p>require &#39;rake/testtask&#39; require &#39;rake/packagetask&#39; require
-&#39;rubygems/package_task&#39;</p>
+<p>require “rake/testtask”</p>
 
 <p>require File.expand_path(File.dirname(__FILE__)) + “/test/config” require
 File.expand_path(File.dirname(__FILE__)) + “/test/support/config”</p>
@@ -59,16 +60,18 @@ abort &quot;Errors running #{errors.join(&#39;, &#39;)}&quot; if errors.any?
 
 <p>end</p>
 
-<p>desc &#39;Run mysql, mysql2, sqlite, and postgresql tests by default&#39;
-task :default =&gt; :test</p>
+<p>desc “Run mysql2, sqlite, and postgresql tests by default” task default:
+:test</p>
 
-<p>desc &#39;Run mysql, mysql2, sqlite, and postgresql tests&#39; task :test
-do</p>
+<p>task :package</p>
+
+<p>desc “Run mysql2, sqlite, and postgresql tests” task :test do</p>
 
 <pre><code>tasks = defined?(JRUBY_VERSION) ?
   %w(test_jdbcmysql test_jdbcsqlite3 test_jdbcpostgresql) :
-  %w(test_mysql test_mysql2 test_sqlite3 test_postgresql)
-run_without_aborting(*tasks)</code></pre>
+  %w(test_mysql2 test_sqlite3 test_postgresql)
+run_without_aborting(*tasks)
+</code></pre>
 
 <p>end</p>
 
@@ -77,228 +80,120 @@ run_without_aborting(*tasks)</code></pre>
 <pre><code>task :isolated do
   tasks = defined?(JRUBY_VERSION) ?
     %w(isolated_test_jdbcmysql isolated_test_jdbcsqlite3 isolated_test_jdbcpostgresql) :
-    %w(isolated_test_mysql isolated_test_mysql2 isolated_test_sqlite3 isolated_test_postgresql)
+    %w(isolated_test_mysql2 isolated_test_sqlite3 isolated_test_postgresql)
   run_without_aborting(*tasks)
-end</code></pre>
+end
+</code></pre>
+
+<p>end</p>
+
+<p>desc “Build MySQL and PostgreSQL test databases” namespace :db do</p>
+
+<pre><code>task create: [&quot;db:mysql:build&quot;, &quot;db:postgresql:build&quot;]
+task drop: [&quot;db:mysql:drop&quot;, &quot;db:postgresql:drop&quot;]
+</code></pre>
+
+<p>end</p>
+
+<p>%w( mysql2 postgresql sqlite3 sqlite3_mem db2 oracle jdbcmysql
+jdbcpostgresql jdbcsqlite3 jdbcderby jdbch2 jdbchsqldb ).each do |adapter|</p>
+
+<pre><code>namespace :test do
+  Rake::TestTask.new(adapter =&gt; &quot;#{adapter}:env&quot;) { |t|
+    adapter_short = adapter == &quot;db2&quot; ? adapter : adapter[/^[a-z0-9]+/]
+    t.libs &lt;&lt; &quot;test&quot;
+    t.test_files = (Dir.glob(&quot;test/cases     _test.rb&quot;).reject {
+      |x| x.include?(&quot;/adapters/&quot;)
+    } + Dir.glob(&quot;test/cases/adapters/#{adapter_short}/   *_test.rb&quot;))
+
+    t.warning = true
+    t.verbose = true
+    t.ruby_opts = [&quot;--dev&quot;] if defined?(JRUBY_VERSION)
+  }
+
+  namespace :isolated do
+    task adapter =&gt; &quot;#{adapter}:env&quot; do
+      adapter_short = adapter == &quot;db2&quot; ? adapter : adapter[/^[a-z0-9]+/]
+      puts [adapter, adapter_short].inspect
+      (Dir[&quot;test/cases/   *_test.rb&quot;].reject {
+        |x| x.include?(&quot;/adapters/&quot;)
+      } + Dir[&quot;test/cases/adapters/#{adapter_short}/**/*_test.rb&quot;]).all? do |file|
+        sh(Gem.ruby, &quot;-w&quot; , &quot;-Itest&quot;, file)
+      end || raise(&quot;Failures&quot;)
+    end
+  end
+end
+
+namespace adapter do
+  task test: &quot;test_#{adapter}&quot;
+  task isolated_test: &quot;isolated_test_#{adapter}&quot;
+
+  # Set the connection environment for the adapter
+  task(:env) { ENV[&quot;ARCONN&quot;] = adapter }
+end
+
+# Make sure the adapter test evaluates the env setting task
+task &quot;test_#{adapter}&quot; =&gt; [&quot;#{adapter}:env&quot;, &quot;test:#{adapter}&quot;]
+task &quot;isolated_test_#{adapter}&quot; =&gt; [&quot;#{adapter}:env&quot;, &quot;test:isolated:#{adapter}&quot;]
+</code></pre>
 
 <p>end</p>
 
 <p>namespace :db do</p>
 
-<pre><code>task :create =&gt; [&#39;mysql:build_databases&#39;, &#39;postgresql:build_databases&#39;]
-task :drop =&gt; [&#39;mysql:drop_databases&#39;, &#39;postgresql:drop_databases&#39;]
-</code></pre>
-
-<p>end</p>
-
-<p>%w( mysql mysql2 postgresql sqlite3 sqlite3_mem firebird db2 oracle sybase
-openbase frontbase jdbcmysql jdbcpostgresql jdbcsqlite3 jdbcderby jdbch2
-jdbchsqldb ).each do |adapter|</p>
-
-<pre><code>Rake::TestTask.new(&quot;test_#{adapter}&quot;) { |t|
-  adapter_short = adapter == &#39;db2&#39; ? adapter : adapter[/^[a-z0-9]+/]
-  t.libs &lt;&lt; &#39;test&#39;
-  t.test_files = (Dir.glob( &quot;test/cases     _test.rb&quot; ).reject {
-    |x| x =~ /\/adapters\//
-  } + Dir.glob(&quot;test/cases/adapters/#{adapter_short}/   *_test.rb&quot;)).sort
-
-  t.warning = true
-  t.verbose = true
-}
-
-task &quot;isolated_test_#{adapter}&quot; do
-  adapter_short = adapter == &#39;db2&#39; ? adapter : adapter[/^[a-z0-9]+/]
-  puts [adapter, adapter_short].inspect
-  ruby = File.join(*RbConfig::CONFIG.values_at(&#39;bindir&#39;, &#39;RUBY_INSTALL_NAME&#39;))
-  (Dir[&quot;test/cases/   *_test.rb&quot;].reject {
-    |x| x =~ /\/adapters\//
-  } + Dir[&quot;test/cases/adapters/#{adapter_short}/**/*_test.rb&quot;]).all? do |file|
-    sh(ruby, &quot;-Itest&quot;, file)
-  end or raise &quot;Failures&quot;
-end
-
-namespace adapter do
-  task :test =&gt; &quot;test_#{adapter}&quot;
-  task :isolated_test =&gt; &quot;isolated_test_#{adapter}&quot;
-
-  # Set the connection environment for the adapter
-  task(:env) { ENV[&#39;ARCONN&#39;] = adapter }
-end
-
-# Make sure the adapter test evaluates the env setting task
-task &quot;test_#{adapter}&quot; =&gt; &quot;#{adapter}:env&quot;
-task &quot;isolated_test_#{adapter}&quot; =&gt; &quot;#{adapter}:env&quot;
-</code></pre>
-
-<p>end</p>
-
-<p>rule &#39;.sqlite3&#39; do |t|</p>
-
-<pre><code>sh %Q{sqlite3 &quot;#{t.name}&quot; &quot;create table a (a integer); drop table a;&quot;}</code></pre>
-
-<p>end</p>
-
-<p>task :test_sqlite3 =&gt; [</p>
-
-<pre><code>&#39;test/fixtures/fixture_database.sqlite3&#39;,
-&#39;test/fixtures/fixture_database_2.sqlite3&#39;</code></pre>
-
-<p>]</p>
-
-<p>namespace :mysql do</p>
-
-<pre><code>desc &#39;Build the MySQL test databases&#39;
-task :build_databases do
-  config = ARTest.config[&#39;connections&#39;][&#39;mysql&#39;]
-  %x( mysql --user=#{config[&#39;arunit&#39;][&#39;username&#39;]} -e &quot;create DATABASE #{config[&#39;arunit&#39;][&#39;database&#39;]} DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_unicode_ci &quot;)
-  %x( mysql --user=#{config[&#39;arunit2&#39;][&#39;username&#39;]} -e &quot;create DATABASE #{config[&#39;arunit2&#39;][&#39;database&#39;]} DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_unicode_ci &quot;)
-end
-
-desc &#39;Drop the MySQL test databases&#39;
-task :drop_databases do
-  config = ARTest.config[&#39;connections&#39;][&#39;mysql&#39;]
-  %x( mysqladmin --user=#{config[&#39;arunit&#39;][&#39;username&#39;]} -f drop #{config[&#39;arunit&#39;][&#39;database&#39;]} )
-  %x( mysqladmin --user=#{config[&#39;arunit2&#39;][&#39;username&#39;]} -f drop #{config[&#39;arunit2&#39;][&#39;database&#39;]} )
-end
-
-desc &#39;Rebuild the MySQL test databases&#39;
-task :rebuild_databases =&gt; [:drop_databases, :build_databases]
-</code></pre>
-
-<p>end</p>
-
-<p>task :build_mysql_databases =&gt; &#39;mysql:build_databases&#39; task
-:drop_mysql_databases =&gt; &#39;mysql:drop_databases&#39; task
-:rebuild_mysql_databases =&gt; &#39;mysql:rebuild_databases&#39;</p>
-
-<p>namespace :postgresql do</p>
-
-<pre><code>desc &#39;Build the PostgreSQL test databases&#39;
-task :build_databases do
-  config = ARTest.config[&#39;connections&#39;][&#39;postgresql&#39;]
-  %x( createdb -E UTF8 -T template0 #{config[&#39;arunit&#39;][&#39;database&#39;]} )
-  %x( createdb -E UTF8 -T template0 #{config[&#39;arunit2&#39;][&#39;database&#39;]} )
-
-  # prepare hstore
-  version = %x( createdb --version ).strip.gsub(/(.*)(\d\.\d\.\d)$/, &quot;\\2&quot;)
-  %w(arunit arunit2).each do |db|
-    if version &lt; &quot;9.1.0&quot;
-      puts &quot;Please prepare hstore data type. See http://www.postgresql.org/docs/9.0/static/hstore.html&quot;
-    else
-      %x( psql #{config[db][&#39;database&#39;]} -c &quot;CREATE EXTENSION hstore;&quot; )
-    end
+<pre><code>namespace :mysql do
+  desc &quot;Build the MySQL test databases&quot;
+  task :build do
+    config = ARTest.config[&quot;connections&quot;][&quot;mysql2&quot;]
+    %x( mysql --user=#{config[&quot;arunit&quot;][&quot;username&quot;]} --password=#{config[&quot;arunit&quot;][&quot;password&quot;]} -e &quot;create DATABASE #{config[&quot;arunit&quot;][&quot;database&quot;]} DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_unicode_ci &quot;)
+    %x( mysql --user=#{config[&quot;arunit2&quot;][&quot;username&quot;]} --password=#{config[&quot;arunit2&quot;][&quot;password&quot;]} -e &quot;create DATABASE #{config[&quot;arunit2&quot;][&quot;database&quot;]} DEFAULT CHARACTER SET utf8 DEFAULT COLLATE utf8_unicode_ci &quot;)
   end
+
+  desc &quot;Drop the MySQL test databases&quot;
+  task :drop do
+    config = ARTest.config[&quot;connections&quot;][&quot;mysql2&quot;]
+    %x( mysqladmin --user=#{config[&quot;arunit&quot;][&quot;username&quot;]} --password=#{config[&quot;arunit&quot;][&quot;password&quot;]} -f drop #{config[&quot;arunit&quot;][&quot;database&quot;]} )
+    %x( mysqladmin --user=#{config[&quot;arunit2&quot;][&quot;username&quot;]} --password=#{config[&quot;arunit2&quot;][&quot;password&quot;]} -f drop #{config[&quot;arunit2&quot;][&quot;database&quot;]} )
+  end
+
+  desc &quot;Rebuild the MySQL test databases&quot;
+  task rebuild: [:drop, :build]
 end
 
-desc &#39;Drop the PostgreSQL test databases&#39;
-task :drop_databases do
-  config = ARTest.config[&#39;connections&#39;][&#39;postgresql&#39;]
-  %x( dropdb #{config[&#39;arunit&#39;][&#39;database&#39;]} )
-  %x( dropdb #{config[&#39;arunit2&#39;][&#39;database&#39;]} )
-end
-
-desc &#39;Rebuild the PostgreSQL test databases&#39;
-task :rebuild_databases =&gt; [:drop_databases, :build_databases]
-</code></pre>
-
-<p>end</p>
-
-<p>task :build_postgresql_databases =&gt; &#39;postgresql:build_databases&#39;
-task :drop_postgresql_databases =&gt; &#39;postgresql:drop_databases&#39;
-task :rebuild_postgresql_databases =&gt;
-&#39;postgresql:rebuild_databases&#39;</p>
-
-<p>namespace :frontbase do</p>
-
-<pre><code>desc &#39;Build the FrontBase test databases&#39;
-task :build_databases =&gt; :rebuild_frontbase_databases
-
-desc &#39;Rebuild the FrontBase test databases&#39;
-task :rebuild_databases do
-  build_frontbase_database = Proc.new do |db_name, sql_definition_file|
-    %(
-      STOP DATABASE #{db_name};
-      DELETE DATABASE #{db_name};
-      CREATE DATABASE #{db_name};
-
-      CONNECT TO #{db_name} AS SESSION_NAME USER _SYSTEM;
-      SET COMMIT FALSE;
-
-      CREATE USER RAILS;
-      CREATE SCHEMA RAILS AUTHORIZATION RAILS;
-      COMMIT;
-
-      SET SESSION AUTHORIZATION RAILS;
-      SCRIPT &#39;#{sql_definition_file}&#39;;
-
-      COMMIT;
-
-      DISCONNECT ALL;
-    )
+namespace :postgresql do
+  desc &quot;Build the PostgreSQL test databases&quot;
+  task :build do
+    config = ARTest.config[&quot;connections&quot;][&quot;postgresql&quot;]
+    %x( createdb -E UTF8 -T template0 #{config[&quot;arunit&quot;][&quot;database&quot;]} )
+    %x( createdb -E UTF8 -T template0 #{config[&quot;arunit2&quot;][&quot;database&quot;]} )
   end
-  config = ARTest.config[&#39;connections&#39;][&#39;frontbase&#39;]
-  create_activerecord_unittest  = build_frontbase_database[config[&#39;arunit&#39;][&#39;database&#39;],  File.join(SCHEMA_ROOT, &#39;frontbase.sql&#39;)]
-  create_activerecord_unittest2 = build_frontbase_database[config[&#39;arunit2&#39;][&#39;database&#39;], File.join(SCHEMA_ROOT, &#39;frontbase2.sql&#39;)]
-  execute_frontbase_sql = Proc.new do |sql|
-    system(&lt;&lt;-SHELL)
-    /Library/FrontBase/bin/sql92 &lt;&lt;-SQL
-    #{sql}
-    SQL
-    SHELL
+
+  desc &quot;Drop the PostgreSQL test databases&quot;
+  task :drop do
+    config = ARTest.config[&quot;connections&quot;][&quot;postgresql&quot;]
+    %x( dropdb #{config[&quot;arunit&quot;][&quot;database&quot;]} )
+    %x( dropdb #{config[&quot;arunit2&quot;][&quot;database&quot;]} )
   end
-  execute_frontbase_sql[create_activerecord_unittest]
-  execute_frontbase_sql[create_activerecord_unittest2]
+
+  desc &quot;Rebuild the PostgreSQL test databases&quot;
+  task rebuild: [:drop, :build]
 end
 </code></pre>
 
 <p>end</p>
 
-<p>task :build_frontbase_databases =&gt; &#39;frontbase:build_databases&#39;
-task :rebuild_frontbase_databases =&gt;
-&#39;frontbase:rebuild_databases&#39;</p>
+<p>task build_mysql_databases: “db:mysql:build” task drop_mysql_databases:
+“db:mysql:drop” task rebuild_mysql_databases: “db:mysql:rebuild”</p>
 
-<p>spec = eval(File.read(&#39;activerecord.gemspec&#39;))</p>
-
-<p>Gem::PackageTask.new(spec) do |p|</p>
-
-<pre><code>p.gem_spec = spec</code></pre>
-
-<p>end</p>
+<p>task build_postgresql_databases: “db:postgresql:build” task
+drop_postgresql_databases: “db:postgresql:drop” task
+rebuild_postgresql_databases: “db:postgresql:rebuild”</p>
 
 <p>task :lines do</p>
 
-<pre><code>lines, codelines, total_lines, total_codelines = 0, 0, 0, 0
-
-FileList[&quot;lib/active_record/**/*.rb&quot;].each do |file_name|
-  next if file_name =~ /vendor/
-  File.open(file_name, &#39;r&#39;) do |f|
-    while line = f.gets
-      lines += 1
-      next if line =~ /^\s*$/
-      next if line =~ /^\s*#/
-      codelines += 1
-    end
-  end
-  puts &quot;L: #{sprintf(&quot;%4d&quot;, lines)}, LOC #{sprintf(&quot;%4d&quot;, codelines)} | #{file_name}&quot;
-
-  total_lines     += lines
-  total_codelines += codelines
-
-  lines, codelines = 0, 0
-end
-
-puts &quot;Total: Lines #{total_lines}, LOC #{total_codelines}&quot;
-</code></pre>
-
-<p>end</p>
-
-<p># Publishing ——————————————————</p>
-
-<p>desc “Release to gemcutter” task :release =&gt; :package do</p>
-
-<pre><code>require &#39;rake/gemcutter&#39;
-Rake::Gemcutter::Tasks.new(spec).define
-Rake::Task[&#39;gem:push&#39;].invoke
+<pre><code>load File.expand_path(&quot;..&quot;, File.dirname(__FILE__)) + &quot;/tools/line_statistics&quot;
+files = FileList[&quot;lib/active_record/**/*.rb&quot;]
+CodeTools::LineStatistics.new(files).print_loc
 </code></pre>
 
 <p>end</p>

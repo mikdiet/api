@@ -15,7 +15,7 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
@@ -26,8 +26,10 @@
             <li>
                 rails/railties/lib/rails/tasks/log.rake
                 
+                    <a href="https://github.com/rails/rails/blob/447e1a48811fa053e8bef954376d1ad47bdb5cef/railties/lib/rails/tasks/log.rake" target="_blank" class="github_url">on GitHub</a>
+                
             </li>
-            <li>Last modified: 2013-04-26 19:46:46 +0300</li>
+            <li>Last modified: 2017-06-18 10:05:13 +0300</li>
         </ul>
     </div>
 
@@ -38,7 +40,13 @@
       
 <p>namespace :log do</p>
 
-<pre><code>desc &quot;Truncates all *.log files in log/ to zero bytes (specify which logs with LOGS=test,development)&quot;
+<pre><code>##
+# Truncates all/specified log files
+# ENV[&#39;LOGS&#39;]
+#   - defaults to all environments log files i.e. &#39;development,test,production&#39;
+#   - ENV[&#39;LOGS&#39;]=all truncates all files i.e. log/*.log
+#   - ENV[&#39;LOGS&#39;]=&#39;test,development&#39; truncates only specified files
+desc &quot;Truncates all/specified *.log files in log/ to zero bytes (specify which logs with LOGS=test,development)&quot;
 task :clear do
   log_files.each do |file|
     clear_log_file(file)
@@ -46,18 +54,28 @@ task :clear do
 end
 
 def log_files
-  if ENV[&#39;LOGS&#39;]
-    ENV[&#39;LOGS&#39;].split(&#39;,&#39;)
-                .map    { |file| &quot;log/#{file.strip}.log&quot; }
-                .select { |file| File.exists?(file) }
-  else
+  if ENV[&quot;LOGS&quot;] == &quot;all&quot;
     FileList[&quot;log/*.log&quot;]
+  elsif ENV[&quot;LOGS&quot;]
+    log_files_to_truncate(ENV[&quot;LOGS&quot;])
+  else
+    log_files_to_truncate(all_environments.join(&quot;,&quot;))
   end
+end
+
+def log_files_to_truncate(envs)
+  envs.split(&quot;,&quot;)
+      .map    { |file| &quot;log/#{file.strip}.log&quot; }
+      .select { |file| File.exist?(file) }
 end
 
 def clear_log_file(file)
   f = File.open(file, &quot;w&quot;)
   f.close
+end
+
+def all_environments
+  Dir[&quot;config/environments/*.rb&quot;].map { |fname| File.basename(fname, &quot;.*&quot;) }
 end
 </code></pre>
 

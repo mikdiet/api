@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            Timeout 
+            <span class="type">Module</span>
+            Timeout
             
         </h1>
         <ul class="files">
@@ -34,9 +34,10 @@
   
     <div class="description">
       
-<p><a href="Timeout.html">Timeout</a> long-running blocks</p>
+<p>frozen_string_literal: false <a href="Timeout.html">Timeout</a>
+long-running blocks</p>
 
-<h2 id="label-Synopsis">Synopsis</h2>
+<h2 id="module-Timeout-label-Synopsis">Synopsis</h2>
 
 <pre><code>require &#39;timeout&#39;
 status = Timeout::timeout(5) {
@@ -44,7 +45,7 @@ status = Timeout::timeout(5) {
 }
 </code></pre>
 
-<h2 id="label-Description">Description</h2>
+<h2 id="module-Timeout-label-Description">Description</h2>
 
 <p><a href="Timeout.html">Timeout</a> provides a way to auto-terminate a
 potentially long-running operation if it hasn&#39;t finished in a fixed
@@ -54,7 +55,7 @@ amount of time.</p>
 is provided for backwards compatibility.  You should prefer Timeout#timeout
 instead.</p>
 
-<h2 id="label-Copyright">Copyright</h2>
+<h2 id="module-Timeout-label-Copyright">Copyright</h2>
 <dl class="rdoc-list note-list"><dt>Copyright
 <dd>
 <p>(C) 2000  Network Applied Communication Laboratory, Inc.</p>
@@ -131,11 +132,11 @@ instead.</p>
         <div class="method">
           <div class="title method-title" id="method-c-timeout">
             
-              <b>timeout</b>(sec, klass = nil)
+              <b>timeout</b>(sec, klass = nil, message = nil)
             
             <a href="../classes/Timeout.html#method-c-timeout" name="method-c-timeout" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Perform an operation in a block, raising an error if it takes longer than
@@ -151,11 +152,19 @@ used, including Floats to specify fractional seconds. A value of 0 or
 raise if the block fails to terminate in <code>sec</code> seconds. 
 Omitting will use the default, <a
 href="Timeout/Error.html">Timeout::Error</a></p>
+</dd><dt><code>message</code>
+<dd>
+<p><a href="Timeout/Error.html">Error</a> message to raise with <a
+href="Exception.html">Exception</a> <a href="Class.html">Class</a>.
+Omitting will use the default, “execution expired”</p>
 </dd></dl>
 
 <p>Returns the result of the block <strong>if</strong> the block completed
 before <code>sec</code> seconds, otherwise throws an exception, based on
 the value of <code>klass</code>.</p>
+
+<p>The exception thrown to terminate the given block cannot be rescued inside
+the block unless <code>klass</code> is given explicitly.</p>
 
 <p>Note that this is both a method of module <a
 href="Timeout.html">Timeout</a>, so you can <code>include Timeout</code>
@@ -164,33 +173,40 @@ method, so you can call it directly as <a
 href="Timeout.html#method-c-timeout">::timeout</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-timeout_source')" id="l_method-c-timeout_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/aaf249dc5744b0307a81fceb4b1157620d90f267/lib/timeout.rb#L75" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-timeout_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/timeout.rb, line 51</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">timeout</span>(<span class="ruby-identifier">sec</span>, <span class="ruby-identifier">klass</span> = <span class="ruby-keyword">nil</span>)   <span class="ruby-comment">#:yield: +sec+</span>
+                <pre><span class="ruby-comment"># File ruby/lib/timeout.rb, line 75</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">timeout</span>(<span class="ruby-identifier">sec</span>, <span class="ruby-identifier">klass</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">message</span> = <span class="ruby-keyword">nil</span>)   <span class="ruby-comment">#:yield: +sec+</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">yield</span>(<span class="ruby-identifier">sec</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">sec</span> <span class="ruby-operator">==</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">sec</span>.<span class="ruby-identifier">zero?</span>
-  <span class="ruby-identifier">exception</span> = <span class="ruby-identifier">klass</span> <span class="ruby-operator">||</span> <span class="ruby-constant">Class</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">ExitException</span>)
-  <span class="ruby-keyword">begin</span>
+  <span class="ruby-identifier">message</span> <span class="ruby-operator">||=</span> <span class="ruby-string">&quot;execution expired&quot;</span>.<span class="ruby-identifier">freeze</span>
+  <span class="ruby-identifier">from</span> = <span class="ruby-node">&quot;from #{caller_locations(1, 1)[0]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">$DEBUG</span>
+  <span class="ruby-identifier">e</span> = <span class="ruby-constant">Error</span>
+  <span class="ruby-identifier">bl</span> = <span class="ruby-identifier">proc</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">exception</span><span class="ruby-operator">|</span>
     <span class="ruby-keyword">begin</span>
       <span class="ruby-identifier">x</span> = <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>
       <span class="ruby-identifier">y</span> = <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">start</span> {
+        <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>.<span class="ruby-identifier">name</span> = <span class="ruby-identifier">from</span>
         <span class="ruby-keyword">begin</span>
           <span class="ruby-identifier">sleep</span> <span class="ruby-identifier">sec</span>
         <span class="ruby-keyword">rescue</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">e</span>
           <span class="ruby-identifier">x</span>.<span class="ruby-identifier">raise</span> <span class="ruby-identifier">e</span>
         <span class="ruby-keyword">else</span>
-          <span class="ruby-identifier">x</span>.<span class="ruby-identifier">raise</span> <span class="ruby-identifier">exception</span>, <span class="ruby-string">&quot;execution expired&quot;</span>
+          <span class="ruby-identifier">x</span>.<span class="ruby-identifier">raise</span> <span class="ruby-identifier">exception</span>, <span class="ruby-identifier">message</span>
         <span class="ruby-keyword">end</span>
       }
       <span class="ruby-keyword">return</span> <span class="ruby-keyword">yield</span>(<span class="ruby-identifier">sec</span>)
@@ -200,18 +216,21 @@ href="Timeout.html#method-c-timeout">::timeout</a>.</p>
         <span class="ruby-identifier">y</span>.<span class="ruby-identifier">join</span> <span class="ruby-comment"># make sure y is dead.</span>
       <span class="ruby-keyword">end</span>
     <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">rescue</span> <span class="ruby-identifier">exception</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">e</span>
-    <span class="ruby-identifier">rej</span> = <span class="ruby-node">/\A#{Regexp.quote(__FILE__)}:#{__LINE__-4}\z/</span>
-    (<span class="ruby-identifier">bt</span> = <span class="ruby-identifier">e</span>.<span class="ruby-identifier">backtrace</span>).<span class="ruby-identifier">reject!</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">m</span><span class="ruby-operator">|</span> <span class="ruby-identifier">rej</span> <span class="ruby-operator">=~</span> <span class="ruby-identifier">m</span>}
-    <span class="ruby-identifier">level</span> = <span class="ruby-operator">-</span><span class="ruby-identifier">caller</span>(<span class="ruby-constant">CALLER_OFFSET</span>).<span class="ruby-identifier">size</span>
-    <span class="ruby-keyword">while</span> <span class="ruby-constant">THIS_FILE</span> <span class="ruby-operator">=~</span> <span class="ruby-identifier">bt</span>[<span class="ruby-identifier">level</span>]
-      <span class="ruby-identifier">bt</span>.<span class="ruby-identifier">delete_at</span>(<span class="ruby-identifier">level</span>)
-      <span class="ruby-identifier">level</span> <span class="ruby-operator">+=</span> <span class="ruby-number">1</span>
-    <span class="ruby-keyword">end</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">klass</span>            <span class="ruby-comment"># if exception class is specified, it</span>
-                              <span class="ruby-comment"># would be expected outside.</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-constant">Error</span>, <span class="ruby-identifier">e</span>.<span class="ruby-identifier">message</span>, <span class="ruby-identifier">e</span>.<span class="ruby-identifier">backtrace</span>
   <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">klass</span>
+    <span class="ruby-keyword">begin</span>
+      <span class="ruby-identifier">bl</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">klass</span>)
+    <span class="ruby-keyword">rescue</span> <span class="ruby-identifier">klass</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">e</span>
+      <span class="ruby-identifier">bt</span> = <span class="ruby-identifier">e</span>.<span class="ruby-identifier">backtrace</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">bt</span> = <span class="ruby-constant">Error</span>.<span class="ruby-identifier">catch</span>(<span class="ruby-identifier">message</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">bl</span>)
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">level</span> = <span class="ruby-operator">-</span><span class="ruby-identifier">caller</span>(<span class="ruby-constant">CALLER_OFFSET</span>).<span class="ruby-identifier">size</span><span class="ruby-operator">-</span><span class="ruby-number">2</span>
+  <span class="ruby-keyword">while</span> <span class="ruby-constant">THIS_FILE</span> <span class="ruby-operator">=~</span> <span class="ruby-identifier">bt</span>[<span class="ruby-identifier">level</span>]
+    <span class="ruby-identifier">bt</span>.<span class="ruby-identifier">delete_at</span>(<span class="ruby-identifier">level</span>)
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">raise</span>(<span class="ruby-identifier">e</span>, <span class="ruby-identifier">message</span>, <span class="ruby-identifier">bt</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -221,4 +240,4 @@ href="Timeout.html#method-c-timeout">::timeout</a>.</p>
 
     </div>
   </body>
-</html>    
+</html>

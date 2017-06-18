@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            RubyVM 
+            <span class="type">Class</span>
+            RubyVM
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Object.html">Object</a>
                     
@@ -66,11 +66,6 @@
       
         <li>
           <span class="type">CLASS</span>
-          <a href="RubyVM/Env.html">RubyVM::Env</a>
-        </li>
-      
-        <li>
-          <span class="type">CLASS</span>
           <a href="RubyVM/InstructionSequence.html">RubyVM::InstructionSequence</a>
         </li>
       
@@ -78,6 +73,24 @@
   
 
 
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>S</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-stat">stat</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
   
 
   
@@ -94,42 +107,6 @@
       <!-- Section constants -->
       <div class="sectiontitle">Constants</div>
       <table border='0' cellpadding='5'>
-        
-          <tr valign='top'>
-            <td class="attr-name">USAGE_ANALYSIS_INSN</td>
-            <td>=</td>
-            <td class="attr-value">::RubyVM:</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"><p>USAGE_ANALYSIS_*</p></td>
-            </tr>
-          
-        
-          <tr valign='top'>
-            <td class="attr-name">USAGE_ANALYSIS_REGS</td>
-            <td>=</td>
-            <td class="attr-value">rb_hash_new()</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
-            </tr>
-          
-        
-          <tr valign='top'>
-            <td class="attr-name">USAGE_ANALYSIS_INSN_BIGRAM</td>
-            <td>=</td>
-            <td class="attr-value">rb_hash_new()</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
-            </tr>
-          
         
           <tr valign='top'>
             <td class="attr-name">OPTS</td>
@@ -165,8 +142,8 @@
               <td>&nbsp;</td>
               <td colspan="2" class="attr-desc"><p><a href="RubyVM.html#DEFAULT_PARAMS">DEFAULT_PARAMS</a> This constant
 variable shows VM&#39;s default parameters. Note that changing these values
-does not affect VM exection. Specification is not stable and you should not
-depend on this value. Of course, this constant is MRI specific.</p></td>
+does not affect VM execution. Specification is not stable and you should
+not depend on this value. Of course, this constant is MRI specific.</p></td>
             </tr>
           
         
@@ -178,8 +155,103 @@ depend on this value. Of course, this constant is MRI specific.</p></td>
 
 
     <!-- Methods -->
+    
+      <div class="sectiontitle">Class Public methods</div>
+      
+        <div class="method">
+          <div class="title method-title" id="method-c-stat">
+            
+              <b>RubyVM.stat &rarr; Hash<br />RubyVM.stat(hsh) &rarr; hsh<br />RubyVM.stat(Symbol) &rarr; Numeric
+</b>
+            
+            <a href="../classes/RubyVM.html#method-c-stat" name="method-c-stat" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a <a href="Hash.html">Hash</a> containing implementation-dependent
+counters inside the VM.</p>
+
+<p>This hash includes information about method/constant cache serials:</p>
+
+<pre><code>{
+  :global_method_state=&gt;251,
+  :global_constant_state=&gt;481,
+  :class_serial=&gt;9029
+}
+</code></pre>
+
+<p>The contents of the hash are implementation specific and may be changed in
+the future.</p>
+
+<p>This method is only expected to work on C Ruby.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-stat_source')" id="l_method-c-stat_source">show</a>
+                
+              </p>
+              <div id="method-c-stat_source" class="dyn-source">
+                <pre>static VALUE
+vm_stat(int argc, VALUE *argv, VALUE self)
+{
+    static VALUE sym_global_method_state, sym_global_constant_state, sym_class_serial;
+    VALUE arg = Qnil;
+    VALUE hash = Qnil, key = Qnil;
+
+    if (rb_scan_args(argc, argv, &quot;01&quot;, &amp;arg) == 1) {
+        if (SYMBOL_P(arg))
+            key = arg;
+        else if (RB_TYPE_P(arg, T_HASH))
+            hash = arg;
+        else
+            rb_raise(rb_eTypeError, &quot;non-hash or symbol given&quot;);
+    }
+    else {
+        hash = rb_hash_new();
+    }
+
+    if (sym_global_method_state == 0) {
+#define S(s) sym_##s = ID2SYM(rb_intern_const(#s))
+        S(global_method_state);
+        S(global_constant_state);
+        S(class_serial);
+#undef S
+    }
+
+#define SET(name, attr) \
+    if (key == sym_##name) \
+        return SERIALT2NUM(attr); \
+    else if (hash != Qnil) \
+        rb_hash_aset(hash, sym_##name, SERIALT2NUM(attr));
+
+    SET(global_method_state, ruby_vm_global_method_state);
+    SET(global_constant_state, ruby_vm_global_constant_state);
+    SET(class_serial, ruby_vm_class_serial);
+#undef SET
+
+    if (!NIL_P(key)) { /* matched key should return above */
+        rb_raise(rb_eArgError, &quot;unknown key: %&quot;PRIsVALUE, rb_sym2str(key));
+    }
+
+    return hash;
+}</pre>
               </div>
+            </div>
+            
+          </div>
+                        </div>
 
     </div>
   </body>
-</html>    
+</html>

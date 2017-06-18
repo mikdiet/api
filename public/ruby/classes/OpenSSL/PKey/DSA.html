@@ -15,16 +15,16 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            OpenSSL::PKey::DSA 
+            <span class="type">Class</span>
+            OpenSSL::PKey::DSA
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
-                    cPKey
+                    <a href="PKey.html">OpenSSL::PKey::PKey</a>
                     
                 </span>
             
@@ -139,6 +139,16 @@ href="../Digest.html">Digest</a> may be used for signing.</p>
             
               
               <li>
+                <a href="#method-i-set_key">set_key</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-set_pqg">set_pqg</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-syssign">syssign</a>,
               </li>
             
@@ -208,7 +218,7 @@ href="../Digest.html">Digest</a> may be used for signing.</p>
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-c-generate" name="method-c-generate" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Creates a new <a href="DSA.html">DSA</a> instance by generating a
@@ -220,15 +230,17 @@ private/public key pair from scratch.</p>
 </li></ul>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-generate_source')" id="l_method-c-generate_source">show</a>
                 
               </p>
@@ -254,12 +266,12 @@ ossl_dsa_s_generate(VALUE klass, VALUE size)
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>DSA.new([size | string [, pass]) &rarr; dsa
+              <b>DSA.new &rarr; dsa<br />DSA.new(size) &rarr; dsa<br />DSA.new(string [, pass]) &rarr; dsa
 </b>
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Creates a new <a href="DSA.html">DSA</a> instance by reading an existing
@@ -282,15 +294,17 @@ DSA.new(File.read(&#39;dsa.pem&#39;)) -&gt; dsa
 DSA.new(File.read(&#39;dsa.pem&#39;), &#39;mypassword&#39;) -&gt; dsa</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -301,23 +315,22 @@ ossl_dsa_initialize(int argc, VALUE *argv, VALUE self)
     EVP_PKEY *pkey;
     DSA *dsa;
     BIO *in;
-    char *passwd = NULL;
     VALUE arg, pass;
 
     GetPKey(self, pkey);
     if(rb_scan_args(argc, argv, &quot;02&quot;, &amp;arg, &amp;pass) == 0) {
         dsa = DSA_new();
     }
-    else if (FIXNUM_P(arg)) {
-        if (!(dsa = dsa_generate(FIX2INT(arg)))) {
+    else if (RB_INTEGER_TYPE_P(arg)) {
+        if (!(dsa = dsa_generate(NUM2INT(arg)))) {
             ossl_raise(eDSAError, NULL);
         }
     }
     else {
-        if (!NIL_P(pass)) passwd = StringValuePtr(pass);
+        pass = ossl_pem_passwd_value(pass);
         arg = ossl_to_der_if_possible(arg);
         in = ossl_obj2bio(arg);
-        dsa = PEM_read_bio_DSAPrivateKey(in, NULL, ossl_pem_passwd_cb, passwd);
+        dsa = PEM_read_bio_DSAPrivateKey(in, NULL, ossl_pem_passwd_cb, (void *)pass);
         if (!dsa) {
             OSSL_BIO_reset(in);
             dsa = PEM_read_bio_DSA_PUBKEY(in, NULL, NULL, NULL);
@@ -332,11 +345,14 @@ ossl_dsa_initialize(int argc, VALUE *argv, VALUE self)
         }
         if (!dsa) {
             OSSL_BIO_reset(in);
+#define PEM_read_bio_DSAPublicKey(bp,x,cb,u) (DSA *)PEM_ASN1_read_bio( \
+        (d2i_of_void *)d2i_DSAPublicKey, PEM_STRING_DSA_PUBLIC, (bp), (void **)(x), (cb), (u))
             dsa = PEM_read_bio_DSAPublicKey(in, NULL, NULL, NULL);
+#undef PEM_read_bio_DSAPublicKey
         }
         BIO_free(in);
         if (!dsa) {
-            ERR_clear_error();
+            ossl_clear_error();
             ossl_raise(eDSAError, &quot;Neither PUB key nor PRIV key&quot;);
         }
     }
@@ -357,12 +373,12 @@ ossl_dsa_initialize(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-export">
             
-              <b>dsa.to_pem([cipher, password]) &rarr; aString
+              <b>dsa.export([cipher, password]) &rarr; aString<br />dsa.to_pem([cipher, password]) &rarr; aString<br />dsa.to_s([cipher, password]) &rarr; aString
 </b>
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-export" name="method-i-export" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Encodes this <a href="DSA.html">DSA</a> to its PEM encoding.</p>
@@ -380,19 +396,21 @@ ossl_dsa_initialize(int argc, VALUE *argv, VALUE self)
 DSA.to_pem(cipher, &#39;mypassword&#39;) -&gt; aString</code></pre>
             </div>
           
-          
+
           
             <div class="aka">
               Also aliased as: <a href="DSA.html#method-i-to_pem">to_pem</a>, <a href="DSA.html#method-i-to_s">to_s</a>
             </div>
           
+
           
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-export_source')" id="l_method-i-export_source">show</a>
                 
               </p>
@@ -400,34 +418,28 @@ DSA.to_pem(cipher, &#39;mypassword&#39;) -&gt; aString</code></pre>
                 <pre>static VALUE
 ossl_dsa_export(int argc, VALUE *argv, VALUE self)
 {
-    EVP_PKEY *pkey;
+    DSA *dsa;
     BIO *out;
     const EVP_CIPHER *ciph = NULL;
-    char *passwd = NULL;
     VALUE cipher, pass, str;
 
-    GetPKeyDSA(self, pkey);
+    GetDSA(self, dsa);
     rb_scan_args(argc, argv, &quot;02&quot;, &amp;cipher, &amp;pass);
     if (!NIL_P(cipher)) {
         ciph = GetCipherPtr(cipher);
-        if (!NIL_P(pass)) {
-            StringValue(pass);
-            if (RSTRING_LENINT(pass) &lt; OSSL_MIN_PWD_LEN)
-                ossl_raise(eOSSLError, &quot;OpenSSL requires passwords to be at least four characters long&quot;);
-            passwd = RSTRING_PTR(pass);
-        }
+        pass = ossl_pem_passwd_value(pass);
     }
     if (!(out = BIO_new(BIO_s_mem()))) {
         ossl_raise(eDSAError, NULL);
     }
-    if (DSA_HAS_PRIVATE(pkey-&gt;pkey.dsa)) {
-        if (!PEM_write_bio_DSAPrivateKey(out, pkey-&gt;pkey.dsa, ciph,
-                                         NULL, 0, ossl_pem_passwd_cb, passwd)){
+    if (DSA_HAS_PRIVATE(dsa)) {
+        if (!PEM_write_bio_DSAPrivateKey(out, dsa, ciph, NULL, 0,
+                                         ossl_pem_passwd_cb, (void *)pass)){
             BIO_free(out);
             ossl_raise(eDSAError, NULL);
         }
     } else {
-        if (!PEM_write_bio_DSA_PUBKEY(out, pkey-&gt;pkey.dsa)) {
+        if (!PEM_write_bio_DSA_PUBKEY(out, dsa)) {
             BIO_free(out);
             ossl_raise(eDSAError, NULL);
         }
@@ -449,22 +461,24 @@ ossl_dsa_export(int argc, VALUE *argv, VALUE self)
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-params" name="method-i-params" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Stores all parameters of key to the hash INSECURE: PRIVATE INFORMATIONS CAN
 LEAK OUT!!! Don&#39;t use :-)) (I&#39;s up to you)</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-params_source')" id="l_method-i-params_source">show</a>
                 
               </p>
@@ -472,18 +486,20 @@ LEAK OUT!!! Don&#39;t use :-)) (I&#39;s up to you)</p>
                 <pre>static VALUE
 ossl_dsa_get_params(VALUE self)
 {
-    EVP_PKEY *pkey;
+    DSA *dsa;
     VALUE hash;
+    const BIGNUM *p, *q, *g, *pub_key, *priv_key;
 
-    GetPKeyDSA(self, pkey);
+    GetDSA(self, dsa);
+    DSA_get0_pqg(dsa, &amp;p, &amp;q, &amp;g);
+    DSA_get0_key(dsa, &amp;pub_key, &amp;priv_key);
 
     hash = rb_hash_new();
-
-    rb_hash_aset(hash, rb_str_new2(&quot;p&quot;), ossl_bn_new(pkey-&gt;pkey.dsa-&gt;p));
-    rb_hash_aset(hash, rb_str_new2(&quot;q&quot;), ossl_bn_new(pkey-&gt;pkey.dsa-&gt;q));
-    rb_hash_aset(hash, rb_str_new2(&quot;g&quot;), ossl_bn_new(pkey-&gt;pkey.dsa-&gt;g));
-    rb_hash_aset(hash, rb_str_new2(&quot;pub_key&quot;), ossl_bn_new(pkey-&gt;pkey.dsa-&gt;pub_key));
-    rb_hash_aset(hash, rb_str_new2(&quot;priv_key&quot;), ossl_bn_new(pkey-&gt;pkey.dsa-&gt;priv_key));
+    rb_hash_aset(hash, rb_str_new2(&quot;p&quot;), ossl_bn_new(p));
+    rb_hash_aset(hash, rb_str_new2(&quot;q&quot;), ossl_bn_new(q));
+    rb_hash_aset(hash, rb_str_new2(&quot;g&quot;), ossl_bn_new(g));
+    rb_hash_aset(hash, rb_str_new2(&quot;pub_key&quot;), ossl_bn_new(pub_key));
+    rb_hash_aset(hash, rb_str_new2(&quot;priv_key&quot;), ossl_bn_new(priv_key));
 
     return hash;
 }</pre>
@@ -500,7 +516,7 @@ ossl_dsa_get_params(VALUE self)
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-private-3F" name="method-i-private-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Indicates whether this <a href="DSA.html">DSA</a> instance has a private
@@ -508,15 +524,17 @@ key associated with it or not. The private key may be retrieved with
 DSA#private_key.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-private-3F_source')" id="l_method-i-private-3F_source">show</a>
                 
               </p>
@@ -524,11 +542,11 @@ DSA#private_key.</p>
                 <pre>static VALUE
 ossl_dsa_is_private(VALUE self)
 {
-    EVP_PKEY *pkey;
+    DSA *dsa;
 
-    GetPKeyDSA(self, pkey);
+    GetDSA(self, dsa);
 
-    return (DSA_PRIVATE(self, pkey-&gt;pkey.dsa)) ? Qtrue : Qfalse;
+    return DSA_PRIVATE(self, dsa) ? Qtrue : Qfalse;
 }</pre>
               </div>
             </div>
@@ -543,7 +561,7 @@ ossl_dsa_is_private(VALUE self)
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-public-3F" name="method-i-public-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Indicates whether this <a href="DSA.html">DSA</a> instance has a public key
@@ -551,15 +569,17 @@ associated with it or not. The public key may be retrieved with <a
 href="DSA.html#method-i-public_key">#public_key</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-public-3F_source')" id="l_method-i-public-3F_source">show</a>
                 
               </p>
@@ -567,11 +587,13 @@ href="DSA.html#method-i-public_key">#public_key</a>.</p>
                 <pre>static VALUE
 ossl_dsa_is_public(VALUE self)
 {
-    EVP_PKEY *pkey;
+    DSA *dsa;
+    const BIGNUM *bn;
 
-    GetPKeyDSA(self, pkey);
+    GetDSA(self, dsa);
+    DSA_get0_key(dsa, &amp;bn, NULL);
 
-    return (pkey-&gt;pkey.dsa-&gt;pub_key) ? Qtrue : Qfalse;
+    return bn ? Qtrue : Qfalse;
 }</pre>
               </div>
             </div>
@@ -586,7 +608,7 @@ ossl_dsa_is_public(VALUE self)
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-public_key" name="method-i-public_key" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a new <a href="DSA.html">DSA</a> instance that carries just the
@@ -599,18 +621,21 @@ leaking any of the private information.</p>
 
 <pre><code>dsa = OpenSSL::PKey::DSA.new(2048) # has public and private information
 pub_key = dsa.public_key # has only the public part available
-pub_key_der = pub_key.to_der # it&#39;s safe to publish this</code></pre>
+pub_key_der = pub_key.to_der # it&#39;s safe to publish this
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-public_key_source')" id="l_method-i-public_key_source">show</a>
                 
               </p>
@@ -624,8 +649,11 @@ ossl_dsa_to_public_key(VALUE self)
 
     GetPKeyDSA(self, pkey);
     /* err check performed by dsa_instance */
-    dsa = DSAPublicKey_dup(pkey-&gt;pkey.dsa);
-    obj = dsa_instance(CLASS_OF(self), dsa);
+#define DSAPublicKey_dup(dsa) (DSA *)ASN1_dup( \
+        (i2d_of_void *)i2d_DSAPublicKey, (d2i_of_void *)d2i_DSAPublicKey, (char *)(dsa))
+    dsa = DSAPublicKey_dup(EVP_PKEY_get0_DSA(pkey));
+#undef DSAPublicKey_dup
+    obj = dsa_instance(rb_obj_class(self), dsa);
     if (obj == Qfalse) {
         DSA_free(dsa);
         ossl_raise(eDSAError, NULL);
@@ -638,6 +666,52 @@ ossl_dsa_to_public_key(VALUE self)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-i-set_key">
+            
+              <b>dsa.set_key(pub_key, priv_key) &rarr; self
+</b>
+            
+            <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-set_key" name="method-i-set_key" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Sets <code>pub_key</code> and <code>priv_key</code> for the <a
+href="DSA.html">DSA</a> instance. <code>priv_key</code> may be nil.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-set_pqg">
+            
+              <b>dsa.set_pqg(p, q, g) &rarr; self
+</b>
+            
+            <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-set_pqg" name="method-i-set_pqg" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Sets <code>p</code>, <code>q</code>, <code>g</code> for the <a
+href="DSA.html">DSA</a> instance.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-i-syssign">
             
               <b>dsa.syssign(string) &rarr; aString
@@ -645,7 +719,7 @@ ossl_dsa_to_public_key(VALUE self)
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-syssign" name="method-i-syssign" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Computes and returns the <a href="DSA.html">DSA</a> signature of
@@ -665,18 +739,21 @@ signed</p>
 <pre><code>dsa = OpenSSL::PKey::DSA.new(2048)
 doc = &quot;Sign me&quot;
 digest = OpenSSL::Digest::SHA1.digest(doc)
-sig = dsa.syssign(digest)</code></pre>
+sig = dsa.syssign(digest)
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-syssign_source')" id="l_method-i-syssign_source">show</a>
                 
               </p>
@@ -684,19 +761,22 @@ sig = dsa.syssign(digest)</code></pre>
                 <pre>static VALUE
 ossl_dsa_sign(VALUE self, VALUE data)
 {
-    EVP_PKEY *pkey;
+    DSA *dsa;
+    const BIGNUM *dsa_q;
     unsigned int buf_len;
     VALUE str;
 
-    GetPKeyDSA(self, pkey);
-    StringValue(data);
-    if (!DSA_PRIVATE(self, pkey-&gt;pkey.dsa)) {
+    GetDSA(self, dsa);
+    DSA_get0_pqg(dsa, NULL, &amp;dsa_q, NULL);
+    if (!dsa_q)
+        ossl_raise(eDSAError, &quot;incomplete DSA&quot;);
+    if (!DSA_PRIVATE(self, dsa))
         ossl_raise(eDSAError, &quot;Private DSA key needed!&quot;);
-    }
-    str = rb_str_new(0, ossl_dsa_buf_size(pkey));
+    StringValue(data);
+    str = rb_str_new(0, DSA_size(dsa));
     if (!DSA_sign(0, (unsigned char *)RSTRING_PTR(data), RSTRING_LENINT(data),
                   (unsigned char *)RSTRING_PTR(str),
-                  &amp;buf_len, pkey-&gt;pkey.dsa)) { /* type is ignored (0) */
+                  &amp;buf_len, dsa)) { /* type is ignored (0) */
         ossl_raise(eDSAError, NULL);
     }
     rb_str_set_len(str, buf_len);
@@ -716,7 +796,7 @@ ossl_dsa_sign(VALUE self, VALUE data)
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-sysverify" name="method-i-sysverify" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Verifies whether the signature is valid given the message digest input. It
@@ -741,15 +821,17 @@ puts dsa.sysverify(digest, sig) # =&gt; true
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-sysverify_source')" id="l_method-i-sysverify_source">show</a>
                 
               </p>
@@ -757,15 +839,15 @@ puts dsa.sysverify(digest, sig) # =&gt; true
                 <pre>static VALUE
 ossl_dsa_verify(VALUE self, VALUE digest, VALUE sig)
 {
-    EVP_PKEY *pkey;
+    DSA *dsa;
     int ret;
 
-    GetPKeyDSA(self, pkey);
+    GetDSA(self, dsa);
     StringValue(digest);
     StringValue(sig);
     /* type is ignored (0) */
     ret = DSA_verify(0, (unsigned char *)RSTRING_PTR(digest), RSTRING_LENINT(digest),
-                     (unsigned char *)RSTRING_PTR(sig), RSTRING_LENINT(sig), pkey-&gt;pkey.dsa);
+                     (unsigned char *)RSTRING_PTR(sig), RSTRING_LENINT(sig), dsa);
     if (ret &lt; 0) {
         ossl_raise(eDSAError, NULL);
     }
@@ -788,21 +870,23 @@ ossl_dsa_verify(VALUE self, VALUE digest, VALUE sig)
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-to_der" name="method-i-to_der" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Encodes this <a href="DSA.html">DSA</a> to its DER encoding.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_der_source')" id="l_method-i-to_der_source">show</a>
                 
               </p>
@@ -810,22 +894,22 @@ ossl_dsa_verify(VALUE self, VALUE digest, VALUE sig)
                 <pre>static VALUE
 ossl_dsa_to_der(VALUE self)
 {
-    EVP_PKEY *pkey;
-    int (*i2d_func)_((DSA*, unsigned char**));
+    DSA *dsa;
+    int (*i2d_func)(DSA *, unsigned char **);
     unsigned char *p;
     long len;
     VALUE str;
 
-    GetPKeyDSA(self, pkey);
-    if(DSA_HAS_PRIVATE(pkey-&gt;pkey.dsa))
-        i2d_func = (int(*)_((DSA*,unsigned char**)))i2d_DSAPrivateKey;
+    GetDSA(self, dsa);
+    if(DSA_HAS_PRIVATE(dsa))
+        i2d_func = (int (*)(DSA *,unsigned char **))i2d_DSAPrivateKey;
     else
         i2d_func = i2d_DSA_PUBKEY;
-    if((len = i2d_func(pkey-&gt;pkey.dsa, NULL)) &lt;= 0)
+    if((len = i2d_func(dsa, NULL)) &lt;= 0)
         ossl_raise(eDSAError, NULL);
     str = rb_str_new(0, len);
     p = (unsigned char *)RSTRING_PTR(str);
-    if(i2d_func(pkey-&gt;pkey.dsa, &amp;p) &lt; 0)
+    if(i2d_func(dsa, &amp;p) &lt; 0)
         ossl_raise(eDSAError, NULL);
     ossl_str_adjust(str, p);
 
@@ -843,15 +927,21 @@ ossl_dsa_to_der(VALUE self)
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-to_pem" name="method-i-to_pem" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
+            <div class="aka">
+              Alias for: <a href="DSA.html#method-i-export">export</a>
+            </div>
           
+
           
           </div>
         
@@ -862,15 +952,21 @@ ossl_dsa_to_der(VALUE self)
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
+            <div class="aka">
+              Alias for: <a href="DSA.html#method-i-export">export</a>
+            </div>
           
+
           
           </div>
         
@@ -882,22 +978,24 @@ ossl_dsa_to_der(VALUE self)
             
             <a href="../../../classes/OpenSSL/PKey/DSA.html#method-i-to_text" name="method-i-to_text" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Prints all parameters of key to buffer INSECURE: PRIVATE INFORMATIONS CAN
 LEAK OUT!!! Don&#39;t use :-)) (I&#39;s up to you)</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_text_source')" id="l_method-i-to_text_source">show</a>
                 
               </p>
@@ -905,15 +1003,15 @@ LEAK OUT!!! Don&#39;t use :-)) (I&#39;s up to you)</p>
                 <pre>static VALUE
 ossl_dsa_to_text(VALUE self)
 {
-    EVP_PKEY *pkey;
+    DSA *dsa;
     BIO *out;
     VALUE str;
 
-    GetPKeyDSA(self, pkey);
+    GetDSA(self, dsa);
     if (!(out = BIO_new(BIO_s_mem()))) {
         ossl_raise(eDSAError, NULL);
     }
-    if (!DSA_print(out, pkey-&gt;pkey.dsa, 0)) { /* offset = 0 */
+    if (!DSA_print(out, dsa, 0)) { /* offset = 0 */
         BIO_free(out);
         ossl_raise(eDSAError, NULL);
     }
@@ -929,4 +1027,4 @@ ossl_dsa_to_text(VALUE self)
 
     </div>
   </body>
-</html>    
+</html>

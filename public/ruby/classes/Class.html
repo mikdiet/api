@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            Class 
+            <span class="type">Class</span>
+            Class
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Module.html">Module</a>
                     
@@ -53,7 +53,7 @@
 <p>Typically, you create a new class by using:</p>
 
 <pre><code>class Name
- # some class describing the class behavior
+ # some code describing the class behavior
 end
 </code></pre>
 
@@ -66,26 +66,27 @@ constant (<code>Name</code> in this case).</p>
 be demonstrated by overriding <code>new</code> in <code>Class</code>:</p>
 
 <pre><code>class Class
-   alias oldNew  new
-   def new(*args)
-     print &quot;Creating a new &quot;, self.name, &quot;\n&quot;
-     oldNew(*args)
-   end
- end
+  alias old_new new
+  def new(*args)
+    print &quot;Creating a new &quot;, self.name, &quot;\n&quot;
+    old_new(*args)
+  end
+end
 
- class Name
- end
+class Name
+end
 
- n = Name.new
+n = Name.new
 </code></pre>
 
 <p><em>produces:</em></p>
 
-<pre><code>Creating a new Name</code></pre>
+<pre><code>Creating a new Name
+</code></pre>
 
 <p>Classes, modules, and objects are interrelated. In the diagram that
 follows, the vertical arrows represent inheritance, and the parentheses
-meta-classes. All metaclasses are instances of the class `Class&#39;.</p>
+metaclasses. All metaclasses are instances of the class `Class&#39;.</p>
 
 <pre><code>                         +---------+             +-...
                          |         |             |
@@ -155,12 +156,12 @@ obj---&gt;OtherClass----------&gt;(OtherClass)-----------...</code></pre>
             
               
               <li>
-                <a href="#method-c-new">new</a>,
+                <a href="#method-i-new">new</a>,
               </li>
             
               
               <li>
-                <a href="#method-i-new">new</a>
+                <a href="#method-c-new">new</a>
               </li>
             
           </ul>
@@ -204,13 +205,12 @@ obj---&gt;OtherClass----------&gt;(OtherClass)-----------...</code></pre>
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>Class.new(super_class=Object)               &rarr; a_class
-Class.new(super_class=Object) { |mod| ... } &rarr; a_class
+              <b>Class.new(super_class=Object)               &rarr; a_class<br />Class.new(super_class=Object) { |mod| ... } &rarr; a_class
 </b>
             
             <a href="../classes/Class.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Creates a new anonymous (unnamed) class with the given superclass (or
@@ -218,7 +218,7 @@ Class.new(super_class=Object) { |mod| ... } &rarr; a_class
 by assigning the class object to a constant.</p>
 
 <p>If a block is given, it is passed the class object, and the block is
-evaluated in the context of this class using <code>class_eval</code>.</p>
+evaluated in the context of this class like <code>class_eval</code>.</p>
 
 <pre><code>fred = Class.new do
   def meth1
@@ -238,15 +238,17 @@ a.meth2          #=&gt; &quot;bye&quot;
 treat it like a regular class.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -269,7 +271,7 @@ rb_class_initialize(int argc, VALUE *argv, VALUE klass)
             rb_raise(rb_eTypeError, &quot;can&#39;t inherit uninitialized class&quot;);
         }
     }
-    RCLASS_SUPER(klass) = super;
+    RCLASS_SET_SUPER(klass, super);
     rb_make_metaclass(klass, RBASIC(super)-&gt;klass);
     rb_class_inherited(super, klass);
     rb_mod_initialize(klass);
@@ -291,7 +293,7 @@ rb_class_initialize(int argc, VALUE *argv, VALUE klass)
             
             <a href="../classes/Class.html#method-i-allocate" name="method-i-allocate" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Allocates space for a new object of <em>class</em>&#39;s class and does not
@@ -312,15 +314,17 @@ klass.allocate.initialized? #=&gt; false
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-allocate_source')" id="l_method-i-allocate_source">show</a>
                 
               </p>
@@ -339,18 +343,10 @@ rb_obj_alloc(VALUE klass)
     }
     allocator = rb_get_alloc_func(klass);
     if (!allocator) {
-        rb_raise(rb_eTypeError, &quot;allocator undefined for %&quot;PRIsVALUE,
-                 klass);
+        rb_undefined_alloc(klass);
     }
 
-#if !defined(DTRACE_PROBES_DISABLED) || !DTRACE_PROBES_DISABLED
-    if (RUBY_DTRACE_OBJECT_CREATE_ENABLED()) {
-        const char * file = rb_sourcefile();
-        RUBY_DTRACE_OBJECT_CREATE(rb_class2name(klass),
-                                  file ? file : &quot;&quot;,
-                                  rb_sourceline());
-    }
-#endif
+    RUBY_DTRACE_CREATE_HOOK(OBJECT, rb_class2name(klass));
 
     obj = (*allocator)(klass);
 
@@ -371,7 +367,7 @@ rb_obj_alloc(VALUE klass)
             
             <a href="../classes/Class.html#method-i-json_creatable-3F" name="method-i-json_creatable-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns true if this class can be used to create an instance from a
@@ -380,20 +376,24 @@ a class method <em>json_create</em> that expects a hash as first parameter.
 The hash should include the required data.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-json_creatable-3F_source')" id="l_method-i-json_creatable-3F_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/bf7cc652ae0fc0c3d9683c3a762669c2d28737a4/ext/json/lib/json/common.rb#L453" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-json_creatable-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/common.rb, line 484</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/common.rb, line 453</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">json_creatable?</span>
   <span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:json_create</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -410,7 +410,7 @@ The hash should include the required data.</p>
             
             <a href="../classes/Class.html#method-i-new" name="method-i-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Calls <code>allocate</code> to create a new object of <em>class</em>&#39;s
@@ -419,21 +419,23 @@ passing it <em>args</em>. This is the method that ends up getting called
 whenever an object is constructed using .new.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-new_source')" id="l_method-i-new_source">show</a>
                 
               </p>
               <div id="method-i-new_source" class="dyn-source">
                 <pre>VALUE
-rb_class_new_instance(int argc, VALUE *argv, VALUE klass)
+rb_class_new_instance(int argc, const VALUE *argv, VALUE klass)
 {
     VALUE obj;
 
@@ -455,7 +457,7 @@ rb_class_new_instance(int argc, VALUE *argv, VALUE klass)
             
             <a href="../classes/Class.html#method-i-superclass" name="method-i-superclass" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the superclass of <em>class</em>, or <code>nil</code>.</p>
@@ -468,21 +470,23 @@ class Bar &lt; Foo; end
 Bar.superclass           #=&gt; Foo
 </code></pre>
 
-<p>returns nil when the given class hasn&#39;t a parent class:</p>
+<p>Returns nil when the given class does not have a parent class:</p>
 
 <pre><code>BasicObject.superclass   #=&gt; nil
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-superclass_source')" id="l_method-i-superclass_source">show</a>
                 
               </p>
@@ -512,4 +516,4 @@ rb_class_superclass(VALUE klass)
 
     </div>
   </body>
-</html>    
+</html>

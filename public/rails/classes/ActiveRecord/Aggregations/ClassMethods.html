@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            ActiveRecord::Aggregations::ClassMethods 
+            <span class="type">Module</span>
+            ActiveRecord::Aggregations::ClassMethods
             
         </h1>
         <ul class="files">
@@ -35,16 +35,17 @@
     <div class="description">
       
 <p>Active Record implements aggregation through a macro-like class method
-called <code>composed_of</code> for representing attributes  as value
-objects. It expresses relationships like “Account [is] composed of Money
-[among other things]” or “Person [is] composed of [an] address”. Each call
-to the macro adds a description of how the value objects are created from
-the attributes of the entity object (when the entity is initialized either
-as a new object or from finding an existing object) and how it can be
-turned back into attributes (when the entity is saved to the database).</p>
+called <a href="ClassMethods.html#method-i-composed_of">composed_of</a> for
+representing attributes as value objects. It expresses relationships like
+“Account [is] composed of Money [among other things]” or “Person [is]
+composed of [an] address”. Each call to the macro adds a description of how
+the value objects are created from the attributes of the entity object
+(when the entity is initialized either as a new object or from finding an
+existing object) and how it can be turned back into attributes (when the
+entity is saved to the database).</p>
 
 <pre><code>class Customer &lt; ActiveRecord::Base
-  composed_of :balance, class_name: &quot;Money&quot;, mapping: %w(balance amount)
+  composed_of :balance, class_name: &quot;Money&quot;, mapping: %w(amount currency)
   composed_of :address, mapping: [ %w(address_street street), %w(address_city city) ]
 end
 </code></pre>
@@ -125,17 +126,12 @@ parameters.</p>
 customer.address_city   = &quot;Copenhagen&quot;
 customer.address        # =&gt; Address.new(&quot;Hyancintvej&quot;, &quot;Copenhagen&quot;)
 
-customer.address_street = &quot;Vesterbrogade&quot;
-customer.address        # =&gt; Address.new(&quot;Hyancintvej&quot;, &quot;Copenhagen&quot;)
-customer.clear_aggregation_cache
-customer.address        # =&gt; Address.new(&quot;Vesterbrogade&quot;, &quot;Copenhagen&quot;)
-
 customer.address = Address.new(&quot;May Street&quot;, &quot;Chicago&quot;)
 customer.address_street # =&gt; &quot;May Street&quot;
 customer.address_city   # =&gt; &quot;Chicago&quot;
 </code></pre>
 
-<h2 id="label-Writing+value+objects">Writing value objects</h2>
+<h2 id="module-ActiveRecord::Aggregations::ClassMethods-label-Writing+value+objects">Writing value objects</h2>
 
 <p>Value objects are immutable and interchangeable objects that represent a
 given value, such as a Money object representing $5. Two Money objects both
@@ -149,42 +145,44 @@ href="../Base.html">ActiveRecord::Base</a> classes are entity objects.</p>
 
 <p>It&#39;s also important to treat the value objects as immutable. Don&#39;t
 allow the Money object to have its amount changed after creation. Create a
-new Money object with the new value instead. The Money#exchange_to method
-is an example of this. It returns a new value object instead of changing
-its own values. Active Record won&#39;t persist value objects that have
-been changed through means other than the writer method.</p>
+new Money object with the new value instead. The
+<code>Money#exchange_to</code> method is an example of this. It returns a
+new value object instead of changing its own values. Active Record
+won&#39;t persist value objects that have been changed through means other
+than the writer method.</p>
 
 <p>The immutable requirement is enforced by Active Record by freezing any
 object assigned as a value object. Attempting to change it afterwards will
-result in a RuntimeError.</p>
+result in a <code>RuntimeError</code>.</p>
 
 <p>Read more about value objects on <a
 href="http://c2.com/cgi/wiki?ValueObject">c2.com/cgi/wiki?ValueObject</a>
 and on the dangers of not keeping value objects immutable on <a
 href="http://c2.com/cgi/wiki?ValueObjectsShouldBeImmutable">c2.com/cgi/wiki?ValueObjectsShouldBeImmutable</a></p>
 
-<h2 id="label-Custom+constructors+and+converters">Custom constructors and converters</h2>
+<h2 id="module-ActiveRecord::Aggregations::ClassMethods-label-Custom+constructors+and+converters">Custom constructors and converters</h2>
 
 <p>By default value objects are initialized by calling the <code>new</code>
 constructor of the value class passing each of the mapped attributes, in
 the order specified by the <code>:mapping</code> option, as arguments. If
-the value class doesn&#39;t support this convention then
-<code>composed_of</code> allows a custom constructor to be specified.</p>
+the value class doesn&#39;t support this convention then <a
+href="ClassMethods.html#method-i-composed_of">composed_of</a> allows a
+custom constructor to be specified.</p>
 
 <p>When a new value is assigned to the value object, the default assumption is
 that the new value is an instance of the value class. Specifying a custom
 converter allows the new value to be automatically converted to an instance
 of value class if necessary.</p>
 
-<p>For example, the NetworkResource model has <code>network_address</code> and
-<code>cidr_range</code> attributes that should be aggregated using the
-NetAddr::CIDR value class (<a
-href="http://netaddr.rubyforge.org">netaddr.rubyforge.org</a>). The
-constructor for the value class is called <code>create</code> and it
+<p>For example, the <code>NetworkResource</code> model has
+<code>network_address</code> and <code>cidr_range</code> attributes that
+should be aggregated using the <code>NetAddr::CIDR</code> value class (<a
+href="http://www.rubydoc.info/gems/netaddr/1.5.0/NetAddr/CIDR">www.rubydoc.info/gems/netaddr/1.5.0/NetAddr/CIDR</a>).
+The constructor for the value class is called <code>create</code> and it
 expects a CIDR address string as a parameter. New values can be assigned to
-the value object using either another NetAddr::CIDR object, a string or an
-array. The <code>:constructor</code> and <code>:converter</code> options
-can be used to meet these requirements:</p>
+the value object using either another <code>NetAddr::CIDR</code> object, a
+string or an array. The <code>:constructor</code> and
+<code>:converter</code> options can be used to meet these requirements:</p>
 
 <pre><code>class NetworkResource &lt; ActiveRecord::Base
   composed_of :cidr,
@@ -210,15 +208,17 @@ network_resource.save
 network_resource.reload
 </code></pre>
 
-<h2 id="label-Finding+records+by+a+value+object">Finding records by a value object</h2>
+<h2 id="module-ActiveRecord::Aggregations::ClassMethods-label-Finding+records+by+a+value+object">Finding records by a value object</h2>
 
-<p>Once a <code>composed_of</code> relationship is specified for a model,
-records can be loaded from the database by specifying an instance of the
-value object in the conditions hash. The following example finds all
-customers with <code>balance_amount</code> equal to 20 and
-<code>balance_currency</code> equal to “USD”:</p>
+<p>Once a <a href="ClassMethods.html#method-i-composed_of">composed_of</a>
+relationship is specified for a model, records can be loaded from the
+database by specifying an instance of the value object in the conditions
+hash. The following example finds all customers with
+<code>balance_amount</code> equal to 20 and <code>balance_currency</code>
+equal to “USD”:</p>
 
-<pre><code>Customer.where(balance: Money.new(20, &quot;USD&quot;))</code></pre>
+<pre><code>Customer.where(balance: Money.new(20, &quot;USD&quot;))
+</code></pre>
 
     </div>
   
@@ -281,7 +281,7 @@ customers with <code>balance_amount</code> equal to 20 and
             
             <a href="../../../classes/ActiveRecord/Aggregations/ClassMethods.html#method-i-composed_of" name="method-i-composed_of" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Adds reader and writer methods for manipulating a value object:
@@ -293,8 +293,8 @@ customers with <code>balance_amount</code> equal to 20 and
 <p><code>:class_name</code> - Specifies the class name of the association. Use
 it only if that name can&#39;t be inferred from the part id. So
 <code>composed_of :address</code> will by default be linked to the Address
-class, but if the real class name is CompanyAddress, you&#39;ll have to
-specify it with this option.</p>
+class, but if the real class name is <code>CompanyAddress</code>,
+you&#39;ll have to specify it with this option.</p>
 </li><li>
 <p><code>:mapping</code> - Specifies the mapping of entity attributes to
 attributes of the value object. Each mapping is represented as an array
@@ -320,7 +320,7 @@ to instantiate a <code>:class_name</code> object. The default is
 assigned to the value object. The converter is passed the single value that
 is used in the assignment and is only called if the new value is not an
 instance of <code>:class_name</code>. If <code>:allow_nil</code> is set to
-true, the converter can return nil to skip the assignment.</p>
+true, the converter can return <code>nil</code> to skip the assignment.</p>
 </li></ul>
 
 <p>Option examples:</p>
@@ -339,20 +339,24 @@ composed_of :ip_address,
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-composed_of_source')" id="l_method-i-composed_of_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/6c5bbb4b7d3bdd1b43e512fb6ae764c373c7827b/activerecord/lib/active_record/aggregations.rb#L224" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-composed_of_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/aggregations.rb, line 212</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/aggregations.rb, line 224</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">composed_of</span>(<span class="ruby-identifier">part_id</span>, <span class="ruby-identifier">options</span> = {})
   <span class="ruby-identifier">options</span>.<span class="ruby-identifier">assert_valid_keys</span>(<span class="ruby-value">:class_name</span>, <span class="ruby-value">:mapping</span>, <span class="ruby-value">:allow_nil</span>, <span class="ruby-value">:constructor</span>, <span class="ruby-value">:converter</span>)
 
@@ -367,7 +371,8 @@ composed_of :ip_address,
   <span class="ruby-identifier">reader_method</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">class_name</span>, <span class="ruby-identifier">mapping</span>, <span class="ruby-identifier">allow_nil</span>, <span class="ruby-identifier">constructor</span>)
   <span class="ruby-identifier">writer_method</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">class_name</span>, <span class="ruby-identifier">mapping</span>, <span class="ruby-identifier">allow_nil</span>, <span class="ruby-identifier">converter</span>)
 
-  <span class="ruby-identifier">create_reflection</span>(<span class="ruby-value">:composed_of</span>, <span class="ruby-identifier">part_id</span>, <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">options</span>, <span class="ruby-keyword">self</span>)
+  <span class="ruby-identifier">reflection</span> = <span class="ruby-constant">ActiveRecord</span><span class="ruby-operator">::</span><span class="ruby-constant">Reflection</span>.<span class="ruby-identifier">create</span>(<span class="ruby-value">:composed_of</span>, <span class="ruby-identifier">part_id</span>, <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">options</span>, <span class="ruby-keyword">self</span>)
+  <span class="ruby-constant">Reflection</span>.<span class="ruby-identifier">add_aggregate_reflection</span> <span class="ruby-keyword">self</span>, <span class="ruby-identifier">part_id</span>, <span class="ruby-identifier">reflection</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -377,4 +382,4 @@ composed_of :ip_address,
 
     </div>
   </body>
-</html>    
+</html>

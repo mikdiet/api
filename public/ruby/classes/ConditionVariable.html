@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            ConditionVariable 
+            <span class="type">Class</span>
+            ConditionVariable
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Object.html">Object</a>
                     
@@ -31,7 +31,7 @@
         </h1>
         <ul class="files">
             
-            <li><a href="../files/ruby/lib/thread_rb.html">ruby/lib/thread.rb</a></li>
+            <li><a href="../files/ruby/thread_sync_c.html">ruby/thread_sync.c</a></li>
             
         </ul>
     </div>
@@ -41,9 +41,8 @@
     <div class="description">
       
 <p><a href="ConditionVariable.html">ConditionVariable</a> objects augment
-class <a href="Mutex.html">Mutex</a>. Using condition variables, it is
-possible to suspend while in the middle of a critical section until a
-resource becomes available.</p>
+class Mutex. Using condition variables, it is possible to suspend while in
+the middle of a critical section until a resource becomes available.</p>
 
 <p>Example:</p>
 
@@ -53,18 +52,18 @@ mutex = Mutex.new
 resource = ConditionVariable.new
 
 a = Thread.new {
-  mutex.synchronize {
-    # Thread &#39;a&#39; now needs the resource
-    resource.wait(mutex)
-    # &#39;a&#39; can now have the resource
-  }
+   mutex.synchronize {
+     # Thread &#39;a&#39; now needs the resource
+     resource.wait(mutex)
+     # &#39;a&#39; can now have the resource
+   }
 }
 
 b = Thread.new {
-  mutex.synchronize {
-    # Thread &#39;b&#39; has finished using the resource
-    resource.signal
-  }
+   mutex.synchronize {
+     # Thread &#39;b&#39; has finished using the resource
+     resource.signal
+   }
 }
 </code></pre>
 
@@ -165,30 +164,33 @@ b = Thread.new {
             
             <a href="../classes/ConditionVariable.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Creates a new <a href="ConditionVariable.html">ConditionVariable</a></p>
+              <p>Creates a new condition variable instance.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 54</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">initialize</span>
-  <span class="ruby-ivar">@waiters</span> = {}
-  <span class="ruby-ivar">@waiters_mutex</span> = <span class="ruby-constant">Mutex</span>.<span class="ruby-identifier">new</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_condvar_initialize(VALUE self)
+{
+    RSTRUCT_SET(self, CONDVAR_WAITERS, ary_buf_new());
+    return self;
+}</pre>
               </div>
             </div>
             
@@ -203,42 +205,33 @@ b = Thread.new {
             
             <a href="../classes/ConditionVariable.html#method-i-broadcast" name="method-i-broadcast" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Wakes up all threads waiting for this lock.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-broadcast_source')" id="l_method-i-broadcast_source">show</a>
                 
               </p>
               <div id="method-i-broadcast_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 101</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">broadcast</span>
-  <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">handle_interrupt</span>(<span class="ruby-constant">StandardError</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value">:on_blocking</span>) <span class="ruby-keyword">do</span>
-    <span class="ruby-identifier">threads</span> = <span class="ruby-keyword">nil</span>
-    <span class="ruby-ivar">@waiters_mutex</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
-      <span class="ruby-identifier">threads</span> = <span class="ruby-ivar">@waiters</span>.<span class="ruby-identifier">keys</span>
-      <span class="ruby-ivar">@waiters</span>.<span class="ruby-identifier">clear</span>
-    <span class="ruby-keyword">end</span>
-    <span class="ruby-keyword">for</span> <span class="ruby-identifier">t</span> <span class="ruby-keyword">in</span> <span class="ruby-identifier">threads</span>
-      <span class="ruby-keyword">begin</span>
-        <span class="ruby-identifier">t</span>.<span class="ruby-identifier">run</span>
-      <span class="ruby-keyword">rescue</span> <span class="ruby-constant">ThreadError</span>
-      <span class="ruby-keyword">end</span>
-    <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">self</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_condvar_broadcast(VALUE self)
+{
+    wakeup_all_threads(GET_CONDVAR_WAITERS(self));
+    return self;
+}</pre>
               </div>
             </div>
             
@@ -251,37 +244,33 @@ b = Thread.new {
             
             <a href="../classes/ConditionVariable.html#method-i-signal" name="method-i-signal" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Wakes up the first thread in line waiting for this lock.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-signal_source')" id="l_method-i-signal_source">show</a>
                 
               </p>
               <div id="method-i-signal_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 86</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">signal</span>
-  <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">handle_interrupt</span>(<span class="ruby-constant">StandardError</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value">:on_blocking</span>) <span class="ruby-keyword">do</span>
-    <span class="ruby-keyword">begin</span>
-      <span class="ruby-identifier">t</span>, <span class="ruby-identifier">_</span> = <span class="ruby-ivar">@waiters_mutex</span>.<span class="ruby-identifier">synchronize</span> { <span class="ruby-ivar">@waiters</span>.<span class="ruby-identifier">shift</span> }
-      <span class="ruby-identifier">t</span>.<span class="ruby-identifier">run</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">t</span>
-    <span class="ruby-keyword">rescue</span> <span class="ruby-constant">ThreadError</span>
-      <span class="ruby-keyword">retry</span> <span class="ruby-comment"># t was already dead?</span>
-    <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">self</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_condvar_signal(VALUE self)
+{
+    wakeup_first_thread(GET_CONDVAR_WAITERS(self));
+    return self;
+}</pre>
               </div>
             </div>
             
@@ -290,11 +279,12 @@ b = Thread.new {
         <div class="method">
           <div class="title method-title" id="method-i-wait">
             
-              <b>wait</b>(mutex, timeout=nil)
+              <b>wait(mutex, timeout=nil)
+</b>
             
             <a href="../classes/ConditionVariable.html#method-i-wait" name="method-i-wait" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Releases the lock held in <code>mutex</code> and waits; reacquires the lock
@@ -305,37 +295,37 @@ on wakeup.</p>
 signal.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-wait_source')" id="l_method-i-wait_source">show</a>
                 
               </p>
               <div id="method-i-wait_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/thread.rb, line 65</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">wait</span>(<span class="ruby-identifier">mutex</span>, <span class="ruby-identifier">timeout</span>=<span class="ruby-keyword">nil</span>)
-  <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">handle_interrupt</span>(<span class="ruby-constant">StandardError</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value">:never</span>) <span class="ruby-keyword">do</span>
-    <span class="ruby-keyword">begin</span>
-      <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">handle_interrupt</span>(<span class="ruby-constant">StandardError</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value">:on_blocking</span>) <span class="ruby-keyword">do</span>
-        <span class="ruby-ivar">@waiters_mutex</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
-          <span class="ruby-ivar">@waiters</span>[<span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>] = <span class="ruby-keyword">true</span>
-        <span class="ruby-keyword">end</span>
-        <span class="ruby-identifier">mutex</span>.<span class="ruby-identifier">sleep</span> <span class="ruby-identifier">timeout</span>
-      <span class="ruby-keyword">end</span>
-    <span class="ruby-keyword">ensure</span>
-      <span class="ruby-ivar">@waiters_mutex</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
-        <span class="ruby-ivar">@waiters</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>)
-      <span class="ruby-keyword">end</span>
-    <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">self</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+rb_condvar_wait(int argc, VALUE *argv, VALUE self)
+{
+    VALUE waiters = GET_CONDVAR_WAITERS(self);
+    VALUE mutex, timeout;
+    struct sleep_call args;
+
+    rb_scan_args(argc, argv, &quot;11&quot;, &amp;mutex, &amp;timeout);
+
+    args.mutex   = mutex;
+    args.timeout = timeout;
+    rb_ary_push(waiters, rb_thread_current());
+    rb_ensure(do_sleep, (VALUE)&amp;args, delete_current_thread, waiters);
+
+    return self;
+}</pre>
               </div>
             </div>
             
@@ -344,4 +334,4 @@ signal.</p>
 
     </div>
   </body>
-</html>    
+</html>

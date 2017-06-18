@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            OpenSSL::OCSP::Request 
+            <span class="type">Class</span>
+            OpenSSL::OCSP::Request
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../../Object.html">Object</a>
                     
@@ -31,12 +31,21 @@
         </h1>
         <ul class="files">
             
-            <li><a href="../../../files/ruby/ext/openssl/ossl_ns_spki_c.html">ruby/ext/openssl/ossl_ns_spki.c</a></li>
+            <li><a href="../../../files/ruby/ext/openssl/ossl_ocsp_c.html">ruby/ext/openssl/ossl_ocsp.c</a></li>
             
         </ul>
     </div>
     <div id="bodyContent">
         <div id="content">
+  
+    <div class="description">
+      
+<p>An <a href="Request.html">OpenSSL::OCSP::Request</a> contains the
+certificate information for determining if a certificate has been revoked
+or not.  A <a href="Request.html">Request</a> can be created for a
+certificate or from a DER-encoded request created elsewhere.</p>
+
+    </div>
   
 
 
@@ -163,25 +172,29 @@
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>new</b>(p1 = v1)
+              <b>OpenSSL::OCSP::Request.new              &rarr; request<br />OpenSSL::OCSP::Request.new(request_der) &rarr; request
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Request.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Creates a new <a href="Request.html">OpenSSL::OCSP::Request</a>.  The
+request may be created empty or from a <code>request_der</code> string.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -190,19 +203,20 @@
 ossl_ocspreq_initialize(int argc, VALUE *argv, VALUE self)
 {
     VALUE arg;
+    OCSP_REQUEST *req, *req_new;
     const unsigned char *p;
 
     rb_scan_args(argc, argv, &quot;01&quot;, &amp;arg);
     if(!NIL_P(arg)){
-        OCSP_REQUEST *req = DATA_PTR(self), *x;
+        GetOCSPReq(self, req);
         arg = ossl_to_der_if_possible(arg);
         StringValue(arg);
-        p = (unsigned char*)RSTRING_PTR(arg);
-        x = d2i_OCSP_REQUEST(&amp;req, &amp;p, RSTRING_LEN(arg));
-        DATA_PTR(self) = req;
-        if(!x){
-            ossl_raise(eOCSPError, &quot;cannot load DER encoded request&quot;);
-        }
+        p = (unsigned char *)RSTRING_PTR(arg);
+        req_new = d2i_OCSP_REQUEST(NULL, &amp;p, RSTRING_LEN(arg));
+        if (!req_new)
+            ossl_raise(eOCSPError, &quot;d2i_OCSP_REQUEST&quot;);
+        SetOCSPReq(self, req_new);
+        OCSP_REQUEST_free(req);
     }
 
     return self;
@@ -217,25 +231,28 @@ ossl_ocspreq_initialize(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-add_certid">
             
-              <b>add_certid</b>(p1)
+              <b>request.add_certid(certificate_id) &rarr; request
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Request.html#method-i-add_certid" name="method-i-add_certid" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Adds <code>certificate_id</code> to the request.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-add_certid_source')" id="l_method-i-add_certid_source">show</a>
                 
               </p>
@@ -244,12 +261,17 @@ ossl_ocspreq_initialize(int argc, VALUE *argv, VALUE self)
 ossl_ocspreq_add_certid(VALUE self, VALUE certid)
 {
     OCSP_REQUEST *req;
-    OCSP_CERTID *id;
+    OCSP_CERTID *id, *id_new;
 
     GetOCSPReq(self, req);
     GetOCSPCertId(certid, id);
-    if(!OCSP_request_add0_id(req, OCSP_CERTID_dup(id)))
-        ossl_raise(eOCSPError, NULL);
+
+    if (!(id_new = OCSP_CERTID_dup(id)))
+        ossl_raise(eOCSPError, &quot;OCSP_CERTID_dup&quot;);
+    if (!OCSP_request_add0_id(req, id_new)) {
+        OCSP_CERTID_free(id_new);
+        ossl_raise(eOCSPError, &quot;OCSP_request_add0_id&quot;);
+    }
 
     return self;
 }</pre>
@@ -261,25 +283,32 @@ ossl_ocspreq_add_certid(VALUE self, VALUE certid)
         <div class="method">
           <div class="title method-title" id="method-i-add_nonce">
             
-              <b>add_nonce</b>(p1 = v1)
+              <b>request.add_nonce(nonce = nil) &rarr; request
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Request.html#method-i-add_nonce" name="method-i-add_nonce" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Adds a <code>nonce</code> to the <a href="../OCSP.html">OCSP</a> request. 
+If no nonce is given a random one will be generated.</p>
+
+<p>The nonce is used to prevent replay attacks but some servers do not support
+it.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-add_nonce_source')" id="l_method-i-add_nonce_source">show</a>
                 
               </p>
@@ -313,25 +342,28 @@ ossl_ocspreq_add_nonce(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-certid">
             
-              <b>certid</b>()
+              <b>request.certid &rarr; [certificate_id, ...]
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Request.html#method-i-certid" name="method-i-certid" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Returns all certificate IDs in this request.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-certid_source')" id="l_method-i-certid_source">show</a>
                 
               </p>
@@ -350,9 +382,10 @@ ossl_ocspreq_get_certid(VALUE self)
     ary = (count &gt; 0) ? rb_ary_new() : Qnil;
     for(i = 0; i &lt; count; i++){
         one = OCSP_request_onereq_get0(req, i);
+        tmp = NewOCSPCertId(cOCSPCertId);
         if(!(id = OCSP_CERTID_dup(OCSP_onereq_get0_id(one))))
             ossl_raise(eOCSPError, NULL);
-        WrapOCSPCertId(cOCSPCertId, tmp, id);
+        SetOCSPCertId(tmp, id);
         rb_ary_push(ary, tmp);
     }
 
@@ -366,37 +399,50 @@ ossl_ocspreq_get_certid(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-check_nonce">
             
-              <b>check_nonce</b>(p1)
+              <b>request.check_nonce(response) &rarr; result
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Request.html#method-i-check_nonce" name="method-i-check_nonce" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Check nonce validity in a request and response. Return value reflects
-result:</p>
+              <p>Checks the nonce validity for this request and <code>response</code>.</p>
 
-<pre><code>1: nonces present and equal.
-2: nonces both absent.
-3: nonce present in response only.
-0: nonces both present and not equal.</code></pre>
+<p>The return value is one of the following:</p>
+<dl class="rdoc-list note-list"><dt>-1 
+<dd>
+<p>nonce in request only.</p>
+</dd><dt>0 
+<dd>
+<p>nonces both present and not equal.</p>
+</dd><dt>1 
+<dd>
+<p>nonces present and equal.</p>
+</dd><dt>2 
+<dd>
+<p>nonces both absent.</p>
+</dd><dt>3 
+<dd>
+<p>nonce present in response only.</p>
+</dd></dl>
 
-<p>-1: nonce in request only.</p>
-
-<pre><code>For most responders clients can check return &gt; 0.
-If responder doesn&#39;t handle nonces return != 0 may be
-necessary. return == 0 is always an error.</code></pre>
+<p>For most responses, clients can check <code>result</code> &gt; 0.  If a
+responder doesn&#39;t handle nonces <code>result.nonzero?</code> may be
+necessary.  A result of <code>0</code> is always an error.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-check_nonce_source')" id="l_method-i-check_nonce_source">show</a>
                 
               </p>
@@ -422,25 +468,41 @@ ossl_ocspreq_check_nonce(VALUE self, VALUE basic_resp)
         <div class="method">
           <div class="title method-title" id="method-i-sign">
             
-              <b>sign</b>(p1, p2, p3 = v3, p4 = v4)
+              <b>request.sign(cert, key, certs = nil, flags = 0, digest = nil) &rarr; self
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Request.html#method-i-sign" name="method-i-sign" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Signs this <a href="../OCSP.html">OCSP</a> request using <code>cert</code>,
+<code>key</code> and optional <code>digest</code>. If <code>digest</code>
+is not specified, SHA-1 is used. <code>certs</code> is an optional Array of
+additional certificates which are included in the request in addition to
+the signer certificate. Note that if <code>certs</code> is nil or not
+given, flag OpenSSL::OCSP::NOCERTS is enabled. Pass an empty array to
+include only the signer certificate.</p>
+
+<p><code>flags</code> can be a bitwise OR of the following constants:</p>
+<dl class="rdoc-list note-list"><dt>OpenSSL::OCSP::NOCERTS
+<dd>
+<p>Don&#39;t include any certificates in the request. <code>certs</code> will
+be ignored.</p>
+</dd></dl>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-sign_source')" id="l_method-i-sign_source">show</a>
                 
               </p>
@@ -448,27 +510,33 @@ ossl_ocspreq_check_nonce(VALUE self, VALUE basic_resp)
                 <pre>static VALUE
 ossl_ocspreq_sign(int argc, VALUE *argv, VALUE self)
 {
-    VALUE signer_cert, signer_key, certs, flags;
+    VALUE signer_cert, signer_key, certs, flags, digest;
     OCSP_REQUEST *req;
     X509 *signer;
     EVP_PKEY *key;
-    STACK_OF(X509) *x509s;
-    unsigned long flg;
+    STACK_OF(X509) *x509s = NULL;
+    unsigned long flg = 0;
+    const EVP_MD *md;
     int ret;
 
-    rb_scan_args(argc, argv, &quot;22&quot;, &amp;signer_cert, &amp;signer_key, &amp;certs, &amp;flags);
+    rb_scan_args(argc, argv, &quot;23&quot;, &amp;signer_cert, &amp;signer_key, &amp;certs, &amp;flags, &amp;digest);
+    GetOCSPReq(self, req);
     signer = GetX509CertPtr(signer_cert);
     key = GetPrivPKeyPtr(signer_key);
-    flg = NIL_P(flags) ? 0 : NUM2INT(flags);
-    if(NIL_P(certs)){
-        x509s = sk_X509_new_null();
-        flags |= OCSP_NOCERTS;
-    }
-    else x509s = ossl_x509_ary2sk(certs);
-    GetOCSPReq(self, req);
-    ret = OCSP_request_sign(req, signer, key, EVP_sha1(), x509s, flg);
+    if (!NIL_P(flags))
+        flg = NUM2INT(flags);
+    if (NIL_P(digest))
+        md = EVP_sha1();
+    else
+        md = GetDigestPtr(digest);
+    if (NIL_P(certs))
+        flg |= OCSP_NOCERTS;
+    else
+        x509s = ossl_x509_ary2sk(certs);
+
+    ret = OCSP_request_sign(req, signer, key, md, x509s, flg);
     sk_X509_pop_free(x509s, X509_free);
-    if(!ret) ossl_raise(eOCSPError, NULL);
+    if (!ret) ossl_raise(eOCSPError, NULL);
 
     return self;
 }</pre>
@@ -484,21 +552,23 @@ ossl_ocspreq_sign(int argc, VALUE *argv, VALUE self)
             
             <a href="../../../classes/OpenSSL/OCSP/Request.html#method-i-to_der" name="method-i-to_der" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Returns this request as a DER-encoded string</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_der_source')" id="l_method-i-to_der_source">show</a>
                 
               </p>
@@ -530,25 +600,32 @@ ossl_ocspreq_to_der(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-verify">
             
-              <b>verify</b>(p1, p2, p3 = v3)
+              <b>request.verify(certificates, store, flags = 0) &rarr; true or false
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Request.html#method-i-verify" name="method-i-verify" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Verifies this request using the given <code>certificates</code> and
+<code>store</code>. <code>certificates</code> is an array of <a
+href="../X509/Certificate.html">OpenSSL::X509::Certificate</a>,
+<code>store</code> is an <a
+href="../X509/Store.html">OpenSSL::X509::Store</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-verify_source')" id="l_method-i-verify_source">show</a>
                 
               </p>
@@ -563,15 +640,16 @@ ossl_ocspreq_verify(int argc, VALUE *argv, VALUE self)
     int flg, result;
 
     rb_scan_args(argc, argv, &quot;21&quot;, &amp;certs, &amp;store, &amp;flags);
+    GetOCSPReq(self, req);
     x509st = GetX509StorePtr(store);
     flg = NIL_P(flags) ? 0 : NUM2INT(flags);
     x509s = ossl_x509_ary2sk(certs);
-    GetOCSPReq(self, req);
     result = OCSP_request_verify(req, x509s, x509st, flg);
     sk_X509_pop_free(x509s, X509_free);
-    if(!result) rb_warn(&quot;%s&quot;, ERR_error_string(ERR_peek_error(), NULL));
+    if (result &lt;= 0)
+        ossl_clear_error();
 
-    return result ? Qtrue : Qfalse;
+    return result &gt; 0 ? Qtrue : Qfalse;
 }</pre>
               </div>
             </div>
@@ -581,4 +659,4 @@ ossl_ocspreq_verify(int argc, VALUE *argv, VALUE self)
 
     </div>
   </body>
-</html>    
+</html>

@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            OpenSSL::OCSP::Response 
+            <span class="type">Class</span>
+            OpenSSL::OCSP::Response
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../../Object.html">Object</a>
                     
@@ -31,12 +31,20 @@
         </h1>
         <ul class="files">
             
-            <li><a href="../../../files/ruby/ext/openssl/ossl_ns_spki_c.html">ruby/ext/openssl/ossl_ns_spki.c</a></li>
+            <li><a href="../../../files/ruby/ext/openssl/ossl_ocsp_c.html">ruby/ext/openssl/ossl_ocsp.c</a></li>
             
         </ul>
     </div>
     <div id="bodyContent">
         <div id="content">
+  
+    <div class="description">
+      
+<p>An <a href="Response.html">OpenSSL::OCSP::Response</a> contains the status
+of a certificate check which is created from an <a
+href="Request.html">OpenSSL::OCSP::Request</a>.</p>
+
+    </div>
   
 
 
@@ -146,25 +154,29 @@
         <div class="method">
           <div class="title method-title" id="method-c-create">
             
-              <b>create</b>(p1, p2)
+              <b>OpenSSL::OCSP::Response.create(status, basic_response = nil) &rarr; response
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Response.html#method-c-create" name="method-c-create" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p><a href="Response.html">OCSP::Response</a></p>
+              <p>Creates an <a href="Response.html">OpenSSL::OCSP::Response</a> from
+<code>status</code> and <code>basic_response</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-create_source')" id="l_method-c-create_source">show</a>
                 
               </p>
@@ -179,9 +191,10 @@ ossl_ocspres_s_create(VALUE klass, VALUE status, VALUE basic_resp)
 
     if(NIL_P(basic_resp)) bs = NULL;
     else GetOCSPBasicRes(basic_resp, bs); /* NO NEED TO DUP */
+    obj = NewOCSPRes(klass);
     if(!(res = OCSP_response_create(st, bs)))
         ossl_raise(eOCSPError, NULL);
-    WrapOCSPRes(klass, obj, res);
+    SetOCSPRes(obj, res);
 
     return obj;
 }</pre>
@@ -193,25 +206,29 @@ ossl_ocspres_s_create(VALUE klass, VALUE status, VALUE basic_resp)
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>new</b>(p1 = v1)
+              <b>OpenSSL::OCSP::Response.new               &rarr; response<br />OpenSSL::OCSP::Response.new(response_der) &rarr; response
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Response.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Creates a new <a href="Response.html">OpenSSL::OCSP::Response</a>.  The
+response may be created empty or from a <code>response_der</code> string.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -220,19 +237,20 @@ ossl_ocspres_s_create(VALUE klass, VALUE status, VALUE basic_resp)
 ossl_ocspres_initialize(int argc, VALUE *argv, VALUE self)
 {
     VALUE arg;
+    OCSP_RESPONSE *res, *res_new;
     const unsigned char *p;
 
     rb_scan_args(argc, argv, &quot;01&quot;, &amp;arg);
     if(!NIL_P(arg)){
-        OCSP_RESPONSE *res = DATA_PTR(self), *x;
+        GetOCSPRes(self, res);
         arg = ossl_to_der_if_possible(arg);
         StringValue(arg);
         p = (unsigned char *)RSTRING_PTR(arg);
-        x = d2i_OCSP_RESPONSE(&amp;res, &amp;p, RSTRING_LEN(arg));
-        DATA_PTR(self) = res;
-        if(!x){
-            ossl_raise(eOCSPError, &quot;cannot load DER encoded response&quot;);
-        }
+        res_new = d2i_OCSP_RESPONSE(NULL, &amp;p, RSTRING_LEN(arg));
+        if (!res_new)
+            ossl_raise(eOCSPError, &quot;d2i_OCSP_RESPONSE&quot;);
+        SetOCSPRes(self, res_new);
+        OCSP_RESPONSE_free(res);
     }
 
     return self;
@@ -247,25 +265,28 @@ ossl_ocspres_initialize(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-basic">
             
-              <b>basic</b>()
+              <b>response.basic
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Response.html#method-i-basic" name="method-i-basic" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Returns a <a href="BasicResponse.html">BasicResponse</a> for this response</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-basic_source')" id="l_method-i-basic_source">show</a>
                 
               </p>
@@ -278,9 +299,10 @@ ossl_ocspres_get_basic(VALUE self)
     VALUE ret;
 
     GetOCSPRes(self, res);
+    ret = NewOCSPBasicRes(cOCSPBasicRes);
     if(!(bs = OCSP_response_get1_basic(res)))
         return Qnil;
-    WrapOCSPBasicRes(cOCSPBasicRes, ret, bs);
+    SetOCSPBasicRes(ret, bs);
 
     return ret;
 }</pre>
@@ -292,25 +314,28 @@ ossl_ocspres_get_basic(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-status">
             
-              <b>status</b>()
+              <b>response.status &rarr; Integer
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Response.html#method-i-status" name="method-i-status" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Returns the status of the response.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-status_source')" id="l_method-i-status_source">show</a>
                 
               </p>
@@ -334,25 +359,28 @@ ossl_ocspres_status(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-status_string">
             
-              <b>status_string</b>()
+              <b>response.status_string &rarr; String
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Response.html#method-i-status_string" name="method-i-status_string" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Returns a status string for the response.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-status_string_source')" id="l_method-i-status_string_source">show</a>
                 
               </p>
@@ -376,25 +404,28 @@ ossl_ocspres_status_string(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-to_der">
             
-              <b>to_der</b>()
+              <b>response.to_der &rarr; String
+</b>
             
             <a href="../../../classes/OpenSSL/OCSP/Response.html#method-i-to_der" name="method-i-to_der" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Returns this response as a DER-encoded string.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_der_source')" id="l_method-i-to_der_source">show</a>
                 
               </p>
@@ -426,4 +457,4 @@ ossl_ocspres_to_der(VALUE self)
 
     </div>
   </body>
-</html>    
+</html>

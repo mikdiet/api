@@ -15,7 +15,7 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
@@ -26,8 +26,10 @@
             <li>
                 rails/actionpack/Rakefile
                 
+                    <a href="https://github.com/rails/rails/blob/bb1ecdcc677bf6e68e0252505509c089619b5b90/actionpack/Rakefile" target="_blank" class="github_url">on GitHub</a>
+                
             </li>
-            <li>Last modified: 2013-06-09 13:25:50 +0300</li>
+            <li>Last modified: 2017-06-18 10:15:05 +0300</li>
         </ul>
     </div>
 
@@ -36,103 +38,54 @@
   
     <div class="description">
       
-<p>require &#39;rake/testtask&#39; require &#39;rake/packagetask&#39; require
-&#39;rubygems/package_task&#39;</p>
+<p>require “rake/testtask”</p>
 
-<p>desc “Default Task” task :default =&gt; :test</p>
+<p>test_files = Dir.glob(“test   /*_test.rb”)</p>
 
-<p># Run the unit tests</p>
+<p>desc “Default Task” task default: :test</p>
 
-<p>desc “Run all unit tests” task :test =&gt; [:test_action_pack,
-:test_active_record_integration]</p>
+<p>task :package</p>
 
-<p>Rake::TestTask.new(:test_action_pack) do |t|</p>
+<p># Run the unit tests Rake::TestTask.new do |t|</p>
 
-<pre><code>t.libs &lt;&lt; &#39;test&#39;
-
-# make sure we include the tests in alphabetical order as on some systems
-# this will not happen automatically and the tests (as a whole) will error
-t.test_files = Dir.glob(&#39;test/{abstract,controller,dispatch,template,assertions,journey}     _test.rb&#39;).sort
+<pre><code>t.libs &lt;&lt; &quot;test&quot;
+t.test_files = test_files
 
 t.warning = true
-t.verbose = true</code></pre>
+t.verbose = true
+t.ruby_opts = [&quot;--dev&quot;] if defined?(JRUBY_VERSION)
+</code></pre>
 
 <p>end</p>
 
 <p>namespace :test do</p>
 
-<pre><code>Rake::TestTask.new(:isolated) do |t|
-  t.libs &lt;&lt; &#39;test&#39;
-  t.pattern = &#39;test/ts_isolated.rb&#39;
+<pre><code>task :isolated do
+  test_files.all? do |file|
+    sh(Gem.ruby, &quot;-w&quot;, &quot;-Ilib:test&quot;, file)
+  end || raise(&quot;Failures&quot;)
 end
-
-Rake::TestTask.new(:template) do |t|
-  t.libs &lt;&lt; &#39;test&#39;
-  t.pattern = &#39;test/template/   *.rb&#39;
-end
-</code></pre>
-
-<p>end</p>
-
-<p>desc &#39;ActiveRecord Integration Tests&#39;
-Rake::TestTask.new(:test_active_record_integration) do |t|</p>
-
-<pre><code>t.libs &lt;&lt; &#39;test&#39;
-t.test_files = Dir.glob(&quot;test/activerecord/*_test.rb&quot;)</code></pre>
-
-<p>end</p>
-
-<p>spec = eval(File.read(&#39;actionpack.gemspec&#39;))</p>
-
-<p>Gem::PackageTask.new(spec) do |p|</p>
-
-<pre><code>p.gem_spec = spec</code></pre>
-
-<p>end</p>
-
-<p>desc “Release to gemcutter” task :release =&gt; :package do</p>
-
-<pre><code>require &#39;rake/gemcutter&#39;
-Rake::Gemcutter::Tasks.new(spec).define
-Rake::Task[&#39;gem:push&#39;].invoke
 </code></pre>
 
 <p>end</p>
 
 <p>task :lines do</p>
 
-<pre><code>lines, codelines, total_lines, total_codelines = 0, 0, 0, 0
-
-FileList[&quot;lib/   *.rb&quot;].each do |file_name|
-  next if file_name =~ /vendor/
-  File.open(file_name, &#39;r&#39;) do |f|
-    while line = f.gets
-      lines += 1
-      next if line =~ /^\s*$/
-      next if line =~ /^\s*#/
-      codelines += 1
-    end
-  end
-  puts &quot;L: #{sprintf(&quot;%4d&quot;, lines)}, LOC #{sprintf(&quot;%4d&quot;, codelines)} | #{file_name}&quot;
-
-  total_lines     += lines
-  total_codelines += codelines
-
-  lines, codelines = 0, 0
-end
-
-puts &quot;Total: Lines #{total_lines}, LOC #{total_codelines}&quot;
+<pre><code>load File.expand_path(&quot;..&quot;, File.dirname(__FILE__)) + &quot;/tools/line_statistics&quot;
+files = FileList[&quot;lib/   *.rb&quot;]
+CodeTools::LineStatistics.new(files).print_loc
 </code></pre>
 
 <p>end</p>
 
-<p>rule &#39;.rb&#39; =&gt; &#39;.y&#39; do |t|</p>
+<p>rule “.rb” =&gt; “.y” do |t|</p>
 
-<pre><code>sh &quot;racc -l -o #{t.name} #{t.source}&quot;</code></pre>
+<pre><code>sh &quot;racc -l -o #{t.name} #{t.source}&quot;
+</code></pre>
 
 <p>end</p>
 
-<p>task compile: &#39;lib/action_dispatch/journey/parser.rb&#39;</p>
+<p>task compile: “lib/action_dispatch/journey/parser.rb”</p>
 
     </div>
   

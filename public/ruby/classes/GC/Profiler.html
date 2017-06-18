@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            GC::Profiler 
+            <span class="type">Module</span>
+            GC::Profiler
             
         </h1>
         <ul class="files">
@@ -179,21 +179,23 @@ href="../GC.html#method-c-malloc_allocations">GC.malloc_allocations</a></p>
             
             <a href="../../classes/GC/Profiler.html#method-c-clear" name="method-c-clear" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Clears the <a href="../GC.html">GC</a> profiler data.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-clear_source')" id="l_method-c-clear_source">show</a>
                 
               </p>
@@ -202,16 +204,16 @@ href="../GC.html#method-c-malloc_allocations">GC.malloc_allocations</a></p>
 gc_profile_clear(void)
 {
     rb_objspace_t *objspace = &amp;rb_objspace;
-
     if (GC_PROFILE_RECORD_DEFAULT_SIZE * 2 &lt; objspace-&gt;profile.size) {
         objspace-&gt;profile.size = GC_PROFILE_RECORD_DEFAULT_SIZE * 2;
-        objspace-&gt;profile.record = realloc(objspace-&gt;profile.record, sizeof(gc_profile_record) * objspace-&gt;profile.size);
-        if (!objspace-&gt;profile.record) {
+        objspace-&gt;profile.records = realloc(objspace-&gt;profile.records, sizeof(gc_profile_record) * objspace-&gt;profile.size);
+        if (!objspace-&gt;profile.records) {
             rb_memerror();
         }
     }
-    MEMZERO(objspace-&gt;profile.record, gc_profile_record, objspace-&gt;profile.size);
-    objspace-&gt;profile.count = 0;
+    MEMZERO(objspace-&gt;profile.records, gc_profile_record, objspace-&gt;profile.size);
+    objspace-&gt;profile.next_index = 0;
+    objspace-&gt;profile.current_record = 0;
     return Qnil;
 }</pre>
               </div>
@@ -227,21 +229,23 @@ gc_profile_clear(void)
             
             <a href="../../classes/GC/Profiler.html#method-c-disable" name="method-c-disable" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Stops the <a href="../GC.html">GC</a> profiler.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-disable_source')" id="l_method-c-disable_source">show</a>
                 
               </p>
@@ -252,6 +256,7 @@ gc_profile_disable(void)
     rb_objspace_t *objspace = &amp;rb_objspace;
 
     objspace-&gt;profile.run = FALSE;
+    objspace-&gt;profile.current_record = 0;
     return Qnil;
 }</pre>
               </div>
@@ -267,21 +272,23 @@ gc_profile_disable(void)
             
             <a href="../../classes/GC/Profiler.html#method-c-enable" name="method-c-enable" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Starts the <a href="../GC.html">GC</a> profiler.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-enable_source')" id="l_method-c-enable_source">show</a>
                 
               </p>
@@ -290,8 +297,8 @@ gc_profile_disable(void)
 gc_profile_enable(void)
 {
     rb_objspace_t *objspace = &amp;rb_objspace;
-
     objspace-&gt;profile.run = TRUE;
+    objspace-&gt;profile.current_record = 0;
     return Qnil;
 }</pre>
               </div>
@@ -307,21 +314,23 @@ gc_profile_enable(void)
             
             <a href="../../classes/GC/Profiler.html#method-c-enabled-3F" name="method-c-enabled-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>The current status of <a href="../GC.html">GC</a> profile mode.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-enabled-3F_source')" id="l_method-c-enabled-3F_source">show</a>
                 
               </p>
@@ -345,7 +354,7 @@ gc_profile_enable_get(VALUE self)
             
             <a href="../../classes/GC/Profiler.html#method-c-raw_data" name="method-c-raw_data" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns an Array of individual raw profile data Hashes ordered from
@@ -396,22 +405,24 @@ have access to the following hash keys:</p>
 <dt><code>:GC_SWEEP_TIME</code>
 <dt><code>:ALLOCATE_INCREASE</code>
 <dt><code>:ALLOCATE_LIMIT</code>
-<dt><code>:HEAP_USE_SLOTS</code>
+<dt><code>:HEAP_USE_PAGES</code>
 <dt><code>:HEAP_LIVE_OBJECTS</code>
 <dt><code>:HEAP_FREE_OBJECTS</code>
 <dt><code>:HAVE_FINALIZE</code>
 <dd></dd></dl>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-raw_data_source')" id="l_method-c-raw_data_source">show</a>
                 
               </p>
@@ -428,23 +439,36 @@ gc_profile_record_get(void)
         return Qnil;
     }
 
-    for (i =0; i &lt; objspace-&gt;profile.count; i++) {
+    for (i =0; i &lt; objspace-&gt;profile.next_index; i++) {
+        gc_profile_record *record = &amp;objspace-&gt;profile.records[i];
+
         prof = rb_hash_new();
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_TIME&quot;)), DBL2NUM(objspace-&gt;profile.record[i].gc_time));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_INVOKE_TIME&quot;)), DBL2NUM(objspace-&gt;profile.record[i].gc_invoke_time));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_USE_SIZE&quot;)), SIZET2NUM(objspace-&gt;profile.record[i].heap_use_size));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_TOTAL_SIZE&quot;)), SIZET2NUM(objspace-&gt;profile.record[i].heap_total_size));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_TOTAL_OBJECTS&quot;)), SIZET2NUM(objspace-&gt;profile.record[i].heap_total_objects));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_IS_MARKED&quot;)), objspace-&gt;profile.record[i].is_marked);
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_FLAGS&quot;)), gc_info_decode(0, rb_hash_new(), record-&gt;flags));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_TIME&quot;)), DBL2NUM(record-&gt;gc_time));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_INVOKE_TIME&quot;)), DBL2NUM(record-&gt;gc_invoke_time));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_USE_SIZE&quot;)), SIZET2NUM(record-&gt;heap_use_size));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_TOTAL_SIZE&quot;)), SIZET2NUM(record-&gt;heap_total_size));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_TOTAL_OBJECTS&quot;)), SIZET2NUM(record-&gt;heap_total_objects));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_IS_MARKED&quot;)), Qtrue);
 #if GC_PROFILE_MORE_DETAIL
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_MARK_TIME&quot;)), DBL2NUM(objspace-&gt;profile.record[i].gc_mark_time));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_SWEEP_TIME&quot;)), DBL2NUM(objspace-&gt;profile.record[i].gc_sweep_time));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;ALLOCATE_INCREASE&quot;)), SIZET2NUM(objspace-&gt;profile.record[i].allocate_increase));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;ALLOCATE_LIMIT&quot;)), SIZET2NUM(objspace-&gt;profile.record[i].allocate_limit));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_USE_SLOTS&quot;)), SIZET2NUM(objspace-&gt;profile.record[i].heap_use_slots));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_LIVE_OBJECTS&quot;)), SIZET2NUM(objspace-&gt;profile.record[i].heap_live_objects));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_FREE_OBJECTS&quot;)), SIZET2NUM(objspace-&gt;profile.record[i].heap_free_objects));
-        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HAVE_FINALIZE&quot;)), objspace-&gt;profile.record[i].have_finalize);
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_MARK_TIME&quot;)), DBL2NUM(record-&gt;gc_mark_time));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;GC_SWEEP_TIME&quot;)), DBL2NUM(record-&gt;gc_sweep_time));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;ALLOCATE_INCREASE&quot;)), SIZET2NUM(record-&gt;allocate_increase));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;ALLOCATE_LIMIT&quot;)), SIZET2NUM(record-&gt;allocate_limit));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_USE_PAGES&quot;)), SIZET2NUM(record-&gt;heap_use_pages));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_LIVE_OBJECTS&quot;)), SIZET2NUM(record-&gt;heap_live_objects));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HEAP_FREE_OBJECTS&quot;)), SIZET2NUM(record-&gt;heap_free_objects));
+
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;REMOVING_OBJECTS&quot;)), SIZET2NUM(record-&gt;removing_objects));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;EMPTY_OBJECTS&quot;)), SIZET2NUM(record-&gt;empty_objects));
+
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;HAVE_FINALIZE&quot;)), (record-&gt;flags &amp; GPR_FLAG_HAVE_FINALIZE) ? Qtrue : Qfalse);
+#endif
+
+#if RGENGC_PROFILE &gt; 0
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;OLD_OBJECTS&quot;)), SIZET2NUM(record-&gt;old_objects));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;REMEMBERED_NORMAL_OBJECTS&quot;)), SIZET2NUM(record-&gt;remembered_normal_objects));
+        rb_hash_aset(prof, ID2SYM(rb_intern(&quot;REMEMBERED_SHADY_OBJECTS&quot;)), SIZET2NUM(record-&gt;remembered_shady_objects));
 #endif
         rb_ary_push(gc_profile, prof);
     }
@@ -459,28 +483,29 @@ gc_profile_record_get(void)
         <div class="method">
           <div class="title method-title" id="method-c-report">
             
-              <b>GC::Profiler.report
-GC::Profiler.report(io)
+              <b>GC::Profiler.report<br />GC::Profiler.report(io)
 </b>
             
             <a href="../../classes/GC/Profiler.html#method-c-report" name="method-c-report" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Writes the <a href="Profiler.html#method-c-result">::result</a> to
 <code>$stdout</code> or the given <a href="../IO.html">IO</a> object.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-report_source')" id="l_method-c-report_source">show</a>
                 
               </p>
@@ -513,7 +538,7 @@ gc_profile_report(int argc, VALUE *argv, VALUE self)
             
             <a href="../../classes/GC/Profiler.html#method-c-result" name="method-c-result" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a profile data report such as:</p>
@@ -523,15 +548,17 @@ Index    Invoke Time(sec)       Use Size(byte)     Total Size(byte)         Tota
     1               0.012               159240               212940                10647         0.00000000000001530000</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-result_source')" id="l_method-c-result_source">show</a>
                 
               </p>
@@ -539,9 +566,9 @@ Index    Invoke Time(sec)       Use Size(byte)     Total Size(byte)         Tota
                 <pre>static VALUE
 gc_profile_result(void)
 {
-        VALUE str = rb_str_buf_new(0);
-        gc_profile_dump_on(str, rb_str_buf_append);
-        return str;
+    VALUE str = rb_str_buf_new(0);
+    gc_profile_dump_on(str, rb_str_buf_append);
+    return str;
 }</pre>
               </div>
             </div>
@@ -556,21 +583,23 @@ gc_profile_result(void)
             
             <a href="../../classes/GC/Profiler.html#method-c-total_time" name="method-c-total_time" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>The total time used for garbage collection in seconds</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-total_time_source')" id="l_method-c-total_time_source">show</a>
                 
               </p>
@@ -580,11 +609,13 @@ gc_profile_total_time(VALUE self)
 {
     double time = 0;
     rb_objspace_t *objspace = &amp;rb_objspace;
-    size_t i;
 
-    if (objspace-&gt;profile.run &amp;&amp; objspace-&gt;profile.count) {
-        for (i = 0; i &lt; objspace-&gt;profile.count; i++) {
-            time += objspace-&gt;profile.record[i].gc_time;
+    if (objspace-&gt;profile.run &amp;&amp; objspace-&gt;profile.next_index &gt; 0) {
+        size_t i;
+        size_t count = objspace-&gt;profile.next_index;
+
+        for (i = 0; i &lt; count; i++) {
+            time += objspace-&gt;profile.records[i].gc_time;
         }
     }
     return DBL2NUM(time);
@@ -597,4 +628,4 @@ gc_profile_total_time(VALUE self)
 
     </div>
   </body>
-</html>    
+</html>

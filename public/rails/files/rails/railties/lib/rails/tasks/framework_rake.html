@@ -15,7 +15,7 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
@@ -26,8 +26,10 @@
             <li>
                 rails/railties/lib/rails/tasks/framework.rake
                 
+                    <a href="https://github.com/rails/rails/blob/50a184b6ccb473417e6e6016895f07d5cc6e1b84/railties/lib/rails/tasks/framework.rake" target="_blank" class="github_url">on GitHub</a>
+                
             </li>
-            <li>Last modified: 2013-08-18 00:29:44 +0300</li>
+            <li>Last modified: 2017-06-18 10:15:06 +0300</li>
         </ul>
     </div>
 
@@ -36,18 +38,18 @@
   
     <div class="description">
       
-<p>namespace :rails do</p>
+<p>namespace :app do</p>
 
-<pre><code>desc &quot;Update configs and some other initially generated files (or use just update:configs, update:bin, or update:application_controller)&quot;
-task update: [ &quot;update:configs&quot;, &quot;update:bin&quot;, &quot;update:application_controller&quot; ]
+<pre><code>desc &quot;Update configs and some other initially generated files (or use just update:configs or update:bin)&quot;
+task update: [ &quot;update:configs&quot;, &quot;update:bin&quot;, &quot;update:upgrade_guide_info&quot; ]
 
 desc &quot;Applies the template supplied by LOCATION=(/path/to/template) or URL&quot;
-task :template do
+task template: :environment do
   template = ENV[&quot;LOCATION&quot;]
   raise &quot;No LOCATION value given. Please set LOCATION either as path to a file or a URL&quot; if template.blank?
   template = File.expand_path(template) if template !~ %r{\A[A-Za-z][A-Za-z0-9+\-\.]*://}
-  require &#39;rails/generators&#39;
-  require &#39;rails/generators/rails/app/app_generator&#39;
+  require &quot;rails/generators&quot;
+  require &quot;rails/generators/rails/app/app_generator&quot;
   generator = Rails::Generators::AppGenerator.new [Rails.root], {}, destination_root: Rails.root
   generator.apply template, verbose: false
 end
@@ -63,53 +65,50 @@ namespace :templates do
 
     default_templates.each do |type, names|
       local_template_type_dir = File.join(project_templates, type)
-      FileUtils.mkdir_p local_template_type_dir
+      mkdir_p local_template_type_dir, verbose: false
 
       names.each do |name|
         dst_name = File.join(local_template_type_dir, name)
         src_name = File.join(generators_lib, type, name, &quot;templates&quot;)
-        FileUtils.cp_r src_name, dst_name
+        cp_r src_name, dst_name, verbose: false
       end
     end
-   end
+  end
 end
 
 namespace :update do
-  def invoke_from_app_generator(method)
-    app_generator.send(method)
-  end
+  class RailsUpdate
+    def self.invoke_from_app_generator(method)
+      app_generator.send(method)
+    end
 
-  def app_generator
-    @app_generator ||= begin
-      require &#39;rails/generators&#39;
-      require &#39;rails/generators/rails/app/app_generator&#39;
-      gen = Rails::Generators::AppGenerator.new [&quot;rails&quot;], { with_dispatchers: true },
-                                                           destination_root: Rails.root
-      File.exists?(Rails.root.join(&quot;config&quot;, &quot;application.rb&quot;)) ?
-        gen.send(:app_const) : gen.send(:valid_const?)
-      gen
+    def self.app_generator
+      @app_generator ||= begin
+        require &quot;rails/generators&quot;
+        require &quot;rails/generators/rails/app/app_generator&quot;
+        gen = Rails::Generators::AppGenerator.new [&quot;rails&quot;],
+                                                  { api: !!Rails.application.config.api_only, update: true },
+                                                  destination_root: Rails.root
+        File.exist?(Rails.root.join(&quot;config&quot;, &quot;application.rb&quot;)) ?
+          gen.send(:app_const) : gen.send(:valid_const?)
+        gen
+      end
     end
   end
 
   # desc &quot;Update config/boot.rb from your current rails install&quot;
   task :configs do
-    invoke_from_app_generator :create_boot_file
-    invoke_from_app_generator :create_config_files
+    RailsUpdate.invoke_from_app_generator :create_boot_file
+    RailsUpdate.invoke_from_app_generator :update_config_files
   end
 
   # desc &quot;Adds new executables to the application bin/ directory&quot;
   task :bin do
-    invoke_from_app_generator :create_bin_files
+    RailsUpdate.invoke_from_app_generator :update_bin_files
   end
 
-  # desc &quot;Rename application.rb to application_controller.rb&quot;
-  task :application_controller do
-    old_style = Rails.root + &#39;/app/controllers/application.rb&#39;
-    new_style = Rails.root + &#39;/app/controllers/application_controller.rb&#39;
-    if File.exists?(old_style) &amp;&amp; !File.exists?(new_style)
-      FileUtils.mv(old_style, new_style)
-      puts &quot;#{old_style} has been renamed to #{new_style}, update your SCM as necessary&quot;
-    end
+  task :upgrade_guide_info do
+    RailsUpdate.invoke_from_app_generator :display_upgrade_guide_info
   end
 end
 </code></pre>

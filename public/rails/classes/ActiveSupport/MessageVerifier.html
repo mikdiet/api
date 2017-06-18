@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            ActiveSupport::MessageVerifier 
+            <span class="type">Class</span>
+            ActiveSupport::MessageVerifier
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../Object.html">Object</a>
                     
@@ -48,20 +48,31 @@ where the session store isn&#39;t suitable or available.</p>
 
 <p>Remember Me:</p>
 
-<pre><code>cookies[:remember_me] = @verifier.generate([@user.id, 2.weeks.from_now])</code></pre>
+<pre><code>cookies[:remember_me] = @verifier.generate([@user.id, 2.weeks.from_now])
+</code></pre>
 
 <p>In the authentication filter:</p>
 
 <pre><code>id, time = @verifier.verify(cookies[:remember_me])
-if time &lt; Time.now
+if Time.now &lt; time
   self.current_user = User.find(id)
-end</code></pre>
+end
+</code></pre>
 
-<p>By default it uses <a href="../Marshal.html">Marshal</a> to serialize the
-message. If you want to use another serialization method, you can set the
-serializer in the options hash upon initialization:</p>
+<p>By default it uses Marshal to serialize the message. If you want to use
+another serialization method, you can set the serializer in the options
+hash upon initialization:</p>
 
-<pre><code>@verifier = ActiveSupport::MessageVerifier.new(&#39;s3Krit&#39;, serializer: YAML)</code></pre>
+<pre><code>@verifier = ActiveSupport::MessageVerifier.new(&#39;s3Krit&#39;, serializer: YAML)
+</code></pre>
+
+<p><code>MessageVerifier</code> creates HMAC signatures using SHA1 hash
+algorithm by default. If you want to use a different hash algorithm, you
+can change it by providing `:digest` key as an option while initializing
+the verifier:</p>
+
+<pre><code>@verifier = ActiveSupport::MessageVerifier.new(&#39;s3Krit&#39;, digest: &#39;SHA256&#39;)
+</code></pre>
 
     </div>
   
@@ -123,6 +134,16 @@ serializer in the options hash upon initialization:</p>
             
               
               <li>
+                <a href="#method-i-valid_message-3F">valid_message?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-verified">verified</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-verify">verify</a>
               </li>
             
@@ -159,29 +180,34 @@ serializer in the options hash upon initialization:</p>
             
             <a href="../../classes/ActiveSupport/MessageVerifier.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/d66e7835bea9505f7003e5038aa19b6ea95ceea1/activesupport/lib/active_support/message_verifier.rb#L36" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/message_verifier.rb, line 29</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/message_verifier.rb, line 36</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">initialize</span>(<span class="ruby-identifier">secret</span>, <span class="ruby-identifier">options</span> = {})
+  <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-string">&quot;Secret should not be nil.&quot;</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">secret</span>
   <span class="ruby-ivar">@secret</span> = <span class="ruby-identifier">secret</span>
-  <span class="ruby-ivar">@digest</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:digest</span>] <span class="ruby-operator">||</span> <span class="ruby-string">&#39;SHA1&#39;</span>
+  <span class="ruby-ivar">@digest</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:digest</span>] <span class="ruby-operator">||</span> <span class="ruby-string">&quot;SHA1&quot;</span>
   <span class="ruby-ivar">@serializer</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:serializer</span>] <span class="ruby-operator">||</span> <span class="ruby-constant">Marshal</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -198,29 +224,165 @@ serializer in the options hash upon initialization:</p>
             
             <a href="../../classes/ActiveSupport/MessageVerifier.html#method-i-generate" name="method-i-generate" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Generates a signed message for the provided value.</p>
+
+<p>The message is signed with the <code>MessageVerifier</code>&#39;s secret.
+Without knowing the secret, the original value cannot be extracted from the
+message.</p>
+
+<pre><code>verifier = ActiveSupport::MessageVerifier.new &#39;s3Krit&#39;
+verifier.generate &#39;a private message&#39; # =&gt; &quot;BAhJIhRwcml2YXRlLW1lc3NhZ2UGOgZFVA==--e2d724331ebdee96a10fb99b089508d1c72bd772&quot;
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-generate_source')" id="l_method-i-generate_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/d66e7835bea9505f7003e5038aa19b6ea95ceea1/activesupport/lib/active_support/message_verifier.rb#L115" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-generate_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/message_verifier.rb, line 46</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/message_verifier.rb, line 115</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">generate</span>(<span class="ruby-identifier">value</span>)
-  <span class="ruby-identifier">data</span> = <span class="ruby-operator">::</span><span class="ruby-constant">Base64</span>.<span class="ruby-identifier">strict_encode64</span>(<span class="ruby-ivar">@serializer</span>.<span class="ruby-identifier">dump</span>(<span class="ruby-identifier">value</span>))
+  <span class="ruby-identifier">data</span> = <span class="ruby-identifier">encode</span>(<span class="ruby-ivar">@serializer</span>.<span class="ruby-identifier">dump</span>(<span class="ruby-identifier">value</span>))
   <span class="ruby-node">&quot;#{data}--#{generate_digest(data)}&quot;</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-valid_message-3F">
+            
+              <b>valid_message?</b>(signed_message)
+            
+            <a href="../../classes/ActiveSupport/MessageVerifier.html#method-i-valid_message-3F" name="method-i-valid_message-3F" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Checks if a signed message could have been generated by signing an object
+with the <code>MessageVerifier</code>&#39;s secret.</p>
+
+<pre><code>verifier = ActiveSupport::MessageVerifier.new &#39;s3Krit&#39;
+signed_message = verifier.generate &#39;a private message&#39;
+verifier.valid_message?(signed_message) # =&gt; true
+
+tampered_message = signed_message.chop # editing the message invalidates the signature
+verifier.valid_message?(tampered_message) # =&gt; false
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-valid_message-3F_source')" id="l_method-i-valid_message-3F_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/d66e7835bea9505f7003e5038aa19b6ea95ceea1/activesupport/lib/active_support/message_verifier.rb#L52" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-valid_message-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/message_verifier.rb, line 52</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">valid_message?</span>(<span class="ruby-identifier">signed_message</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">signed_message</span>.<span class="ruby-identifier">nil?</span> <span class="ruby-operator">||</span> <span class="ruby-operator">!</span><span class="ruby-identifier">signed_message</span>.<span class="ruby-identifier">valid_encoding?</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">signed_message</span>.<span class="ruby-identifier">blank?</span>
+
+  <span class="ruby-identifier">data</span>, <span class="ruby-identifier">digest</span> = <span class="ruby-identifier">signed_message</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&quot;--&quot;</span>.<span class="ruby-identifier">freeze</span>)
+  <span class="ruby-identifier">data</span>.<span class="ruby-identifier">present?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">digest</span>.<span class="ruby-identifier">present?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">SecurityUtils</span>.<span class="ruby-identifier">secure_compare</span>(<span class="ruby-identifier">digest</span>, <span class="ruby-identifier">generate_digest</span>(<span class="ruby-identifier">data</span>))
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-verified">
+            
+              <b>verified</b>(signed_message)
+            
+            <a href="../../classes/ActiveSupport/MessageVerifier.html#method-i-verified" name="method-i-verified" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Decodes the signed message using the <code>MessageVerifier</code>&#39;s
+secret.</p>
+
+<pre><code>verifier = ActiveSupport::MessageVerifier.new &#39;s3Krit&#39;
+
+signed_message = verifier.generate &#39;a private message&#39;
+verifier.verified(signed_message) # =&gt; &#39;a private message&#39;
+</code></pre>
+
+<p>Returns <code>nil</code> if the message was not signed with the same
+secret.</p>
+
+<pre><code>other_verifier = ActiveSupport::MessageVerifier.new &#39;d1ff3r3nt-s3Krit&#39;
+other_verifier.verified(signed_message) # =&gt; nil
+</code></pre>
+
+<p>Returns <code>nil</code> if the message is not Base64-encoded.</p>
+
+<pre><code>invalid_message = &quot;f--46a0120593880c733a53b6dad75b42ddc1c8996d&quot;
+verifier.verified(invalid_message) # =&gt; nil
+</code></pre>
+
+<p>Raises any error raised while decoding the signed message.</p>
+
+<pre><code>incompatible_message = &quot;test--dad7b06c94abba8d46a15fafaef56c327665d5ff&quot;
+verifier.verified(incompatible_message) # =&gt; TypeError: incompatible marshal file format
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-verified_source')" id="l_method-i-verified_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/d66e7835bea9505f7003e5038aa19b6ea95ceea1/activesupport/lib/active_support/message_verifier.rb#L80" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-verified_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/message_verifier.rb, line 80</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">verified</span>(<span class="ruby-identifier">signed_message</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">valid_message?</span>(<span class="ruby-identifier">signed_message</span>)
+    <span class="ruby-keyword">begin</span>
+      <span class="ruby-identifier">data</span> = <span class="ruby-identifier">signed_message</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&quot;--&quot;</span>.<span class="ruby-identifier">freeze</span>)[<span class="ruby-number">0</span>]
+      <span class="ruby-ivar">@serializer</span>.<span class="ruby-identifier">load</span>(<span class="ruby-identifier">decode</span>(<span class="ruby-identifier">data</span>))
+    <span class="ruby-keyword">rescue</span> <span class="ruby-constant">ArgumentError</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">argument_error</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">argument_error</span>.<span class="ruby-identifier">message</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-string">&quot;invalid base64&quot;</span>)
+      <span class="ruby-identifier">raise</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -234,35 +396,46 @@ serializer in the options hash upon initialization:</p>
             
             <a href="../../classes/ActiveSupport/MessageVerifier.html#method-i-verify" name="method-i-verify" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Decodes the signed message using the <code>MessageVerifier</code>&#39;s
+secret.</p>
+
+<pre><code>verifier = ActiveSupport::MessageVerifier.new &#39;s3Krit&#39;
+signed_message = verifier.generate &#39;a private message&#39;
+
+verifier.verify(signed_message) # =&gt; &#39;a private message&#39;
+</code></pre>
+
+<p>Raises <code>InvalidSignature</code> if the message was not signed with the
+same secret or was not Base64-encoded.</p>
+
+<pre><code>other_verifier = ActiveSupport::MessageVerifier.new &#39;d1ff3r3nt-s3Krit&#39;
+other_verifier.verify(signed_message) # =&gt; ActiveSupport::MessageVerifier::InvalidSignature
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-verify_source')" id="l_method-i-verify_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/d66e7835bea9505f7003e5038aa19b6ea95ceea1/activesupport/lib/active_support/message_verifier.rb#L104" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-verify_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/message_verifier.rb, line 35</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/message_verifier.rb, line 104</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">verify</span>(<span class="ruby-identifier">signed_message</span>)
-  <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidSignature</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">signed_message</span>.<span class="ruby-identifier">blank?</span>
-
-  <span class="ruby-identifier">data</span>, <span class="ruby-identifier">digest</span> = <span class="ruby-identifier">signed_message</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&quot;--&quot;</span>)
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">data</span>.<span class="ruby-identifier">present?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">digest</span>.<span class="ruby-identifier">present?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">secure_compare</span>(<span class="ruby-identifier">digest</span>, <span class="ruby-identifier">generate_digest</span>(<span class="ruby-identifier">data</span>))
-    <span class="ruby-ivar">@serializer</span>.<span class="ruby-identifier">load</span>(<span class="ruby-operator">::</span><span class="ruby-constant">Base64</span>.<span class="ruby-identifier">decode64</span>(<span class="ruby-identifier">data</span>))
-  <span class="ruby-keyword">else</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidSignature</span>
-  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">verified</span>(<span class="ruby-identifier">signed_message</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">raise</span>(<span class="ruby-constant">InvalidSignature</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -272,4 +445,4 @@ serializer in the options hash upon initialization:</p>
 
     </div>
   </body>
-</html>    
+</html>

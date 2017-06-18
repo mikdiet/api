@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>phantomjs.js</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>
+    <div class="banner">
+        
+        <h1>
+            phantomjs.js
+        </h1>
+        <ul class="files">
+            
+            <li>
+                rails/ci/phantomjs.js
+                
+                    <a href="https://github.com/rails/rails/blob/fe4a5706acb4a734acccc86a01416ed695ffbd06/ci/phantomjs.js" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2017-06-18 10:05:12 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<pre><code> PhantomJS Runner QUnit Plugin 1.2.0
+
+ PhantomJS binaries: http://phantomjs.org/download.html
+ Requires PhantomJS 1.6+ (1.7+ recommended)
+
+ Run with:
+   phantomjs runner.js [url-of-your-qunit-testsuite]
+
+ e.g.
+   phantomjs runner.js http://localhost/qunit/test/index.html
+
+global phantom:false, require:false, console:false, window:false, QUnit:false</code></pre>
+
+<p>(function() {</p>
+
+<pre><code>&#39;use strict&#39;;
+
+var url, page, timeout,
+        args = require(&#39;system&#39;).args;
+
+// arg[0]: scriptName, args[1...]: arguments
+if (args.length &lt; 2 || args.length &gt; 3) {
+        console.error(&#39;Usage:\n  phantomjs runner.js [url-of-your-qunit-testsuite] [timeout-in-seconds]&#39;);
+        phantom.exit(1);
+}
+
+url = args[1];
+page = require(&#39;webpage&#39;).create();
+if (args[2] !== undefined) {
+        timeout = parseInt(args[2], 10);
+}
+
+// Route `console.log()` calls from within the Page context to the main Phantom context (i.e. current `this`)
+page.onConsoleMessage = function(msg) {
+        console.log(msg);
+};
+
+page.onInitialized = function() {
+        page.evaluate(addLogging);
+};
+
+page.onCallback = function(message) {
+        var result,
+                failed;
+
+        if (message) {
+                if (message.name === &#39;QUnit.done&#39;) {
+                        result = message.data;
+                        failed = !result || !result.total || result.failed;
+
+                        if (!result.total) {
+                                console.error(&#39;No tests were executed. Are you loading tests asynchronously?&#39;);
+                        }
+
+                        phantom.exit(failed ? 1 : 0);
+                }
+        }
+};
+
+page.open(url, function(status) {
+        if (status !== &#39;success&#39;) {
+                console.error(&#39;Unable to access network: &#39; + status);
+                phantom.exit(1);
+        } else {
+                // Cannot do this verification with the &#39;DOMContentLoaded&#39; handler because it
+                // will be too late to attach it if a page does not have any script tags.
+                var qunitMissing = page.evaluate(function() { return (typeof QUnit === &#39;undefined&#39; || !QUnit); });
+                if (qunitMissing) {
+                        console.error(&#39;The `QUnit` object is not present on this page.&#39;);
+                        phantom.exit(1);
+                }
+
+                // Set a timeout on the test running, otherwise tests with async problems will hang forever
+                if (typeof timeout === &#39;number&#39;) {
+                        setTimeout(function() {
+                                console.error(&#39;The specified timeout of &#39; + timeout + &#39; seconds has expired. Aborting...&#39;);
+                                phantom.exit(1);
+                        }, timeout * 1000);
+                }
+
+                // Do nothing... the callback mechanism will handle everything!
+        }
+});
+
+function addLogging() {
+        window.document.addEventListener(&#39;DOMContentLoaded&#39;, function() {
+                var currentTestAssertions = [];
+
+                QUnit.log(function(details) {
+                        var response;
+
+                        // Ignore passing assertions
+                        if (details.result) {
+                                return;
+                        }
+
+                        response = details.message || &#39;&#39;;
+
+                        if (typeof details.expected !== &#39;undefined&#39;) {
+                                if (response) {
+                                        response += &#39;, &#39;;
+                                }
+
+                                response += &#39;expected: &#39; + details.expected + &#39;, but was: &#39; + details.actual;
+                        }
+
+                        if (details.source) {
+                                response += &quot;\n&quot; + details.source;
+                        }
+
+                        currentTestAssertions.push(&#39;Failed assertion: &#39; + response);
+                });
+
+                QUnit.testDone(function(result) {
+                        var i,
+                                len,
+                                name = &#39;&#39;;
+
+                        if (result.module) {
+                                name += result.module + &#39;: &#39;;
+                        }
+                        name += result.name;
+
+                        if (result.failed) {
+                                console.log(&#39;\n&#39; + &#39;Test failed: &#39; + name);
+
+                                for (i = 0, len = currentTestAssertions.length; i &lt; len; i++) {
+                                        console.log(&#39;    &#39; + currentTestAssertions[i]);
+                                }
+                        }
+
+                        currentTestAssertions.length = 0;
+                });
+
+                QUnit.done(function(result) {
+                        console.log(&#39;\n&#39; + &#39;Took &#39; + result.runtime +  &#39;ms to run &#39; + result.total + &#39; tests. &#39; + result.passed + &#39; passed, &#39; + result.failed + &#39; failed.&#39;);
+
+                        if (typeof window.callPhantom === &#39;function&#39;) {
+                                window.callPhantom({
+                                        &#39;name&#39;: &#39;QUnit.done&#39;,
+                                        &#39;data&#39;: result
+                                });
+                        }
+                });
+        }, false);
+}</code></pre>
+
+<p>})();</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            OpenSSL::X509::Store 
+            <span class="type">Class</span>
+            OpenSSL::X509::Store
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../../Object.html">Object</a>
                     
@@ -31,7 +31,7 @@
         </h1>
         <ul class="files">
             
-            <li><a href="../../../files/ruby/ext/openssl/ossl_ssl_session_c.html">ruby/ext/openssl/ossl_ssl_session.c</a></li>
+            <li><a href="../../../files/ruby/ext/openssl/ossl_x509attr_c.html">ruby/ext/openssl/ossl_x509attr.c</a></li>
             
         </ul>
     </div>
@@ -46,31 +46,35 @@ certificates used to verify peer certificates.</p>
 <p>The easiest way to create a useful certificate store is:</p>
 
 <pre><code>cert_store = OpenSSL::X509::Store.new
-cert_store.set_default_paths</code></pre>
+cert_store.set_default_paths
+</code></pre>
 
 <p>This will use your system&#39;s built-in certificates.</p>
 
 <p>If your system does not have a default set of certificates you can obtain a
-set from Mozilla here: <a
-href="http://curl.haxx.se/docs/caextract.html">curl.haxx.se/docs/caextract.html</a>
-(Note that this set does not have an HTTPS download option so you may wish
-to use the firefox-db2pem.sh script to extract the certificates from a
-local install to avoid man-in-the-middle attacks.)</p>
+set extracted from Mozilla CA certificate store by cURL maintainers here:
+<a
+href="https://curl.haxx.se/docs/caextract.html">curl.haxx.se/docs/caextract.html</a>
+(You may wish to use the firefox-db2pem.sh script to extract the
+certificates from a local install to avoid man-in-the-middle attacks.)</p>
 
 <p>After downloading or generating a cacert.pem from the above link you can
 create a certificate store from the pem file like this:</p>
 
 <pre><code>cert_store = OpenSSL::X509::Store.new
-cert_store.add_file &#39;cacert.pem&#39;</code></pre>
+cert_store.add_file &#39;cacert.pem&#39;
+</code></pre>
 
 <p>The certificate store can be used with an SSLSocket like this:</p>
 
 <pre><code>ssl_context = OpenSSL::SSL::SSLContext.new
+ssl_context.verify_mode = OpenSSL::SSL::VERIFY_PEER
 ssl_context.cert_store = cert_store
 
 tcp_socket = TCPSocket.open &#39;example.com&#39;, 443
 
-ssl_socket = OpenSSL::SSL::SSLSocket.new tcp_socket, ssl_context</code></pre>
+ssl_socket = OpenSSL::SSL::SSLSocket.new tcp_socket, ssl_context
+</code></pre>
 
     </div>
   
@@ -226,7 +230,8 @@ ssl_socket = OpenSSL::SSL::SSLSocket.new tcp_socket, ssl_context</code></pre>
               [R]
             </td>
             <td class='attr-name'>chain</td>
-            <td class='attr-desc'></td>
+            <td class='attr-desc'><p>The certificate chain constructed by the last call of <a
+href="Store.html#method-i-verify">verify</a>.</p></td>
           </tr>
         
           <tr valign='top'>
@@ -234,7 +239,8 @@ ssl_socket = OpenSSL::SSL::SSLSocket.new tcp_socket, ssl_context</code></pre>
               [R]
             </td>
             <td class='attr-name'>error</td>
-            <td class='attr-desc'></td>
+            <td class='attr-desc'><p>The error code set by the last call of <a
+href="Store.html#method-i-verify">verify</a>.</p></td>
           </tr>
         
           <tr valign='top'>
@@ -242,7 +248,8 @@ ssl_socket = OpenSSL::SSL::SSLSocket.new tcp_socket, ssl_context</code></pre>
               [R]
             </td>
             <td class='attr-name'>error_string</td>
-            <td class='attr-desc'></td>
+            <td class='attr-desc'><p>The description for the error code set by the last call of <a
+href="Store.html#method-i-verify">verify</a>.</p></td>
           </tr>
         
           <tr valign='top'>
@@ -250,7 +257,13 @@ ssl_socket = OpenSSL::SSL::SSLSocket.new tcp_socket, ssl_context</code></pre>
               [R]
             </td>
             <td class='attr-name'>verify_callback</td>
-            <td class='attr-desc'></td>
+            <td class='attr-desc'><p>The callback for additional certificate verification. It is invoked for
+each untrusted certificate in the chain.</p>
+
+<p>The callback is invoked with two values, a boolean that indicates if the
+pre-verification by <a href="../../OpenSSL.html">OpenSSL</a> has succeeded
+or not, and the <a href="StoreContext.html">StoreContext</a> in use. The
+callback must return either true or false.</p></td>
           </tr>
         
       </table>
@@ -264,25 +277,28 @@ ssl_socket = OpenSSL::SSL::SSLSocket.new tcp_socket, ssl_context</code></pre>
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>X509::Store.new => store</b>
+              <b>X509::Store.new => store
+</b>
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Creates a new <a href="Store.html">X509::Store</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -294,15 +310,12 @@ ossl_x509store_initialize(int argc, VALUE *argv, VALUE self)
 
 /* BUG: This method takes any number of arguments but appears to ignore them. */
     GetX509Store(self, store);
+#if !defined(HAVE_OPAQUE_OPENSSL)
+    /* [Bug #405] [Bug #1678] [Bug #3000]; already fixed? */
     store-&gt;ex_data.sk = NULL;
-    X509_STORE_set_verify_cb_func(store, ossl_verify_cb);
-    ossl_x509store_set_vfy_cb(self, Qnil);
-
-#if (OPENSSL_VERSION_NUMBER &lt; 0x00907000L)
-    rb_iv_set(self, &quot;@flags&quot;, INT2NUM(0));
-    rb_iv_set(self, &quot;@purpose&quot;, INT2NUM(0));
-    rb_iv_set(self, &quot;@trust&quot;, INT2NUM(0));
 #endif
+    X509_STORE_set_verify_cb(store, x509store_verify_cb);
+    ossl_x509store_set_vfy_cb(self, Qnil);
 
     /* last verification status */
     rb_iv_set(self, &quot;@error&quot;, Qnil);
@@ -327,22 +340,24 @@ ossl_x509store_initialize(int argc, VALUE *argv, VALUE self)
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-add_cert" name="method-i-add_cert" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Adds the <a href="Certificate.html">OpenSSL::X509::Certificate</a>
 <code>cert</code> to the certificate store.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-add_cert_source')" id="l_method-i-add_cert_source">show</a>
                 
               </p>
@@ -369,25 +384,29 @@ ossl_x509store_add_cert(VALUE self, VALUE arg)
         <div class="method">
           <div class="title method-title" id="method-i-add_crl">
             
-              <b>add_crl</b>(p1)
+              <b>store.add_crl(crl) &rarr; self
+</b>
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-add_crl" name="method-i-add_crl" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Adds the <a href="CRL.html">OpenSSL::X509::CRL</a> <code>crl</code> to the
+store.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-add_crl_source')" id="l_method-i-add_crl_source">show</a>
                 
               </p>
@@ -414,27 +433,29 @@ ossl_x509store_add_crl(VALUE self, VALUE arg)
         <div class="method">
           <div class="title method-title" id="method-i-add_file">
             
-              <b>store.add_file(file) &rarr; store
+              <b>store.add_file(file) &rarr; self
 </b>
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-add_file" name="method-i-add_file" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Adds the certificates in <code>file</code> to the certificate store.  The
 <code>file</code> can contain multiple PEM-encoded certificates.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-add_file_source')" id="l_method-i-add_file_source">show</a>
                 
               </p>
@@ -447,8 +468,8 @@ ossl_x509store_add_file(VALUE self, VALUE file)
     char *path = NULL;
 
     if(file != Qnil){
-        SafeStringValue(file);
-        path = RSTRING_PTR(file);
+        rb_check_safe_obj(file);
+        path = StringValueCStr(file);
     }
     GetX509Store(self, store);
     lookup = X509_STORE_add_lookup(store, X509_LOOKUP_file());
@@ -467,25 +488,28 @@ ossl_x509store_add_file(VALUE self, VALUE file)
         <div class="method">
           <div class="title method-title" id="method-i-add_path">
             
-              <b>add_path</b>(p1)
+              <b>store.add_path(path) &rarr; self
+</b>
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-add_path" name="method-i-add_path" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Adds <code>path</code> as the hash dir to be looked up by the store.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-add_path_source')" id="l_method-i-add_path_source">show</a>
                 
               </p>
@@ -498,8 +522,8 @@ ossl_x509store_add_path(VALUE self, VALUE dir)
     char *path = NULL;
 
     if(dir != Qnil){
-        SafeStringValue(dir);
-        path = RSTRING_PTR(dir);
+        rb_check_safe_obj(dir);
+        path = StringValueCStr(dir);
     }
     GetX509Store(self, store);
     lookup = X509_STORE_add_lookup(store, X509_LOOKUP_hash_dir());
@@ -518,25 +542,30 @@ ossl_x509store_add_path(VALUE self, VALUE dir)
         <div class="method">
           <div class="title method-title" id="method-i-flags-3D">
             
-              <b>flags=</b>(p1)
+              <b>store.flags = flag
+</b>
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-flags-3D" name="method-i-flags-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Sets <code>flag</code> to the <a href="Store.html">Store</a>.
+<code>flag</code> consists of zero or more of the constants defined in with
+name V_FLAG_* or&#39;ed together.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-flags-3D_source')" id="l_method-i-flags-3D_source">show</a>
                 
               </p>
@@ -544,15 +573,11 @@ ossl_x509store_add_path(VALUE self, VALUE dir)
                 <pre>static VALUE
 ossl_x509store_set_flags(VALUE self, VALUE flags)
 {
-#if (OPENSSL_VERSION_NUMBER &gt;= 0x00907000L)
     X509_STORE *store;
     long f = NUM2LONG(flags);
 
     GetX509Store(self, store);
     X509_STORE_set_flags(store, f);
-#else
-    rb_iv_set(self, &quot;@flags&quot;, flags);
-#endif
 
     return flags;
 }</pre>
@@ -564,25 +589,50 @@ ossl_x509store_set_flags(VALUE self, VALUE flags)
         <div class="method">
           <div class="title method-title" id="method-i-purpose-3D">
             
-              <b>purpose=</b>(p1)
+              <b>store.purpose = purpose
+</b>
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-purpose-3D" name="method-i-purpose-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Sets the store&#39;s purpose to <code>purpose</code>. If specified, the
+verifications on the store will check every untrusted certificate&#39;s
+extensions are consistent with the purpose. The purpose is specified by
+constants:</p>
+<ul><li>
+<p>X509::PURPOSE_SSL_CLIENT</p>
+</li><li>
+<p>X509::PURPOSE_SSL_SERVER</p>
+</li><li>
+<p>X509::PURPOSE_NS_SSL_SERVER</p>
+</li><li>
+<p>X509::PURPOSE_SMIME_SIGN</p>
+</li><li>
+<p>X509::PURPOSE_SMIME_ENCRYPT</p>
+</li><li>
+<p>X509::PURPOSE_CRL_SIGN</p>
+</li><li>
+<p>X509::PURPOSE_ANY</p>
+</li><li>
+<p>X509::PURPOSE_OCSP_HELPER</p>
+</li><li>
+<p>X509::PURPOSE_TIMESTAMP_SIGN</p>
+</li></ul>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-purpose-3D_source')" id="l_method-i-purpose-3D_source">show</a>
                 
               </p>
@@ -590,15 +640,11 @@ ossl_x509store_set_flags(VALUE self, VALUE flags)
                 <pre>static VALUE
 ossl_x509store_set_purpose(VALUE self, VALUE purpose)
 {
-#if (OPENSSL_VERSION_NUMBER &gt;= 0x00907000L)
     X509_STORE *store;
     int p = NUM2INT(purpose);
 
     GetX509Store(self, store);
     X509_STORE_set_purpose(store, p);
-#else
-    rb_iv_set(self, &quot;@purpose&quot;, purpose);
-#endif
 
     return purpose;
 }</pre>
@@ -610,30 +656,35 @@ ossl_x509store_set_purpose(VALUE self, VALUE purpose)
         <div class="method">
           <div class="title method-title" id="method-i-set_default_paths">
             
-              <b>store.set_default_path
+              <b>store.set_default_paths
 </b>
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-set_default_paths" name="method-i-set_default_paths" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Adds the default certificates to the certificate store.  These certificates
-are loaded from the default configuration directory which can usually be
-determined by:</p>
-
-<pre><code>File.dirname OpenSSL::Config::DEFAULT_CONFIG_FILE</code></pre>
+              <p>Configures <code>store</code> to look up CA certificates from the system
+default certificate store as needed basis. The location of the store can
+usually be determined by:</p>
+<ul><li>
+<p>OpenSSL::X509::DEFAULT_CERT_FILE</p>
+</li><li>
+<p>OpenSSL::X509::DEFAULT_CERT_DIR</p>
+</li></ul>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-set_default_paths_source')" id="l_method-i-set_default_paths_source">show</a>
                 
               </p>
@@ -658,25 +709,28 @@ ossl_x509store_set_default_paths(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-time-3D">
             
-              <b>time=</b>(p1)
+              <b>store.time = time
+</b>
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-time-3D" name="method-i-time-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Sets the time to be used in verifications.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-time-3D_source')" id="l_method-i-time-3D_source">show</a>
                 
               </p>
@@ -695,25 +749,27 @@ ossl_x509store_set_time(VALUE self, VALUE time)
         <div class="method">
           <div class="title method-title" id="method-i-trust-3D">
             
-              <b>trust=</b>(p1)
+              <b>store.trust = trust</b>
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-trust-3D" name="method-i-trust-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-trust-3D_source')" id="l_method-i-trust-3D_source">show</a>
                 
               </p>
@@ -721,15 +777,11 @@ ossl_x509store_set_time(VALUE self, VALUE time)
                 <pre>static VALUE
 ossl_x509store_set_trust(VALUE self, VALUE trust)
 {
-#if (OPENSSL_VERSION_NUMBER &gt;= 0x00907000L)
     X509_STORE *store;
     int t = NUM2INT(trust);
 
     GetX509Store(self, store);
     X509_STORE_set_trust(store, t);
-#else
-    rb_iv_set(self, &quot;@trust&quot;, trust);
-#endif
 
     return trust;
 }</pre>
@@ -741,25 +793,42 @@ ossl_x509store_set_trust(VALUE self, VALUE trust)
         <div class="method">
           <div class="title method-title" id="method-i-verify">
             
-              <b>verify</b>(p1, p2 = v2)
+              <b>store.verify(cert, chain = nil) &rarr; true | false
+</b>
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-verify" name="method-i-verify" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Performs a certificate verification on the <a
+href="Certificate.html">OpenSSL::X509::Certificate</a> <code>cert</code>.</p>
+
+<p><code>chain</code> can be an array of <a
+href="Certificate.html">OpenSSL::X509::Certificate</a> that is used to
+construct the certificate chain.</p>
+
+<p>If a block is given, it overrides the callback set by <a
+href="Store.html#method-i-verify_callback-3D">verify_callback=</a>.</p>
+
+<p>After finishing the verification, the error information can be retrieved by
+<a href="Store.html#attribute-i-error">error</a>, <a
+href="Store.html#attribute-i-error_string">error_string</a>, and the
+resuting complete certificate chain can be retrieved by <a
+href="Store.html#attribute-i-chain">chain</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-verify_source')" id="l_method-i-verify_source">show</a>
                 
               </p>
@@ -795,21 +864,23 @@ ossl_x509store_verify(int argc, VALUE *argv, VALUE self)
             
             <a href="../../../classes/OpenSSL/X509/Store.html#method-i-verify_callback-3D" name="method-i-verify_callback-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>General callback for <a href="../../OpenSSL.html">OpenSSL</a> verify</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-verify_callback-3D_source')" id="l_method-i-verify_callback-3D_source">show</a>
                 
               </p>
@@ -820,7 +891,7 @@ ossl_x509store_set_vfy_cb(VALUE self, VALUE cb)
     X509_STORE *store;
 
     GetX509Store(self, store);
-    X509_STORE_set_ex_data(store, ossl_verify_cb_idx, (void*)cb);
+    X509_STORE_set_ex_data(store, store_ex_verify_cb_idx, (void *)cb);
     rb_iv_set(self, &quot;@verify_callback&quot;, cb);
 
     return cb;
@@ -833,4 +904,4 @@ ossl_x509store_set_vfy_cb(VALUE self, VALUE cb)
 
     </div>
   </body>
-</html>    
+</html>

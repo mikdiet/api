@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            Fiddle::Handle 
+            <span class="type">Class</span>
+            Fiddle::Handle
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../Object.html">Object</a>
                     
@@ -43,38 +43,34 @@
 <p>The <a href="Handle.html">Fiddle::Handle</a> is the manner to access the
 dynamic library</p>
 
-<h2 id="label-Example">Example</h2>
+<h2 id="class-Fiddle::Handle-label-Example">Example</h2>
 
-<h3 id="label-Setup">Setup</h3>
+<h3 id="class-Fiddle::Handle-label-Setup">Setup</h3>
 
 <pre><code>libc_so = &quot;/lib64/libc.so.6&quot;
 =&gt; &quot;/lib64/libc.so.6&quot;
 @handle = Fiddle::Handle.new(libc_so)
-=&gt; #&lt;Fiddle::Handle:0x00000000d69ef8&gt;
-</code></pre>
+=&gt; #&lt;Fiddle::Handle:0x00000000d69ef8&gt;</code></pre>
 
-<h3 id="label-Setup%2C+with+flags">Setup, with flags</h3>
+<h3 id="class-Fiddle::Handle-label-Setup-2C+with+flags">Setup, with flags</h3>
 
 <pre><code>libc_so = &quot;/lib64/libc.so.6&quot;
 =&gt; &quot;/lib64/libc.so.6&quot;
 @handle = Fiddle::Handle.new(libc_so, Fiddle::RTLD_LAZY | Fiddle::RTLD_GLOBAL)
-=&gt; #&lt;Fiddle::Handle:0x00000000d69ef8&gt;
-</code></pre>
+=&gt; #&lt;Fiddle::Handle:0x00000000d69ef8&gt;</code></pre>
 
 <p>See <a href="Handle.html#RTLD_LAZY">RTLD_LAZY</a> and <a
 href="Handle.html#RTLD_GLOBAL">RTLD_GLOBAL</a></p>
 
-<h3 id="label-Addresses+to+symbols">Addresses to symbols</h3>
+<h3 id="class-Fiddle::Handle-label-Addresses+to+symbols">Addresses to symbols</h3>
 
 <pre><code>strcpy_addr = @handle[&#39;strcpy&#39;]
-=&gt; 140062278451968
-</code></pre>
+=&gt; 140062278451968</code></pre>
 
 <p>or</p>
 
 <pre><code>strcpy_addr = @handle.sym(&#39;strcpy&#39;)
-=&gt; 140062278451968
-</code></pre>
+=&gt; 140062278451968</code></pre>
 
     </div>
   
@@ -316,11 +312,12 @@ If this cannot be done an error is returned.</p></td>
         <div class="method">
           <div class="title method-title" id="method-c-5B-5D">
             
-              <b></b>
+              <b>sym(name)
+</b>
             
             <a href="../../classes/Fiddle/Handle.html#method-c-5B-5D" name="method-c-5B-5D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Get the address as an <a href="../Integer.html">Integer</a> for the
@@ -330,15 +327,17 @@ RTLD_NEXT.</p>
 <p>See man(3) dlsym() for more info.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-5B-5D_source')" id="l_method-c-5B-5D_source">show</a>
                 
               </p>
@@ -346,7 +345,7 @@ RTLD_NEXT.</p>
                 <pre>static VALUE
 rb_fiddle_handle_s_sym(VALUE self, VALUE sym)
 {
-    return fiddle_handle_sym(RTLD_NEXT, StringValueCStr(sym));
+    return fiddle_handle_sym(RTLD_NEXT, sym);
 }</pre>
               </div>
             </div>
@@ -356,27 +355,41 @@ rb_fiddle_handle_s_sym(VALUE self, VALUE sym)
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>new(lib = nil, flags = Fiddle::RTLD_LAZY | Fiddle::RTLD_GLOBAL)
+              <b>new(library = nil, flags = Fiddle::RTLD_LAZY | Fiddle::RTLD_GLOBAL)
 </b>
             
             <a href="../../classes/Fiddle/Handle.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Create a new handler that opens library named <code>lib</code> with
-<code>flags</code>.  If no library is specified, RTLD_DEFAULT is used.</p>
+              <p>Create a new handler that opens <code>library</code> with
+<code>flags</code>.</p>
+
+<p>If no <code>library</code> is specified or <code>nil</code> is given, <a
+href="Handle.html#DEFAULT">DEFAULT</a> is used, which is the equivalent to
+RTLD_DEFAULT. See <code>man 3 dlopen</code> for more.</p>
+
+<pre><code>lib = Fiddle::Handle.new
+</code></pre>
+
+<p>The default is dependent on OS, and provide a handle for all libraries
+already loaded. For example, in most cases you can use this to access
+<code>libc</code> functions, or ruby functions like
+<code>rb_str_new</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -397,18 +410,16 @@ rb_fiddle_handle_initialize(int argc, VALUE argv[], VALUE self)
         cflag = RTLD_LAZY | RTLD_GLOBAL;
         break;
       case 1:
-        clib = NIL_P(lib) ? NULL : StringValuePtr(lib);
+        clib = NIL_P(lib) ? NULL : SafeStringValueCStr(lib);
         cflag = RTLD_LAZY | RTLD_GLOBAL;
         break;
       case 2:
-        clib = NIL_P(lib) ? NULL : StringValuePtr(lib);
+        clib = NIL_P(lib) ? NULL : SafeStringValueCStr(lib);
         cflag = NUM2INT(flag);
         break;
       default:
         rb_bug(&quot;rb_fiddle_handle_new&quot;);
     }
-
-    rb_secure(2);
 
 #if defined(_WIN32)
     if( !clib ){
@@ -424,6 +435,7 @@ rb_fiddle_handle_initialize(int argc, VALUE argv[], VALUE self)
 # ifdef _WIN32_WCE
         ptr = dlopen(&quot;coredll.dll&quot;, cflag);
 # else
+        (void)cflag;
         ptr = w32_coredll();
 # endif
     }
@@ -466,22 +478,24 @@ rb_fiddle_handle_initialize(int argc, VALUE argv[], VALUE self)
             
             <a href="../../classes/Fiddle/Handle.html#method-c-sym" name="method-c-sym" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Get the address as an <a href="../Integer.html">Integer</a> for the
 function named <code>name</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-sym_source')" id="l_method-c-sym_source">show</a>
                 
               </p>
@@ -489,7 +503,7 @@ function named <code>name</code>.</p>
                 <pre>static VALUE
 rb_fiddle_handle_s_sym(VALUE self, VALUE sym)
 {
-    return fiddle_handle_sym(RTLD_NEXT, StringValueCStr(sym));
+    return fiddle_handle_sym(RTLD_NEXT, sym);
 }</pre>
               </div>
             </div>
@@ -506,22 +520,24 @@ rb_fiddle_handle_s_sym(VALUE self, VALUE sym)
             
             <a href="../../classes/Fiddle/Handle.html#method-i-5B-5D" name="method-i-5B-5D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Get the address as an <a href="../Integer.html">Integer</a> for the
 function named <code>name</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
                 
               </p>
@@ -536,7 +552,7 @@ rb_fiddle_handle_sym(VALUE self, VALUE sym)
         rb_raise(rb_eFiddleError, &quot;closed handle&quot;);
     }
 
-    return fiddle_handle_sym(fiddle_handle-&gt;ptr, StringValueCStr(sym));
+    return fiddle_handle_sym(fiddle_handle-&gt;ptr, sym);
 }</pre>
               </div>
             </div>
@@ -551,7 +567,7 @@ rb_fiddle_handle_sym(VALUE self, VALUE sym)
             
             <a href="../../classes/Fiddle/Handle.html#method-i-close" name="method-i-close" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Close this handle.</p>
@@ -560,15 +576,17 @@ rb_fiddle_handle_sym(VALUE self, VALUE sym)
 href="DLError.html">Fiddle::DLError</a> exception.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-close_source')" id="l_method-i-close_source">show</a>
                 
               </p>
@@ -610,7 +628,7 @@ rb_fiddle_handle_close(VALUE self)
             
             <a href="../../classes/Fiddle/Handle.html#method-i-close_enabled-3F" name="method-i-close_enabled-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns <code>true</code> if dlclose() will be called when this handle is
@@ -619,15 +637,17 @@ garbage collected.</p>
 <p>See man(3) dlclose() for more info.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-close_enabled-3F_source')" id="l_method-i-close_enabled-3F_source">show</a>
                 
               </p>
@@ -655,21 +675,23 @@ rb_fiddle_handle_close_enabled_p(VALUE self)
             
             <a href="../../classes/Fiddle/Handle.html#method-i-disable_close" name="method-i-disable_close" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Disable a call to dlclose() when this handle is garbage collected.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-disable_close_source')" id="l_method-i-disable_close_source">show</a>
                 
               </p>
@@ -696,21 +718,23 @@ rb_fiddle_handle_disable_close(VALUE self)
             
             <a href="../../classes/Fiddle/Handle.html#method-i-enable_close" name="method-i-enable_close" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Enable a call to dlclose() when this handle is garbage collected.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-enable_close_source')" id="l_method-i-enable_close_source">show</a>
                 
               </p>
@@ -737,22 +761,24 @@ rb_fiddle_handle_enable_close(VALUE self)
             
             <a href="../../classes/Fiddle/Handle.html#method-i-sym" name="method-i-sym" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Get the address as an <a href="../Integer.html">Integer</a> for the
 function named <code>name</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-sym_source')" id="l_method-i-sym_source">show</a>
                 
               </p>
@@ -767,7 +793,7 @@ rb_fiddle_handle_sym(VALUE self, VALUE sym)
         rb_raise(rb_eFiddleError, &quot;closed handle&quot;);
     }
 
-    return fiddle_handle_sym(fiddle_handle-&gt;ptr, StringValueCStr(sym));
+    return fiddle_handle_sym(fiddle_handle-&gt;ptr, sym);
 }</pre>
               </div>
             </div>
@@ -782,21 +808,23 @@ rb_fiddle_handle_sym(VALUE self, VALUE sym)
             
             <a href="../../classes/Fiddle/Handle.html#method-i-to_i" name="method-i-to_i" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the memory address for this handle.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_i_source')" id="l_method-i-to_i_source">show</a>
                 
               </p>
@@ -817,4 +845,4 @@ rb_fiddle_handle_to_i(VALUE self)
 
     </div>
   </body>
-</html>    
+</html>

@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            ActiveRecord::Querying 
+            <span class="type">Module</span>
+            ActiveRecord::Querying
             
         </h1>
         <ul class="files">
@@ -103,7 +103,7 @@
             
             <a href="../../classes/ActiveRecord/Querying.html#method-i-count_by_sql" name="method-i-count_by_sql" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the result of an SQL statement that should only include a COUNT(*)
@@ -112,33 +112,37 @@ complicated SQL queries that can&#39;t be executed using the <a
 href="Calculations.html">ActiveRecord::Calculations</a> class methods. Look
 into those before using this.</p>
 
+<pre><code>Product.count_by_sql &quot;SELECT COUNT(*) FROM sales s, customers c WHERE s.customer_id = c.id&quot;
+# =&gt; 12
+</code></pre>
+
 <h4 id="method-i-count_by_sql-label-Parameters">Parameters</h4>
 <ul><li>
 <p><code>sql</code> - An SQL statement which should return a count query from
-the database, see the example below.</p>
-
-<p>Product.count_by_sql “SELECT COUNT(*) FROM sales s, customers c WHERE
-s.customer_id = c.id”</p>
+the database, see the example above.</p>
 </li></ul>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-count_by_sql_source')" id="l_method-i-count_by_sql_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/48f3be8cc938e86cbc963da659c583ee1bb81319/activerecord/lib/active_record/querying.rb#L64" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-count_by_sql_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/querying.rb, line 57</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/querying.rb, line 64</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">count_by_sql</span>(<span class="ruby-identifier">sql</span>)
-  <span class="ruby-identifier">sql</span> = <span class="ruby-identifier">sanitize_conditions</span>(<span class="ruby-identifier">sql</span>)
-  <span class="ruby-identifier">connection</span>.<span class="ruby-identifier">select_value</span>(<span class="ruby-identifier">sql</span>, <span class="ruby-node">&quot;#{name} Count&quot;</span>).<span class="ruby-identifier">to_i</span>
+  <span class="ruby-identifier">connection</span>.<span class="ruby-identifier">select_value</span>(<span class="ruby-identifier">sanitize_sql</span>(<span class="ruby-identifier">sql</span>), <span class="ruby-node">&quot;#{name} Count&quot;</span>).<span class="ruby-identifier">to_i</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -148,18 +152,19 @@ s.customer_id = c.id”</p>
         <div class="method">
           <div class="title method-title" id="method-i-find_by_sql">
             
-              <b>find_by_sql</b>(sql, binds = [])
+              <b>find_by_sql</b>(sql, binds = [], preparable: nil, &amp;block)
             
             <a href="../../classes/ActiveRecord/Querying.html#method-i-find_by_sql" name="method-i-find_by_sql" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Executes a custom SQL query against your database and returns all the
 results. The results will be returned as an array with columns requested
 encapsulated as attributes of the model you call this method from. If you
 call <code>Product.find_by_sql</code> then the results will be returned in
-a Product object with the attributes you specified in the SQL query.</p>
+a <code>Product</code> object with the attributes you specified in the SQL
+query.</p>
 
 <p>If you call a complicated SQL query which spans multiple tables the columns
 specified by the SELECT will be attributes of the model, whether or not
@@ -174,38 +179,48 @@ to change your call if you switch engines.</p>
 <pre><code># A simple SQL query spanning multiple tables
 Post.find_by_sql &quot;SELECT p.title, c.author FROM posts p, comments c WHERE p.id = c.post_id&quot;
 # =&gt; [#&lt;Post:0x36bff9c @attributes={&quot;title&quot;=&gt;&quot;Ruby Meetup&quot;, &quot;first_name&quot;=&gt;&quot;Quentin&quot;}&gt;, ...]
+</code></pre>
 
-# You can use the same string replacement techniques as you can with ActiveRecord#find
-Post.find_by_sql [&quot;SELECT title FROM posts WHERE author = ? AND created &gt; ?&quot;, author_id, start_date]
-# =&gt; [#&lt;Post:0x36bff9c @attributes={&quot;title&quot;=&gt;&quot;The Cheap Man Buys Twice&quot;}&gt;, ...]
+<p>You can use the same string replacement techniques as you can with
+<code>ActiveRecord::QueryMethods#where</code>:</p>
+
+<pre><code>Post.find_by_sql [&quot;SELECT title FROM posts WHERE author = ? AND created &gt; ?&quot;, author_id, start_date]
+Post.find_by_sql [&quot;SELECT body FROM comments WHERE author = :user_id OR approved_by = :user_id&quot;, { :user_id =&gt; user_id }]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-find_by_sql_source')" id="l_method-i-find_by_sql_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/48f3be8cc938e86cbc963da659c583ee1bb81319/activerecord/lib/active_record/querying.rb#L38" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-find_by_sql_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/querying.rb, line 35</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">find_by_sql</span>(<span class="ruby-identifier">sql</span>, <span class="ruby-identifier">binds</span> = [])
-  <span class="ruby-identifier">result_set</span> = <span class="ruby-identifier">connection</span>.<span class="ruby-identifier">select_all</span>(<span class="ruby-identifier">sanitize_sql</span>(<span class="ruby-identifier">sql</span>), <span class="ruby-node">&quot;#{name} Load&quot;</span>, <span class="ruby-identifier">binds</span>)
-  <span class="ruby-identifier">column_types</span> = {}
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/querying.rb, line 38</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">find_by_sql</span>(<span class="ruby-identifier">sql</span>, <span class="ruby-identifier">binds</span> = [], <span class="ruby-identifier">preparable</span><span class="ruby-operator">:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">result_set</span> = <span class="ruby-identifier">connection</span>.<span class="ruby-identifier">select_all</span>(<span class="ruby-identifier">sanitize_sql</span>(<span class="ruby-identifier">sql</span>), <span class="ruby-node">&quot;#{name} Load&quot;</span>, <span class="ruby-identifier">binds</span>, <span class="ruby-identifier">preparable</span><span class="ruby-operator">:</span> <span class="ruby-identifier">preparable</span>)
+  <span class="ruby-identifier">column_types</span> = <span class="ruby-identifier">result_set</span>.<span class="ruby-identifier">column_types</span>.<span class="ruby-identifier">dup</span>
+  <span class="ruby-identifier">columns_hash</span>.<span class="ruby-identifier">each_key</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">k</span><span class="ruby-operator">|</span> <span class="ruby-identifier">column_types</span>.<span class="ruby-identifier">delete</span> <span class="ruby-identifier">k</span> }
+  <span class="ruby-identifier">message_bus</span> = <span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">Notifications</span>.<span class="ruby-identifier">instrumenter</span>
 
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">result_set</span>.<span class="ruby-identifier">respond_to?</span> <span class="ruby-value">:column_types</span>
-    <span class="ruby-identifier">column_types</span> = <span class="ruby-identifier">result_set</span>.<span class="ruby-identifier">column_types</span>
-  <span class="ruby-keyword">else</span>
-    <span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">Deprecation</span>.<span class="ruby-identifier">warn</span> <span class="ruby-string">&quot;the object returned from `select_all` must respond to `column_types`&quot;</span>
+  <span class="ruby-identifier">payload</span> = {
+    <span class="ruby-identifier">record_count</span><span class="ruby-operator">:</span> <span class="ruby-identifier">result_set</span>.<span class="ruby-identifier">length</span>,
+    <span class="ruby-identifier">class_name</span><span class="ruby-operator">:</span> <span class="ruby-identifier">name</span>
+  }
+
+  <span class="ruby-identifier">message_bus</span>.<span class="ruby-identifier">instrument</span>(<span class="ruby-string">&quot;instantiation.active_record&quot;</span>, <span class="ruby-identifier">payload</span>) <span class="ruby-keyword">do</span>
+    <span class="ruby-identifier">result_set</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">record</span><span class="ruby-operator">|</span> <span class="ruby-identifier">instantiate</span>(<span class="ruby-identifier">record</span>, <span class="ruby-identifier">column_types</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>) }
   <span class="ruby-keyword">end</span>
-
-  <span class="ruby-identifier">result_set</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">record</span><span class="ruby-operator">|</span> <span class="ruby-identifier">instantiate</span>(<span class="ruby-identifier">record</span>, <span class="ruby-identifier">column_types</span>) }
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -215,4 +230,4 @@ Post.find_by_sql [&quot;SELECT title FROM posts WHERE author = ? AND created &gt
 
     </div>
   </body>
-</html>    
+</html>

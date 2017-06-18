@@ -15,17 +15,17 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            ActionView::RoutingUrlFor 
+            <span class="type">Module</span>
+            ActionView::RoutingUrlFor
             
         </h1>
         <ul class="files">
             
-            <li><a href="../../files/rails/actionpack/lib/action_view/routing_url_for_rb.html">rails/actionpack/lib/action_view/routing_url_for.rb</a></li>
+            <li><a href="../../files/rails/actionview/lib/action_view/routing_url_for_rb.html">rails/actionview/lib/action_view/routing_url_for.rb</a></li>
             
         </ul>
     </div>
@@ -91,7 +91,7 @@
             
             <a href="../../classes/ActionView/RoutingUrlFor.html#method-i-url_for" name="method-i-url_for" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the URL for the set of <code>options</code> provided. This takes
@@ -145,7 +145,7 @@ their namespace unless it is an absolute one.</p>
 <h4 id="method-i-url_for-label-Examples">Examples</h4>
 
 <pre><code>&lt;%= url_for(action: &#39;index&#39;) %&gt;
-# =&gt; /blog/
+# =&gt; /blogs/
 
 &lt;%= url_for(action: &#39;find&#39;, controller: &#39;books&#39;) %&gt;
 # =&gt; /books/find
@@ -190,32 +190,64 @@ their namespace unless it is an absolute one.</p>
 # =&gt; /users</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-url_for_source')" id="l_method-i-url_for_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/010e246756c09f44e901f4fd8e8eab2cb3022e95/actionview/lib/action_view/routing_url_for.rb#L77" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-url_for_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_view/routing_url_for.rb, line 76</span>
+                <pre><span class="ruby-comment"># File rails/actionview/lib/action_view/routing_url_for.rb, line 77</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">url_for</span>(<span class="ruby-identifier">options</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">options</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">String</span>
     <span class="ruby-identifier">options</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-keyword">nil</span>, <span class="ruby-constant">Hash</span>
-    <span class="ruby-identifier">options</span> <span class="ruby-operator">||=</span> {}
-    <span class="ruby-identifier">options</span> = { <span class="ruby-value">:only_path</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:host</span>].<span class="ruby-identifier">nil?</span> }.<span class="ruby-identifier">merge!</span>(<span class="ruby-identifier">options</span>.<span class="ruby-identifier">symbolize_keys</span>)
-    <span class="ruby-keyword">super</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-keyword">nil</span>
+    <span class="ruby-keyword">super</span>(<span class="ruby-identifier">only_path</span><span class="ruby-operator">:</span> <span class="ruby-identifier">_generate_paths_by_default</span>)
+  <span class="ruby-keyword">when</span> <span class="ruby-constant">Hash</span>
+    <span class="ruby-identifier">options</span> = <span class="ruby-identifier">options</span>.<span class="ruby-identifier">symbolize_keys</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-identifier">options</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:only_path</span>)
+      <span class="ruby-identifier">options</span>[<span class="ruby-value">:only_path</span>] = <span class="ruby-identifier">only_path?</span>(<span class="ruby-identifier">options</span>[<span class="ruby-value">:host</span>])
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">super</span>(<span class="ruby-identifier">options</span>)
+  <span class="ruby-keyword">when</span> <span class="ruby-constant">ActionController</span><span class="ruby-operator">::</span><span class="ruby-constant">Parameters</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-identifier">options</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:only_path</span>)
+      <span class="ruby-identifier">options</span>[<span class="ruby-value">:only_path</span>] = <span class="ruby-identifier">only_path?</span>(<span class="ruby-identifier">options</span>[<span class="ruby-value">:host</span>])
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">super</span>(<span class="ruby-identifier">options</span>)
   <span class="ruby-keyword">when</span> <span class="ruby-value">:back</span>
     <span class="ruby-identifier">_back_url</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-constant">Array</span>
+    <span class="ruby-identifier">components</span> = <span class="ruby-identifier">options</span>.<span class="ruby-identifier">dup</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">_generate_paths_by_default</span>
+      <span class="ruby-identifier">polymorphic_path</span>(<span class="ruby-identifier">components</span>, <span class="ruby-identifier">components</span>.<span class="ruby-identifier">extract_options!</span>)
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-identifier">polymorphic_url</span>(<span class="ruby-identifier">components</span>, <span class="ruby-identifier">components</span>.<span class="ruby-identifier">extract_options!</span>)
+    <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">else</span>
-    <span class="ruby-identifier">polymorphic_path</span>(<span class="ruby-identifier">options</span>)
+    <span class="ruby-identifier">method</span> = <span class="ruby-identifier">_generate_paths_by_default</span> <span class="ruby-operator">?</span> <span class="ruby-value">:path</span> <span class="ruby-operator">:</span> <span class="ruby-value">:url</span>
+    <span class="ruby-identifier">builder</span> = <span class="ruby-constant">ActionDispatch</span><span class="ruby-operator">::</span><span class="ruby-constant">Routing</span><span class="ruby-operator">::</span><span class="ruby-constant">PolymorphicRoutes</span><span class="ruby-operator">::</span><span class="ruby-constant">HelperMethodBuilder</span>.<span class="ruby-identifier">send</span>(<span class="ruby-identifier">method</span>)
+
+    <span class="ruby-keyword">case</span> <span class="ruby-identifier">options</span>
+    <span class="ruby-keyword">when</span> <span class="ruby-constant">Symbol</span>
+      <span class="ruby-identifier">builder</span>.<span class="ruby-identifier">handle_string_call</span>(<span class="ruby-keyword">self</span>, <span class="ruby-identifier">options</span>)
+    <span class="ruby-keyword">when</span> <span class="ruby-constant">Class</span>
+      <span class="ruby-identifier">builder</span>.<span class="ruby-identifier">handle_class_call</span>(<span class="ruby-keyword">self</span>, <span class="ruby-identifier">options</span>)
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-identifier">builder</span>.<span class="ruby-identifier">handle_model_call</span>(<span class="ruby-keyword">self</span>, <span class="ruby-identifier">options</span>)
+    <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -226,4 +258,4 @@ their namespace unless it is an absolute one.</p>
 
     </div>
   </body>
-</html>    
+</html>

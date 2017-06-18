@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            RubyVM::InstructionSequence 
+            <span class="type">Class</span>
+            RubyVM::InstructionSequence
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../Object.html">Object</a>
                     
@@ -133,12 +133,12 @@ you see.</p>
             
               
               <li>
-                <a href="#method-i-disasm">disasm</a>,
+                <a href="#method-c-disasm">disasm</a>,
               </li>
             
               
               <li>
-                <a href="#method-c-disasm">disasm</a>,
+                <a href="#method-i-disasm">disasm</a>,
               </li>
             
               
@@ -206,7 +206,17 @@ you see.</p>
             
               
               <li>
-                <a href="#method-i-line_trace_specify">line_trace_specify</a>
+                <a href="#method-i-line_trace_specify">line_trace_specify</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-load_from_binary">load_from_binary</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-load_from_binary_extra_data">load_from_binary_extra_data</a>
               </li>
             
           </ul>
@@ -254,7 +264,12 @@ you see.</p>
             
               
               <li>
-                <a href="#method-i-to_a">to_a</a>
+                <a href="#method-i-to_a">to_a</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-to_binary">to_binary</a>
               </li>
             
           </ul>
@@ -290,7 +305,7 @@ you see.</p>
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-c-compile" name="method-c-compile" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Takes <code>source</code>, a String of Ruby code and compiles it to an <a
@@ -313,31 +328,41 @@ href="InstructionSequence.html#method-c-compile_option-3D">::compile_option=</a>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-compile_source')" id="l_method-c-compile_source">show</a>
                 
               </p>
               <div id="method-c-compile_source" class="dyn-source">
                 <pre>static VALUE
-iseq_s_compile(int argc, VALUE *argv, VALUE self)
+iseqw_s_compile(int argc, VALUE *argv, VALUE self)
 {
     VALUE src, file = Qnil, path = Qnil, line = INT2FIX(1), opt = Qnil;
+    int i;
 
     rb_secure(1);
 
-    rb_scan_args(argc, argv, &quot;14&quot;, &amp;src, &amp;file, &amp;path, &amp;line, &amp;opt);
-    if (NIL_P(file)) file = rb_str_new2(&quot;&lt;compiled&gt;&quot;);
+    i = rb_scan_args(argc, argv, &quot;1*:&quot;, &amp;src, NULL, &amp;opt);
+    if (i &gt; 4+NIL_P(opt)) rb_error_arity(argc, 1, 5);
+    switch (i) {
+      case 5: opt = argv[--i];
+      case 4: line = argv[--i];
+      case 3: path = argv[--i];
+      case 2: file = argv[--i];
+    }
+    if (NIL_P(file)) file = rb_fstring_cstr(&quot;&lt;compiled&gt;&quot;);
     if (NIL_P(line)) line = INT2FIX(1);
 
-    return rb_iseq_compile_with_option(src, file, path, line, 0, opt);
+    return iseqw_new(rb_iseq_compile_with_option(src, file, path, line, 0, opt));
 }</pre>
               </div>
             </div>
@@ -352,7 +377,7 @@ iseq_s_compile(int argc, VALUE *argv, VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-c-compile_file" name="method-c-compile_file" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Takes <code>file</code>, a String with the location of a Ruby source file,
@@ -376,42 +401,55 @@ RubyVM::InstructionSequence.compile_file(&quot;/tmp/hello.rb&quot;)
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-compile_file_source')" id="l_method-c-compile_file_source">show</a>
                 
               </p>
               <div id="method-c-compile_file_source" class="dyn-source">
                 <pre>static VALUE
-iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
+iseqw_s_compile_file(int argc, VALUE *argv, VALUE self)
 {
     VALUE file, line = INT2FIX(1), opt = Qnil;
-    VALUE parser;
-    VALUE f;
+    VALUE parser, f, exc = Qnil;
     NODE *node;
-    const char *fname;
     rb_compile_option_t option;
+    int i;
 
     rb_secure(1);
-    rb_scan_args(argc, argv, &quot;11&quot;, &amp;file, &amp;opt);
+    i = rb_scan_args(argc, argv, &quot;1*:&quot;, &amp;file, NULL, &amp;opt);
+    if (i &gt; 1+NIL_P(opt)) rb_error_arity(argc, 1, 2);
+    switch (i) {
+      case 2: opt = argv[--i];
+    }
     FilePathValue(file);
-    fname = StringValueCStr(file);
+    file = rb_fstring(file); /* rb_io_t-&gt;pathv gets frozen anyways */
 
     f = rb_file_open_str(file, &quot;r&quot;);
 
     parser = rb_parser_new();
-    node = rb_parser_compile_file(parser, fname, f, NUM2INT(line));
+    rb_parser_set_context(parser, NULL, FALSE);
+    node = rb_parser_compile_file_path(parser, file, f, NUM2INT(line));
+    if (!node) exc = GET_THREAD()-&gt;errinfo;
+
+    rb_io_close(f);
+    if (!node) rb_exc_raise(exc);
+
     make_compile_option(&amp;option, opt);
-    return rb_iseq_new_with_opt(node, rb_str_new2(&quot;&lt;main&gt;&quot;), file,
-                                rb_realpath_internal(Qnil, file, 1), line, Qfalse,
-                                ISEQ_TYPE_TOP, &amp;option);
+
+    return iseqw_new(rb_iseq_new_with_opt(node, rb_fstring_cstr(&quot;&lt;main&gt;&quot;),
+                                          file,
+                                          rb_realpath_internal(Qnil, file, 1),
+                                          line, NULL, ISEQ_TYPE_TOP, &amp;option));
 }</pre>
               </div>
             </div>
@@ -426,7 +464,7 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-c-compile_option" name="method-c-compile_option" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a hash of default options used by the Ruby iseq compiler.</p>
@@ -435,21 +473,23 @@ iseq_s_compile_file(int argc, VALUE *argv, VALUE self)
 href="InstructionSequence.html#method-c-compile_option-3D">::compile_option=</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-compile_option_source')" id="l_method-c-compile_option_source">show</a>
                 
               </p>
               <div id="method-c-compile_option_source" class="dyn-source">
                 <pre>static VALUE
-iseq_s_compile_option_get(VALUE self)
+iseqw_s_compile_option_get(VALUE self)
 {
     return make_compile_option_value(&amp;COMPILE_OPTION_DEFAULT);
 }</pre>
@@ -466,7 +506,7 @@ iseq_s_compile_option_get(VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-c-compile_option-3D" name="method-c-compile_option-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Sets the default values for various optimizations in the Ruby iseq
@@ -508,21 +548,23 @@ href="InstructionSequence.html#method-c-compile">::compile</a> and <a
 href="InstructionSequence.html#method-c-compile_file">::compile_file</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-compile_option-3D_source')" id="l_method-c-compile_option-3D_source">show</a>
                 
               </p>
               <div id="method-c-compile_option-3D_source" class="dyn-source">
                 <pre>static VALUE
-iseq_s_compile_option_set(VALUE self, VALUE opt)
+iseqw_s_compile_option_set(VALUE self, VALUE opt)
 {
     rb_compile_option_t option;
     rb_secure(1);
@@ -538,13 +580,12 @@ iseq_s_compile_option_set(VALUE self, VALUE opt)
         <div class="method">
           <div class="title method-title" id="method-c-disasm">
             
-              <b>InstructionSequence.disasm(body) &rarr; str
-InstructionSequence.disassemble(body) &rarr; str
+              <b>InstructionSequence.disasm(body) &rarr; str<br />InstructionSequence.disassemble(body) &rarr; str
 </b>
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-c-disasm" name="method-c-disasm" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Takes <code>body</code>, a <a href="../Method.html">Method</a> or <a
@@ -576,7 +617,8 @@ puts RubyVM::InstructionSequence.disasm(method(:hello))
 
 <pre><code># /tmp/proc.rb
 p = proc { num = 1 + 2 }
-puts RubyVM::InstructionSequence.disasm(p)</code></pre>
+puts RubyVM::InstructionSequence.disasm(p)
+</code></pre>
 
 <p>Produces:</p>
 
@@ -596,24 +638,26 @@ local table (size: 2, argc: 0 [opts: 0, rest: -1, post: 0, block: -1] s1)
 0012 leave</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-disasm_source')" id="l_method-c-disasm_source">show</a>
                 
               </p>
               <div id="method-c-disasm_source" class="dyn-source">
                 <pre>static VALUE
-iseq_s_disasm(VALUE klass, VALUE body)
+iseqw_s_disasm(VALUE klass, VALUE body)
 {
-    VALUE iseqval = iseq_s_of(klass, body);
-    return NIL_P(iseqval) ? Qnil : rb_iseq_disasm(iseqval);
+    VALUE iseqw = iseqw_s_of(klass, body);
+    return NIL_P(iseqw) ? Qnil : rb_iseq_disasm(iseqw_check(iseqw));
 }</pre>
               </div>
             </div>
@@ -623,13 +667,12 @@ iseq_s_disasm(VALUE klass, VALUE body)
         <div class="method">
           <div class="title method-title" id="method-c-disassemble">
             
-              <b>InstructionSequence.disasm(body) &rarr; str
-InstructionSequence.disassemble(body) &rarr; str
+              <b>InstructionSequence.disasm(body) &rarr; str<br />InstructionSequence.disassemble(body) &rarr; str
 </b>
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-c-disassemble" name="method-c-disassemble" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Takes <code>body</code>, a <a href="../Method.html">Method</a> or <a
@@ -661,7 +704,8 @@ puts RubyVM::InstructionSequence.disasm(method(:hello))
 
 <pre><code># /tmp/proc.rb
 p = proc { num = 1 + 2 }
-puts RubyVM::InstructionSequence.disasm(p)</code></pre>
+puts RubyVM::InstructionSequence.disasm(p)
+</code></pre>
 
 <p>Produces:</p>
 
@@ -681,24 +725,111 @@ local table (size: 2, argc: 0 [opts: 0, rest: -1, post: 0, block: -1] s1)
 0012 leave</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-disassemble_source')" id="l_method-c-disassemble_source">show</a>
                 
               </p>
               <div id="method-c-disassemble_source" class="dyn-source">
                 <pre>static VALUE
-iseq_s_disasm(VALUE klass, VALUE body)
+iseqw_s_disasm(VALUE klass, VALUE body)
 {
-    VALUE iseqval = iseq_s_of(klass, body);
-    return NIL_P(iseqval) ? Qnil : rb_iseq_disasm(iseqval);
+    VALUE iseqw = iseqw_s_of(klass, body);
+    return NIL_P(iseqw) ? Qnil : rb_iseq_disasm(iseqw_check(iseqw));
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-c-load_from_binary">
+            
+              <b>RubyVM::InstructionSequence.load_from_binary(binary) &rarr; iseq
+</b>
+            
+            <a href="../../classes/RubyVM/InstructionSequence.html#method-c-load_from_binary" name="method-c-load_from_binary" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Load an iseq object from binary format String object created by <a
+href="InstructionSequence.html#method-i-to_binary">#to_binary</a>.</p>
+
+<p>This loader does not have a verifier, so that loading broken/modified
+binary causes critical problem.</p>
+
+<p>You should not load binary data provided by others. You should use binary
+data translated by yourself.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-load_from_binary_source')" id="l_method-c-load_from_binary_source">show</a>
+                
+              </p>
+              <div id="method-c-load_from_binary_source" class="dyn-source">
+                <pre>static VALUE
+iseqw_s_load_from_binary(VALUE self, VALUE str)
+{
+    return iseqw_new(iseq_ibf_load(str));
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-c-load_from_binary_extra_data">
+            
+              <b>RubyVM::InstructionSequence.load_from_binary_extra_data(binary) &rarr; str
+</b>
+            
+            <a href="../../classes/RubyVM/InstructionSequence.html#method-c-load_from_binary_extra_data" name="method-c-load_from_binary_extra_data" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Load extra data embed into binary format String object.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-load_from_binary_extra_data_source')" id="l_method-c-load_from_binary_extra_data_source">show</a>
+                
+              </p>
+              <div id="method-c-load_from_binary_extra_data_source" class="dyn-source">
+                <pre>static VALUE
+iseqw_s_load_from_binary_extra_data(VALUE self, VALUE str)
+{
+    return  iseq_ibf_load_extra_data(str);
 }</pre>
               </div>
             </div>
@@ -712,7 +843,7 @@ iseq_s_disasm(VALUE klass, VALUE body)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Takes <code>source</code>, a String of Ruby code and compiles it to an <a
@@ -735,31 +866,41 @@ href="InstructionSequence.html#method-c-compile_option-3D">::compile_option=</a>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
                 <pre>static VALUE
-iseq_s_compile(int argc, VALUE *argv, VALUE self)
+iseqw_s_compile(int argc, VALUE *argv, VALUE self)
 {
     VALUE src, file = Qnil, path = Qnil, line = INT2FIX(1), opt = Qnil;
+    int i;
 
     rb_secure(1);
 
-    rb_scan_args(argc, argv, &quot;14&quot;, &amp;src, &amp;file, &amp;path, &amp;line, &amp;opt);
-    if (NIL_P(file)) file = rb_str_new2(&quot;&lt;compiled&gt;&quot;);
+    i = rb_scan_args(argc, argv, &quot;1*:&quot;, &amp;src, NULL, &amp;opt);
+    if (i &gt; 4+NIL_P(opt)) rb_error_arity(argc, 1, 5);
+    switch (i) {
+      case 5: opt = argv[--i];
+      case 4: line = argv[--i];
+      case 3: path = argv[--i];
+      case 2: file = argv[--i];
+    }
+    if (NIL_P(file)) file = rb_fstring_cstr(&quot;&lt;compiled&gt;&quot;);
     if (NIL_P(line)) line = INT2FIX(1);
 
-    return rb_iseq_compile_with_option(src, file, path, line, 0, opt);
+    return iseqw_new(rb_iseq_compile_with_option(src, file, path, line, 0, opt));
 }</pre>
               </div>
             </div>
@@ -773,7 +914,7 @@ iseq_s_compile(int argc, VALUE *argv, VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-c-of" name="method-c-of" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the instruction sequence containing the given proc or method.</p>
@@ -788,8 +929,7 @@ iseq_s_compile(int argc, VALUE *argv, VALUE self)
 # for a method
 &gt; def foo(bar); puts bar; end
 &gt; RubyVM::InstructionSequence.of(method(:foo))
-&gt; #=&gt; &lt;RubyVM::InstructionSequence:foo@(irb)&gt;
-</code></pre>
+&gt; #=&gt; &lt;RubyVM::InstructionSequence:foo@(irb)&gt;</code></pre>
 
 <p>Using <a
 href="InstructionSequence.html#method-c-compile_file">::compile_file</a>:</p>
@@ -810,43 +950,43 @@ $a_global_proc = proc { str = &#39;a&#39; + &#39;b&#39; }
 
 # then the global proc
 &gt; RubyVM::InstructionSequence.of($a_global_proc)
-&gt; #=&gt; #&lt;RubyVM::InstructionSequence:0x007fb73d7caf78&gt;
-</code></pre>
+&gt; #=&gt; #&lt;RubyVM::InstructionSequence:0x007fb73d7caf78&gt;</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-of_source')" id="l_method-c-of_source">show</a>
                 
               </p>
               <div id="method-c-of_source" class="dyn-source">
                 <pre>static VALUE
-iseq_s_of(VALUE klass, VALUE body)
+iseqw_s_of(VALUE klass, VALUE body)
 {
-    VALUE ret = Qnil;
-    rb_iseq_t *iseq;
+    const rb_iseq_t *iseq = NULL;
 
     rb_secure(1);
 
     if (rb_obj_is_proc(body)) {
-        rb_proc_t *proc;
-        GetProcPtr(body, proc);
-        iseq = proc-&gt;block.iseq;
-        if (RUBY_VM_NORMAL_ISEQ_P(iseq)) {
-            ret = iseq-&gt;self;
+        iseq = vm_proc_iseq(body);
+
+        if (!rb_obj_is_iseq((VALUE)iseq)) {
+            iseq = NULL;
         }
     }
-    else if ((iseq = rb_method_get_iseq(body)) != 0) {
-        ret = iseq-&gt;self;
+    else {
+        iseq = rb_method_iseq(body);
     }
-    return ret;
+
+    return iseq ? iseqw_new(iseq) : Qnil;
 }</pre>
               </div>
             </div>
@@ -862,7 +1002,7 @@ iseq_s_of(VALUE klass, VALUE body)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-absolute_path" name="method-i-absolute_path" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the absolute path of this instruction sequence.</p>
@@ -879,29 +1019,28 @@ end
 
 # in irb
 &gt; iseq = RubyVM::InstructionSequence.compile_file(&#39;/tmp/method.rb&#39;)
-&gt; iseq.absolute_path #=&gt; /tmp/method.rb
-</code></pre>
+&gt; iseq.absolute_path #=&gt; /tmp/method.rb</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-absolute_path_source')" id="l_method-i-absolute_path_source">show</a>
                 
               </p>
               <div id="method-i-absolute_path_source" class="dyn-source">
                 <pre>static VALUE
-iseq_absolute_path(VALUE self)
+iseqw_absolute_path(VALUE self)
 {
-    rb_iseq_t *iseq;
-    GetISeqPtr(self, iseq);
-    return iseq-&gt;location.absolute_path;
+    return rb_iseq_absolute_path(iseqw_check(self));
 }</pre>
               </div>
             </div>
@@ -915,7 +1054,7 @@ iseq_absolute_path(VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-base_label" name="method-i-base_label" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the base label of this instruction sequence.</p>
@@ -938,29 +1077,28 @@ end
 
 # in irb
 &gt; iseq = RubyVM::InstructionSequence.compile_file(&#39;/tmp/method.rb&#39;)
-&gt; iseq.base_label #=&gt; &lt;main&gt;
-</code></pre>
+&gt; iseq.base_label #=&gt; &lt;main&gt;</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-base_label_source')" id="l_method-i-base_label_source">show</a>
                 
               </p>
               <div id="method-i-base_label_source" class="dyn-source">
                 <pre>static VALUE
-iseq_base_label(VALUE self)
+iseqw_base_label(VALUE self)
 {
-    rb_iseq_t *iseq;
-    GetISeqPtr(self, iseq);
-    return iseq-&gt;location.base_label;
+    return rb_iseq_base_label(iseqw_check(self));
 }</pre>
               </div>
             </div>
@@ -974,13 +1112,14 @@ iseq_base_label(VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-disasm" name="method-i-disasm" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the instruction sequence as a <code>String</code> in human readable
 form.</p>
 
-<pre><code>puts RubyVM::InstructionSequence.compile(&#39;1 + 2&#39;).disasm</code></pre>
+<pre><code>puts RubyVM::InstructionSequence.compile(&#39;1 + 2&#39;).disasm
+</code></pre>
 
 <p>Produces:</p>
 
@@ -992,124 +1131,25 @@ form.</p>
 0008 leave</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-disasm_source')" id="l_method-i-disasm_source">show</a>
                 
               </p>
               <div id="method-i-disasm_source" class="dyn-source">
-                <pre>VALUE
-rb_iseq_disasm(VALUE self)
+                <pre>static VALUE
+iseqw_disasm(VALUE self)
 {
-    rb_iseq_t *iseqdat = iseq_check(self);
-    VALUE *iseq;
-    VALUE str = rb_str_new(0, 0);
-    VALUE child = rb_ary_new();
-    unsigned long size;
-    int i;
-    long l;
-    ID *tbl;
-    size_t n;
-    enum {header_minlen = 72};
-
-    rb_secure(1);
-
-    iseq = iseqdat-&gt;iseq;
-    size = iseqdat-&gt;iseq_size;
-
-    rb_str_cat2(str, &quot;== disasm: &quot;);
-
-    rb_str_concat(str, iseq_inspect(iseqdat-&gt;self));
-    if ((l = RSTRING_LEN(str)) &lt; header_minlen) {
-        rb_str_resize(str, header_minlen);
-        memset(RSTRING_PTR(str) + l, &#39;=&#39;, header_minlen - l);
-    }
-    rb_str_cat2(str, &quot;\n&quot;);
-
-    /* show catch table information */
-    if (iseqdat-&gt;catch_table_size != 0) {
-        rb_str_cat2(str, &quot;== catch table\n&quot;);
-    }
-    for (i = 0; i &lt; iseqdat-&gt;catch_table_size; i++) {
-        struct iseq_catch_table_entry *entry = &amp;iseqdat-&gt;catch_table[i];
-        rb_str_catf(str,
-                    &quot;| catch type: %-6s st: %04d ed: %04d sp: %04d cont: %04d\n&quot;,
-                    catch_type((int)entry-&gt;type), (int)entry-&gt;start,
-                    (int)entry-&gt;end, (int)entry-&gt;sp, (int)entry-&gt;cont);
-        if (entry-&gt;iseq) {
-            rb_str_concat(str, rb_iseq_disasm(entry-&gt;iseq));
-        }
-    }
-    if (iseqdat-&gt;catch_table_size != 0) {
-        rb_str_cat2(str, &quot;|-------------------------------------&quot;
-                    &quot;-----------------------------------\n&quot;);
-    }
-
-    /* show local table information */
-    tbl = iseqdat-&gt;local_table;
-
-    if (tbl) {
-        rb_str_catf(str,
-                    &quot;local table (size: %d, argc: %d &quot;
-                    &quot;[opts: %d, rest: %d, post: %d, block: %d] s%d)\n&quot;,
-                    iseqdat-&gt;local_size, iseqdat-&gt;argc,
-                    iseqdat-&gt;arg_opts, iseqdat-&gt;arg_rest,
-                    iseqdat-&gt;arg_post_len, iseqdat-&gt;arg_block,
-                    iseqdat-&gt;arg_simple);
-
-        for (i = 0; i &lt; iseqdat-&gt;local_table_size; i++) {
-            long width;
-            VALUE name = id_to_name(tbl[i], 0);
-            char argi[0x100] = &quot;&quot;;
-            char opti[0x100] = &quot;&quot;;
-
-            if (iseqdat-&gt;arg_opts) {
-                int argc = iseqdat-&gt;argc;
-                int opts = iseqdat-&gt;arg_opts;
-                if (i &gt;= argc &amp;&amp; i &lt; argc + opts - 1) {
-                    snprintf(opti, sizeof(opti), &quot;Opt=%&quot;PRIdVALUE,
-                             iseqdat-&gt;arg_opt_table[i - argc]);
-                }
-            }
-
-            snprintf(argi, sizeof(argi), &quot;%s%s%s%s%s&quot;, /* arg, opts, rest, post  block */
-                     iseqdat-&gt;argc &gt; i ? &quot;Arg&quot; : &quot;&quot;,
-                     opti,
-                     iseqdat-&gt;arg_rest == i ? &quot;Rest&quot; : &quot;&quot;,
-                     (iseqdat-&gt;arg_post_start &lt;= i &amp;&amp;
-                      i &lt; iseqdat-&gt;arg_post_start + iseqdat-&gt;arg_post_len) ? &quot;Post&quot; : &quot;&quot;,
-                     iseqdat-&gt;arg_block == i ? &quot;Block&quot; : &quot;&quot;);
-
-            rb_str_catf(str, &quot;[%2d] &quot;, iseqdat-&gt;local_size - i);
-            width = RSTRING_LEN(str) + 11;
-            if (name)
-                rb_str_append(str, name);
-            else
-                rb_str_cat2(str, &quot;?&quot;);
-            if (*argi) rb_str_catf(str, &quot;&lt;%s&gt;&quot;, argi);
-            if ((width -= RSTRING_LEN(str)) &gt; 0) rb_str_catf(str, &quot;%*s&quot;, (int)width, &quot;&quot;);
-        }
-        rb_str_cat2(str, &quot;\n&quot;);
-    }
-
-    /* show each line */
-    for (n = 0; n &lt; size;) {
-        n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
-    }
-
-    for (i = 0; i &lt; RARRAY_LEN(child); i++) {
-        VALUE isv = rb_ary_entry(child, i);
-        rb_str_concat(str, rb_iseq_disasm(isv));
-    }
-
-    return str;
+    return rb_iseq_disasm(iseqw_check(self));
 }</pre>
               </div>
             </div>
@@ -1123,13 +1163,14 @@ rb_iseq_disasm(VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-disassemble" name="method-i-disassemble" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the instruction sequence as a <code>String</code> in human readable
 form.</p>
 
-<pre><code>puts RubyVM::InstructionSequence.compile(&#39;1 + 2&#39;).disasm</code></pre>
+<pre><code>puts RubyVM::InstructionSequence.compile(&#39;1 + 2&#39;).disasm
+</code></pre>
 
 <p>Produces:</p>
 
@@ -1141,124 +1182,25 @@ form.</p>
 0008 leave</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-disassemble_source')" id="l_method-i-disassemble_source">show</a>
                 
               </p>
               <div id="method-i-disassemble_source" class="dyn-source">
-                <pre>VALUE
-rb_iseq_disasm(VALUE self)
+                <pre>static VALUE
+iseqw_disasm(VALUE self)
 {
-    rb_iseq_t *iseqdat = iseq_check(self);
-    VALUE *iseq;
-    VALUE str = rb_str_new(0, 0);
-    VALUE child = rb_ary_new();
-    unsigned long size;
-    int i;
-    long l;
-    ID *tbl;
-    size_t n;
-    enum {header_minlen = 72};
-
-    rb_secure(1);
-
-    iseq = iseqdat-&gt;iseq;
-    size = iseqdat-&gt;iseq_size;
-
-    rb_str_cat2(str, &quot;== disasm: &quot;);
-
-    rb_str_concat(str, iseq_inspect(iseqdat-&gt;self));
-    if ((l = RSTRING_LEN(str)) &lt; header_minlen) {
-        rb_str_resize(str, header_minlen);
-        memset(RSTRING_PTR(str) + l, &#39;=&#39;, header_minlen - l);
-    }
-    rb_str_cat2(str, &quot;\n&quot;);
-
-    /* show catch table information */
-    if (iseqdat-&gt;catch_table_size != 0) {
-        rb_str_cat2(str, &quot;== catch table\n&quot;);
-    }
-    for (i = 0; i &lt; iseqdat-&gt;catch_table_size; i++) {
-        struct iseq_catch_table_entry *entry = &amp;iseqdat-&gt;catch_table[i];
-        rb_str_catf(str,
-                    &quot;| catch type: %-6s st: %04d ed: %04d sp: %04d cont: %04d\n&quot;,
-                    catch_type((int)entry-&gt;type), (int)entry-&gt;start,
-                    (int)entry-&gt;end, (int)entry-&gt;sp, (int)entry-&gt;cont);
-        if (entry-&gt;iseq) {
-            rb_str_concat(str, rb_iseq_disasm(entry-&gt;iseq));
-        }
-    }
-    if (iseqdat-&gt;catch_table_size != 0) {
-        rb_str_cat2(str, &quot;|-------------------------------------&quot;
-                    &quot;-----------------------------------\n&quot;);
-    }
-
-    /* show local table information */
-    tbl = iseqdat-&gt;local_table;
-
-    if (tbl) {
-        rb_str_catf(str,
-                    &quot;local table (size: %d, argc: %d &quot;
-                    &quot;[opts: %d, rest: %d, post: %d, block: %d] s%d)\n&quot;,
-                    iseqdat-&gt;local_size, iseqdat-&gt;argc,
-                    iseqdat-&gt;arg_opts, iseqdat-&gt;arg_rest,
-                    iseqdat-&gt;arg_post_len, iseqdat-&gt;arg_block,
-                    iseqdat-&gt;arg_simple);
-
-        for (i = 0; i &lt; iseqdat-&gt;local_table_size; i++) {
-            long width;
-            VALUE name = id_to_name(tbl[i], 0);
-            char argi[0x100] = &quot;&quot;;
-            char opti[0x100] = &quot;&quot;;
-
-            if (iseqdat-&gt;arg_opts) {
-                int argc = iseqdat-&gt;argc;
-                int opts = iseqdat-&gt;arg_opts;
-                if (i &gt;= argc &amp;&amp; i &lt; argc + opts - 1) {
-                    snprintf(opti, sizeof(opti), &quot;Opt=%&quot;PRIdVALUE,
-                             iseqdat-&gt;arg_opt_table[i - argc]);
-                }
-            }
-
-            snprintf(argi, sizeof(argi), &quot;%s%s%s%s%s&quot;, /* arg, opts, rest, post  block */
-                     iseqdat-&gt;argc &gt; i ? &quot;Arg&quot; : &quot;&quot;,
-                     opti,
-                     iseqdat-&gt;arg_rest == i ? &quot;Rest&quot; : &quot;&quot;,
-                     (iseqdat-&gt;arg_post_start &lt;= i &amp;&amp;
-                      i &lt; iseqdat-&gt;arg_post_start + iseqdat-&gt;arg_post_len) ? &quot;Post&quot; : &quot;&quot;,
-                     iseqdat-&gt;arg_block == i ? &quot;Block&quot; : &quot;&quot;);
-
-            rb_str_catf(str, &quot;[%2d] &quot;, iseqdat-&gt;local_size - i);
-            width = RSTRING_LEN(str) + 11;
-            if (name)
-                rb_str_append(str, name);
-            else
-                rb_str_cat2(str, &quot;?&quot;);
-            if (*argi) rb_str_catf(str, &quot;&lt;%s&gt;&quot;, argi);
-            if ((width -= RSTRING_LEN(str)) &gt; 0) rb_str_catf(str, &quot;%*s&quot;, (int)width, &quot;&quot;);
-        }
-        rb_str_cat2(str, &quot;\n&quot;);
-    }
-
-    /* show each line */
-    for (n = 0; n &lt; size;) {
-        n += rb_iseq_disasm_insn(str, iseq, n, iseqdat, child);
-    }
-
-    for (i = 0; i &lt; RARRAY_LEN(child); i++) {
-        VALUE isv = rb_ary_entry(child, i);
-        rb_str_concat(str, rb_iseq_disasm(isv));
-    }
-
-    return str;
+    return rb_iseq_disasm(iseqw_check(self));
 }</pre>
               </div>
             </div>
@@ -1273,7 +1215,7 @@ rb_iseq_disasm(VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-eval" name="method-i-eval" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Evaluates the instruction sequence and returns the result.</p>
@@ -1282,24 +1224,26 @@ rb_iseq_disasm(VALUE self)
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-eval_source')" id="l_method-i-eval_source">show</a>
                 
               </p>
               <div id="method-i-eval_source" class="dyn-source">
                 <pre>static VALUE
-iseq_eval(VALUE self)
+iseqw_eval(VALUE self)
 {
     rb_secure(1);
-    return rb_iseq_eval(self);
+    return rb_iseq_eval(iseqw_check(self));
 }</pre>
               </div>
             </div>
@@ -1313,7 +1257,7 @@ iseq_eval(VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-first_lineno" name="method-i-first_lineno" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the number of the first source line where the instruction sequence
@@ -1328,25 +1272,25 @@ iseq.first_lineno
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-first_lineno_source')" id="l_method-i-first_lineno_source">show</a>
                 
               </p>
               <div id="method-i-first_lineno_source" class="dyn-source">
                 <pre>static VALUE
-iseq_first_lineno(VALUE self)
+iseqw_first_lineno(VALUE self)
 {
-    rb_iseq_t *iseq;
-    GetISeqPtr(self, iseq);
-    return iseq-&gt;location.first_lineno;
+    return rb_iseq_first_lineno(iseqw_check(self));
 }</pre>
               </div>
             </div>
@@ -1360,7 +1304,7 @@ iseq_first_lineno(VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a human-readable string representation of this instruction
@@ -1369,31 +1313,34 @@ href="InstructionSequence.html#method-i-label">label</a> and <a
 href="InstructionSequence.html#method-i-path">path</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
               </p>
               <div id="method-i-inspect_source" class="dyn-source">
                 <pre>static VALUE
-iseq_inspect(VALUE self)
+iseqw_inspect(VALUE self)
 {
-    rb_iseq_t *iseq;
-    GetISeqPtr(self, iseq);
-    if (!iseq-&gt;location.label) {
+    const rb_iseq_t *iseq = iseqw_check(self);
+
+    if (!iseq-&gt;body-&gt;location.label) {
         return rb_sprintf(&quot;#&lt;%s: uninitialized&gt;&quot;, rb_obj_classname(self));
     }
-
-    return rb_sprintf(&quot;&lt;%s:%s@%s&gt;&quot;,
-                      rb_obj_classname(self),
-                      RSTRING_PTR(iseq-&gt;location.label), RSTRING_PTR(iseq-&gt;location.path));
+    else {
+        return rb_sprintf(&quot;&lt;%s:%s@%s&gt;&quot;,
+                          rb_obj_classname(self),
+                          RSTRING_PTR(iseq-&gt;body-&gt;location.label), RSTRING_PTR(iseq-&gt;body-&gt;location.path));
+    }
 }</pre>
               </div>
             </div>
@@ -1407,7 +1354,7 @@ iseq_inspect(VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-label" name="method-i-label" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the label of this instruction sequence.</p>
@@ -1433,29 +1380,28 @@ end
 
 # in irb
 &gt; iseq = RubyVM::InstructionSequence.compile_file(&#39;/tmp/method.rb&#39;)
-&gt; iseq.label #=&gt; &lt;main&gt;
-</code></pre>
+&gt; iseq.label #=&gt; &lt;main&gt;</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-label_source')" id="l_method-i-label_source">show</a>
                 
               </p>
               <div id="method-i-label_source" class="dyn-source">
                 <pre>static VALUE
-iseq_label(VALUE self)
+iseqw_label(VALUE self)
 {
-    rb_iseq_t *iseq;
-    GetISeqPtr(self, iseq);
-    return iseq-&gt;location.label;
+    return rb_iseq_label(iseqw_check(self));
 }</pre>
               </div>
             </div>
@@ -1469,7 +1415,7 @@ iseq_label(VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-line_trace_all" name="method-i-line_trace_all" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p><strong>Experimental MRI specific feature, only available as C level
@@ -1478,24 +1424,26 @@ api.</strong></p>
 <p>Returns all <code>specified_line</code> events.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-line_trace_all_source')" id="l_method-i-line_trace_all_source">show</a>
                 
               </p>
               <div id="method-i-line_trace_all_source" class="dyn-source">
                 <pre>VALUE
-rb_iseq_line_trace_all(VALUE iseqval)
+rb_iseqw_line_trace_all(VALUE iseqw)
 {
     VALUE result = rb_ary_new();
-    rb_iseq_line_trace_each(iseqval, collect_trace, (void *)result);
+    rb_iseqw_line_trace_each(iseqw, collect_trace, (void *)result);
     return result;
 }</pre>
               </div>
@@ -1510,7 +1458,7 @@ rb_iseq_line_trace_all(VALUE iseqval)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-line_trace_specify" name="method-i-line_trace_specify" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p><strong>Experimental MRI specific feature, only available as C level
@@ -1530,21 +1478,23 @@ is not boolean.</p>
 href="../TypeError.html">TypeError</a> exception is raised.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-line_trace_specify_source')" id="l_method-i-line_trace_specify_source">show</a>
                 
               </p>
               <div id="method-i-line_trace_specify_source" class="dyn-source">
                 <pre>VALUE
-rb_iseq_line_trace_specify(VALUE iseqval, VALUE pos, VALUE set)
+rb_iseqw_line_trace_specify(VALUE iseqval, VALUE pos, VALUE set)
 {
     struct set_specifc_data data;
 
@@ -1559,7 +1509,7 @@ rb_iseq_line_trace_specify(VALUE iseqval, VALUE pos, VALUE set)
         rb_raise(rb_eTypeError, &quot;`set&#39; should be true/false&quot;);
     }
 
-    rb_iseq_line_trace_each(iseqval, line_trace_specify, (void *)&amp;data);
+    rb_iseqw_line_trace_each(iseqval, line_trace_specify, (void *)&amp;data);
 
     if (data.prev == 0) {
         rb_raise(rb_eTypeError, &quot;`pos&#39; is out of range.&quot;);
@@ -1578,7 +1528,7 @@ rb_iseq_line_trace_specify(VALUE iseqval, VALUE pos, VALUE set)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-path" name="method-i-path" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the path of this instruction sequence.</p>
@@ -1603,29 +1553,28 @@ end
 
 # in irb
 &gt; iseq = RubyVM::InstructionSequence.compile_file(&#39;/tmp/method.rb&#39;)
-&gt; iseq.path #=&gt; /tmp/method.rb
-</code></pre>
+&gt; iseq.path #=&gt; /tmp/method.rb</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-path_source')" id="l_method-i-path_source">show</a>
                 
               </p>
               <div id="method-i-path_source" class="dyn-source">
                 <pre>static VALUE
-iseq_path(VALUE self)
+iseqw_path(VALUE self)
 {
-    rb_iseq_t *iseq;
-    GetISeqPtr(self, iseq);
-    return iseq-&gt;location.path;
+    return rb_iseq_path(iseqw_check(self));
 }</pre>
               </div>
             </div>
@@ -1640,7 +1589,7 @@ iseq_path(VALUE self)
             
             <a href="../../classes/RubyVM/InstructionSequence.html#method-i-to_a" name="method-i-to_a" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns an Array with 14 elements representing the instruction sequence
@@ -1708,15 +1657,9 @@ loaded from.</p>
 <dd>
 <p>An array containing the names of all arguments and local variables as
 symbols.</p>
-</dd><dt>args
+</dd><dt>params
 <dd>
-<p>The arity if the method or block only has required arguments.</p>
-
-<p>Otherwise an array of:</p>
-
-<pre><code>[required_argc, [optional_arg_labels, ...],
- splat_index, post_splat_argc, post_splat_index,
- block_index, simple]</code></pre>
+<p>An <a href="../Hash.html">Hash</a> object containing parameter information.</p>
 
 <p>More info about these values can be found in <code>vm_core.h</code>.</p>
 </dd><dt>catch_table
@@ -1728,27 +1671,83 @@ etc.).</p>
 <p>An array of arrays containing the instruction names and operands that make
 up the body of the instruction sequence.</p>
 </dd></dl>
+
+<p>Note that this format is MRI specific and version dependent.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_a_source')" id="l_method-i-to_a_source">show</a>
                 
               </p>
               <div id="method-i-to_a_source" class="dyn-source">
                 <pre>static VALUE
-iseq_to_a(VALUE self)
+iseqw_to_a(VALUE self)
 {
-    rb_iseq_t *iseq = iseq_check(self);
+    const rb_iseq_t *iseq = iseqw_check(self);
     rb_secure(1);
     return iseq_data_to_ary(iseq);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-to_binary">
+            
+              <b>iseq.to_binary(extra_data = nil) &rarr; binary str
+</b>
+            
+            <a href="../../classes/RubyVM/InstructionSequence.html#method-i-to_binary" name="method-i-to_binary" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns serialized iseq binary format data as a String object. A
+corresponding iseq object is created by <a
+href="InstructionSequence.html#method-c-load_from_binary">::load_from_binary</a>
+method.</p>
+
+<p>String extra_data will be saved with binary data. You can access this data
+with <a
+href="InstructionSequence.html#method-c-load_from_binary_extra_data">::load_from_binary_extra_data</a>.</p>
+
+<p>Note that the translated binary data is not portable. You can not move this
+binary data to another machine. You can not use the binary data which is
+created by another version/another architecture of Ruby.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_binary_source')" id="l_method-i-to_binary_source">show</a>
+                
+              </p>
+              <div id="method-i-to_binary_source" class="dyn-source">
+                <pre>static VALUE
+iseqw_to_binary(int argc, VALUE *argv, VALUE self)
+{
+    VALUE opt;
+    rb_scan_args(argc, argv, &quot;01&quot;, &amp;opt);
+    return iseq_ibf_dump(iseqw_check(self), opt);
 }</pre>
               </div>
             </div>
@@ -1758,4 +1757,4 @@ iseq_to_a(VALUE self)
 
     </div>
   </body>
-</html>    
+</html>

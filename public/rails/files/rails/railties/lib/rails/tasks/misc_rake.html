@@ -15,7 +15,7 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
@@ -26,8 +26,10 @@
             <li>
                 rails/railties/lib/rails/tasks/misc.rake
                 
+                    <a href="https://github.com/rails/rails/blob/69ab3eb57e8387b0dd9d672b5e8d9185395baa03/railties/lib/rails/tasks/misc.rake" target="_blank" class="github_url">on GitHub</a>
+                
             </li>
-            <li>Last modified: 2013-04-26 19:46:46 +0300</li>
+            <li>Last modified: 2017-06-18 10:05:13 +0300</li>
         </ul>
     </div>
 
@@ -36,53 +38,71 @@
   
     <div class="description">
       
-<p>desc &#39;Generate a cryptographically secure secret key (this is typically
-used to generate a secret for cookie sessions).&#39; task :secret do</p>
+<p>desc “Generate a cryptographically secure secret key (this is typically
+used to generate a secret for cookie sessions).” task :secret do</p>
 
-<pre><code>require &#39;securerandom&#39;
+<pre><code>require &quot;securerandom&quot;
 puts SecureRandom.hex(64)
 </code></pre>
 
 <p>end</p>
 
-<p>desc &#39;List versions of all <a
+<p>desc “List versions of all <a
 href="../../../../../../classes/Rails.html">Rails</a> frameworks and the
-environment&#39; task about: :environment do</p>
+environment” task about: :environment do</p>
 
-<pre><code>puts Rails::Info</code></pre>
+<pre><code>puts Rails::Info
+</code></pre>
 
 <p>end</p>
 
 <p>namespace :time do</p>
 
-<pre><code>namespace :zones do
-  desc &#39;Displays all time zones, also available: time:zones:us, time:zones:local -- filter with OFFSET parameter, e.g., OFFSET=-6&#39;
+<pre><code>desc &quot;List all time zones, list by two-letter country code (`rails time:zones[US]`), or list by UTC offset (`rails time:zones[-8]`)&quot;
+task :zones, :country_or_offset do |t, args|
+  zones, offset = ActiveSupport::TimeZone.all, nil
+
+  if country_or_offset = args[:country_or_offset]
+    begin
+      zones = ActiveSupport::TimeZone.country_zones(country_or_offset)
+    rescue TZInfo::InvalidCountryCode
+      offset = country_or_offset
+    end
+  end
+
+  build_time_zone_list zones, offset
+end
+
+namespace :zones do
+  # desc &#39;Displays all time zones, also available: time:zones:us, time:zones:local -- filter with OFFSET parameter, e.g., OFFSET=-6&#39;
   task :all do
-    build_time_zone_list(:all)
+    build_time_zone_list ActiveSupport::TimeZone.all
   end
 
   # desc &#39;Displays names of US time zones recognized by the Rails TimeZone class, grouped by offset. Results can be filtered with optional OFFSET parameter, e.g., OFFSET=-6&#39;
   task :us do
-    build_time_zone_list(:us_zones)
+    build_time_zone_list ActiveSupport::TimeZone.us_zones
   end
 
   # desc &#39;Displays names of time zones recognized by the Rails TimeZone class with the same offset as the system local time&#39;
   task :local do
-    require &#39;active_support&#39;
-    require &#39;active_support/time&#39;
+    require &quot;active_support&quot;
+    require &quot;active_support/time&quot;
+
     jan_offset = Time.now.beginning_of_year.utc_offset
     jul_offset = Time.now.beginning_of_year.change(month: 7).utc_offset
     offset = jan_offset &lt; jul_offset ? jan_offset : jul_offset
-    build_time_zone_list(:all, offset)
+
+    build_time_zone_list(ActiveSupport::TimeZone.all, offset)
   end
 
   # to find UTC -06:00 zones, OFFSET can be set to either -6, -6:00 or 21600
-  def build_time_zone_list(method, offset = ENV[&#39;OFFSET&#39;])
-    require &#39;active_support&#39;
-    require &#39;active_support/time&#39;
+  def build_time_zone_list(zones, offset = ENV[&quot;OFFSET&quot;])
+    require &quot;active_support&quot;
+    require &quot;active_support/time&quot;
     if offset
       offset = if offset.to_s.match(/(\+|-)?(\d+):(\d+)/)
-        sign = $1 == &#39;-&#39; ? -1 : 1
+        sign = $1 == &quot;-&quot; ? -1 : 1
         hours, minutes = $2.to_f, $3.to_f
         ((hours * 3600) + (minutes.to_f * 60)) * sign
       elsif offset.to_f.abs &lt;= 13
@@ -92,7 +112,7 @@ environment&#39; task about: :environment do</p>
       end
     end
     previous_offset = nil
-    ActiveSupport::TimeZone.__send__(method).each do |zone|
+    zones.each do |zone|
       if offset.nil? || offset == zone.utc_offset
         puts &quot;\n* UTC #{zone.formatted_offset} *&quot; unless zone.utc_offset == previous_offset
         puts zone.name

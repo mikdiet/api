@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            Method 
+            <span class="type">Class</span>
+            Method
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Object.html">Object</a>
                     
@@ -101,7 +101,12 @@
             
               
               <li>
-                <a href="#method-i-clone">clone</a>
+                <a href="#method-i-clone">clone</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-curry">curry</a>
               </li>
             
           </ul>
@@ -161,6 +166,11 @@
             
               
               <li>
+                <a href="#method-i-original_name">original_name</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-owner">owner</a>
               </li>
             
@@ -197,7 +207,12 @@
             
               
               <li>
-                <a href="#method-i-source_location">source_location</a>
+                <a href="#method-i-source_location">source_location</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-super_method">super_method</a>
               </li>
             
           </ul>
@@ -258,11 +273,11 @@
         <div class="method">
           <div class="title method-title" id="method-i-3D-3D">
             
-              <b></b>
+              <b>meth == other_meth  &rarr; true or false</b>
             
             <a href="../classes/Method.html#method-i-3D-3D" name="method-i-3D-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Two method objects are equal if they are bound to the same object and refer
@@ -270,15 +285,17 @@ to the same method definition and their owners are the same class or
 module.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-3D-3D_source')" id="l_method-i-3D-3D_source">show</a>
                 
               </p>
@@ -287,6 +304,7 @@ module.</p>
 method_eq(VALUE method, VALUE other)
 {
     struct METHOD *m1, *m2;
+    VALUE klass1, klass2;
 
     if (!rb_obj_is_method(other))
         return Qfalse;
@@ -297,8 +315,12 @@ method_eq(VALUE method, VALUE other)
     m1 = (struct METHOD *)DATA_PTR(method);
     m2 = (struct METHOD *)DATA_PTR(other);
 
+    klass1 = method_entry_defined_class(m1-&gt;me);
+    klass2 = method_entry_defined_class(m2-&gt;me);
+
     if (!rb_method_entry_eq(m1-&gt;me, m2-&gt;me) ||
-        m1-&gt;rclass != m2-&gt;rclass ||
+        klass1 != klass2 ||
+        m1-&gt;klass != m2-&gt;klass ||
         m1-&gt;recv != m2-&gt;recv) {
         return Qfalse;
     }
@@ -313,40 +335,63 @@ method_eq(VALUE method, VALUE other)
         <div class="method">
           <div class="title method-title" id="method-i-5B-5D">
             
-              <b>meth[args, ...]         &rarr; obj</b>
+              <b>prc[params,...]        &rarr; obj</b>
             
             <a href="../classes/Method.html#method-i-5B-5D" name="method-i-5B-5D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Invokes the <em>meth</em> with the specified arguments, returning the
-method&#39;s return value.</p>
+              <p>Invokes the block, setting the block&#39;s parameters to the values in
+<em>params</em> using something close to method calling semantics. Returns
+the value of the last expression evaluated in the block.</p>
 
-<pre><code>m = 12.method(&quot;+&quot;)
-m.call(3)    #=&gt; 15
-m.call(20)   #=&gt; 32
+<pre><code>a_proc = Proc.new {|scalar, *values| values.map {|value| value*scalar } }
+a_proc.call(9, 1, 2, 3)    #=&gt; [9, 18, 27]
+a_proc[9, 1, 2, 3]         #=&gt; [9, 18, 27]
+a_proc.(9, 1, 2, 3)        #=&gt; [9, 18, 27]
+a_proc.yield(9, 1, 2, 3)   #=&gt; [9, 18, 27]
 </code></pre>
+
+<p>Note that <code>prc.()</code> invokes <code>prc.call()</code> with the
+parameters given.  It&#39;s syntactic sugar to hide “call”.</p>
+
+<p>For procs created using <code>lambda</code> or <code>-&gt;()</code> an
+error is generated if the wrong number of parameters are passed to the
+proc. For procs created using <code>Proc.new</code> or
+<code>Kernel.proc</code>, extra parameters are silently discarded and
+missing parameters are set to <code>nil</code>.</p>
+
+<pre><code>a_proc = proc {|a,b| [a,b] }
+a_proc.call(1)   #=&gt; [1, nil]
+
+a_proc = lambda {|a,b| [a,b] }
+a_proc.call(1)   # ArgumentError: wrong number of arguments (given 1, expected 2)
+</code></pre>
+
+<p>See also <a href="Proc.html#method-i-lambda-3F">Proc#lambda?</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
                 
               </p>
               <div id="method-i-5B-5D_source" class="dyn-source">
                 <pre>VALUE
-rb_method_call(int argc, VALUE *argv, VALUE method)
+rb_method_call(int argc, const VALUE *argv, VALUE method)
 {
-    VALUE proc = rb_block_given_p() ? rb_block_proc() : Qnil;
-    return rb_method_call_with_block(argc, argv, method, proc);
+    VALUE procval = rb_block_given_p() ? rb_block_proc() : Qnil;
+    return rb_method_call_with_block(argc, argv, method, procval);
 }</pre>
               </div>
             </div>
@@ -356,12 +401,12 @@ rb_method_call(int argc, VALUE *argv, VALUE method)
         <div class="method">
           <div class="title method-title" id="method-i-arity">
             
-              <b>meth.arity    &rarr; fixnum
+              <b>meth.arity    &rarr; integer
 </b>
             
             <a href="../classes/Method.html#method-i-arity" name="method-i-arity" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns an indication of the number of arguments accepted by a method.
@@ -393,15 +438,17 @@ c.method(:six).arity     #=&gt; -3
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-arity_source')" id="l_method-i-arity_source">show</a>
                 
               </p>
@@ -420,40 +467,63 @@ method_arity_m(VALUE method)
         <div class="method">
           <div class="title method-title" id="method-i-call">
             
-              <b>meth.call(args, ...)    &rarr; obj</b>
+              <b>prc.call(params,...)   &rarr; obj</b>
             
             <a href="../classes/Method.html#method-i-call" name="method-i-call" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Invokes the <em>meth</em> with the specified arguments, returning the
-method&#39;s return value.</p>
+              <p>Invokes the block, setting the block&#39;s parameters to the values in
+<em>params</em> using something close to method calling semantics. Returns
+the value of the last expression evaluated in the block.</p>
 
-<pre><code>m = 12.method(&quot;+&quot;)
-m.call(3)    #=&gt; 15
-m.call(20)   #=&gt; 32
+<pre><code>a_proc = Proc.new {|scalar, *values| values.map {|value| value*scalar } }
+a_proc.call(9, 1, 2, 3)    #=&gt; [9, 18, 27]
+a_proc[9, 1, 2, 3]         #=&gt; [9, 18, 27]
+a_proc.(9, 1, 2, 3)        #=&gt; [9, 18, 27]
+a_proc.yield(9, 1, 2, 3)   #=&gt; [9, 18, 27]
 </code></pre>
+
+<p>Note that <code>prc.()</code> invokes <code>prc.call()</code> with the
+parameters given.  It&#39;s syntactic sugar to hide “call”.</p>
+
+<p>For procs created using <code>lambda</code> or <code>-&gt;()</code> an
+error is generated if the wrong number of parameters are passed to the
+proc. For procs created using <code>Proc.new</code> or
+<code>Kernel.proc</code>, extra parameters are silently discarded and
+missing parameters are set to <code>nil</code>.</p>
+
+<pre><code>a_proc = proc {|a,b| [a,b] }
+a_proc.call(1)   #=&gt; [1, nil]
+
+a_proc = lambda {|a,b| [a,b] }
+a_proc.call(1)   # ArgumentError: wrong number of arguments (given 1, expected 2)
+</code></pre>
+
+<p>See also <a href="Proc.html#method-i-lambda-3F">Proc#lambda?</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-call_source')" id="l_method-i-call_source">show</a>
                 
               </p>
               <div id="method-i-call_source" class="dyn-source">
                 <pre>VALUE
-rb_method_call(int argc, VALUE *argv, VALUE method)
+rb_method_call(int argc, const VALUE *argv, VALUE method)
 {
-    VALUE proc = rb_block_given_p() ? rb_block_proc() : Qnil;
-    return rb_method_call_with_block(argc, argv, method, proc);
+    VALUE procval = rb_block_given_p() ? rb_block_proc() : Qnil;
+    return rb_method_call_with_block(argc, argv, method, procval);
 }</pre>
               </div>
             </div>
@@ -468,7 +538,7 @@ rb_method_call(int argc, VALUE *argv, VALUE method)
             
             <a href="../classes/Method.html#method-i-clone" name="method-i-clone" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a clone of this method.</p>
@@ -485,15 +555,17 @@ n = m.clone.call # =&gt; &quot;bar&quot;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-clone_source')" id="l_method-i-clone_source">show</a>
                 
               </p>
@@ -507,13 +579,75 @@ method_clone(VALUE self)
     TypedData_Get_Struct(self, struct METHOD, &amp;method_data_type, orig);
     clone = TypedData_Make_Struct(CLASS_OF(self), struct METHOD, &amp;method_data_type, data);
     CLONESETUP(clone, self);
-    *data = *orig;
-    data-&gt;me = ALLOC(rb_method_entry_t);
-    *data-&gt;me = *orig-&gt;me;
-    if (data-&gt;me-&gt;def) data-&gt;me-&gt;def-&gt;alias_count++;
-    data-&gt;ume = ALLOC(struct unlinked_method_entry_list_entry);
-
+    RB_OBJ_WRITE(clone, &amp;data-&gt;recv, orig-&gt;recv);
+    RB_OBJ_WRITE(clone, &amp;data-&gt;klass, orig-&gt;klass);
+    RB_OBJ_WRITE(clone, &amp;data-&gt;me, rb_method_entry_clone(orig-&gt;me));
     return clone;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-curry">
+            
+              <b>meth.curry        &rarr; proc<br />meth.curry(arity) &rarr; proc
+</b>
+            
+            <a href="../classes/Method.html#method-i-curry" name="method-i-curry" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a curried proc based on the method. When the proc is called with a
+number of arguments that is lower than the method&#39;s arity, then another
+curried proc is returned. Only when enough arguments have been supplied to
+satisfy the method signature, will the method actually be called.</p>
+
+<p>The optional <em>arity</em> argument should be supplied when currying
+methods with variable arguments to determine how many arguments are needed
+before the method is called.</p>
+
+<pre><code>def foo(a,b,c)
+  [a, b, c]
+end
+
+proc  = self.method(:foo).curry
+proc2 = proc.call(1, 2)          #=&gt; #&lt;Proc&gt;
+proc2.call(3)                    #=&gt; [1,2,3]
+
+def vararg(*args)
+  args
+end
+
+proc = self.method(:vararg).curry(4)
+proc2 = proc.call(:x)      #=&gt; #&lt;Proc&gt;
+proc3 = proc2.call(:y, :z) #=&gt; #&lt;Proc&gt;
+proc3.call(:a)             #=&gt; [:x, :y, :z, :a]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-curry_source')" id="l_method-i-curry_source">show</a>
+                
+              </p>
+              <div id="method-i-curry_source" class="dyn-source">
+                <pre>static VALUE
+rb_method_curry(int argc, const VALUE *argv, VALUE self)
+{
+    VALUE proc = method_to_proc(self);
+    return proc_curry(argc, argv, proc);
 }</pre>
               </div>
             </div>
@@ -523,11 +657,11 @@ method_clone(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-eql-3F">
             
-              <b></b>
+              <b>meth.eql?(other_meth)  &rarr; true or false</b>
             
             <a href="../classes/Method.html#method-i-eql-3F" name="method-i-eql-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Two method objects are equal if they are bound to the same object and refer
@@ -535,15 +669,17 @@ to the same method definition and their owners are the same class or
 module.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-eql-3F_source')" id="l_method-i-eql-3F_source">show</a>
                 
               </p>
@@ -552,6 +688,7 @@ module.</p>
 method_eq(VALUE method, VALUE other)
 {
     struct METHOD *m1, *m2;
+    VALUE klass1, klass2;
 
     if (!rb_obj_is_method(other))
         return Qfalse;
@@ -562,8 +699,12 @@ method_eq(VALUE method, VALUE other)
     m1 = (struct METHOD *)DATA_PTR(method);
     m2 = (struct METHOD *)DATA_PTR(other);
 
+    klass1 = method_entry_defined_class(m1-&gt;me);
+    klass2 = method_entry_defined_class(m2-&gt;me);
+
     if (!rb_method_entry_eq(m1-&gt;me, m2-&gt;me) ||
-        m1-&gt;rclass != m2-&gt;rclass ||
+        klass1 != klass2 ||
+        m1-&gt;klass != m2-&gt;klass ||
         m1-&gt;recv != m2-&gt;recv) {
         return Qfalse;
     }
@@ -583,21 +724,25 @@ method_eq(VALUE method, VALUE other)
             
             <a href="../classes/Method.html#method-i-hash" name="method-i-hash" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a hash value corresponding to the method object.</p>
+
+<p>See also <a href="Object.html#method-i-hash">Object#hash</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-hash_source')" id="l_method-i-hash_source">show</a>
                 
               </p>
@@ -609,8 +754,7 @@ method_hash(VALUE method)
     st_index_t hash;
 
     TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, m);
-    hash = rb_hash_start((st_index_t)m-&gt;rclass);
-    hash = rb_hash_uint(hash, (st_index_t)m-&gt;recv);
+    hash = rb_hash_start((st_index_t)m-&gt;recv);
     hash = rb_hash_method_entry(hash, m-&gt;me);
     hash = rb_hash_end(hash);
 
@@ -628,7 +772,7 @@ method_hash(VALUE method)
             
             <a href="../classes/Method.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the name of the underlying method.</p>
@@ -637,15 +781,17 @@ method_hash(VALUE method)
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
               </p>
@@ -657,6 +803,8 @@ method_inspect(VALUE method)
     VALUE str;
     const char *s;
     const char *sharp = &quot;#&quot;;
+    VALUE mklass;
+    VALUE defined_class;
 
     TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
     str = rb_str_buf_new2(&quot;#&lt;&quot;);
@@ -664,11 +812,24 @@ method_inspect(VALUE method)
     rb_str_buf_cat2(str, s);
     rb_str_buf_cat2(str, &quot;: &quot;);
 
-    if (FL_TEST(data-&gt;me-&gt;klass, FL_SINGLETON)) {
-        VALUE v = rb_ivar_get(data-&gt;me-&gt;klass, attached);
+    mklass = data-&gt;klass;
+
+    if (data-&gt;me-&gt;def-&gt;type == VM_METHOD_TYPE_ALIAS) {
+        defined_class = data-&gt;me-&gt;def-&gt;body.alias.original_me-&gt;owner;
+    }
+    else {
+        defined_class = method_entry_defined_class(data-&gt;me);
+    }
+
+    if (RB_TYPE_P(defined_class, T_ICLASS)) {
+        defined_class = RBASIC_CLASS(defined_class);
+    }
+
+    if (FL_TEST(mklass, FL_SINGLETON)) {
+        VALUE v = rb_ivar_get(mklass, attached);
 
         if (data-&gt;recv == Qundef) {
-            rb_str_buf_append(str, rb_inspect(data-&gt;me-&gt;klass));
+            rb_str_buf_append(str, rb_inspect(mklass));
         }
         else if (data-&gt;recv == v) {
             rb_str_buf_append(str, rb_inspect(v));
@@ -683,15 +844,19 @@ method_inspect(VALUE method)
         }
     }
     else {
-        rb_str_buf_cat2(str, rb_class2name(data-&gt;rclass));
-        if (data-&gt;rclass != data-&gt;me-&gt;klass) {
+        rb_str_buf_append(str, rb_class_name(mklass));
+        if (defined_class != mklass) {
             rb_str_buf_cat2(str, &quot;(&quot;);
-            rb_str_buf_cat2(str, rb_class2name(data-&gt;me-&gt;klass));
+            rb_str_buf_append(str, rb_class_name(defined_class));
             rb_str_buf_cat2(str, &quot;)&quot;);
         }
     }
     rb_str_buf_cat2(str, sharp);
-    rb_str_append(str, rb_id2str(data-&gt;me-&gt;def-&gt;original_id));
+    rb_str_append(str, rb_id2str(data-&gt;me-&gt;called_id));
+    if (data-&gt;me-&gt;called_id != data-&gt;me-&gt;def-&gt;original_id) {
+        rb_str_catf(str, &quot;(%&quot;PRIsVALUE&quot;)&quot;,
+                    rb_id2str(data-&gt;me-&gt;def-&gt;original_id));
+    }
     if (data-&gt;me-&gt;def-&gt;type == VM_METHOD_TYPE_NOTIMPLEMENTED) {
         rb_str_buf_cat2(str, &quot; (not-implemented)&quot;);
     }
@@ -712,21 +877,23 @@ method_inspect(VALUE method)
             
             <a href="../classes/Method.html#method-i-name" name="method-i-name" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the name of the method.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-name_source')" id="l_method-i-name_source">show</a>
                 
               </p>
@@ -737,7 +904,49 @@ method_name(VALUE obj)
     struct METHOD *data;
 
     TypedData_Get_Struct(obj, struct METHOD, &amp;method_data_type, data);
-    return ID2SYM(data-&gt;id);
+    return ID2SYM(data-&gt;me-&gt;called_id);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-original_name">
+            
+              <b>meth.original_name    &rarr; symbol
+</b>
+            
+            <a href="../classes/Method.html#method-i-original_name" name="method-i-original_name" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the original name of the method.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-original_name_source')" id="l_method-i-original_name_source">show</a>
+                
+              </p>
+              <div id="method-i-original_name_source" class="dyn-source">
+                <pre>static VALUE
+method_original_name(VALUE obj)
+{
+    struct METHOD *data;
+
+    TypedData_Get_Struct(obj, struct METHOD, &amp;method_data_type, data);
+    return ID2SYM(data-&gt;me-&gt;def-&gt;original_id);
 }</pre>
               </div>
             </div>
@@ -752,21 +961,23 @@ method_name(VALUE obj)
             
             <a href="../classes/Method.html#method-i-owner" name="method-i-owner" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the class or module that defines the method.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-owner_source')" id="l_method-i-owner_source">show</a>
                 
               </p>
@@ -775,9 +986,8 @@ method_name(VALUE obj)
 method_owner(VALUE obj)
 {
     struct METHOD *data;
-
     TypedData_Get_Struct(obj, struct METHOD, &amp;method_data_type, data);
-    return data-&gt;me-&gt;klass;
+    return data-&gt;me-&gt;owner;
 }</pre>
               </div>
             </div>
@@ -792,21 +1002,36 @@ method_owner(VALUE obj)
             
             <a href="../classes/Method.html#method-i-parameters" name="method-i-parameters" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the parameter information of this method.</p>
+
+<pre><code>def foo(bar); end
+method(:foo).parameters #=&gt; [[:req, :bar]]
+
+def foo(bar, baz, bat, &amp;blk); end
+method(:foo).parameters #=&gt; [[:req, :bar], [:req, :baz], [:req, :bat], [:block, :blk]]
+
+def foo(bar, *args); end
+method(:foo).parameters #=&gt; [[:req, :bar], [:rest, :args]]
+
+def foo(bar, baz, *args, &amp;blk); end
+method(:foo).parameters #=&gt; [[:req, :bar], [:req, :baz], [:rest, :args], [:block, :blk]]
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-parameters_source')" id="l_method-i-parameters_source">show</a>
                 
               </p>
@@ -814,7 +1039,7 @@ method_owner(VALUE obj)
                 <pre>static VALUE
 rb_method_parameters(VALUE method)
 {
-    rb_iseq_t *iseq = rb_method_get_iseq(method);
+    const rb_iseq_t *iseq = rb_method_iseq(method);
     if (!iseq) {
         return unnamed_parameters(method_arity(method));
     }
@@ -833,21 +1058,23 @@ rb_method_parameters(VALUE method)
             
             <a href="../classes/Method.html#method-i-receiver" name="method-i-receiver" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the bound receiver of the method object.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-receiver_source')" id="l_method-i-receiver_source">show</a>
                 
               </p>
@@ -868,27 +1095,29 @@ method_receiver(VALUE obj)
         <div class="method">
           <div class="title method-title" id="method-i-source_location">
             
-              <b>meth.source_location  &rarr; [String, Fixnum]
+              <b>meth.source_location  &rarr; [String, Integer]
 </b>
             
             <a href="../classes/Method.html#method-i-source_location" name="method-i-source_location" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the Ruby source filename and line number containing this method or
-nil if this method was not defined in Ruby (i.e. native)</p>
+nil if this method was not defined in Ruby (i.e. native).</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-source_location_source')" id="l_method-i-source_location_source">show</a>
                 
               </p>
@@ -896,8 +1125,56 @@ nil if this method was not defined in Ruby (i.e. native)</p>
                 <pre>VALUE
 rb_method_location(VALUE method)
 {
-    rb_method_definition_t *def = method_get_def(method);
-    return method_def_location(def);
+    return method_def_location(method_def(method));
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-super_method">
+            
+              <b>meth.super_method  &rarr; method
+</b>
+            
+            <a href="../classes/Method.html#method-i-super_method" name="method-i-super_method" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a <a href="Method.html">Method</a> of superclass which would be
+called when super is used or nil if there is no method on superclass.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-super_method_source')" id="l_method-i-super_method_source">show</a>
+                
+              </p>
+              <div id="method-i-super_method_source" class="dyn-source">
+                <pre>static VALUE
+method_super_method(VALUE method)
+{
+    const struct METHOD *data;
+    VALUE super_class;
+    const rb_method_entry_t *me;
+
+    TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
+    super_class = RCLASS_SUPER(method_entry_defined_class(data-&gt;me));
+    if (!super_class) return Qnil;
+    me = (rb_method_entry_t *)rb_callable_method_entry_without_refinements(super_class, data-&gt;me-&gt;called_id);
+    if (!me) return Qnil;
+    return mnew_internal(me, super_class, data-&gt;recv, data-&gt;me-&gt;called_id, rb_obj_class(method), FALSE, FALSE);
 }</pre>
               </div>
             </div>
@@ -907,39 +1184,42 @@ rb_method_location(VALUE method)
         <div class="method">
           <div class="title method-title" id="method-i-to_proc">
             
-              <b>meth.to_proc    &rarr; prc
+              <b>meth.to_proc    &rarr; proc
 </b>
             
             <a href="../classes/Method.html#method-i-to_proc" name="method-i-to_proc" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a <code>Proc</code> object corresponding to this method.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_proc_source')" id="l_method-i-to_proc_source">show</a>
                 
               </p>
               <div id="method-i-to_proc_source" class="dyn-source">
                 <pre>static VALUE
-method_proc(VALUE method)
+method_to_proc(VALUE method)
 {
     VALUE procval;
     rb_proc_t *proc;
+
     /*
      * class Method
      *   def to_proc
-     *     proc{|*args|
+     *     lambda{|*args|
      *       self.call(*args)
      *     }
      *   end
@@ -962,7 +1242,7 @@ method_proc(VALUE method)
             
             <a href="../classes/Method.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the name of the underlying method.</p>
@@ -971,15 +1251,17 @@ method_proc(VALUE method)
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_s_source')" id="l_method-i-to_s_source">show</a>
                 
               </p>
@@ -991,6 +1273,8 @@ method_inspect(VALUE method)
     VALUE str;
     const char *s;
     const char *sharp = &quot;#&quot;;
+    VALUE mklass;
+    VALUE defined_class;
 
     TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
     str = rb_str_buf_new2(&quot;#&lt;&quot;);
@@ -998,11 +1282,24 @@ method_inspect(VALUE method)
     rb_str_buf_cat2(str, s);
     rb_str_buf_cat2(str, &quot;: &quot;);
 
-    if (FL_TEST(data-&gt;me-&gt;klass, FL_SINGLETON)) {
-        VALUE v = rb_ivar_get(data-&gt;me-&gt;klass, attached);
+    mklass = data-&gt;klass;
+
+    if (data-&gt;me-&gt;def-&gt;type == VM_METHOD_TYPE_ALIAS) {
+        defined_class = data-&gt;me-&gt;def-&gt;body.alias.original_me-&gt;owner;
+    }
+    else {
+        defined_class = method_entry_defined_class(data-&gt;me);
+    }
+
+    if (RB_TYPE_P(defined_class, T_ICLASS)) {
+        defined_class = RBASIC_CLASS(defined_class);
+    }
+
+    if (FL_TEST(mklass, FL_SINGLETON)) {
+        VALUE v = rb_ivar_get(mklass, attached);
 
         if (data-&gt;recv == Qundef) {
-            rb_str_buf_append(str, rb_inspect(data-&gt;me-&gt;klass));
+            rb_str_buf_append(str, rb_inspect(mklass));
         }
         else if (data-&gt;recv == v) {
             rb_str_buf_append(str, rb_inspect(v));
@@ -1017,15 +1314,19 @@ method_inspect(VALUE method)
         }
     }
     else {
-        rb_str_buf_cat2(str, rb_class2name(data-&gt;rclass));
-        if (data-&gt;rclass != data-&gt;me-&gt;klass) {
+        rb_str_buf_append(str, rb_class_name(mklass));
+        if (defined_class != mklass) {
             rb_str_buf_cat2(str, &quot;(&quot;);
-            rb_str_buf_cat2(str, rb_class2name(data-&gt;me-&gt;klass));
+            rb_str_buf_append(str, rb_class_name(defined_class));
             rb_str_buf_cat2(str, &quot;)&quot;);
         }
     }
     rb_str_buf_cat2(str, sharp);
-    rb_str_append(str, rb_id2str(data-&gt;me-&gt;def-&gt;original_id));
+    rb_str_append(str, rb_id2str(data-&gt;me-&gt;called_id));
+    if (data-&gt;me-&gt;called_id != data-&gt;me-&gt;def-&gt;original_id) {
+        rb_str_catf(str, &quot;(%&quot;PRIsVALUE&quot;)&quot;,
+                    rb_id2str(data-&gt;me-&gt;def-&gt;original_id));
+    }
     if (data-&gt;me-&gt;def-&gt;type == VM_METHOD_TYPE_NOTIMPLEMENTED) {
         rb_str_buf_cat2(str, &quot; (not-implemented)&quot;);
     }
@@ -1046,7 +1347,7 @@ method_inspect(VALUE method)
             
             <a href="../classes/Method.html#method-i-unbind" name="method-i-unbind" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Dissociates <em>meth</em> from its current receiver. The resulting
@@ -1054,15 +1355,17 @@ method_inspect(VALUE method)
 same class (see <code>UnboundMethod</code>).</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-unbind_source')" id="l_method-i-unbind_source">show</a>
                 
               </p>
@@ -1076,14 +1379,9 @@ method_unbind(VALUE obj)
     TypedData_Get_Struct(obj, struct METHOD, &amp;method_data_type, orig);
     method = TypedData_Make_Struct(rb_cUnboundMethod, struct METHOD,
                                    &amp;method_data_type, data);
-    data-&gt;recv = Qundef;
-    data-&gt;id = orig-&gt;id;
-    data-&gt;me = ALLOC(rb_method_entry_t);
-    *data-&gt;me = *orig-&gt;me;
-    if (orig-&gt;me-&gt;def) orig-&gt;me-&gt;def-&gt;alias_count++;
-    data-&gt;rclass = orig-&gt;rclass;
-    data-&gt;defined_class = orig-&gt;defined_class;
-    data-&gt;ume = ALLOC(struct unlinked_method_entry_list_entry);
+    RB_OBJ_WRITE(method, &amp;data-&gt;recv, Qundef);
+    RB_OBJ_WRITE(method, &amp;data-&gt;klass, orig-&gt;klass);
+    RB_OBJ_WRITE(method, &amp;data-&gt;me, rb_method_entry_clone(orig-&gt;me));
     OBJ_INFECT(method, obj);
 
     return method;
@@ -1096,4 +1394,4 @@ method_unbind(VALUE obj)
 
     </div>
   </body>
-</html>    
+</html>

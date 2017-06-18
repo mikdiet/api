@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            OpenSSL::X509::Attribute 
+            <span class="type">Class</span>
+            OpenSSL::X509::Attribute
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../../Object.html">Object</a>
                     
@@ -31,7 +31,7 @@
         </h1>
         <ul class="files">
             
-            <li><a href="../../../files/ruby/ext/openssl/ossl_ssl_session_c.html">ruby/ext/openssl/ossl_ssl_session.c</a></li>
+            <li><a href="../../../files/ruby/ext/openssl/ossl_x509attr_c.html">ruby/ext/openssl/ossl_x509attr.c</a></li>
             
         </ul>
     </div>
@@ -143,21 +143,23 @@
             
             <a href="../../../classes/OpenSSL/X509/Attribute.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -200,21 +202,23 @@ ossl_x509attr_initialize(int argc, VALUE *argv, VALUE self)
             
             <a href="../../../classes/OpenSSL/X509/Attribute.html#method-i-oid" name="method-i-oid" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-oid_source')" id="l_method-i-oid_source">show</a>
                 
               </p>
@@ -253,21 +257,23 @@ ossl_x509attr_get_oid(VALUE self)
             
             <a href="../../../classes/OpenSSL/X509/Attribute.html#method-i-oid-3D" name="method-i-oid-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-oid-3D_source')" id="l_method-i-oid-3D_source">show</a>
                 
               </p>
@@ -279,12 +285,15 @@ ossl_x509attr_set_oid(VALUE self, VALUE oid)
     ASN1_OBJECT *obj;
     char *s;
 
-    s = StringValuePtr(oid);
-    obj = OBJ_txt2obj(s, 0);
-    if(!obj) obj = OBJ_txt2obj(s, 1);
-    if(!obj) ossl_raise(eX509AttrError, NULL);
     GetX509Attr(self, attr);
-    X509_ATTRIBUTE_set1_object(attr, obj);
+    s = StringValueCStr(oid);
+    obj = OBJ_txt2obj(s, 0);
+    if(!obj) ossl_raise(eX509AttrError, NULL);
+    if (!X509_ATTRIBUTE_set1_object(attr, obj)) {
+        ASN1_OBJECT_free(obj);
+        ossl_raise(eX509AttrError, &quot;X509_ATTRIBUTE_set1_object&quot;);
+    }
+    ASN1_OBJECT_free(obj);
 
     return oid;
 }</pre>
@@ -300,21 +309,23 @@ ossl_x509attr_set_oid(VALUE self, VALUE oid)
             
             <a href="../../../classes/OpenSSL/X509/Attribute.html#method-i-to_der" name="method-i-to_der" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_der_source')" id="l_method-i-to_der_source">show</a>
                 
               </p>
@@ -334,7 +345,7 @@ ossl_x509attr_to_der(VALUE self)
     p = (unsigned char *)RSTRING_PTR(str);
     if(i2d_X509_ATTRIBUTE(attr, &amp;p) &lt;= 0)
         ossl_raise(eX509AttrError, NULL);
-    rb_str_set_len(str, p - (unsigned char*)RSTRING_PTR(str));
+    ossl_str_adjust(str, p);
 
     return str;
 }</pre>
@@ -350,21 +361,23 @@ ossl_x509attr_to_der(VALUE self)
             
             <a href="../../../classes/OpenSSL/X509/Attribute.html#method-i-value" name="method-i-value" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-value_source')" id="l_method-i-value_source">show</a>
                 
               </p>
@@ -373,32 +386,34 @@ ossl_x509attr_to_der(VALUE self)
 ossl_x509attr_get_value(VALUE self)
 {
     X509_ATTRIBUTE *attr;
-    VALUE str, asn1;
-    long length;
+    STACK_OF(ASN1_TYPE) *sk;
+    VALUE str;
+    int i, count, len;
     unsigned char *p;
 
     GetX509Attr(self, attr);
-    if(attr-&gt;value.ptr == NULL) return Qnil;
-    if(OSSL_X509ATTR_IS_SINGLE(attr)){
-        length = i2d_ASN1_TYPE(attr-&gt;value.single, NULL);
-        str = rb_str_new(0, length);
-        p = (unsigned char *)RSTRING_PTR(str);
-        i2d_ASN1_TYPE(attr-&gt;value.single, &amp;p);
-        ossl_str_adjust(str, p);
-    }
-    else{
-        length = i2d_ASN1_SET_OF_ASN1_TYPE(attr-&gt;value.set,
-                        (unsigned char **) NULL, i2d_ASN1_TYPE,
-                        V_ASN1_SET, V_ASN1_UNIVERSAL, 0);
-        str = rb_str_new(0, length);
-        p = (unsigned char *)RSTRING_PTR(str);
-        i2d_ASN1_SET_OF_ASN1_TYPE(attr-&gt;value.set, &amp;p,
-                        i2d_ASN1_TYPE, V_ASN1_SET, V_ASN1_UNIVERSAL, 0);
-        ossl_str_adjust(str, p);
-    }
-    asn1 = rb_funcall(mASN1, rb_intern(&quot;decode&quot;), 1, str);
+    /* there is no X509_ATTRIBUTE_get0_set() :( */
+    if (!(sk = sk_ASN1_TYPE_new_null()))
+        ossl_raise(eX509AttrError, &quot;sk_new&quot;);
 
-    return asn1;
+    count = X509_ATTRIBUTE_count(attr);
+    for (i = 0; i &lt; count; i++)
+        sk_ASN1_TYPE_push(sk, X509_ATTRIBUTE_get0_type(attr, i));
+
+    if ((len = i2d_ASN1_SET_ANY(sk, NULL)) &lt;= 0) {
+        sk_ASN1_TYPE_free(sk);
+        ossl_raise(eX509AttrError, NULL);
+    }
+    str = rb_str_new(0, len);
+    p = (unsigned char *)RSTRING_PTR(str);
+    if (i2d_ASN1_SET_ANY(sk, &amp;p) &lt;= 0) {
+        sk_ASN1_TYPE_free(sk);
+        ossl_raise(eX509AttrError, NULL);
+    }
+    ossl_str_adjust(str, p);
+    sk_ASN1_TYPE_free(sk);
+
+    return rb_funcall(mASN1, rb_intern(&quot;decode&quot;), 1, str);
 }</pre>
               </div>
             </div>
@@ -412,21 +427,23 @@ ossl_x509attr_get_value(VALUE self)
             
             <a href="../../../classes/OpenSSL/X509/Attribute.html#method-i-value-3D" name="method-i-value-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-value-3D_source')" id="l_method-i-value-3D_source">show</a>
                 
               </p>
@@ -435,21 +452,37 @@ ossl_x509attr_get_value(VALUE self)
 ossl_x509attr_set_value(VALUE self, VALUE value)
 {
     X509_ATTRIBUTE *attr;
-    ASN1_TYPE *a1type;
+    VALUE asn1_value;
+    int i, asn1_tag;
 
-    if(!(a1type = ossl_asn1_get_asn1type(value)))
-        ossl_raise(eASN1Error, &quot;could not get ASN1_TYPE&quot;);
-    if(ASN1_TYPE_get(a1type) == V_ASN1_SEQUENCE){
-        ASN1_TYPE_free(a1type);
-        ossl_raise(eASN1Error, &quot;couldn&#39;t set SEQUENCE for attribute value.&quot;);
-    }
+    OSSL_Check_Kind(value, cASN1Data);
+    asn1_tag = NUM2INT(rb_attr_get(value, rb_intern(&quot;@tag&quot;)));
+    asn1_value = rb_attr_get(value, rb_intern(&quot;@value&quot;));
+    if (asn1_tag != V_ASN1_SET)
+        ossl_raise(eASN1Error, &quot;argument must be ASN1::Set&quot;);
+    if (!RB_TYPE_P(asn1_value, T_ARRAY))
+        ossl_raise(eASN1Error, &quot;ASN1::Set has non-array value&quot;);
+
     GetX509Attr(self, attr);
-    if(attr-&gt;value.set){
-        if(OSSL_X509ATTR_IS_SINGLE(attr)) ASN1_TYPE_free(attr-&gt;value.single);
-        else sk_ASN1_TYPE_free(attr-&gt;value.set);
+    if (X509_ATTRIBUTE_count(attr)) { /* populated, reset first */
+        ASN1_OBJECT *obj = X509_ATTRIBUTE_get0_object(attr);
+        X509_ATTRIBUTE *new_attr = X509_ATTRIBUTE_create_by_OBJ(NULL, obj, 0, NULL, -1);
+        if (!new_attr)
+            ossl_raise(eX509AttrError, NULL);
+        SetX509Attr(self, new_attr);
+        X509_ATTRIBUTE_free(attr);
+        attr = new_attr;
     }
-    OSSL_X509ATTR_SET_SINGLE(attr);
-    attr-&gt;value.single = a1type;
+
+    for (i = 0; i &lt; RARRAY_LEN(asn1_value); i++) {
+        ASN1_TYPE *a1type = ossl_asn1_get_asn1type(RARRAY_AREF(asn1_value, i));
+        if (!X509_ATTRIBUTE_set1_data(attr, ASN1_TYPE_get(a1type),
+                                      a1type-&gt;value.ptr, -1)) {
+            ASN1_TYPE_free(a1type);
+            ossl_raise(eX509AttrError, NULL);
+        }
+        ASN1_TYPE_free(a1type);
+    }
 
     return value;
 }</pre>
@@ -461,4 +494,4 @@ ossl_x509attr_set_value(VALUE self, VALUE value)
 
     </div>
   </body>
-</html>    
+</html>

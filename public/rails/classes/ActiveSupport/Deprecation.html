@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            ActiveSupport::Deprecation 
+            <span class="type">Class</span>
+            ActiveSupport::Deprecation
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../Object.html">Object</a>
                     
@@ -34,6 +34,8 @@
             <li><a href="../../files/rails/activesupport/lib/active_support/deprecation_rb.html">rails/activesupport/lib/active_support/deprecation.rb</a></li>
             
             <li><a href="../../files/rails/activesupport/lib/active_support/deprecation/behaviors_rb.html">rails/activesupport/lib/active_support/deprecation/behaviors.rb</a></li>
+            
+            <li><a href="../../files/rails/activesupport/lib/active_support/deprecation/constant_accessor_rb.html">rails/activesupport/lib/active_support/deprecation/constant_accessor.rb</a></li>
             
             <li><a href="../../files/rails/activesupport/lib/active_support/deprecation/instance_delegator_rb.html">rails/activesupport/lib/active_support/deprecation/instance_delegator.rb</a></li>
             
@@ -72,6 +74,11 @@ deprecate methods, instance variables, objects and constants.</p>
         <li>
           <span class="type">MODULE</span>
           <a href="Deprecation/Behavior.html">ActiveSupport::Deprecation::Behavior</a>
+        </li>
+      
+        <li>
+          <span class="type">MODULE</span>
+          <a href="Deprecation/DeprecatedConstantAccessor.html">ActiveSupport::Deprecation::DeprecatedConstantAccessor</a>
         </li>
       
         <li>
@@ -178,26 +185,35 @@ deprecate methods, instance variables, objects and constants.</p>
             <td class="attr-name">DEFAULT_BEHAVIORS</td>
             <td>=</td>
             <td class="attr-value">{
-:stderr =&gt; Proc.new { |message, callstack|
+raise: -&gt;(message, callstack) {
+e = DeprecationException.new(message)
+e.set_backtrace(callstack.map(&amp;:to_s))
+raise e
+},
+
+stderr: -&gt;(message, callstack) {
 $stderr.puts(message)
 $stderr.puts callstack.join(&quot;\n  &quot;) if debug
 },
-:log =&gt; Proc.new { |message, callstack|
+
+log: -&gt;(message, callstack) {
 logger =
-if defined?(Rails) &amp;&amp; Rails.logger
+if defined?(Rails.logger) &amp;&amp; Rails.logger
 Rails.logger
 else
-require &#39;active_support/logger&#39;
+require &quot;active_support/logger&quot;
 ActiveSupport::Logger.new($stderr)
 end
 logger.warn message
 logger.debug callstack.join(&quot;\n  &quot;) if debug
 },
-:notify =&gt; Proc.new { |message, callstack|
+
+notify: -&gt;(message, callstack) {
 ActiveSupport::Notifications.instrument(&quot;deprecation.rails&quot;,
-:message =&gt; message, :callstack =&gt; callstack)
+message: message, callstack: callstack)
 },
-:silence =&gt; Proc.new { |message, callstack| }
+
+silence: -&gt;(message, callstack) {},
 }</td>
           </tr>
           
@@ -222,7 +238,8 @@ href="../Rails.html#method-c-env">Rails.env</a>.</p></td>
               [RW]
             </td>
             <td class='attr-name'>deprecation_horizon</td>
-            <td class='attr-desc'><p>The version the deprecated behavior will be removed, by default.</p></td>
+            <td class='attr-desc'><p>The version number in which the deprecated behavior will be removed, by
+default.</p></td>
           </tr>
         
       </table>
@@ -236,34 +253,39 @@ href="../Rails.html#method-c-env">Rails.env</a>.</p></td>
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>new</b>(deprecation_horizon = &#39;4.1&#39;, gem_name = &#39;Rails&#39;)
+              <b>new</b>(deprecation_horizon = &quot;5.2&quot;, gem_name = &quot;Rails&quot;)
             
             <a href="../../classes/ActiveSupport/Deprecation.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>It accepts two parameters on initialization. The first is an version of
-library and the second is an library name</p>
+              <p>It accepts two parameters on initialization. The first is a version of
+library and the second is a library name</p>
 
-<pre><code>ActiveSupport::Deprecation.new(&#39;2.0&#39;, &#39;MyLibrary&#39;)</code></pre>
+<pre><code>ActiveSupport::Deprecation.new(&#39;2.0&#39;, &#39;MyLibrary&#39;)
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/b9883bd2581a786fafb3d9f6466bfc1780d4c0de/activesupport/lib/active_support/deprecation.rb#L36" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/deprecation.rb, line 35</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">initialize</span>(<span class="ruby-identifier">deprecation_horizon</span> = <span class="ruby-string">&#39;4.1&#39;</span>, <span class="ruby-identifier">gem_name</span> = <span class="ruby-string">&#39;Rails&#39;</span>)
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/deprecation.rb, line 36</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">initialize</span>(<span class="ruby-identifier">deprecation_horizon</span> = <span class="ruby-string">&quot;5.2&quot;</span>, <span class="ruby-identifier">gem_name</span> = <span class="ruby-string">&quot;Rails&quot;</span>)
   <span class="ruby-keyword">self</span>.<span class="ruby-identifier">gem_name</span> = <span class="ruby-identifier">gem_name</span>
   <span class="ruby-keyword">self</span>.<span class="ruby-identifier">deprecation_horizon</span> = <span class="ruby-identifier">deprecation_horizon</span>
   <span class="ruby-comment"># By default, warnings are not silenced and debugging is off.</span>
@@ -278,4 +300,4 @@ library and the second is an library name</p>
 
     </div>
   </body>
-</html>    
+</html>

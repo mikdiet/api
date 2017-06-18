@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            ActiveRecord::AttributeMethods::Serialization::ClassMethods 
+            <span class="type">Module</span>
+            ActiveRecord::AttributeMethods::Serialization::ClassMethods
             
         </h1>
         <ul class="files">
@@ -55,12 +55,7 @@
             
               
               <li>
-                <a href="#method-i-serialize">serialize</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-serialized_attributes">serialized_attributes</a>
+                <a href="#method-i-serialize">serialize</a>
               </li>
             
           </ul>
@@ -92,26 +87,44 @@
         <div class="method">
           <div class="title method-title" id="method-i-serialize">
             
-              <b>serialize</b>(attr_name, class_name = Object)
+              <b>serialize</b>(attr_name, class_name_or_coder = Object)
             
             <a href="../../../../classes/ActiveRecord/AttributeMethods/Serialization/ClassMethods.html#method-i-serialize" name="method-i-serialize" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>If you have an attribute that needs to be saved to the database as an
 object, and retrieved as the same object, then specify the name of that
 attribute using this method and it will be handled automatically. The
 serialization is done through YAML. If <code>class_name</code> is
-specified, the serialized object must be of that class on retrieval or
-<code>SerializationTypeMismatch</code> will be raised.</p>
+specified, the serialized object must be of that class on assignment and
+retrieval. Otherwise <a
+href="../../SerializationTypeMismatch.html">SerializationTypeMismatch</a>
+will be raised.</p>
+
+<p>Empty objects as <code>{}</code>, in the case of <code>Hash</code>, or
+<code>[]</code>, in the case of <code>Array</code>, will always be
+persisted as null.</p>
+
+<p>Keep in mind that database adapters handle certain serialization tasks for
+you. For instance: <code>json</code> and <code>jsonb</code> types in
+PostgreSQL will be converted between JSON object/array syntax and Ruby
+<code>Hash</code> or <code>Array</code> objects transparently. There is no
+need to use <a href="ClassMethods.html#method-i-serialize">serialize</a> in
+this case.</p>
+
+<p>For more complex cases, such as conversion to or from your application
+domain objects, consider using the <a
+href="../../Attributes.html">ActiveRecord::Attributes</a> API.</p>
 
 <h4 id="method-i-serialize-label-Parameters">Parameters</h4>
 <ul><li>
 <p><code>attr_name</code> - The field name that should be serialized.</p>
 </li><li>
-<p><code>class_name</code> - Optional, class name that the object type should
-be equal to.</p>
+<p><code>class_name_or_coder</code> - Optional, a coder object, which responds
+to <code>.load</code> and <code>.dump</code> or a class name that the
+object type should be equal to.</p>
 </li></ul>
 
 <h4 id="method-i-serialize-label-Example">Example</h4>
@@ -120,70 +133,53 @@ be equal to.</p>
 class User &lt; ActiveRecord::Base
   serialize :preferences
 end
+
+# Serialize preferences using JSON as coder.
+class User &lt; ActiveRecord::Base
+  serialize :preferences, JSON
+end
+
+# Serialize preferences as Hash using YAML coder.
+class User &lt; ActiveRecord::Base
+  serialize :preferences, Hash
+end
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-serialize_source')" id="l_method-i-serialize_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/99820fbeb29ae35a7771f3991bd119b102861aa7/activerecord/lib/active_record/attribute_methods/serialization.rb#L48" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-serialize_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/attribute_methods/serialization.rb, line 38</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">serialize</span>(<span class="ruby-identifier">attr_name</span>, <span class="ruby-identifier">class_name</span> = <span class="ruby-constant">Object</span>)
-  <span class="ruby-identifier">include</span> <span class="ruby-constant">Behavior</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/attribute_methods/serialization.rb, line 48</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">serialize</span>(<span class="ruby-identifier">attr_name</span>, <span class="ruby-identifier">class_name_or_coder</span> = <span class="ruby-constant">Object</span>)
+  <span class="ruby-comment"># When ::JSON is used, force it to go through the Active Support JSON encoder</span>
+  <span class="ruby-comment"># to ensure special objects (e.g. Active Record models) are dumped correctly</span>
+  <span class="ruby-comment"># using the #as_json hook.</span>
+  <span class="ruby-identifier">coder</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">class_name_or_coder</span> <span class="ruby-operator">==</span> <span class="ruby-operator">::</span><span class="ruby-constant">JSON</span>
+    <span class="ruby-constant">Coders</span><span class="ruby-operator">::</span><span class="ruby-constant">JSON</span>
+  <span class="ruby-keyword">elsif</span> [<span class="ruby-value">:load</span>, <span class="ruby-value">:dump</span>].<span class="ruby-identifier">all?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">x</span><span class="ruby-operator">|</span> <span class="ruby-identifier">class_name_or_coder</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">x</span>) }
+    <span class="ruby-identifier">class_name_or_coder</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-constant">Coders</span><span class="ruby-operator">::</span><span class="ruby-constant">YAMLColumn</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">attr_name</span>, <span class="ruby-identifier">class_name_or_coder</span>)
+  <span class="ruby-keyword">end</span>
 
-  <span class="ruby-identifier">coder</span> = <span class="ruby-keyword">if</span> [<span class="ruby-value">:load</span>, <span class="ruby-value">:dump</span>].<span class="ruby-identifier">all?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">x</span><span class="ruby-operator">|</span> <span class="ruby-identifier">class_name</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-identifier">x</span>) }
-            <span class="ruby-identifier">class_name</span>
-          <span class="ruby-keyword">else</span>
-            <span class="ruby-constant">Coders</span><span class="ruby-operator">::</span><span class="ruby-constant">YAMLColumn</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">class_name</span>)
-          <span class="ruby-keyword">end</span>
-
-  <span class="ruby-comment"># merge new serialized attribute and create new hash to ensure that each class in inheritance hierarchy</span>
-  <span class="ruby-comment"># has its own hash of own serialized attributes</span>
-  <span class="ruby-keyword">self</span>.<span class="ruby-identifier">serialized_attributes</span> = <span class="ruby-identifier">serialized_attributes</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">attr_name</span>.<span class="ruby-identifier">to_s</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">coder</span>)
+  <span class="ruby-identifier">decorate_attribute_type</span>(<span class="ruby-identifier">attr_name</span>, <span class="ruby-value">:serialize</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">type</span><span class="ruby-operator">|</span>
+    <span class="ruby-constant">Type</span><span class="ruby-operator">::</span><span class="ruby-constant">Serialized</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">type</span>, <span class="ruby-identifier">coder</span>)
+  <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <div class="title method-title" id="method-i-serialized_attributes">
-            
-              <b>serialized_attributes</b>
-            
-            <a href="../../../../classes/ActiveRecord/AttributeMethods/Serialization/ClassMethods.html#method-i-serialized_attributes" name="method-i-serialized_attributes" class="permalink">Link</a>
-          </div>
-          
-          
-            <div class="description">
-              <p>Returns a hash of all the attributes that have been specified for
-serialization as keys and their class restriction as values.</p>
-            </div>
-          
-          
-          
-          
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source: 
-                <a href="javascript:toggleSource('method-i-serialized_attributes_source')" id="l_method-i-serialized_attributes_source">show</a>
-                
-              </p>
-              <div id="method-i-serialized_attributes_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/attribute_methods/serialization.rb, line 20</span>
-        </pre>
               </div>
             </div>
             
@@ -192,4 +188,4 @@ serialization as keys and their class restriction as values.</p>
 
     </div>
   </body>
-</html>    
+</html>

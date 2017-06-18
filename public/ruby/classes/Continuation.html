@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            Continuation 
+            <span class="type">Class</span>
+            Continuation
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Object.html">Object</a>
                     
@@ -62,7 +62,27 @@ $cc.call unless message =~ /Max/
 <pre><code>Freddie
 Herbie
 Ron
-Max</code></pre>
+Max
+</code></pre>
+
+<p>Also you can call callcc in other methods:</p>
+
+<pre><code>require &quot;continuation&quot;
+
+def g
+  arr = [ &quot;Freddie&quot;, &quot;Herbie&quot;, &quot;Ron&quot;, &quot;Max&quot;, &quot;Ringo&quot; ]
+  cc = callcc { |cc| cc }
+  puts arr.shift
+  return cc, arr.size
+end
+
+def f
+  c, size = g
+  c.call(c) if size &gt; 1
+end
+
+f
+</code></pre>
 
 <p>This (somewhat contrived) example allows the inner loop to abandon
 processing early:</p>
@@ -160,7 +180,7 @@ puts
             
             <a href="../classes/Continuation.html#method-i-5B-5D" name="method-i-5B-5D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Invokes the continuation. The program continues from the end of the
@@ -175,15 +195,17 @@ callcc {|cont|  cont.call 1, 2, 3 }   #=&gt; [1, 2, 3]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
                 
               </p>
@@ -202,20 +224,17 @@ rb_cont_call(int argc, VALUE *argv, VALUE contval)
         rb_raise(rb_eRuntimeError, &quot;continuation called across stack rewinding barrier&quot;);
     }
     if (cont-&gt;saved_thread.fiber) {
-        rb_fiber_t *fcont;
-        GetFiberPtr(cont-&gt;saved_thread.fiber, fcont);
-
         if (th-&gt;fiber != cont-&gt;saved_thread.fiber) {
             rb_raise(rb_eRuntimeError, &quot;continuation called across fiber&quot;);
         }
     }
+    rollback_ensure_stack(contval, th-&gt;ensure_list, cont-&gt;ensure_array);
 
     cont-&gt;argc = argc;
     cont-&gt;value = make_passing_arg(argc, argv);
 
     /* restore `tracing&#39; context. see [Feature #4347] */
     th-&gt;trace_arg = cont-&gt;saved_thread.trace_arg;
-
     cont_restore_0(cont, &amp;contval);
     return Qnil; /* unreachable */
 }</pre>
@@ -231,7 +250,7 @@ rb_cont_call(int argc, VALUE *argv, VALUE contval)
             
             <a href="../classes/Continuation.html#method-i-call" name="method-i-call" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Invokes the continuation. The program continues from the end of the
@@ -246,15 +265,17 @@ callcc {|cont|  cont.call 1, 2, 3 }   #=&gt; [1, 2, 3]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-call_source')" id="l_method-i-call_source">show</a>
                 
               </p>
@@ -273,20 +294,17 @@ rb_cont_call(int argc, VALUE *argv, VALUE contval)
         rb_raise(rb_eRuntimeError, &quot;continuation called across stack rewinding barrier&quot;);
     }
     if (cont-&gt;saved_thread.fiber) {
-        rb_fiber_t *fcont;
-        GetFiberPtr(cont-&gt;saved_thread.fiber, fcont);
-
         if (th-&gt;fiber != cont-&gt;saved_thread.fiber) {
             rb_raise(rb_eRuntimeError, &quot;continuation called across fiber&quot;);
         }
     }
+    rollback_ensure_stack(contval, th-&gt;ensure_list, cont-&gt;ensure_array);
 
     cont-&gt;argc = argc;
     cont-&gt;value = make_passing_arg(argc, argv);
 
     /* restore `tracing&#39; context. see [Feature #4347] */
     th-&gt;trace_arg = cont-&gt;saved_thread.trace_arg;
-
     cont_restore_0(cont, &amp;contval);
     return Qnil; /* unreachable */
 }</pre>
@@ -298,4 +316,4 @@ rb_cont_call(int argc, VALUE *argv, VALUE contval)
 
     </div>
   </body>
-</html>    
+</html>

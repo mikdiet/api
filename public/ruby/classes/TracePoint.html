@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            TracePoint 
+            <span class="type">Class</span>
+            TracePoint
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Object.html">Object</a>
                     
@@ -44,7 +44,7 @@
 href="Kernel.html#method-i-set_trace_func">Kernel#set_trace_func</a> in a
 nice Object-Oriented API.</p>
 
-<h2 id="label-Example">Example</h2>
+<h2 id="class-TracePoint-label-Example">Example</h2>
 
 <p>We can use <a href="TracePoint.html">TracePoint</a> to gather information
 specifically for exceptions:</p>
@@ -52,16 +52,16 @@ specifically for exceptions:</p>
 <pre><code>trace = TracePoint.new(:raise) do |tp|
     p [tp.lineno, tp.event, tp.raised_exception]
 end
-#=&gt; #&lt;TracePoint:0x007f786a452448&gt;
+#=&gt; #&lt;TracePoint:disabled&gt;
 
 trace.enable
-#=&gt; #&lt;TracePoint:0x007f786a452448&gt;
+#=&gt; false
 
 0 / 0
 #=&gt; [5, :raise, #&lt;ZeroDivisionError: divided by 0&gt;]
 </code></pre>
 
-<h2 id="label-Events">Events</h2>
+<h2 id="class-TracePoint-label-Events">Events</h2>
 
 <p>If you don&#39;t specify the type of events you want to listen for, <a
 href="TracePoint.html">TracePoint</a> will include all available events.</p>
@@ -108,6 +108,9 @@ events you want to use.</p>
 </dd><dt><code>:thread_end</code>
 <dd>
 <p>event hook at thread ending</p>
+</dd><dt><code>:fiber_switch</code>
+<dd>
+<p>event hook at fiber switch</p>
 </dd></dl>
 
     </div>
@@ -136,6 +139,18 @@ events you want to use.</p>
               
               <li>
                 <a href="#method-i-binding">binding</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>C</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-callee_id">callee_id</a>
               </li>
             
           </ul>
@@ -263,7 +278,12 @@ events you want to use.</p>
             
               
               <li>
-                <a href="#method-i-self">self</a>
+                <a href="#method-i-self">self</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-stat">stat</a>
               </li>
             
           </ul>
@@ -312,7 +332,7 @@ events you want to use.</p>
             
             <a href="../classes/TracePoint.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a new <a href="TracePoint.html">TracePoint</a> object, not enabled
@@ -324,10 +344,10 @@ href="TracePoint.html#method-i-enable">#enable</a></p>
 <pre><code>trace = TracePoint.new(:call) do |tp|
     p [tp.lineno, tp.defined_class, tp.method_id, tp.event]
 end
-#=&gt; #&lt;TracePoint:0x007f17372cdb20&gt;
+#=&gt; #&lt;TracePoint:disabled&gt;
 
 trace.enable
-#=&gt; #&lt;TracePoint:0x007f17372cdb20&gt;
+#=&gt; false
 
 puts &quot;Hello, TracePoint!&quot;
 # ...
@@ -338,7 +358,8 @@ puts &quot;Hello, TracePoint!&quot;
 <p>When you want to deactivate the trace, you must use <a
 href="TracePoint.html#method-i-disable">#disable</a></p>
 
-<pre><code>trace.disable</code></pre>
+<pre><code>trace.disable
+</code></pre>
 
 <p>See <a href="TracePoint.html#label-Events">Events at TracePoint</a> for
 possible events and more information.</p>
@@ -367,15 +388,17 @@ $tp.line #=&gt; access from outside (RuntimeError)
 <p>Access from other threads is also forbidden.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -407,6 +430,57 @@ tracepoint_new_s(int argc, VALUE *argv, VALUE self)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-c-stat">
+            
+              <b>TracePoint.stat &rarr; obj
+</b>
+            
+            <a href="../classes/TracePoint.html#method-c-stat" name="method-c-stat" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns internal information of <a href="TracePoint.html">TracePoint</a>.</p>
+
+<p>The contents of the returned value are implementation specific. It may be
+changed in future.</p>
+
+<p>This method is only for debugging <a href="TracePoint.html">TracePoint</a>
+itself.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-stat_source')" id="l_method-c-stat_source">show</a>
+                
+              </p>
+              <div id="method-c-stat_source" class="dyn-source">
+                <pre>static VALUE
+tracepoint_stat_s(VALUE self)
+{
+    rb_vm_t *vm = GET_VM();
+    VALUE stat = rb_hash_new();
+
+    tracepoint_stat_event_hooks(stat, vm-&gt;self, vm-&gt;event_hooks.hooks);
+    /* TODO: thread local hooks */
+
+    return stat;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-c-trace">
             
               <b>TracePoint.trace(*events) { |obj| block }        &rarr; obj
@@ -414,28 +488,30 @@ tracepoint_new_s(int argc, VALUE *argv, VALUE self)
             
             <a href="../classes/TracePoint.html#method-c-trace" name="method-c-trace" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>A convenience method for <a href="TracePoint.html#method-c-new">::new</a>,
 that activates the trace automatically.</p>
 
 <pre><code>trace = TracePoint.trace(:call) { |tp| [tp.lineno, tp.event] }
-#=&gt; #&lt;TracePoint:0x007f786a452448&gt;
+#=&gt; #&lt;TracePoint:enabled&gt;
 
 trace.enabled? #=&gt; true
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-trace_source')" id="l_method-c-trace_source">show</a>
                 
               </p>
@@ -461,21 +537,23 @@ tracepoint_trace_s(int argc, VALUE *argv, VALUE self)
             
             <a href="../classes/TracePoint.html#method-i-binding" name="method-i-binding" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Return the generated binding object from event</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-binding_source')" id="l_method-i-binding_source">show</a>
                 
               </p>
@@ -491,13 +569,51 @@ tracepoint_attr_binding(VALUE tpval)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-i-callee_id">
+            
+              <b>callee_id</b>()
+            
+            <a href="../classes/TracePoint.html#method-i-callee_id" name="method-i-callee_id" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Return the called name of the method being called</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-callee_id_source')" id="l_method-i-callee_id_source">show</a>
+                
+              </p>
+              <div id="method-i-callee_id_source" class="dyn-source">
+                <pre>static VALUE
+tracepoint_attr_callee_id(VALUE tpval)
+{
+    return rb_tracearg_callee_id(get_trace_arg());
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-i-defined_class">
             
               <b>defined_class</b>()
             
             <a href="../classes/TracePoint.html#method-i-defined_class" name="method-i-defined_class" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Return class or module of the method being called.</p>
@@ -542,15 +658,17 @@ end
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-defined_class_source')" id="l_method-i-defined_class_source">show</a>
                 
               </p>
@@ -568,13 +686,12 @@ tracepoint_attr_defined_class(VALUE tpval)
         <div class="method">
           <div class="title method-title" id="method-i-disable">
             
-              <b>trace.disable                &rarr; true or false
-trace.disable { block } &rarr; obj
+              <b>trace.disable                &rarr; true or false<br />trace.disable { block } &rarr; obj
 </b>
             
             <a href="../classes/TracePoint.html#method-i-disable" name="method-i-disable" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Deactivates the trace</p>
@@ -609,15 +726,17 @@ trace.enabled?
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-disable_source')" id="l_method-i-disable_source">show</a>
                 
               </p>
@@ -646,13 +765,12 @@ tracepoint_disable_m(VALUE tpval)
         <div class="method">
           <div class="title method-title" id="method-i-enable">
             
-              <b>trace.enable         &rarr; true or false
-trace.enable { block }       &rarr; obj
+              <b>trace.enable         &rarr; true or false<br />trace.enable { block }       &rarr; obj
 </b>
             
             <a href="../classes/TracePoint.html#method-i-enable" name="method-i-enable" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Activates the trace</p>
@@ -689,15 +807,17 @@ trace.enabled?
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-enable_source')" id="l_method-i-enable_source">show</a>
                 
               </p>
@@ -731,21 +851,23 @@ tracepoint_enable_m(VALUE tpval)
             
             <a href="../classes/TracePoint.html#method-i-enabled-3F" name="method-i-enabled-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>The current status of the trace</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-enabled-3F_source')" id="l_method-i-enabled-3F_source">show</a>
                 
               </p>
@@ -768,7 +890,7 @@ rb_tracepoint_enabled_p(VALUE tpval)
             
             <a href="../classes/TracePoint.html#method-i-event" name="method-i-event" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Type of event</p>
@@ -777,15 +899,17 @@ rb_tracepoint_enabled_p(VALUE tpval)
 more information.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-event_source')" id="l_method-i-event_source">show</a>
                 
               </p>
@@ -808,22 +932,24 @@ tracepoint_attr_event(VALUE tpval)
             
             <a href="../classes/TracePoint.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Return a string containing a human-readable <a
 href="TracePoint.html">TracePoint</a> status.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
               </p>
@@ -841,7 +967,7 @@ tracepoint_inspect(VALUE self)
             {
                 VALUE sym = rb_tracearg_method_id(trace_arg);
                 if (NIL_P(sym))
-                  goto default_inspect;
+                    goto default_inspect;
                 return rb_sprintf(&quot;#&lt;TracePoint:%&quot;PRIsVALUE&quot;@%&quot;PRIsVALUE&quot;:%d in `%&quot;PRIsVALUE&quot;&#39;&gt;&quot;,
                                   rb_tracearg_event(trace_arg),
                                   rb_tracearg_path(trace_arg),
@@ -886,21 +1012,23 @@ tracepoint_inspect(VALUE self)
             
             <a href="../classes/TracePoint.html#method-i-lineno" name="method-i-lineno" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Line number of the event</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-lineno_source')" id="l_method-i-lineno_source">show</a>
                 
               </p>
@@ -922,21 +1050,23 @@ tracepoint_attr_lineno(VALUE tpval)
             
             <a href="../classes/TracePoint.html#method-i-method_id" name="method-i-method_id" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Return the name of the method being called</p>
+              <p>Return the name at the definition of the method being called</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-method_id_source')" id="l_method-i-method_id_source">show</a>
                 
               </p>
@@ -958,21 +1088,23 @@ tracepoint_attr_method_id(VALUE tpval)
             
             <a href="../classes/TracePoint.html#method-i-path" name="method-i-path" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Path of the file being run</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-path_source')" id="l_method-i-path_source">show</a>
                 
               </p>
@@ -994,21 +1126,23 @@ tracepoint_attr_path(VALUE tpval)
             
             <a href="../classes/TracePoint.html#method-i-raised_exception" name="method-i-raised_exception" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Value from exception raised on the <code>:raise</code> event</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-raised_exception_source')" id="l_method-i-raised_exception_source">show</a>
                 
               </p>
@@ -1030,22 +1164,24 @@ tracepoint_attr_raised_exception(VALUE tpval)
             
             <a href="../classes/TracePoint.html#method-i-return_value" name="method-i-return_value" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Return value from <code>:return</code>, <code>c_return</code>, and
 <code>b_return</code> event</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-return_value_source')" id="l_method-i-return_value_source">show</a>
                 
               </p>
@@ -1067,25 +1203,28 @@ tracepoint_attr_return_value(VALUE tpval)
             
             <a href="../classes/TracePoint.html#method-i-self" name="method-i-self" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Return the trace object during event</p>
 
 <p>Same as <a href="TracePoint.html#method-i-binding">#binding</a>:</p>
 
-<pre><code>trace.binding.eval(&#39;self&#39;)</code></pre>
+<pre><code>trace.binding.eval(&#39;self&#39;)
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-self_source')" id="l_method-i-self_source">show</a>
                 
               </p>
@@ -1103,4 +1242,4 @@ tracepoint_attr_self(VALUE tpval)
 
     </div>
   </body>
-</html>    
+</html>

@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            Digest::Base 
+            <span class="type">Class</span>
+            Digest::Base
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Class.html">Digest::Class</a>
                     
@@ -31,7 +31,7 @@
         </h1>
         <ul class="files">
             
-            <li><a href="../../files/ruby/ext/digest/digest_c.html">ruby/ext/digest/digest.c</a></li>
+            <li><a href="../../files/ruby/ext/digest/bubblebabble/bubblebabble_c.html">ruby/ext/digest/bubblebabble/bubblebabble.c</a></li>
             
         </ul>
     </div>
@@ -43,6 +43,42 @@
 <p>This abstract class provides a common interface to message digest
 implementation classes written in C.</p>
 
+<h2 id="class-Digest::Base-label-Write+a+Digest+subclass+in+C">Write a <a href="../Digest.html">Digest</a> subclass in C</h2>
+
+<p><a href="Base.html">Digest::Base</a> provides a common interface to message
+digest classes written in C. These classes must provide a struct of type
+rb_digest_metadata_t:</p>
+
+<pre><code>typedef int (*rb_digest_hash_init_func_t)(void *);
+typedef void (*rb_digest_hash_update_func_t)(void *, unsigned char *, size_t);
+typedef int (*rb_digest_hash_finish_func_t)(void *, unsigned char *);
+
+typedef struct {
+  int api_version;
+  size_t digest_len;
+  size_t block_len;
+  size_t ctx_size;
+  rb_digest_hash_init_func_t init_func;
+  rb_digest_hash_update_func_t update_func;
+  rb_digest_hash_finish_func_t finish_func;
+} rb_digest_metadata_t;</code></pre>
+
+<p>This structure must be set as an instance variable named
+<code>metadata</code> (without the +@+ in front of the name). By example:</p>
+
+<pre><code> static const rb_digest_metadata_t sha1 = {
+    RUBY_DIGEST_API_VERSION,
+    SHA1_DIGEST_LENGTH,
+    SHA1_BLOCK_LENGTH,
+    sizeof(SHA1_CTX),
+    (rb_digest_hash_init_func_t)SHA1_Init,
+    (rb_digest_hash_update_func_t)SHA1_Update,
+    (rb_digest_hash_finish_func_t)SHA1_Finish,
+};
+
+rb_ivar_set(cDigest_SHA1, rb_intern(&quot;metadata&quot;),
+            Data_Wrap_Struct(0, 0, 0, (void *)&amp;sha1));</code></pre>
+
     </div>
   
 
@@ -57,6 +93,72 @@ implementation classes written in C.</p>
   
 
 
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>#</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-3C-3C">&lt;&lt;</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>B</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-block_length">block_length</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>D</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-digest_length">digest_length</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>R</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-reset">reset</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>U</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-update">update</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
   
 
   
@@ -76,8 +178,242 @@ implementation classes written in C.</p>
 
 
     <!-- Methods -->
+        
+      <div class="sectiontitle">Instance Public methods</div>
+      
+        <div class="method">
+          <div class="title method-title" id="method-i-3C-3C">
+            
+              <b>digest_base << string &rarr; digest_base</b>
+            
+            <a href="../../classes/Digest/Base.html#method-i-3C-3C" name="method-i-3C-3C" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Update the digest using given <em>string</em> and return <code>self</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-3C-3C_source')" id="l_method-i-3C-3C_source">show</a>
+                
+              </p>
+              <div id="method-i-3C-3C_source" class="dyn-source">
+                <pre>static VALUE
+rb_digest_base_update(VALUE self, VALUE str)
+{
+    rb_digest_metadata_t *algo;
+    void *pctx;
+
+    algo = get_digest_base_metadata(rb_obj_class(self));
+
+    TypedData_Get_Struct(self, void, &amp;digest_type, pctx);
+
+    StringValue(str);
+    algo-&gt;update_func(pctx, (unsigned char *)RSTRING_PTR(str), RSTRING_LEN(str));
+    RB_GC_GUARD(str);
+
+    return self;
+}</pre>
               </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-block_length">
+            
+              <b>digest_base.block_length &rarr; Integer
+</b>
+            
+            <a href="../../classes/Digest/Base.html#method-i-block_length" name="method-i-block_length" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Return the block length of the digest in bytes.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-block_length_source')" id="l_method-i-block_length_source">show</a>
+                
+              </p>
+              <div id="method-i-block_length_source" class="dyn-source">
+                <pre>static VALUE
+rb_digest_base_block_length(VALUE self)
+{
+    rb_digest_metadata_t *algo;
+
+    algo = get_digest_base_metadata(rb_obj_class(self));
+
+    return INT2NUM(algo-&gt;block_len);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-digest_length">
+            
+              <b>digest_base.digest_length &rarr; Integer
+</b>
+            
+            <a href="../../classes/Digest/Base.html#method-i-digest_length" name="method-i-digest_length" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Return the length of the hash value in bytes.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-digest_length_source')" id="l_method-i-digest_length_source">show</a>
+                
+              </p>
+              <div id="method-i-digest_length_source" class="dyn-source">
+                <pre>static VALUE
+rb_digest_base_digest_length(VALUE self)
+{
+    rb_digest_metadata_t *algo;
+
+    algo = get_digest_base_metadata(rb_obj_class(self));
+
+    return INT2NUM(algo-&gt;digest_len);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-reset">
+            
+              <b>digest_base.reset &rarr; digest_base
+</b>
+            
+            <a href="../../classes/Digest/Base.html#method-i-reset" name="method-i-reset" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Reset the digest to its initial state and return <code>self</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-reset_source')" id="l_method-i-reset_source">show</a>
+                
+              </p>
+              <div id="method-i-reset_source" class="dyn-source">
+                <pre>static VALUE
+rb_digest_base_reset(VALUE self)
+{
+    rb_digest_metadata_t *algo;
+    void *pctx;
+
+    algo = get_digest_base_metadata(rb_obj_class(self));
+
+    TypedData_Get_Struct(self, void, &amp;digest_type, pctx);
+
+    algo_init(algo, pctx);
+
+    return self;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-update">
+            
+              <b>digest_base.update(string) &rarr; digest_base</b>
+            
+            <a href="../../classes/Digest/Base.html#method-i-update" name="method-i-update" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Update the digest using given <em>string</em> and return <code>self</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-update_source')" id="l_method-i-update_source">show</a>
+                
+              </p>
+              <div id="method-i-update_source" class="dyn-source">
+                <pre>static VALUE
+rb_digest_base_update(VALUE self, VALUE str)
+{
+    rb_digest_metadata_t *algo;
+    void *pctx;
+
+    algo = get_digest_base_metadata(rb_obj_class(self));
+
+    TypedData_Get_Struct(self, void, &amp;digest_type, pctx);
+
+    StringValue(str);
+    algo-&gt;update_func(pctx, (unsigned char *)RSTRING_PTR(str), RSTRING_LEN(str));
+    RB_GC_GUARD(str);
+
+    return self;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+                    </div>
 
     </div>
   </body>
-</html>    
+</html>

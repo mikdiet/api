@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            OpenSSL::PKey::EC::Group 
+            <span class="type">Class</span>
+            OpenSSL::PKey::EC::Group
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../../../Object.html">Object</a>
                     
@@ -31,7 +31,7 @@
         </h1>
         <ul class="files">
             
-            <li><a href="../../../../files/ruby/ext/openssl/ossl_pkey_ec_c.html">ruby/ext/openssl/ossl_pkey_ec.c</a></li>
+            <li><a href="../../../../files/ruby/ext/openssl/ossl_pkey_c.html">ruby/ext/openssl/ossl_pkey.c</a></li>
             
         </ul>
     </div>
@@ -259,38 +259,43 @@
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>OpenSSL::PKey::EC::Group.new("secp112r1")
-OpenSSL::PKey::EC::Group.new(ec_group)
-OpenSSL::PKey::EC::Group.new(pem_string)
-OpenSSL::PKey::EC::Group.new(der_string)
-OpenSSL::PKey::EC::Group.new(pem_file)
-OpenSSL::PKey::EC::Group.new(der_file)
-OpenSSL::PKey::EC::Group.new(:GFp_simple)
-OpenSSL::PKey::EC::Group.new(:GFp_mult)
-OpenSSL::PKey::EC::Group.new(:GFp_nist)
-OpenSSL::PKey::EC::Group.new(:GF2m_simple)
-OpenSSL::PKey::EC::Group.new(:GFp, bignum_p, bignum_a, bignum_b)
-OpenSSL::PKey::EC::Group.new(:GF2m, bignum_p, bignum_a, bignum_b)
+              <b>OpenSSL::PKey::EC::Group.new(ec_group)<br />OpenSSL::PKey::EC::Group.new(pem_or_der_encoded)<br />OpenSSL::PKey::EC::Group.new(ec_method)<br />OpenSSL::PKey::EC::Group.new(:GFp, bignum_p, bignum_a, bignum_b)<br />OpenSSL::PKey::EC::Group.new(:GF2m, bignum_p, bignum_a, bignum_b)
 </b>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
-EC_GROUP_*</p>
+              <p>Creates a new <a href="Group.html">EC::Group</a> object.</p>
+
+<p><code>ec_method</code> is a symbol that represents an EC_METHOD. Currently
+the following are supported:</p>
+<ul><li>
+<p>:GFp_simple</p>
+</li><li>
+<p>:GFp_mont</p>
+</li><li>
+<p>:GFp_nist</p>
+</li><li>
+<p>:GF2m_simple</p>
+</li></ul>
+
+<p>If the first argument is :GFp or :GF2m, creates a new curve with given
+parameters.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -298,11 +303,10 @@ EC_GROUP_*</p>
                 <pre>static VALUE ossl_ec_group_initialize(int argc, VALUE *argv, VALUE self)
 {
     VALUE arg1, arg2, arg3, arg4;
-    ossl_ec_group *ec_group;
-    EC_GROUP *group = NULL;
+    EC_GROUP *group;
 
-    Data_Get_Struct(self, ossl_ec_group, ec_group);
-    if (ec_group-&gt;group != NULL)
+    TypedData_Get_Struct(self, EC_GROUP, &amp;ossl_ec_group_type, group);
+    if (group)
         ossl_raise(rb_eRuntimeError, &quot;EC_GROUP is already initialized&quot;);
 
     switch (rb_scan_args(argc, argv, &quot;13&quot;, &amp;arg1, &amp;arg2, &amp;arg3, &amp;arg4)) {
@@ -317,8 +321,10 @@ EC_GROUP_*</p>
                 method = EC_GFp_mont_method();
             } else if (id == s_GFp_nist) {
                 method = EC_GFp_nist_method();
+#if !defined(OPENSSL_NO_EC2M)
             } else if (id == s_GF2m_simple) {
                 method = EC_GF2m_simple_method();
+#endif
             }
 
             if (method) {
@@ -330,7 +336,7 @@ EC_GROUP_*</p>
         } else if (rb_obj_is_kind_of(arg1, cEC_GROUP)) {
             const EC_GROUP *arg1_group;
 
-            SafeRequire_EC_GROUP(arg1, arg1_group);
+            SafeGetECGroup(arg1, arg1_group);
             if ((group = EC_GROUP_dup(arg1_group)) == NULL)
                 ossl_raise(eEC_GROUP, &quot;EC_GROUP_dup&quot;);
         } else {
@@ -348,13 +354,13 @@ EC_GROUP_*</p>
                 const char *name = StringValueCStr(arg1);
                 int nid = OBJ_sn2nid(name);
 
-                (void)ERR_get_error();
+                ossl_clear_error(); /* ignore errors in d2i_ECPKParameters_bio() */
                 if (nid == NID_undef)
-                    ossl_raise(eEC_GROUP, &quot;unknown curve name (%s)&quot;, name);
+                    ossl_raise(eEC_GROUP, &quot;unknown curve name (%&quot;PRIsVALUE&quot;)&quot;, arg1);
 
                 group = EC_GROUP_new_by_curve_name(nid);
                 if (group == NULL)
-                    ossl_raise(eEC_GROUP, &quot;unable to create curve (%s)&quot;, name);
+                    ossl_raise(eEC_GROUP, &quot;unable to create curve (%&quot;PRIsVALUE&quot;)&quot;, arg1);
 
                 EC_GROUP_set_asn1_flag(group, OPENSSL_EC_NAMED_CURVE);
                 EC_GROUP_set_point_conversion_form(group, POINT_CONVERSION_UNCOMPRESSED);
@@ -372,8 +378,10 @@ EC_GROUP_*</p>
 
             if (id == s_GFp) {
                 new_curve = EC_GROUP_new_curve_GFp;
+#if !defined(OPENSSL_NO_EC2M)
             } else if (id == s_GF2m) {
                 new_curve = EC_GROUP_new_curve_GF2m;
+#endif
             } else {
                 ossl_raise(rb_eArgError, &quot;unknown symbol, must be :GFp or :GF2m&quot;);
             }
@@ -391,8 +399,7 @@ EC_GROUP_*</p>
 
     if (group == NULL)
         ossl_raise(eEC_GROUP, &quot;&quot;);
-
-    ec_group-&gt;group = group;
+    RTYPEDDATA_DATA(self) = group;
 
     return self;
 }</pre>
@@ -410,42 +417,51 @@ EC_GROUP_*</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-3D-3D" name="method-i-3D-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
+            <div class="aka">
+              Alias for: <a href="Group.html#method-i-eql-3F">eql?</a>
+            </div>
           
+
           
           </div>
         
         <div class="method">
           <div class="title method-title" id="method-i-asn1_flag">
             
-              <b>group.asn1_flag  => Fixnum
+              <b>group.asn1_flag &rarr; Integer
 </b>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-asn1_flag" name="method-i-asn1_flag" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
-EC_GROUP_get_asn1_flag()</p>
+              <p>Returns the flags set on the group.</p>
+
+<p>See also <a href="Group.html#method-i-asn1_flag-3D">asn1_flag=</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-asn1_flag_source')" id="l_method-i-asn1_flag_source">show</a>
                 
               </p>
@@ -455,11 +471,10 @@ EC_GROUP_get_asn1_flag()</p>
     EC_GROUP *group = NULL;
     int flag;
 
-    Require_EC_GROUP(self, group);
-
+    GetECGroup(self, group);
     flag = EC_GROUP_get_asn1_flag(group);
 
-    return INT2FIX(flag);
+    return INT2NUM(flag);
 }</pre>
               </div>
             </div>
@@ -469,27 +484,39 @@ EC_GROUP_get_asn1_flag()</p>
         <div class="method">
           <div class="title method-title" id="method-i-asn1_flag-3D">
             
-              <b>group.asn1_flag = Fixnum   => Fixnum
+              <b>group.asn1_flag = flags
 </b>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-asn1_flag-3D" name="method-i-asn1_flag-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
-EC_GROUP_set_asn1_flag()</p>
+              <p>Sets flags on the group. The flag value is used to determine how to encode
+the group: encode explicit parameters or named curve using an OID.</p>
+
+<p>The flag value can be either of:</p>
+<ul><li>
+<p>EC::NAMED_CURVE</p>
+</li><li>
+<p>EC::EXPLICIT_CURVE</p>
+</li></ul>
+
+<p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
+EC_GROUP_set_asn1_flag().</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-asn1_flag-3D_source')" id="l_method-i-asn1_flag-3D_source">show</a>
                 
               </p>
@@ -498,8 +525,7 @@ EC_GROUP_set_asn1_flag()</p>
 {
     EC_GROUP *group = NULL;
 
-    Require_EC_GROUP(self, group);
-
+    GetECGroup(self, group);
     EC_GROUP_set_asn1_flag(group, NUM2INT(flag_v));
 
     return flag_v;
@@ -517,22 +543,26 @@ EC_GROUP_set_asn1_flag()</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-cofactor" name="method-i-cofactor" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
+              <p>Returns the cofactor of the group.</p>
+
+<p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 EC_GROUP_get_cofactor()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-cofactor_source')" id="l_method-i-cofactor_source">show</a>
                 
               </p>
@@ -543,7 +573,7 @@ EC_GROUP_get_cofactor()</p>
     BIGNUM *bn;
     EC_GROUP *group = NULL;
 
-    Require_EC_GROUP(self, group);
+    GetECGroup(self, group);
 
     bn_obj = ossl_bn_new(NULL);
     bn = GetBNPtr(bn_obj);
@@ -566,22 +596,26 @@ EC_GROUP_get_cofactor()</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-curve_name" name="method-i-curve_name" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
+              <p>Returns the curve name (sn).</p>
+
+<p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 EC_GROUP_get_curve_name()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-curve_name_source')" id="l_method-i-curve_name_source">show</a>
                 
               </p>
@@ -591,7 +625,7 @@ EC_GROUP_get_curve_name()</p>
     EC_GROUP *group = NULL;
     int nid;
 
-    Get_EC_GROUP(self, group);
+    GetECGroup(self, group);
     if (group == NULL)
         return Qnil;
 
@@ -608,27 +642,29 @@ EC_GROUP_get_curve_name()</p>
         <div class="method">
           <div class="title method-title" id="method-i-degree">
             
-              <b>group.degree   => Fixnum
+              <b>group.degree   => integer
 </b>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-degree" name="method-i-degree" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 EC_GROUP_get_degree()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-degree_source')" id="l_method-i-degree_source">show</a>
                 
               </p>
@@ -637,7 +673,7 @@ EC_GROUP_get_degree()</p>
 {
     EC_GROUP *group = NULL;
 
-    Require_EC_GROUP(self, group);
+    GetECGroup(self, group);
 
     return INT2NUM(EC_GROUP_get_degree(group));
 }</pre>
@@ -649,29 +685,33 @@ EC_GROUP_get_degree()</p>
         <div class="method">
           <div class="title method-title" id="method-i-eql-3F">
             
-              <b>group1 == group2   => true | false</b>
+              <b>group1.eql?(group2)   => true | false<br />group1 == group2   => true | false
+</b>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-eql-3F" name="method-i-eql-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Returns true if the two groups use the same curve and have the same
+parameters, false otherwise.</p>
             </div>
           
-          
+
           
             <div class="aka">
               Also aliased as: <a href="Group.html#method-i-3D-3D">==</a>
             </div>
           
+
           
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-eql-3F_source')" id="l_method-i-eql-3F_source">show</a>
                 
               </p>
@@ -680,8 +720,8 @@ EC_GROUP_get_degree()</p>
 {
     EC_GROUP *group1 = NULL, *group2 = NULL;
 
-    Require_EC_GROUP(a, group1);
-    SafeRequire_EC_GROUP(b, group2);
+    GetECGroup(a, group1);
+    SafeGetECGroup(b, group2);
 
     if (EC_GROUP_cmp(group1, group2, ossl_bn_ctx) == 1)
        return Qfalse;
@@ -701,36 +741,41 @@ EC_GROUP_get_degree()</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-generator" name="method-i-generator" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
+              <p>Returns the generator of the group.</p>
+
+<p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 EC_GROUP_get0_generator()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-generator_source')" id="l_method-i-generator_source">show</a>
                 
               </p>
               <div id="method-i-generator_source" class="dyn-source">
                 <pre>static VALUE ossl_ec_group_get_generator(VALUE self)
 {
-    VALUE point_obj;
-    EC_GROUP *group = NULL;
+    EC_GROUP *group;
+    const EC_POINT *generator;
 
-    Require_EC_GROUP(self, group);
+    GetECGroup(self, group);
+    generator = EC_GROUP_get0_generator(group);
+    if (!generator)
+        return Qnil;
 
-    point_obj = ossl_ec_point_dup(EC_GROUP_get0_generator(group), self);
-
-    return point_obj;
+    return ec_point_new(generator, group);
 }</pre>
               </div>
             </div>
@@ -745,22 +790,26 @@ EC_GROUP_get0_generator()</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-order" name="method-i-order" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
+              <p>Returns the order of the group.</p>
+
+<p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 EC_GROUP_get_order()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-order_source')" id="l_method-i-order_source">show</a>
                 
               </p>
@@ -771,7 +820,7 @@ EC_GROUP_get_order()</p>
     BIGNUM *bn;
     EC_GROUP *group = NULL;
 
-    Require_EC_GROUP(self, group);
+    GetECGroup(self, group);
 
     bn_obj = ossl_bn_new(NULL);
     bn = GetBNPtr(bn_obj);
@@ -789,27 +838,32 @@ EC_GROUP_get_order()</p>
         <div class="method">
           <div class="title method-title" id="method-i-point_conversion_form">
             
-              <b>group.point_conversion_form  => :uncompressed | :compressed | :hybrid
+              <b>group.point_conversion_form &rarr; Symbol
 </b>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-point_conversion_form" name="method-i-point_conversion_form" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
-EC_GROUP_get_point_conversion_form()</p>
+              <p>Returns the form how <a href="Point.html">EC::Point</a> data is encoded as
+ASN.1.</p>
+
+<p>See also <a
+href="Group.html#method-i-point_conversion_form-3D">point_conversion_form=</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-point_conversion_form_source')" id="l_method-i-point_conversion_form_source">show</a>
                 
               </p>
@@ -820,8 +874,7 @@ EC_GROUP_get_point_conversion_form()</p>
     point_conversion_form_t form;
     VALUE ret;
 
-    Require_EC_GROUP(self, group);
-
+    GetECGroup(self, group);
     form = EC_GROUP_get_point_conversion_form(group);
 
     switch (form) {
@@ -841,48 +894,58 @@ EC_GROUP_get_point_conversion_form()</p>
         <div class="method">
           <div class="title method-title" id="method-i-point_conversion_form-3D">
             
-              <b>group.point_conversion_form = form => form
+              <b>group.point_conversion_form = form
 </b>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-point_conversion_form-3D" name="method-i-point_conversion_form-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
+              <p>Sets the form how <a href="Point.html">EC::Point</a> data is encoded as
+ASN.1 as defined in X9.62.</p>
+
+<p><code>format</code> can be one of these:</p>
+<dl class="rdoc-list note-list"><dt>:compressed
+<dd>
+<p>Encoded as z||x, where z is an octet indicating which solution of the
+equation y is. z will be 0x02 or 0x03.</p>
+</dd><dt>:uncompressed
+<dd>
+<p>Encoded as z||x||y, where z is an octet 0x04.</p>
+</dd><dt>:hybrid
+<dd>
+<p>Encodes as z||x||y, where z is an octet indicating which solution of the
+equation y is. z will be 0x06 or 0x07.</p>
+</dd></dl>
+
+<p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 EC_GROUP_set_point_conversion_form()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-point_conversion_form-3D_source')" id="l_method-i-point_conversion_form-3D_source">show</a>
                 
               </p>
               <div id="method-i-point_conversion_form-3D_source" class="dyn-source">
-                <pre>static VALUE ossl_ec_group_set_point_conversion_form(VALUE self, VALUE form_v)
+                <pre>static VALUE
+ossl_ec_group_set_point_conversion_form(VALUE self, VALUE form_v)
 {
-    EC_GROUP *group = NULL;
+    EC_GROUP *group;
     point_conversion_form_t form;
-    ID form_id = SYM2ID(form_v);
 
-    Require_EC_GROUP(self, group);
-
-    if (form_id == ID_uncompressed) {
-        form = POINT_CONVERSION_UNCOMPRESSED;
-    } else if (form_id == ID_compressed) {
-        form = POINT_CONVERSION_COMPRESSED;
-    } else if (form_id == ID_hybrid) {
-        form = POINT_CONVERSION_HYBRID;
-    } else {
-        ossl_raise(rb_eArgError, &quot;form must be :compressed, :uncompressed, or :hybrid&quot;);
-    }
+    GetECGroup(self, group);
+    form = parse_point_conversion_form_symbol(form_v);
 
     EC_GROUP_set_point_conversion_form(group, form);
 
@@ -901,22 +964,24 @@ EC_GROUP_set_point_conversion_form()</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-seed" name="method-i-seed" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 EC_GROUP_get0_seed()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-seed_source')" id="l_method-i-seed_source">show</a>
                 
               </p>
@@ -926,8 +991,7 @@ EC_GROUP_get0_seed()</p>
     EC_GROUP *group = NULL;
     size_t seed_len;
 
-    Require_EC_GROUP(self, group);
-
+    GetECGroup(self, group);
     seed_len = EC_GROUP_get_seed_len(group);
 
     if (seed_len == 0)
@@ -948,22 +1012,24 @@ EC_GROUP_get0_seed()</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-seed-3D" name="method-i-seed-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 EC_GROUP_set_seed()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-seed-3D_source')" id="l_method-i-seed-3D_source">show</a>
                 
               </p>
@@ -972,7 +1038,7 @@ EC_GROUP_set_seed()</p>
 {
     EC_GROUP *group = NULL;
 
-    Require_EC_GROUP(self, group);
+    GetECGroup(self, group);
     StringValue(seed);
 
     if (EC_GROUP_set_seed(group, (unsigned char *)RSTRING_PTR(seed), RSTRING_LEN(seed)) != (size_t)RSTRING_LEN(seed))
@@ -993,22 +1059,28 @@ EC_GROUP_set_seed()</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-set_generator" name="method-i-set_generator" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
+              <p>Sets the curve parameters. <code>generator</code> must be an instance of <a
+href="Point.html">EC::Point</a> that is on the curve. <code>order</code>
+and <code>cofactor</code> are integers.</p>
+
+<p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 EC_GROUP_set_generator()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-set_generator_source')" id="l_method-i-set_generator_source">show</a>
                 
               </p>
@@ -1019,8 +1091,8 @@ EC_GROUP_set_generator()</p>
     const EC_POINT *point;
     const BIGNUM *o, *co;
 
-    Require_EC_GROUP(self, group);
-    SafeRequire_EC_POINT(generator, point);
+    GetECGroup(self, group);
+    SafeGetECPoint(generator, point);
     o = GetBNPtr(order);
     co = GetBNPtr(cofactor);
 
@@ -1042,22 +1114,24 @@ EC_GROUP_set_generator()</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-to_der" name="method-i-to_der" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 i2d_ECPKParameters_bio()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_der_source')" id="l_method-i-to_der_source">show</a>
                 
               </p>
@@ -1079,22 +1153,24 @@ i2d_ECPKParameters_bio()</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-to_pem" name="method-i-to_pem" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 PEM_write_bio_ECPKParameters()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_pem_source')" id="l_method-i-to_pem_source">show</a>
                 
               </p>
@@ -1116,22 +1192,24 @@ PEM_write_bio_ECPKParameters()</p>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Group.html#method-i-to_text" name="method-i-to_text" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
 ECPKParameters_print()</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-to_text_source')" id="l_method-i-to_text_source">show</a>
                 
               </p>
@@ -1142,7 +1220,7 @@ ECPKParameters_print()</p>
     BIO *out;
     VALUE str;
 
-    Require_EC_GROUP(self, group);
+    GetECGroup(self, group);
     if (!(out = BIO_new(BIO_s_mem()))) {
         ossl_raise(eEC_GROUP, &quot;BIO_new(BIO_s_mem())&quot;);
     }
@@ -1162,4 +1240,4 @@ ECPKParameters_print()</p>
 
     </div>
   </body>
-</html>    
+</html>

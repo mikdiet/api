@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            ActionDispatch::Cookies 
+            <span class="type">Class</span>
+            ActionDispatch::Cookies
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../Object.html">Object</a>
                     
@@ -54,34 +54,43 @@ does not get the cookie object itself back, just the value it holds.</p>
 # This cookie will be deleted when the user&#39;s browser is closed.
 cookies[:user_name] = &quot;david&quot;
 
-# Assign an array of values to a cookie.
-cookies[:lat_lon] = [47.68, -122.37]
+# Cookie values are String based. Other data types need to be serialized.
+cookies[:lat_lon] = JSON.generate([47.68, -122.37])
 
 # Sets a cookie that expires in 1 hour.
 cookies[:login] = { value: &quot;XJ-122&quot;, expires: 1.hour.from_now }
 
 # Sets a signed cookie, which prevents users from tampering with its value.
-# The cookie is signed by your app&#39;s &lt;tt&gt;config.secret_key_base&lt;/tt&gt; value.
-# It can be read using the signed method &lt;tt&gt;cookies.signed[:name]&lt;/tt&gt;
+# The cookie is signed by your app&#39;s `secrets.secret_key_base` value.
+# It can be read using the signed method `cookies.signed[:name]`
 cookies.signed[:user_id] = current_user.id
+
+# Sets an encrypted cookie value before sending it to the client which
+# prevent users from reading and tampering with its value.
+# The cookie is signed by your app&#39;s `secrets.secret_key_base` value.
+# It can be read using the encrypted method `cookies.encrypted[:name]`
+cookies.encrypted[:discount] = 45
 
 # Sets a &quot;permanent&quot; cookie (which expires in 20 years from now).
 cookies.permanent[:login] = &quot;XJ-122&quot;
 
 # You can also chain these methods:
-cookies.permanent.signed[:login] = &quot;XJ-122&quot;</code></pre>
+cookies.permanent.signed[:login] = &quot;XJ-122&quot;
+</code></pre>
 
 <p>Examples of reading:</p>
 
-<pre><code>cookies[:user_name]    # =&gt; &quot;david&quot;
-cookies.size           # =&gt; 2
-cookies[:lat_lon]      # =&gt; [47.68, -122.37]
-cookies.signed[:login] # =&gt; &quot;XJ-122&quot;
+<pre><code>cookies[:user_name]           # =&gt; &quot;david&quot;
+cookies.size                  # =&gt; 2
+JSON.parse(cookies[:lat_lon]) # =&gt; [47.68, -122.37]
+cookies.signed[:login]        # =&gt; &quot;XJ-122&quot;
+cookies.encrypted[:discount]  # =&gt; 45
 </code></pre>
 
 <p>Example for deleting:</p>
 
-<pre><code>cookies.delete :user_name</code></pre>
+<pre><code>cookies.delete :user_name
+</code></pre>
 
 <p>Please note that if you specify a :domain when setting a cookie, you must
 also specify the domain when deleting the cookie:</p>
@@ -92,26 +101,34 @@ also specify the domain when deleting the cookie:</p>
   domain: &#39;domain.com&#39;
 }
 
-cookies.delete(:name, domain: &#39;domain.com&#39;)</code></pre>
+cookies.delete(:name, domain: &#39;domain.com&#39;)
+</code></pre>
 
 <p>The option symbols for setting cookies are:</p>
 <ul><li>
-<p><code>:value</code> - The cookie&#39;s value or list of values (as an
-array).</p>
+<p><code>:value</code> - The cookie&#39;s value.</p>
 </li><li>
 <p><code>:path</code> - The path for which this cookie applies. Defaults to
 the root of the application.</p>
 </li><li>
 <p><code>:domain</code> - The domain for which this cookie applies so you can
 restrict to the domain level. If you use a schema like <a
-href="http://www.example.com">www.example.com</a> and want to share session
-with user.example.com set <code>:domain</code> to <code>:all</code>. Make
-sure to specify the <code>:domain</code> option with <code>:all</code>
-again when deleting cookies.</p>
+href="www.example.com">www.example.com</a> and want to share session with
+user.example.com set <code>:domain</code> to <code>:all</code>. Make sure
+to specify the <code>:domain</code> option with <code>:all</code> or
+<code>Array</code> again when deleting cookies.</p>
 
-<pre><code>domain: nil  # Does not sets cookie domain. (default)
+<pre><code>domain: nil  # Does not set cookie domain. (default)
 domain: :all # Allow the cookie for the top most level
-                  domain and subdomains.</code></pre>
+             # domain and subdomains.
+domain: %w(.example.com .example.org) # Allow the cookie
+                                      # for concrete domain names.</code></pre>
+</li><li>
+<p><code>:tld_length</code> - When using <code>:domain =&gt; :all</code>, this
+option can be used to explicitly set the TLD length when using a short
+(&lt;= 3 character) domain that is being interpreted as part of a TLD. For
+example, to share cookies between user1.lvh.me and user2.lvh.me, set
+<code>:tld_length</code> to 1.</p>
 </li><li>
 <p><code>:expires</code> - The time at which this cookie expires, as a Time
 object.</p>
@@ -142,11 +159,6 @@ only HTTP. Defaults to <code>false</code>.</p>
         <li>
           <span class="type">MODULE</span>
           <a href="Cookies/ChainedCookieJars.html">ActionDispatch::Cookies::ChainedCookieJars</a>
-        </li>
-      
-        <li>
-          <span class="type">MODULE</span>
-          <a href="Cookies/VerifyAndUpgradeLegacySignedMessage.html">ActionDispatch::Cookies::VerifyAndUpgradeLegacySignedMessage</a>
         </li>
       
     </ul>
@@ -285,6 +297,30 @@ only HTTP. Defaults to <code>false</code>.</p>
           
         
           <tr valign='top'>
+            <td class="attr-name">COOKIES_SERIALIZER</td>
+            <td>=</td>
+            <td class="attr-value">&quot;action_dispatch.cookies_serializer&quot;.freeze</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+          <tr valign='top'>
+            <td class="attr-name">COOKIES_DIGEST</td>
+            <td>=</td>
+            <td class="attr-value">&quot;action_dispatch.cookies_digest&quot;.freeze</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+          <tr valign='top'>
             <td class="attr-name">MAX_COOKIE_SIZE</td>
             <td>=</td>
             <td class="attr-value">4096</td>
@@ -326,26 +362,30 @@ only HTTP. Defaults to <code>false</code>.</p>
             
             <a href="../../classes/ActionDispatch/Cookies.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/b70fc698e157f2a768ba42efac08c08f4786b01c/actionpack/lib/action_dispatch/middleware/cookies.rb#L606" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/middleware/cookies.rb, line 481</span>
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/middleware/cookies.rb, line 606</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">initialize</span>(<span class="ruby-identifier">app</span>)
   <span class="ruby-ivar">@app</span> = <span class="ruby-identifier">app</span>
 <span class="ruby-keyword">end</span></pre>
@@ -363,33 +403,42 @@ only HTTP. Defaults to <code>false</code>.</p>
             
             <a href="../../classes/ActionDispatch/Cookies.html#method-i-call" name="method-i-call" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-call_source')" id="l_method-i-call_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/b70fc698e157f2a768ba42efac08c08f4786b01c/actionpack/lib/action_dispatch/middleware/cookies.rb#L610" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-call_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/middleware/cookies.rb, line 485</span>
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/middleware/cookies.rb, line 610</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">call</span>(<span class="ruby-identifier">env</span>)
+  <span class="ruby-identifier">request</span> = <span class="ruby-constant">ActionDispatch</span><span class="ruby-operator">::</span><span class="ruby-constant">Request</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">env</span>
+
   <span class="ruby-identifier">status</span>, <span class="ruby-identifier">headers</span>, <span class="ruby-identifier">body</span> = <span class="ruby-ivar">@app</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">env</span>)
 
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">cookie_jar</span> = <span class="ruby-identifier">env</span>[<span class="ruby-string">&#39;action_dispatch.cookies&#39;</span>]
-    <span class="ruby-identifier">cookie_jar</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">headers</span>)
-    <span class="ruby-keyword">if</span> <span class="ruby-identifier">headers</span>[<span class="ruby-constant">HTTP_HEADER</span>].<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:join</span>)
-      <span class="ruby-identifier">headers</span>[<span class="ruby-constant">HTTP_HEADER</span>] = <span class="ruby-identifier">headers</span>[<span class="ruby-constant">HTTP_HEADER</span>].<span class="ruby-identifier">join</span>(<span class="ruby-string">&quot;\n&quot;</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">have_cookie_jar?</span>
+    <span class="ruby-identifier">cookie_jar</span> = <span class="ruby-identifier">request</span>.<span class="ruby-identifier">cookie_jar</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-identifier">cookie_jar</span>.<span class="ruby-identifier">committed?</span>
+      <span class="ruby-identifier">cookie_jar</span>.<span class="ruby-identifier">write</span>(<span class="ruby-identifier">headers</span>)
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">headers</span>[<span class="ruby-constant">HTTP_HEADER</span>].<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:join</span>)
+        <span class="ruby-identifier">headers</span>[<span class="ruby-constant">HTTP_HEADER</span>] = <span class="ruby-identifier">headers</span>[<span class="ruby-constant">HTTP_HEADER</span>].<span class="ruby-identifier">join</span>(<span class="ruby-string">&quot;\n&quot;</span>)
+      <span class="ruby-keyword">end</span>
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span>
 
@@ -403,4 +452,4 @@ only HTTP. Defaults to <code>false</code>.</p>
 
     </div>
   </body>
-</html>    
+</html>

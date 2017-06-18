@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            ActiveRecord::Locking::Pessimistic 
+            <span class="type">Module</span>
+            ActiveRecord::Locking::Pessimistic
             
         </h1>
         <ul class="files">
@@ -37,13 +37,15 @@
 <p><a href="Pessimistic.html">Locking::Pessimistic</a> provides support for
 row-level locking using SELECT … FOR UPDATE and other lock types.</p>
 
-<p>Pass <code>lock: true</code> to <code>ActiveRecord::Base.find</code> to
-obtain an exclusive lock on the selected rows:</p>
+<p>Chain <code>ActiveRecord::Base#find</code> to
+<code>ActiveRecord::QueryMethods#lock</code> to obtain an exclusive lock on
+the selected rows:</p>
 
 <pre><code># select * from accounts where id=1 for update
-Account.find(1, lock: true)</code></pre>
+Account.lock.find(1)
+</code></pre>
 
-<p>Pass <code>lock: &#39;some locking clause&#39;</code> to give a
+<p>Call <code>lock(&#39;some locking clause&#39;)</code> to use a
 database-specific locking clause of your own such as &#39;LOCK IN SHARE
 MODE&#39; or &#39;FOR UPDATE NOWAIT&#39;. Example:</p>
 
@@ -55,7 +57,8 @@ MODE&#39; or &#39;FOR UPDATE NOWAIT&#39;. Example:</p>
   shugo.save!
   yuko.balance += 100
   yuko.save!
-end</code></pre>
+end
+</code></pre>
 
 <p>You can also use <code>ActiveRecord::Base#lock!</code> method to lock one
 record by id. This may be better if you don&#39;t need to lock every row.
@@ -73,8 +76,7 @@ Example:</p>
   account1.save!
   account2.balance += 100
   account2.save!
-end
-</code></pre>
+end</code></pre>
 
 <p>You can start a transaction and acquire the lock in one go by calling
 <code>with_lock</code> with a block. The block is called from within a
@@ -86,11 +88,12 @@ account.with_lock do
   # account is already locked.
   account.balance -= 100
   account.save!
-end</code></pre>
+end
+</code></pre>
 
 <p>Database-specific information on row locking:</p>
 
-<pre><code>MySQL: http://dev.mysql.com/doc/refman/5.1/en/innodb-locking-reads.html
+<pre><code>MySQL: http://dev.mysql.com/doc/refman/5.7/en/innodb-locking-reads.html
 PostgreSQL: http://www.postgresql.org/docs/current/interactive/sql-select.html#SQL-FOR-UPDATE-SHARE</code></pre>
 
     </div>
@@ -166,7 +169,7 @@ PostgreSQL: http://www.postgresql.org/docs/current/interactive/sql-select.html#S
             
             <a href="../../../classes/ActiveRecord/Locking/Pessimistic.html#method-i-lock-21" name="method-i-lock-21" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Obtain a row lock on this record. Reloads the record to obtain the
@@ -175,24 +178,36 @@ statement or pass true for “FOR UPDATE” (the default, an exclusive row
 lock). Returns the locked record.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-lock-21_source')" id="l_method-i-lock-21_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/578f283012f2f047b9e79ac046a32fd51e274761/activerecord/lib/active_record/locking/pessimistic.rb#L61" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-lock-21_source" class="dyn-source">
                 <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/locking/pessimistic.rb, line 61</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">lock!</span>(<span class="ruby-identifier">lock</span> = <span class="ruby-keyword">true</span>)
-  <span class="ruby-identifier">reload</span>(<span class="ruby-value">:lock</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">lock</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">persisted?</span>
-  <span class="ruby-keyword">self</span>
-<span class="ruby-keyword">end</span></pre>
+      <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">lock!</span>(<span class="ruby-identifier">lock</span> = <span class="ruby-keyword">true</span>)
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">persisted?</span>
+          <span class="ruby-keyword">if</span> <span class="ruby-identifier">changed?</span>
+            <span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">Deprecation</span>.<span class="ruby-identifier">warn</span>(<span class="ruby-string">&quot;              Locking a record with unpersisted changes is deprecated and will raise an
+              exception in Rails 5.2. Use `save` to persist the changes, or `reload` to
+              discard them explicitly.
+&quot;</span>.<span class="ruby-identifier">squish</span>)
+          <span class="ruby-keyword">end</span>
+          <span class="ruby-identifier">reload</span>(<span class="ruby-identifier">lock</span><span class="ruby-operator">:</span> <span class="ruby-identifier">lock</span>)
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-keyword">self</span>
+      <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -205,28 +220,32 @@ lock). Returns the locked record.</p>
             
             <a href="../../../classes/ActiveRecord/Locking/Pessimistic.html#method-i-with_lock" name="method-i-with_lock" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Wraps the passed block in a transaction, locking the object before
-yielding. You pass can the SQL locking clause as argument (see
+yielding. You can pass the SQL locking clause as argument (see
 <code>lock!</code>).</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-with_lock_source')" id="l_method-i-with_lock_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/578f283012f2f047b9e79ac046a32fd51e274761/activerecord/lib/active_record/locking/pessimistic.rb#L78" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-with_lock_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/locking/pessimistic.rb, line 69</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/locking/pessimistic.rb, line 78</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">with_lock</span>(<span class="ruby-identifier">lock</span> = <span class="ruby-keyword">true</span>)
   <span class="ruby-identifier">transaction</span> <span class="ruby-keyword">do</span>
     <span class="ruby-identifier">lock!</span>(<span class="ruby-identifier">lock</span>)
@@ -241,4 +260,4 @@ yielding. You pass can the SQL locking clause as argument (see
 
     </div>
   </body>
-</html>    
+</html>

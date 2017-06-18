@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            Random 
+            <span class="type">Class</span>
+            Random
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Object.html">Object</a>
                     
@@ -30,6 +30,8 @@
             
         </h1>
         <ul class="files">
+            
+            <li><a href="../files/ruby/lib/securerandom_rb.html">ruby/lib/securerandom.rb</a></li>
             
             <li><a href="../files/ruby/random_c.html">ruby/random.c</a></li>
             
@@ -74,6 +76,17 @@ period of 2**19937-1.</p>
   
 
 
+  
+    <!-- Namespace -->
+    <div class="sectiontitle">Namespace</div>
+    <ul>
+      
+        <li>
+          <span class="type">MODULE</span>
+          <a href="Random/Formatter.html">Random::Formatter</a>
+        </li>
+      
+    </ul>
   
 
 
@@ -134,7 +147,12 @@ period of 2**19937-1.</p>
             
               
               <li>
-                <a href="#method-c-rand">rand</a>
+                <a href="#method-c-rand">rand</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-raw_seed">raw_seed</a>
               </li>
             
           </ul>
@@ -161,6 +179,20 @@ period of 2**19937-1.</p>
   
 
   
+    <!-- Includes -->
+    <div class="sectiontitle">Included Modules</div>
+    <ul>
+      
+        <li>
+          
+            <a href="Random/Formatter.html">
+              Random::Formatter
+            </a>
+          
+        </li>
+      
+    </ul>
+  
 
 
 
@@ -170,24 +202,6 @@ period of 2**19937-1.</p>
 
     
 
-    
-      <!-- Section constants -->
-      <div class="sectiontitle">Constants</div>
-      <table border='0' cellpadding='5'>
-        
-          <tr valign='top'>
-            <td class="attr-name">DEFAULT</td>
-            <td>=</td>
-            <td class="attr-value">rand_default</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
-            </tr>
-          
-        
-      </table>
     
 
 
@@ -206,7 +220,7 @@ period of 2**19937-1.</p>
             
             <a href="../classes/Random.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Creates a new PRNG using <code>seed</code> to set the initial state. If
@@ -217,15 +231,17 @@ href="Random.html#method-c-new_seed">::new_seed</a>.</p>
 on the use of seed values.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -236,13 +252,14 @@ random_init(int argc, VALUE *argv, VALUE obj)
     VALUE vseed;
     rb_random_t *rnd = get_rnd(obj);
 
-    if (argc == 0) {
+    if (rb_check_arity(argc, 0, 1) == 0) {
         rb_check_frozen(obj);
         vseed = random_seed();
     }
     else {
-        rb_scan_args(argc, argv, &quot;01&quot;, &amp;vseed);
+        vseed = argv[0];
         rb_check_copyable(obj, vseed);
+        vseed = rb_to_int(vseed);
     }
     rnd-&gt;seed = rand_init(&amp;rnd-&gt;mt, vseed);
     return obj;
@@ -260,7 +277,7 @@ random_init(int argc, VALUE *argv, VALUE obj)
             
             <a href="../classes/Random.html#method-c-new_seed" name="method-c-new_seed" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns an arbitrary seed value. This is used by <a
@@ -271,15 +288,17 @@ as an argument.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_seed_source')" id="l_method-c-new_seed_source">show</a>
                 
               </p>
@@ -287,9 +306,12 @@ as an argument.</p>
                 <pre>static VALUE
 random_seed(void)
 {
-    unsigned int buf[DEFAULT_SEED_CNT];
-    fill_random_seed(buf);
-    return make_seed_value(buf);
+    VALUE v;
+    uint32_t buf[DEFAULT_SEED_CNT+1];
+    fill_random_seed(buf, DEFAULT_SEED_CNT);
+    v = make_seed_value(buf, DEFAULT_SEED_CNT);
+    explicit_bzero(buf, DEFAULT_SEED_LEN);
+    return v;
 }</pre>
               </div>
             </div>
@@ -299,27 +321,28 @@ random_seed(void)
         <div class="method">
           <div class="title method-title" id="method-c-rand">
             
-              <b>Random.rand &rarr; float
-Random.rand(max) &rarr; number
+              <b>Random.rand &rarr; float<br />Random.rand(max) &rarr; number
 </b>
             
             <a href="../classes/Random.html#method-c-rand" name="method-c-rand" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Alias of Random::DEFAULT.rand.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-rand_source')" id="l_method-c-rand_source">show</a>
                 
               </p>
@@ -327,7 +350,55 @@ Random.rand(max) &rarr; number
                 <pre>static VALUE
 random_s_rand(int argc, VALUE *argv, VALUE obj)
 {
-    return rand_random(argc, argv, rand_start(&amp;default_rand));
+    VALUE v = rand_random(argc, argv, Qnil, rand_start(&amp;default_rand));
+    check_random_number(v, argv);
+    return v;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-c-raw_seed">
+            
+              <b>Random.raw_seed(size) &rarr; string
+</b>
+            
+            <a href="../classes/Random.html#method-c-raw_seed" name="method-c-raw_seed" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a raw seed string, using platform providing features.</p>
+
+<pre><code>Random.raw_seed(8)  #=&gt; &quot;\x78\x41\xBA\xAF\x7D\xEA\xD8\xEA&quot;
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-raw_seed_source')" id="l_method-c-raw_seed_source">show</a>
+                
+              </p>
+              <div id="method-c-raw_seed_source" class="dyn-source">
+                <pre>static VALUE
+random_raw_seed(VALUE self, VALUE size)
+{
+    long n = NUM2ULONG(size);
+    VALUE buf = rb_str_new(0, n);
+    if (n == 0) return buf;
+    if (fill_random_bytes(RSTRING_PTR(buf), n, FALSE)) return Qnil;
+    return buf;
 }</pre>
               </div>
             </div>
@@ -342,7 +413,7 @@ random_s_rand(int argc, VALUE *argv, VALUE obj)
             
             <a href="../classes/Random.html#method-c-srand" name="method-c-srand" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Seeds the system pseudo-random number generator, Random::DEFAULT, with
@@ -365,15 +436,17 @@ srand 1234               # =&gt; 1234
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-srand_source')" id="l_method-c-srand_source">show</a>
                 
               </p>
@@ -384,12 +457,11 @@ rb_f_srand(int argc, VALUE *argv, VALUE obj)
     VALUE seed, old;
     rb_random_t *r = &amp;default_rand;
 
-    rb_secure(4);
-    if (argc == 0) {
+    if (rb_check_arity(argc, 0, 1) == 0) {
         seed = random_seed();
     }
     else {
-        rb_scan_args(argc, argv, &quot;01&quot;, &amp;seed);
+        seed = rb_to_int(argv[0]);
     }
     old = r-&gt;seed;
     r-&gt;seed = rand_init(&amp;r-&gt;mt, seed);
@@ -411,7 +483,7 @@ rb_f_srand(int argc, VALUE *argv, VALUE obj)
             
             <a href="../classes/Random.html#method-i-3D-3D" name="method-i-3D-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns true if the two generators have the same internal state, otherwise
@@ -437,15 +509,17 @@ prng1 == prng2 # =&gt; true
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-3D-3D_source')" id="l_method-i-3D-3D_source">show</a>
                 
               </p>
@@ -457,11 +531,10 @@ random_equal(VALUE self, VALUE other)
     if (rb_obj_class(self) != rb_obj_class(other)) return Qfalse;
     r1 = get_rnd(self);
     r2 = get_rnd(other);
-    if (!RTEST(rb_funcall2(r1-&gt;seed, rb_intern(&quot;==&quot;), 1, &amp;r2-&gt;seed))) return Qfalse;
     if (memcmp(r1-&gt;mt.state, r2-&gt;mt.state, sizeof(r1-&gt;mt.state))) return Qfalse;
     if ((r1-&gt;mt.next - r1-&gt;mt.state) != (r2-&gt;mt.next - r2-&gt;mt.state)) return Qfalse;
     if (r1-&gt;mt.left != r2-&gt;mt.left) return Qfalse;
-    return Qtrue;
+    return rb_equal(r1-&gt;seed, r2-&gt;seed);
 }</pre>
               </div>
             </div>
@@ -476,7 +549,7 @@ random_equal(VALUE self, VALUE other)
             
             <a href="../classes/Random.html#method-i-bytes" name="method-i-bytes" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a random binary string containing <code>size</code> bytes.</p>
@@ -486,15 +559,17 @@ random_string.size                   # =&gt; 10
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-bytes_source')" id="l_method-i-bytes_source">show</a>
                 
               </p>
@@ -502,7 +577,7 @@ random_string.size                   # =&gt; 10
                 <pre>static VALUE
 random_bytes(VALUE obj, VALUE len)
 {
-    return rb_random_bytes(obj, NUM2LONG(rb_to_int(len)));
+    return genrand_bytes(get_rnd(obj), NUM2LONG(rb_to_int(len)));
 }</pre>
               </div>
             </div>
@@ -512,13 +587,12 @@ random_bytes(VALUE obj, VALUE len)
         <div class="method">
           <div class="title method-title" id="method-i-rand">
             
-              <b>prng.rand &rarr; float
-prng.rand(max) &rarr; number
+              <b>prng.rand &rarr; float<br />prng.rand(max) &rarr; number
 </b>
             
             <a href="../classes/Random.html#method-i-rand" name="method-i-rand" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>When <code>max</code> is an <a href="Integer.html">Integer</a>,
@@ -554,15 +628,17 @@ prng.rand(5.0...9.0) # =&gt; between 5.0 and 9.0, excluding 9.0
 href="ArgumentError.html">ArgumentError</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-rand_source')" id="l_method-i-rand_source">show</a>
                 
               </p>
@@ -570,7 +646,9 @@ href="ArgumentError.html">ArgumentError</a>.</p>
                 <pre>static VALUE
 random_rand(int argc, VALUE *argv, VALUE obj)
 {
-    return rand_random(argc, argv, get_rnd(obj));
+    VALUE v = rand_random(argc, argv, obj, get_rnd(obj));
+    check_random_number(v, argv);
+    return v;
 }</pre>
               </div>
             </div>
@@ -585,7 +663,7 @@ random_rand(int argc, VALUE *argv, VALUE obj)
             
             <a href="../classes/Random.html#method-i-seed" name="method-i-seed" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the seed value used to initialize the generator. This may be used
@@ -601,15 +679,17 @@ prng2.rand(100)  #=&gt; 47
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-seed_source')" id="l_method-i-seed_source">show</a>
                 
               </p>
@@ -627,4 +707,4 @@ random_get_seed(VALUE obj)
 
     </div>
   </body>
-</html>    
+</html>

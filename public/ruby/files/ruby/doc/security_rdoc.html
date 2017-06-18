@@ -15,7 +15,7 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
@@ -26,8 +26,10 @@
             <li>
                 ruby/doc/security.rdoc
                 
+                    <a href="https://github.com/ruby/ruby/blob/07efce075bd580e9bcb52b2e67b5489a1b10adde/doc/security.rdoc" target="_blank" class="github_url">on GitHub</a>
+                
             </li>
-            <li>Last modified: 2013-06-09 13:45:34 +0300</li>
+            <li>Last modified: 2017-06-18 10:06:54 +0300</li>
         </ul>
     </div>
 
@@ -47,27 +49,23 @@ secure alternatives where applicable.</p>
 
 <p>Please check the full list of publicly known CVEs and how to correctly
 report a security vulnerability, at: <a
-href="http://www.ruby-lang.org/en/security">www.ruby-lang.org/en/security</a>/
+href="https://www.ruby-lang.org/en/security">www.ruby-lang.org/en/security</a>/
 Japanese version is here: <a
-href="http://www.ruby-lang.org/ja/security">www.ruby-lang.org/ja/security</a>/</p>
+href="https://www.ruby-lang.org/ja/security">www.ruby-lang.org/ja/security</a>/</p>
 
 <p>Security vulnerabilities should be reported via an email to <a
 href="mailto:security@ruby-lang.org">security@ruby-lang.org</a> (<a
-href="http://www.ruby-lang.org/security.asc">the PGP public key</a>), which
-is a private mailing list. Reported problems will be published after fixes.</p>
+href="https://www.ruby-lang.org/security.asc">the PGP public key</a>),
+which is a private mailing list. Reported problems will be published after
+fixes.</p>
 
-<h2 id="label-%24SAFE"><code>$SAFE</code></h2>
+<h2 id="label-24SAFE"><code>$SAFE</code></h2>
 
 <p>Ruby provides a mechanism to restrict what operations can be performed by
 Ruby code in the form of the <code>$SAFE</code> variable.</p>
 
 <p>However, <code>$SAFE</code> does not provide a secure environment for
-executing untrusted code even at its maximum level of <code>4</code>.
-<code>$SAFE</code> is inherently flawed as a security mechanism, as it
-relies on every unsafe operation performed by any C method to be guarded by
-a <code>$SAFE</code> check. If this check is ever missed, the entire
-security of the system is compromised. <code>$SAFE</code> also does not
-offer any protection against denial of service attacks.</p>
+executing untrusted code.</p>
 
 <p>If you need to execute untrusted code, you should use an operating system
 level sandboxing mechanism. On Linux, ptrace or LXC can be used to sandbox
@@ -93,7 +91,7 @@ handle this manually. Never deserialize to a user specified class.</p>
 <h2 id="label-YAML">YAML</h2>
 
 <p>YAML is a popular human readable data serialization format used by many
-Ruby programs for configuration and database persistance of Ruby object
+Ruby programs for configuration and database persistence of Ruby object
 trees.</p>
 
 <p>Similar to <code>Marshal</code>, it is able to deserialize into arbitrary
@@ -115,23 +113,37 @@ for method, variable and constant names. The reason for this is that
 symbols are simply integers with names attached to them, so they are faster
 to look up in hashtables.</p>
 
-<p>Once a symbol is created, the memory used by it is never freed. If you
-convert user input to symbols with <code>to_sym</code> or
-<code>intern</code>, it is possible for an attacker to mount a denial of
-service attack against your application by flooding it with unique strings.
-Because each string is kept in memory until the Ruby process exits, this
-will cause memory consumption to grow and grow until Ruby runs out of
-memory and crashes.</p>
+<p>Starting in version 2.2, most symbols can be garbage collected; these are
+called <em>mortal</em> symbols. Most symbols you create (e.g. by calling
+<code>to_sym</code>) are mortal.</p>
 
-<p>Be careful with passing user input to methods such as <code>send</code>,
-<code>instance_variable_get</code> or <code>_set</code>,
-<code>const_get</code> or <code>_set</code>, etc. as these methods will
-convert string parameters to symbols internally and pose the same DoS
-potential as direct conversion through
-<code>to_sym</code>/<code>intern</code>.</p>
+<p><em>Immortal</em> symbols on the other hand will never be garbage
+collected. They are created when modifying code:</p>
+<ul><li>
+<p>defining a method (e.g. with <code>define_method</code>),</p>
+</li><li>
+<p>setting an instance variable (e.g. with
+<code>instance_variable_set</code>),</p>
+</li><li>
+<p>creating a variable or constant (e.g. with <code>const_set</code>)</p>
+</li></ul>
 
-<p>The workaround to this is simple - don&#39;t convert user input to symbols.
-You should attempt to leave user input in string form instead.</p>
+<p>C extensions that have not been updated and are still calling `SYM2ID` will
+create immortal symbols. Bugs in 2.2.0: <code>send</code> and +__send__+
+also created immortal symbols, and calling methods with keyword arguments
+could also create some.</p>
+
+<p>Don&#39;t create immortal symbols from user inputs. Otherwise, this would
+allow a user to mount a denial of service attack against your application
+by flooding it with unique strings, which will cause memory to grow
+indefinitely until the Ruby process is killed or causes the system to slow
+to a halt.</p>
+
+<p>While it might not be a good idea to call these with user inputs, methods
+that used to be vulnerable such as <code>to_sym</code>,
+<code>respond_to?</code>, <code>method</code>,
+<code>instance_variable_get</code>, <code>const_get</code>, etc. are no
+longer a threat.</p>
 
 <h2 id="label-Regular+expressions">Regular expressions</h2>
 
@@ -168,12 +180,14 @@ if the call to <code>send</code> has an explicit receiver.</p>
 <p>For example, the following code snippet writes “Hello world” to the
 terminal:</p>
 
-<pre><code>1.send(:puts, &quot;Hello world&quot;)</code></pre>
+<pre><code>1.send(:puts, &quot;Hello world&quot;)
+</code></pre>
 
 <p>You should never call <code>send</code> with user supplied input as the
 first parameter. Doing so can introduce a denial of service vulnerability:</p>
 
-<pre><code>foo.send(params[:bar]) # params[:bar] is &quot;exit!&quot;</code></pre>
+<pre><code>foo.send(params[:bar]) # params[:bar] is &quot;exit!&quot;
+</code></pre>
 
 <p>If an attacker can control the first two arguments to <code>send</code>,
 remote code execution is possible:</p>
@@ -189,7 +203,8 @@ names.</p>
 <p>Note that the use of <code>public_send</code> is also dangerous, as
 <code>send</code> itself is public:</p>
 
-<pre><code>1.public_send(&quot;send&quot;, &quot;eval&quot;, &quot;...ruby code to be executed...&quot;)</code></pre>
+<pre><code>1.public_send(&quot;send&quot;, &quot;eval&quot;, &quot;...ruby code to be executed...&quot;)
+</code></pre>
 
 <h2 id="label-DRb"><a href="../../../classes/DRb.html">DRb</a></h2>
 

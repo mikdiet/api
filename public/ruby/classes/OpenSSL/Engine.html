@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            OpenSSL::Engine 
+            <span class="type">Class</span>
+            OpenSSL::Engine
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../Object.html">Object</a>
                     
@@ -37,6 +37,16 @@
     </div>
     <div id="bodyContent">
         <div id="content">
+  
+    <div class="description">
+      
+<p>This class is the access to openssl&#39;s ENGINE cryptographic module
+implementation.</p>
+
+<p>See also, <a
+href="https://www.openssl.org/docs/crypto/engine.html">www.openssl.org/docs/crypto/engine.html</a></p>
+
+    </div>
   
 
 
@@ -230,25 +240,34 @@
         <div class="method">
           <div class="title method-title" id="method-c-by_id">
             
-              <b>by_id</b>(p1)
+              <b>by_id(name) &rarr; engine
+</b>
             
             <a href="../../classes/OpenSSL/Engine.html#method-c-by_id" name="method-c-by_id" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Fetch the engine as specified by the <code>id</code> String</p>
+
+<pre><code>OpenSSL::Engine.by_id(&quot;openssl&quot;)
+ =&gt; #&lt;OpenSSL::Engine id=&quot;openssl&quot; name=&quot;Software engine support&quot;&gt;</code></pre>
+
+<p>See <a href="Engine.html#method-c-engines">::engines</a> for the currently
+loaded engines</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-by_id_source')" id="l_method-c-by_id_source">show</a>
                 
               </p>
@@ -259,17 +278,18 @@ ossl_engine_s_by_id(VALUE klass, VALUE id)
     ENGINE *e;
     VALUE obj;
 
-    StringValue(id);
+    StringValueCStr(id);
     ossl_engine_s_load(1, &amp;id, klass);
+    obj = NewEngine(klass);
     if(!(e = ENGINE_by_id(RSTRING_PTR(id))))
         ossl_raise(eEngineError, NULL);
-    WrapEngine(klass, obj, e);
+    SetEngine(obj, e);
     if(rb_block_given_p()) rb_yield(obj);
     if(!ENGINE_init(e))
         ossl_raise(eEngineError, NULL);
     ENGINE_ctrl(e, ENGINE_CTRL_SET_PASSWORD_CALLBACK,
                 0, NULL, (void(*)(void))ossl_pem_passwd_cb);
-    ERR_clear_error();
+    ossl_clear_error();
 
     return obj;
 }</pre>
@@ -281,25 +301,33 @@ ossl_engine_s_by_id(VALUE klass, VALUE id)
         <div class="method">
           <div class="title method-title" id="method-c-cleanup">
             
-              <b>cleanup</b>()
+              <b>OpenSSL::Engine.cleanup
+</b>
             
             <a href="../../classes/OpenSSL/Engine.html#method-c-cleanup" name="method-c-cleanup" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>It is only necessary to run cleanup when engines are loaded via <a
+href="Engine.html#method-c-load">::load</a>. However, running cleanup
+before exit is recommended.</p>
+
+<p>Note that this is needed and works only in <a
+href="../OpenSSL.html">OpenSSL</a> &lt; 1.1.0.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-cleanup_source')" id="l_method-c-cleanup_source">show</a>
                 
               </p>
@@ -307,9 +335,7 @@ ossl_engine_s_by_id(VALUE klass, VALUE id)
                 <pre>static VALUE
 ossl_engine_s_cleanup(VALUE self)
 {
-#if defined(HAVE_ENGINE_CLEANUP)
     ENGINE_cleanup();
-#endif
     return Qnil;
 }</pre>
               </div>
@@ -324,21 +350,23 @@ ossl_engine_s_cleanup(VALUE self)
             
             <a href="../../classes/OpenSSL/Engine.html#method-c-engines" name="method-c-engines" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Returns an array of currently loaded engines.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-engines_source')" id="l_method-c-engines_source">show</a>
                 
               </p>
@@ -351,11 +379,12 @@ ossl_engine_s_engines(VALUE klass)
 
     ary = rb_ary_new();
     for(e = ENGINE_get_first(); e; e = ENGINE_get_next(e)){
+        obj = NewEngine(klass);
         /* Need a ref count of two here because of ENGINE_free being
          * called internally by OpenSSL when moving to the next ENGINE
          * and by us when releasing the ENGINE reference */
         ENGINE_up_ref(e);
-        WrapEngine(klass, obj, e);
+        SetEngine(obj, e);
         rb_ary_push(ary, obj);
     }
 
@@ -369,25 +398,31 @@ ossl_engine_s_engines(VALUE klass)
         <div class="method">
           <div class="title method-title" id="method-c-load">
             
-              <b>load</b>(p1 = v1)
+              <b>load(enginename = nil)
+</b>
             
             <a href="../../classes/OpenSSL/Engine.html#method-c-load" name="method-c-load" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>This method loads engines. If <code>name</code> is nil, then all builtin
+engines are loaded. Otherwise, the given <code>name</code>, as a string, 
+is loaded if available to your runtime, and returns true. If
+<code>name</code> is not found, then nil is returned.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-load_source')" id="l_method-c-load_source">show</a>
                 
               </p>
@@ -405,7 +440,7 @@ ossl_engine_s_load(int argc, VALUE *argv, VALUE klass)
         ENGINE_load_builtin_engines();
         return Qtrue;
     }
-    StringValue(name);
+    StringValueCStr(name);
 #ifndef OPENSSL_NO_STATIC_ENGINE
 #if HAVE_ENGINE_LOAD_DYNAMIC
     OSSL_ENGINE_LOAD_IF_MATCH(dynamic);
@@ -457,7 +492,7 @@ ossl_engine_s_load(int argc, VALUE *argv, VALUE klass)
     OSSL_ENGINE_LOAD_IF_MATCH(openbsd_dev_crypto);
 #endif
     OSSL_ENGINE_LOAD_IF_MATCH(openssl);
-    rb_warning(&quot;no such builtin loader for `%s&#39;&quot;, RSTRING_PTR(name));
+    rb_warning(&quot;no such builtin loader for `%&quot;PRIsVALUE&quot;&#39;&quot;, name);
     return Qnil;
 #endif /* HAVE_ENGINE_LOAD_BUILTIN_ENGINES */
 }</pre>
@@ -471,25 +506,37 @@ ossl_engine_s_load(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <div class="title method-title" id="method-i-cipher">
             
-              <b>cipher</b>(p1)
+              <b>engine.cipher(name) &rarr; OpenSSL::Cipher
+</b>
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-cipher" name="method-i-cipher" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>This returns an <a href="Cipher.html">OpenSSL::Cipher</a> by
+<code>name</code>, if it is available in this engine.</p>
+
+<p>An <a href="Engine/EngineError.html">EngineError</a> will be raised if the
+cipher is unavailable.</p>
+
+<pre><code>e = OpenSSL::Engine.by_id(&quot;openssl&quot;)
+ =&gt; #&lt;OpenSSL::Engine id=&quot;openssl&quot; name=&quot;Software engine support&quot;&gt;
+e.cipher(&quot;RC4&quot;)
+ =&gt; #&lt;OpenSSL::Cipher:0x007fc5cacc3048&gt;</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-cipher_source')" id="l_method-i-cipher_source">show</a>
                 
               </p>
@@ -499,12 +546,10 @@ ossl_engine_get_cipher(VALUE self, VALUE name)
 {
     ENGINE *e;
     const EVP_CIPHER *ciph, *tmp;
-    char *s;
     int nid;
 
-    s = StringValuePtr(name);
-    tmp = EVP_get_cipherbyname(s);
-    if(!tmp) ossl_raise(eEngineError, &quot;no such cipher `%s&#39;&quot;, s);
+    tmp = EVP_get_cipherbyname(StringValueCStr(name));
+    if(!tmp) ossl_raise(eEngineError, &quot;no such cipher `%&quot;PRIsVALUE&quot;&#39;&quot;, name);
     nid = EVP_CIPHER_nid(tmp);
     GetEngine(self, e);
     ciph = ENGINE_get_cipher(e, nid);
@@ -524,21 +569,23 @@ ossl_engine_get_cipher(VALUE self, VALUE name)
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-cmds" name="method-i-cmds" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Returns an array of command definitions for the current engine</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-cmds_source')" id="l_method-i-cmds_source">show</a>
                 
               </p>
@@ -572,25 +619,31 @@ ossl_engine_get_cmds(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-ctrl_cmd">
             
-              <b>ctrl_cmd</b>(p1, p2 = v2)
+              <b>engine.ctrl_cmd(command, value = nil) &rarr; engine
+</b>
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-ctrl_cmd" name="method-i-ctrl_cmd" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Send the given <code>command</code> to this engine.</p>
+
+<p>Raises an <a href="Engine/EngineError.html">EngineError</a> if the
+<code>command</code> fails.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-ctrl_cmd_source')" id="l_method-i-ctrl_cmd_source">show</a>
                 
               </p>
@@ -604,10 +657,8 @@ ossl_engine_ctrl_cmd(int argc, VALUE *argv, VALUE self)
 
     GetEngine(self, e);
     rb_scan_args(argc, argv, &quot;11&quot;, &amp;cmd, &amp;val);
-    StringValue(cmd);
-    if (!NIL_P(val)) StringValue(val);
-    ret = ENGINE_ctrl_cmd_string(e, RSTRING_PTR(cmd),
-                                 NIL_P(val) ? NULL : RSTRING_PTR(val), 0);
+    ret = ENGINE_ctrl_cmd_string(e, StringValueCStr(cmd),
+                                 NIL_P(val) ? NULL : StringValueCStr(val), 0);
     if (!ret) ossl_raise(eEngineError, NULL);
 
     return self;
@@ -620,25 +671,40 @@ ossl_engine_ctrl_cmd(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-digest">
             
-              <b>digest</b>(p1)
+              <b>engine.digest(name) &rarr; OpenSSL::Digest
+</b>
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-digest" name="method-i-digest" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>This returns an <a href="Digest.html">OpenSSL::Digest</a> by
+<code>name</code>.</p>
+
+<p>Will raise an <a href="Engine/EngineError.html">EngineError</a> if the
+digest is unavailable.</p>
+
+<pre><code>e = OpenSSL::Engine.by_id(&quot;openssl&quot;)
+  #=&gt; #&lt;OpenSSL::Engine id=&quot;openssl&quot; name=&quot;Software engine support&quot;&gt;
+e.digest(&quot;SHA1&quot;)
+  #=&gt; #&lt;OpenSSL::Digest: da39a3ee5e6b4b0d3255bfef95601890afd80709&gt;
+e.digest(&quot;zomg&quot;)
+  #=&gt; OpenSSL::Engine::EngineError: no such digest `zomg&#39;
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-digest_source')" id="l_method-i-digest_source">show</a>
                 
               </p>
@@ -648,12 +714,10 @@ ossl_engine_get_digest(VALUE self, VALUE name)
 {
     ENGINE *e;
     const EVP_MD *md, *tmp;
-    char *s;
     int nid;
 
-    s = StringValuePtr(name);
-    tmp = EVP_get_digestbyname(s);
-    if(!tmp) ossl_raise(eEngineError, &quot;no such digest `%s&#39;&quot;, s);
+    tmp = EVP_get_digestbyname(StringValueCStr(name));
+    if(!tmp) ossl_raise(eEngineError, &quot;no such digest `%&quot;PRIsVALUE&quot;&#39;&quot;, name);
     nid = EVP_MD_nid(tmp);
     GetEngine(self, e);
     md = ENGINE_get_digest(e, nid);
@@ -673,21 +737,26 @@ ossl_engine_get_digest(VALUE self, VALUE name)
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-finish" name="method-i-finish" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Releases all internal structural references for this engine.</p>
+
+<p>May raise an <a href="Engine/EngineError.html">EngineError</a> if the
+engine is unavailable</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-finish_source')" id="l_method-i-finish_source">show</a>
                 
               </p>
@@ -714,21 +783,29 @@ ossl_engine_finish(VALUE self)
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-id" name="method-i-id" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Get the id for this engine</p>
+
+<pre><code>OpenSSL::Engine.load
+OpenSSL::Engine.engines #=&gt; [#&lt;OpenSSL::Engine#&gt;, ...]
+OpenSSL::Engine.engines.first.id
+  #=&gt; &quot;rsax&quot;
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-id_source')" id="l_method-i-id_source">show</a>
                 
               </p>
@@ -752,21 +829,23 @@ ossl_engine_get_id(VALUE self)
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Pretty print this engine</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
               </p>
@@ -774,18 +853,11 @@ ossl_engine_get_id(VALUE self)
                 <pre>static VALUE
 ossl_engine_inspect(VALUE self)
 {
-    VALUE str;
-    const char *cname = rb_class2name(rb_obj_class(self));
+    ENGINE *e;
 
-    str = rb_str_new2(&quot;#&lt;&quot;);
-    rb_str_cat2(str, cname);
-    rb_str_cat2(str, &quot; id=\&quot;&quot;);
-    rb_str_append(str, ossl_engine_get_id(self));
-    rb_str_cat2(str, &quot;\&quot; name=\&quot;&quot;);
-    rb_str_append(str, ossl_engine_get_name(self));
-    rb_str_cat2(str, &quot;\&quot;&gt;&quot;);
-
-    return str;
+    GetEngine(self, e);
+    return rb_sprintf(&quot;#&lt;%&quot;PRIsVALUE&quot; id=\&quot;%s\&quot; name=\&quot;%s\&quot;&gt;&quot;,
+                      rb_obj_class(self), ENGINE_get_id(e), ENGINE_get_name(e));
 }</pre>
               </div>
             </div>
@@ -795,25 +867,31 @@ ossl_engine_inspect(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-load_private_key">
             
-              <b>load_private_key</b>(p1 = v1, p2 = v2)
+              <b>engine.load_private_key(id = nil, data = nil) &rarr; OpenSSL::PKey
+</b>
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-load_private_key" name="method-i-load_private_key" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Loads the given private key by <code>id</code> and <code>data</code>.</p>
+
+<p>An <a href="Engine/EngineError.html">EngineError</a> is raised of the <a
+href="PKey.html">OpenSSL::PKey</a> is unavailable.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-load_private_key_source')" id="l_method-i-load_private_key_source">show</a>
                 
               </p>
@@ -827,14 +905,10 @@ ossl_engine_load_privkey(int argc, VALUE *argv, VALUE self)
     char *sid, *sdata;
 
     rb_scan_args(argc, argv, &quot;02&quot;, &amp;id, &amp;data);
-    sid = NIL_P(id) ? NULL : StringValuePtr(id);
-    sdata = NIL_P(data) ? NULL : StringValuePtr(data);
+    sid = NIL_P(id) ? NULL : StringValueCStr(id);
+    sdata = NIL_P(data) ? NULL : StringValueCStr(data);
     GetEngine(self, e);
-#if OPENSSL_VERSION_NUMBER &lt; 0x00907000L
-    pkey = ENGINE_load_private_key(e, sid, sdata);
-#else
     pkey = ENGINE_load_private_key(e, sid, NULL, sdata);
-#endif
     if (!pkey) ossl_raise(eEngineError, NULL);
     obj = ossl_pkey_new(pkey);
     OSSL_PKEY_SET_PRIVATE(obj);
@@ -849,25 +923,31 @@ ossl_engine_load_privkey(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-load_public_key">
             
-              <b>load_public_key</b>(p1 = v1, p2 = v2)
+              <b>engine.load_public_key(id = nil, data = nil) &rarr; OpenSSL::PKey
+</b>
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-load_public_key" name="method-i-load_public_key" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Loads the given private key by <code>id</code> and <code>data</code>.</p>
+
+<p>An <a href="Engine/EngineError.html">EngineError</a> is raised of the <a
+href="PKey.html">OpenSSL::PKey</a> is unavailable.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-load_public_key_source')" id="l_method-i-load_public_key_source">show</a>
                 
               </p>
@@ -881,14 +961,10 @@ ossl_engine_load_pubkey(int argc, VALUE *argv, VALUE self)
     char *sid, *sdata;
 
     rb_scan_args(argc, argv, &quot;02&quot;, &amp;id, &amp;data);
-    sid = NIL_P(id) ? NULL : StringValuePtr(id);
-    sdata = NIL_P(data) ? NULL : StringValuePtr(data);
+    sid = NIL_P(id) ? NULL : StringValueCStr(id);
+    sdata = NIL_P(data) ? NULL : StringValueCStr(data);
     GetEngine(self, e);
-#if OPENSSL_VERSION_NUMBER &lt; 0x00907000L
-    pkey = ENGINE_load_public_key(e, sid, sdata);
-#else
     pkey = ENGINE_load_public_key(e, sid, NULL, sdata);
-#endif
     if (!pkey) ossl_raise(eEngineError, NULL);
 
     return ossl_pkey_new(pkey);
@@ -905,21 +981,29 @@ ossl_engine_load_pubkey(int argc, VALUE *argv, VALUE self)
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-name" name="method-i-name" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p>Get the descriptive name for this engine</p>
+
+<pre><code>OpenSSL::Engine.load
+OpenSSL::Engine.engines #=&gt; [#&lt;OpenSSL::Engine#&gt;, ...]
+OpenSSL::Engine.engines.first.name
+  #=&gt; &quot;RSAX engine support&quot;
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-name_source')" id="l_method-i-name_source">show</a>
                 
               </p>
@@ -939,25 +1023,43 @@ ossl_engine_get_name(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-set_default">
             
-              <b>set_default</b>(p1)
+              <b>engine.set_default(flag)
+</b>
             
             <a href="../../classes/OpenSSL/Engine.html#method-i-set_default" name="method-i-set_default" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              
+              <p><a href="../Set.html">Set</a> the defaults for this engine with the given
+<code>flag</code>.</p>
+
+<p>These flags are used to control combinations of algorithm methods.</p>
+
+<p><code>flag</code> can be one of the following, other flags are available
+depending on your OS.</p>
+<dl class="rdoc-list label-list"><dt>All flags
+<dd>
+<p>0xFFFF</p>
+</dd><dt>No flags
+<dd>
+<p>0x0000</p>
+</dd></dl>
+
+<p>See also &lt;openssl/engine.h&gt;</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-set_default_source')" id="l_method-i-set_default_source">show</a>
                 
               </p>
@@ -981,4 +1083,4 @@ ossl_engine_set_default(VALUE self, VALUE flag)
 
     </div>
   </body>
-</html>    
+</html>

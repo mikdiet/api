@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            ActionController::UrlFor 
+            <span class="type">Module</span>
+            ActionController::UrlFor
             
         </h1>
         <ul class="files">
@@ -39,10 +39,12 @@ a <code>RouteSet</code> by implementing the <code>_routes</code> method.
 Otherwise, an exception will be raised.</p>
 
 <p>In addition to <code>AbstractController::UrlFor</code>, this module
-accesses the HTTP layer to define url options like the <code>host</code>.
+accesses the HTTP layer to define URL options like the <code>host</code>.
 In order to do so, this module requires the host class to implement
-<code>env</code> and <code>request</code>, which need to be a
-Rack-compatible.</p>
+<code>env</code> which needs to be Rack-compatible and <code>request</code>
+which is either an instance of <code>ActionDispatch::Request</code> or an
+object that responds to the <code>host</code>, <code>optional_port</code>,
+<code>protocol</code> and <code>symbolized_path_parameter</code> methods.</p>
 
 <pre><code>class RootUrl
   include ActionController::UrlFor
@@ -132,46 +134,53 @@ end
             
             <a href="../../classes/ActionController/UrlFor.html#method-i-url_options" name="method-i-url_options" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-url_options_source')" id="l_method-i-url_options_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/b383b346600d5325a211376837bc83b7ae472f46/actionpack/lib/action_controller/metal/url_for.rb#L28" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-url_options_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_controller/metal/url_for.rb, line 25</span>
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_controller/metal/url_for.rb, line 28</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">url_options</span>
-  <span class="ruby-ivar">@_url_options</span> <span class="ruby-operator">||=</span> <span class="ruby-keyword">super</span>.<span class="ruby-identifier">reverse_merge</span>(
-    <span class="ruby-value">:host</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">host</span>,
-    <span class="ruby-value">:port</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">optional_port</span>,
-    <span class="ruby-value">:protocol</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">protocol</span>,
-    <span class="ruby-value">:_recall</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">symbolized_path_parameters</span>
-  ).<span class="ruby-identifier">freeze</span>
+  <span class="ruby-ivar">@_url_options</span> <span class="ruby-operator">||=</span> {
+    <span class="ruby-identifier">host</span><span class="ruby-operator">:</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">host</span>,
+    <span class="ruby-identifier">port</span><span class="ruby-operator">:</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">optional_port</span>,
+    <span class="ruby-identifier">protocol</span><span class="ruby-operator">:</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">protocol</span>,
+    <span class="ruby-identifier">_recall</span><span class="ruby-operator">:</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">path_parameters</span>
+  }.<span class="ruby-identifier">merge!</span>(<span class="ruby-keyword">super</span>).<span class="ruby-identifier">freeze</span>
 
-  <span class="ruby-keyword">if</span> (<span class="ruby-identifier">same_origin</span> = <span class="ruby-identifier">_routes</span>.<span class="ruby-identifier">equal?</span>(<span class="ruby-identifier">env</span>[<span class="ruby-string">&quot;action_dispatch.routes&quot;</span>])) <span class="ruby-operator">||</span>
-     (<span class="ruby-identifier">script_name</span> = <span class="ruby-identifier">env</span>[<span class="ruby-node">&quot;ROUTES_#{_routes.object_id}_SCRIPT_NAME&quot;</span>]) <span class="ruby-operator">||</span>
-     (<span class="ruby-identifier">original_script_name</span> = <span class="ruby-identifier">env</span>[<span class="ruby-string">&#39;ORIGINAL_SCRIPT_NAME&#39;</span>])
+  <span class="ruby-keyword">if</span> (<span class="ruby-identifier">same_origin</span> = <span class="ruby-identifier">_routes</span>.<span class="ruby-identifier">equal?</span>(<span class="ruby-identifier">request</span>.<span class="ruby-identifier">routes</span>)) <span class="ruby-operator">||</span>
+     (<span class="ruby-identifier">script_name</span> = <span class="ruby-identifier">request</span>.<span class="ruby-identifier">engine_script_name</span>(<span class="ruby-identifier">_routes</span>)) <span class="ruby-operator">||</span>
+     (<span class="ruby-identifier">original_script_name</span> = <span class="ruby-identifier">request</span>.<span class="ruby-identifier">original_script_name</span>)
 
-    <span class="ruby-ivar">@_url_options</span>.<span class="ruby-identifier">dup</span>.<span class="ruby-identifier">tap</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">options</span><span class="ruby-operator">|</span>
-      <span class="ruby-keyword">if</span> <span class="ruby-identifier">original_script_name</span>
-        <span class="ruby-identifier">options</span>[<span class="ruby-value">:original_script_name</span>] = <span class="ruby-identifier">original_script_name</span>
+    <span class="ruby-identifier">options</span> = <span class="ruby-ivar">@_url_options</span>.<span class="ruby-identifier">dup</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">original_script_name</span>
+      <span class="ruby-identifier">options</span>[<span class="ruby-value">:original_script_name</span>] = <span class="ruby-identifier">original_script_name</span>
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">same_origin</span>
+        <span class="ruby-identifier">options</span>[<span class="ruby-value">:script_name</span>] = <span class="ruby-identifier">request</span>.<span class="ruby-identifier">script_name</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-operator">?</span> <span class="ruby-string">&quot;&quot;</span>.<span class="ruby-identifier">freeze</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">script_name</span>.<span class="ruby-identifier">dup</span>
       <span class="ruby-keyword">else</span>
-        <span class="ruby-identifier">options</span>[<span class="ruby-value">:script_name</span>] = <span class="ruby-identifier">same_origin</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">script_name</span>.<span class="ruby-identifier">dup</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">script_name</span>
+        <span class="ruby-identifier">options</span>[<span class="ruby-value">:script_name</span>] = <span class="ruby-identifier">script_name</span>
       <span class="ruby-keyword">end</span>
-      <span class="ruby-identifier">options</span>.<span class="ruby-identifier">freeze</span>
     <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">options</span>.<span class="ruby-identifier">freeze</span>
   <span class="ruby-keyword">else</span>
     <span class="ruby-ivar">@_url_options</span>
   <span class="ruby-keyword">end</span>
@@ -184,4 +193,4 @@ end
 
     </div>
   </body>
-</html>    
+</html>

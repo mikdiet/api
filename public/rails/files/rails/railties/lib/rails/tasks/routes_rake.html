@@ -15,7 +15,7 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
@@ -26,8 +26,10 @@
             <li>
                 rails/railties/lib/rails/tasks/routes.rake
                 
+                    <a href="https://github.com/rails/rails/blob/96d8521818a56b12dbbb2194b9edf55f1797807e/railties/lib/rails/tasks/routes.rake" target="_blank" class="github_url">on GitHub</a>
+                
             </li>
-            <li>Last modified: 2013-04-26 19:46:46 +0300</li>
+            <li>Last modified: 2017-06-18 10:05:13 +0300</li>
         </ul>
     </div>
 
@@ -36,13 +38,36 @@
   
     <div class="description">
       
-<p>desc &#39;Print out all defined routes in match order, with names. Target
-specific controller with CONTROLLER=x.&#39; task routes: :environment do</p>
+<p>require “optparse”</p>
+
+<p>desc “Print out all defined routes in match order, with names. Target
+specific controller with -c option, or grep routes using -g option” task
+routes: :environment do</p>
 
 <pre><code>all_routes = Rails.application.routes.routes
-require &#39;action_dispatch/routing/inspector&#39;
+require &quot;action_dispatch/routing/inspector&quot;
 inspector = ActionDispatch::Routing::RoutesInspector.new(all_routes)
-puts inspector.format(ActionDispatch::Routing::ConsoleFormatter.new, ENV[&#39;CONTROLLER&#39;])
+
+routes_filter = nil
+
+OptionParser.new do |opts|
+  opts.banner = &quot;Usage: rails routes [options]&quot;
+
+  Rake.application.standard_rake_options.each { |args| opts.on(*args) }
+
+  opts.on(&quot;-c CONTROLLER&quot;) do |controller|
+    routes_filter = { controller: controller }
+  end
+
+  opts.on(&quot;-g PATTERN&quot;) do |pattern|
+    routes_filter = pattern
+  end
+
+end.parse!(ARGV.reject { |x| x == &quot;routes&quot; })
+
+puts inspector.format(ActionDispatch::Routing::ConsoleFormatter.new, routes_filter)
+
+exit 0 # ensure extra arguments aren&#39;t interpreted as Rake tasks
 </code></pre>
 
 <p>end</p>

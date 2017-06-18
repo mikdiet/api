@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            ActionDispatch::SSL 
+            <span class="type">Class</span>
+            ActionDispatch::SSL
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../Object.html">Object</a>
                     
@@ -37,6 +37,53 @@
     </div>
     <div id="bodyContent">
         <div id="content">
+  
+    <div class="description">
+      
+<p>This middleware is added to the stack when `config.force_ssl = true`, and
+is passed the options set in `config.ssl_options`. It does three jobs to
+enforce secure HTTP requests:</p>
+
+<pre><code>1. TLS redirect: Permanently redirects http:// requests to https://
+   with the same URL host, path, etc. Enabled by default. Set `config.ssl_options`
+   to modify the destination URL
+   (e.g. `redirect: { host: &quot;secure.widgets.com&quot;, port: 8080 }`), or set
+   `redirect: false` to disable this feature.
+
+2. Secure cookies: Sets the `secure` flag on cookies to tell browsers they
+   mustn&#39;t be sent along with http:// requests. Enabled by default. Set
+   `config.ssl_options` with `secure_cookies: false` to disable this feature.
+
+3. HTTP Strict Transport Security (HSTS): Tells the browser to remember
+   this site as TLS-only and automatically redirect non-TLS requests.
+   Enabled by default. Configure `config.ssl_options` with `hsts: false` to disable.</code></pre>
+
+<p>Set `config.ssl_options` with `hsts: { … }` to configure HSTS:</p>
+
+<pre><code>* `expires`: How long, in seconds, these settings will stick. The minimum
+  required to qualify for browser preload lists is `18.weeks`. Defaults to
+  `180.days` (recommended).
+* `subdomains`: Set to `true` to tell the browser to apply these settings
+  to all subdomains. This protects your cookies from interception by a
+  vulnerable site on a subdomain. Defaults to `true`.
+* `preload`: Advertise that this site may be included in browsers&#39;
+  preloaded HSTS lists. HSTS protects your site on every visit *except the
+  first visit* since it hasn&#39;t seen your HSTS header yet. To close this
+  gap, browser vendors include a baked-in list of HSTS-enabled sites.
+  Go to https://hstspreload.appspot.com to submit your site for inclusion.
+  Defaults to `false`.</code></pre>
+
+<p>To turn off HSTS, omitting the header is not enough. Browsers will remember
+the original HSTS directive until it expires. Instead, use the header to
+tell browsers to expire HSTS immediately. Setting `hsts: false` is a
+shortcut for `hsts: { expires: 0 }`.</p>
+
+<p>Requests can opt-out of redirection with `exclude`:</p>
+
+<pre><code>config.ssl_options = { redirect: { exclude: -&gt; request { request.path =~ /healthcheck/ } } }
+</code></pre>
+
+    </div>
   
 
 
@@ -110,14 +157,16 @@
       <table border='0' cellpadding='5'>
         
           <tr valign='top'>
-            <td class="attr-name">YEAR</td>
+            <td class="attr-name">HSTS_EXPIRES_IN</td>
             <td>=</td>
-            <td class="attr-value">31536000</td>
+            <td class="attr-value">15552000</td>
           </tr>
           
             <tr valign='top'>
               <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
+              <td colspan="2" class="attr-desc"><p>Default to 180 days, the low end for <a
+href="https://www.ssllabs.com/ssltest">www.ssllabs.com/ssltest</a>/ and
+greater than the 18-week requirement for browser preload lists.</p></td>
             </tr>
           
         
@@ -139,28 +188,32 @@
             
             <a href="../../classes/ActionDispatch/SSL.html#method-c-default_hsts_options" name="method-c-default_hsts_options" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-default_hsts_options_source')" id="l_method-c-default_hsts_options_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/a3ce625c76355ebd095d55bb5c3864db73247826/actionpack/lib/action_dispatch/middleware/ssl.rb#L47" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_hsts_options_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/middleware/ssl.rb, line 5</span>
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/middleware/ssl.rb, line 47</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">self</span>.<span class="ruby-identifier">default_hsts_options</span>
-  { <span class="ruby-value">:expires</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-constant">YEAR</span>, <span class="ruby-value">:subdomains</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-keyword">false</span> }
+  { <span class="ruby-identifier">expires</span><span class="ruby-operator">:</span> <span class="ruby-constant">HSTS_EXPIRES_IN</span>, <span class="ruby-identifier">subdomains</span><span class="ruby-operator">:</span> <span class="ruby-keyword">true</span>, <span class="ruby-identifier">preload</span><span class="ruby-operator">:</span> <span class="ruby-keyword">false</span> }
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -170,39 +223,43 @@
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>new</b>(app, options = {})
+              <b>new</b>(app, redirect: {}, hsts: {}, secure_cookies: true)
             
             <a href="../../classes/ActionDispatch/SSL.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/a3ce625c76355ebd095d55bb5c3864db73247826/actionpack/lib/action_dispatch/middleware/ssl.rb#L51" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/middleware/ssl.rb, line 9</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">initialize</span>(<span class="ruby-identifier">app</span>, <span class="ruby-identifier">options</span> = {})
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/middleware/ssl.rb, line 51</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">initialize</span>(<span class="ruby-identifier">app</span>, <span class="ruby-identifier">redirect</span><span class="ruby-operator">:</span> {}, <span class="ruby-identifier">hsts</span><span class="ruby-operator">:</span> {}, <span class="ruby-identifier">secure_cookies</span><span class="ruby-operator">:</span> <span class="ruby-keyword">true</span>)
   <span class="ruby-ivar">@app</span> = <span class="ruby-identifier">app</span>
 
-  <span class="ruby-ivar">@hsts</span> = <span class="ruby-identifier">options</span>.<span class="ruby-identifier">fetch</span>(<span class="ruby-value">:hsts</span>, {})
-  <span class="ruby-ivar">@hsts</span> = {} <span class="ruby-keyword">if</span> <span class="ruby-ivar">@hsts</span> <span class="ruby-operator">==</span> <span class="ruby-keyword">true</span>
-  <span class="ruby-ivar">@hsts</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">default_hsts_options</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-ivar">@hsts</span>) <span class="ruby-keyword">if</span> <span class="ruby-ivar">@hsts</span>
+  <span class="ruby-ivar">@redirect</span> = <span class="ruby-identifier">redirect</span>
 
-  <span class="ruby-ivar">@host</span>    = <span class="ruby-identifier">options</span>[<span class="ruby-value">:host</span>]
-  <span class="ruby-ivar">@port</span>    = <span class="ruby-identifier">options</span>[<span class="ruby-value">:port</span>]
+  <span class="ruby-ivar">@exclude</span> = <span class="ruby-ivar">@redirect</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-ivar">@redirect</span>[<span class="ruby-value">:exclude</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">proc</span> { <span class="ruby-operator">!</span><span class="ruby-ivar">@redirect</span> }
+  <span class="ruby-ivar">@secure_cookies</span> = <span class="ruby-identifier">secure_cookies</span>
+
+  <span class="ruby-ivar">@hsts_header</span> = <span class="ruby-identifier">build_hsts_header</span>(<span class="ruby-identifier">normalize_hsts_options</span>(<span class="ruby-identifier">hsts</span>))
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -218,36 +275,41 @@
             
             <a href="../../classes/ActionDispatch/SSL.html#method-i-call" name="method-i-call" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-call_source')" id="l_method-i-call_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/a3ce625c76355ebd095d55bb5c3864db73247826/actionpack/lib/action_dispatch/middleware/ssl.rb#L62" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-call_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/middleware/ssl.rb, line 20</span>
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/middleware/ssl.rb, line 62</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">call</span>(<span class="ruby-identifier">env</span>)
-  <span class="ruby-identifier">request</span> = <span class="ruby-constant">Request</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">env</span>)
+  <span class="ruby-identifier">request</span> = <span class="ruby-constant">Request</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">env</span>
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">request</span>.<span class="ruby-identifier">ssl?</span>
-    <span class="ruby-identifier">status</span>, <span class="ruby-identifier">headers</span>, <span class="ruby-identifier">body</span> = <span class="ruby-ivar">@app</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">env</span>)
-    <span class="ruby-identifier">headers</span> = <span class="ruby-identifier">hsts_headers</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">headers</span>)
-    <span class="ruby-identifier">flag_cookies_as_secure!</span>(<span class="ruby-identifier">headers</span>)
-    [<span class="ruby-identifier">status</span>, <span class="ruby-identifier">headers</span>, <span class="ruby-identifier">body</span>]
+    <span class="ruby-ivar">@app</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">env</span>).<span class="ruby-identifier">tap</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">status</span>, <span class="ruby-identifier">headers</span>, <span class="ruby-identifier">body</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">set_hsts_header!</span> <span class="ruby-identifier">headers</span>
+      <span class="ruby-identifier">flag_cookies_as_secure!</span> <span class="ruby-identifier">headers</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@secure_cookies</span>
+    <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">else</span>
-    <span class="ruby-identifier">redirect_to_https</span>(<span class="ruby-identifier">request</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-identifier">redirect_to_https</span> <span class="ruby-identifier">request</span> <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@exclude</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">request</span>)
+    <span class="ruby-ivar">@app</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">env</span>)
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -258,4 +320,4 @@
 
     </div>
   </body>
-</html>    
+</html>

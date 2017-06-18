@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            SystemCallError 
+            <span class="type">Class</span>
+            SystemCallError
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="StandardError.html">StandardError</a>
                     
@@ -47,7 +47,8 @@ all low-level platform-dependent errors.</p>
 href="SystemCallError.html">SystemCallError</a> and are defined in the <a
 href="Errno.html">Errno</a> module.</p>
 
-<pre><code>File.open(&quot;does/not/exist&quot;)</code></pre>
+<pre><code>File.open(&quot;does/not/exist&quot;)
+</code></pre>
 
 <p><em>raises the exception:</em></p>
 
@@ -139,7 +140,7 @@ href="Errno.html">Errno</a> module.</p>
             
             <a href="../classes/SystemCallError.html#method-c-3D-3D-3D" name="method-c-3D-3D-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Return <code>true</code> if the receiver is a generic
@@ -147,15 +148,17 @@ href="Errno.html">Errno</a> module.</p>
 <em>other</em> are the same.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-3D-3D-3D_source')" id="l_method-c-3D-3D-3D_source">show</a>
                 
               </p>
@@ -164,20 +167,17 @@ href="Errno.html">Errno</a> module.</p>
 syserr_eqq(VALUE self, VALUE exc)
 {
     VALUE num, e;
-    ID en;
-
-    CONST_ID(en, &quot;errno&quot;);
 
     if (!rb_obj_is_kind_of(exc, rb_eSystemCallError)) {
-        if (!rb_respond_to(exc, en)) return Qfalse;
+        if (!rb_respond_to(exc, id_errno)) return Qfalse;
     }
     else if (self == rb_eSystemCallError) return Qtrue;
 
-    num = rb_attr_get(exc, rb_intern(&quot;errno&quot;));
+    num = rb_attr_get(exc, id_errno);
     if (NIL_P(num)) {
-        num = rb_funcall(exc, en, 0, 0);
+        num = rb_funcallv(exc, id_errno, 0, 0);
     }
-    e = rb_const_get(self, rb_intern(&quot;Errno&quot;));
+    e = rb_const_get(self, id_Errno);
     if (FIXNUM_P(num) ? num == e : rb_equal(num, e))
         return Qtrue;
     return Qfalse;
@@ -195,7 +195,7 @@ syserr_eqq(VALUE self, VALUE exc)
             
             <a href="../classes/SystemCallError.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>If <em>errno</em> corresponds to a known system error code, constructs the
@@ -204,15 +204,17 @@ generic <code>SystemCallError</code> object. The error number is
 subsequently available via the <code>errno</code> method.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -224,12 +226,12 @@ syserr_initialize(int argc, VALUE *argv, VALUE self)
     char *strerror();
 #endif
     const char *err;
-    VALUE mesg, error;
+    VALUE mesg, error, func, errmsg;
     VALUE klass = rb_obj_class(self);
 
     if (klass == rb_eSystemCallError) {
         st_data_t data = (st_data_t)klass;
-        rb_scan_args(argc, argv, &quot;11&quot;, &amp;mesg, &amp;error);
+        rb_scan_args(argc, argv, &quot;12&quot;, &amp;mesg, &amp;error, &amp;func);
         if (argc == 1 &amp;&amp; FIXNUM_P(mesg)) {
             error = mesg; mesg = Qnil;
         }
@@ -239,33 +241,28 @@ syserr_initialize(int argc, VALUE *argv, VALUE self)
             if (!RB_TYPE_P(self, T_OBJECT)) { /* insurance to avoid type crash */
                 rb_raise(rb_eTypeError, &quot;invalid instance type&quot;);
             }
-            RBASIC(self)-&gt;klass = klass;
+            RBASIC_SET_CLASS(self, klass);
         }
     }
     else {
-        rb_scan_args(argc, argv, &quot;01&quot;, &amp;mesg);
-        error = rb_const_get(klass, rb_intern(&quot;Errno&quot;));
+        rb_scan_args(argc, argv, &quot;02&quot;, &amp;mesg, &amp;func);
+        error = rb_const_get(klass, id_Errno);
     }
     if (!NIL_P(error)) err = strerror(NUM2INT(error));
     else err = &quot;unknown error&quot;;
-    if (!NIL_P(mesg)) {
-        rb_encoding *le = rb_locale_encoding();
-        VALUE str = StringValue(mesg);
-        rb_encoding *me = rb_enc_get(mesg);
 
-        mesg = rb_sprintf(&quot;%s - %&quot;PRIsVALUE, err, mesg);
-        if (le != me &amp;&amp; rb_enc_asciicompat(me)) {
-            le = me;
-        }/* else assume err is non ASCII string. */
-        OBJ_INFECT(mesg, str);
-        rb_enc_associate(mesg, le);
+    errmsg = rb_enc_str_new_cstr(err, rb_locale_encoding());
+    if (!NIL_P(mesg)) {
+        VALUE str = StringValue(mesg);
+
+        if (!NIL_P(func)) rb_str_catf(errmsg, &quot; @ %&quot;PRIsVALUE, func);
+        rb_str_catf(errmsg, &quot; - %&quot;PRIsVALUE, str);
+        OBJ_INFECT(errmsg, mesg);
     }
-    else {
-        mesg = rb_str_new2(err);
-        rb_enc_associate(mesg, rb_locale_encoding());
-    }
+    mesg = errmsg;
+
     rb_call_super(1, &amp;mesg);
-    rb_iv_set(self, &quot;errno&quot;, error);
+    rb_ivar_set(self, id_errno, error);
     return self;
 }</pre>
               </div>
@@ -278,26 +275,28 @@ syserr_initialize(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-errno">
             
-              <b>system_call_error.errno   &rarr; fixnum
+              <b>system_call_error.errno   &rarr; integer
 </b>
             
             <a href="../classes/SystemCallError.html#method-i-errno" name="method-i-errno" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Return this SystemCallError&#39;s error number.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-errno_source')" id="l_method-i-errno_source">show</a>
                 
               </p>
@@ -305,7 +304,7 @@ syserr_initialize(int argc, VALUE *argv, VALUE self)
                 <pre>static VALUE
 syserr_errno(VALUE self)
 {
-    return rb_attr_get(self, rb_intern(&quot;errno&quot;));
+    return rb_attr_get(self, id_errno);
 }</pre>
               </div>
             </div>
@@ -315,4 +314,4 @@ syserr_errno(VALUE self)
 
     </div>
   </body>
-</html>    
+</html>

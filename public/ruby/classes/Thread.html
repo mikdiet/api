@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            Thread 
+            <span class="type">Class</span>
+            Thread
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="Object.html">Object</a>
                     
@@ -35,6 +35,8 @@
             
             <li><a href="../files/ruby/thread_c.html">ruby/thread.c</a></li>
             
+            <li><a href="../files/ruby/thread_sync_c.html">ruby/thread_sync.c</a></li>
+            
             <li><a href="../files/ruby/vm_c.html">ruby/vm.c</a></li>
             
             <li><a href="../files/ruby/vm_trace_c.html">ruby/vm_trace.c</a></li>
@@ -46,7 +48,187 @@
   
     <div class="description">
       
-<p><a href="Thread.html">::Thread</a></p>
+<p>Threads are the Ruby implementation for a concurrent programming model.</p>
+
+<p>Programs that require multiple threads of execution are a perfect candidate
+for Ruby&#39;s <a href="Thread.html">Thread</a> class.</p>
+
+<p>For example, we can create a new thread separate from the main thread&#39;s
+execution using <a href="Thread.html#method-c-new">::new</a>.</p>
+
+<pre><code>thr = Thread.new { puts &quot;Whats the big deal&quot; }
+</code></pre>
+
+<p>Then we are able to pause the execution of the main thread and allow our
+new thread to finish, using <a href="Thread.html#method-i-join">join</a>:</p>
+
+<pre><code>thr.join #=&gt; &quot;Whats the big deal&quot;
+</code></pre>
+
+<p>If we don&#39;t call <code>thr.join</code> before the main thread
+terminates, then all other threads including <code>thr</code> will be
+killed.</p>
+
+<p>Alternatively, you can use an array for handling multiple threads at once,
+like in the following example:</p>
+
+<pre><code>threads = []
+threads &lt;&lt; Thread.new { puts &quot;Whats the big deal&quot; }
+threads &lt;&lt; Thread.new { 3.times { puts &quot;Threads are fun!&quot; } }
+</code></pre>
+
+<p>After creating a few threads we wait for them all to finish consecutively.</p>
+
+<pre><code>threads.each { |thr| thr.join }
+</code></pre>
+
+<h3 id="class-Thread-label-Thread+initialization"><a href="Thread.html">Thread</a> initialization</h3>
+
+<p>In order to create new threads, Ruby provides <a
+href="Thread.html#method-c-new">::new</a>, <a
+href="Thread.html#method-c-start">::start</a>, and <a
+href="Thread.html#method-c-fork">::fork</a>. A block must be provided with
+each of these methods, otherwise a <a
+href="ThreadError.html">ThreadError</a> will be raised.</p>
+
+<p>When subclassing the <a href="Thread.html">Thread</a> class, the
+<code>initialize</code> method of your subclass will be ignored by <a
+href="Thread.html#method-c-start">::start</a> and <a
+href="Thread.html#method-c-fork">::fork</a>. Otherwise, be sure to call
+super in your <code>initialize</code> method.</p>
+
+<h3 id="class-Thread-label-Thread+termination"><a href="Thread.html">Thread</a> termination</h3>
+
+<p>For terminating threads, Ruby provides a variety of ways to do this.</p>
+
+<p>The class method <a href="Thread.html#method-c-kill">::kill</a>, is meant
+to exit a given thread:</p>
+
+<pre><code>thr = Thread.new { ... }
+Thread.kill(thr) # sends exit() to thr</code></pre>
+
+<p>Alternatively, you can use the instance method <a
+href="Thread.html#method-i-exit">exit</a>, or any of its aliases <a
+href="Thread.html#method-i-kill">kill</a> or <a
+href="Thread.html#method-i-terminate">terminate</a>.</p>
+
+<pre><code>thr.exit
+</code></pre>
+
+<h3 id="class-Thread-label-Thread+status"><a href="Thread.html">Thread</a> status</h3>
+
+<p>Ruby provides a few instance methods for querying the state of a given
+thread. To get a string with the current thread&#39;s state use <a
+href="Thread.html#method-i-status">status</a></p>
+
+<pre><code>thr = Thread.new { sleep }
+thr.status # =&gt; &quot;sleep&quot;
+thr.exit
+thr.status # =&gt; false
+</code></pre>
+
+<p>You can also use <a href="Thread.html#method-i-alive-3F">alive?</a> to tell
+if the thread is running or sleeping, and <a
+href="Thread.html#method-i-stop-3F">stop?</a> if the thread is dead or
+sleeping.</p>
+
+<h3 id="class-Thread-label-Thread+variables+and+scope"><a href="Thread.html">Thread</a> variables and scope</h3>
+
+<p>Since threads are created with blocks, the same rules apply to other Ruby
+blocks for variable scope. Any local variables created within this block
+are accessible to only this thread.</p>
+
+<h4 id="class-Thread-label-Fiber-local+vs.+Thread-local">Fiber-local vs. Thread-local</h4>
+
+<p>Each fiber has its own bucket for <a
+href="Thread.html#method-i-5B-5D">#[]</a> storage. When you set a new
+fiber-local it is only accessible within this <a
+href="Fiber.html">Fiber</a>. To illustrate:</p>
+
+<pre><code>Thread.new {
+  Thread.current[:foo] = &quot;bar&quot;
+  Fiber.new {
+    p Thread.current[:foo] # =&gt; nil
+  }.resume
+}.join
+</code></pre>
+
+<p>This example uses <a href="Thread.html#method-i-5B-5D">[]</a> for getting
+and <a href="Thread.html#method-i-5B-5D-3D">[]=</a> for setting
+fiber-locals, you can also use <a href="Thread.html#method-i-keys">keys</a>
+to list the fiber-locals for a given thread and <a
+href="Thread.html#method-i-key-3F">key?</a> to check if a fiber-local
+exists.</p>
+
+<p>When it comes to thread-locals, they are accessible within the entire scope
+of the thread. Given the following example:</p>
+
+<pre><code>Thread.new{
+  Thread.current.thread_variable_set(:foo, 1)
+  p Thread.current.thread_variable_get(:foo) # =&gt; 1
+  Fiber.new{
+    Thread.current.thread_variable_set(:foo, 2)
+    p Thread.current.thread_variable_get(:foo) # =&gt; 2
+  }.resume
+  p Thread.current.thread_variable_get(:foo)   # =&gt; 2
+}.join
+</code></pre>
+
+<p>You can see that the thread-local <code>:foo</code> carried over into the
+fiber and was changed to <code>2</code> by the end of the thread.</p>
+
+<p>This example makes use of <a
+href="Thread.html#method-i-thread_variable_set">thread_variable_set</a> to
+create new thread-locals, and <a
+href="Thread.html#method-i-thread_variable_get">thread_variable_get</a> to
+reference them.</p>
+
+<p>There is also <a
+href="Thread.html#method-i-thread_variables">thread_variables</a> to list
+all thread-locals, and <a
+href="Thread.html#method-i-thread_variable-3F">thread_variable?</a> to
+check if a given thread-local exists.</p>
+
+<h3 id="class-Thread-label-Exception+handling"><a href="Exception.html">Exception</a> handling</h3>
+
+<p>Any thread can raise an exception using the <a
+href="Thread.html#method-i-raise">raise</a> instance method, which operates
+similarly to <a href="Kernel.html#method-i-raise">Kernel#raise</a>.</p>
+
+<p>However, it&#39;s important to note that an exception that occurs in any
+thread except the main thread depends on <a
+href="Thread.html#method-i-abort_on_exception">abort_on_exception</a>. This
+option is <code>false</code> by default, meaning that any unhandled
+exception will cause the thread to terminate silently when waited on by
+either <a href="Thread.html#method-i-join">join</a> or <a
+href="Thread.html#method-i-value">value</a>. You can change this default by
+either <a
+href="Thread.html#method-i-abort_on_exception-3D">abort_on_exception=</a>
+<code>true</code> or setting $DEBUG to <code>true</code>.</p>
+
+<p>With the addition of the class method <a
+href="Thread.html#method-c-handle_interrupt">::handle_interrupt</a>, you
+can now handle exceptions asynchronously with threads.</p>
+
+<h3 id="class-Thread-label-Scheduling">Scheduling</h3>
+
+<p>Ruby provides a few ways to support scheduling threads in your program.</p>
+
+<p>The first way is by using the class method <a
+href="Thread.html#method-c-stop">::stop</a>, to put the current running
+thread to sleep and schedule the execution of another thread.</p>
+
+<p>Once a thread is asleep, you can use the instance method <a
+href="Thread.html#method-i-wakeup">wakeup</a> to mark your thread as
+eligible for scheduling.</p>
+
+<p>You can also try <a href="Thread.html#method-c-pass">::pass</a>, which
+attempts to pass execution to another thread but is dependent on the OS
+whether a running thread will switch or not. The same goes for <a
+href="Thread.html#method-i-priority">priority</a>, which lets you hint to
+the thread scheduler which threads you want to take precedence when passing
+execution. This method is also dependent on the OS and may be ignored on
+some platforms.</p>
 
     </div>
   
@@ -67,6 +249,11 @@
         <li>
           <span class="type">CLASS</span>
           <a href="Thread/Backtrace.html">Thread::Backtrace</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Thread/Mutex.html">Thread::Mutex</a>
         </li>
       
     </ul>
@@ -118,22 +305,22 @@
             
               
               <li>
-                <a href="#method-c-abort_on_exception">abort_on_exception</a>,
-              </li>
-            
-              
-              <li>
                 <a href="#method-i-abort_on_exception">abort_on_exception</a>,
               </li>
             
               
               <li>
-                <a href="#method-i-abort_on_exception-3D">abort_on_exception=</a>,
+                <a href="#method-c-abort_on_exception">abort_on_exception</a>,
               </li>
             
               
               <li>
                 <a href="#method-c-abort_on_exception-3D">abort_on_exception=</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-abort_on_exception-3D">abort_on_exception=</a>,
               </li>
             
               
@@ -189,12 +376,12 @@
             
               
               <li>
-                <a href="#method-i-exit">exit</a>,
+                <a href="#method-c-exit">exit</a>,
               </li>
             
               
               <li>
-                <a href="#method-c-exit">exit</a>
+                <a href="#method-i-exit">exit</a>
               </li>
             
           </ul>
@@ -317,6 +504,16 @@
             
               
               <li>
+                <a href="#method-i-name">name</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-name-3D">name=</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-c-new">new</a>
               </li>
             
@@ -362,6 +559,26 @@
               
               <li>
                 <a href="#method-i-raise">raise</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-report_on_exception">report_on_exception</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-report_on_exception">report_on_exception</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-report_on_exception-3D">report_on_exception=</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-report_on_exception-3D">report_on_exception=</a>,
               </li>
             
               
@@ -486,7 +703,7 @@
           <tr valign='top'>
             <td class="attr-name">MUTEX_FOR_THREAD_EXCLUSIVE</td>
             <td>=</td>
-            <td class="attr-value">Mutex.new</td>
+            <td class="attr-value">Thread::Mutex.new</td>
           </tr>
           
             <tr valign='top'>
@@ -514,22 +731,24 @@
             
             <a href="../classes/Thread.html#method-c-DEBUG" name="method-c-DEBUG" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the thread debug level.  Available only if compiled with
 THREAD_DEBUG=-1.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-DEBUG_source')" id="l_method-c-DEBUG_source">show</a>
                 
               </p>
@@ -552,22 +771,24 @@ rb_thread_s_debug(void)
             
             <a href="../classes/Thread.html#method-c-DEBUG-3D" name="method-c-DEBUG-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Sets the thread debug level.  Available only if compiled with
 THREAD_DEBUG=-1.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-DEBUG-3D_source')" id="l_method-c-DEBUG-3D_source">show</a>
                 
               </p>
@@ -591,26 +812,38 @@ rb_thread_s_debug_set(VALUE self, VALUE val)
             
             <a href="../classes/Thread.html#method-c-abort_on_exception" name="method-c-abort_on_exception" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns the status of the global “abort on exception&#39;&#39; condition. 
-The default is <code>false</code>. When set to <code>true</code>, or if the
-global <code>$DEBUG</code> flag is <code>true</code> (perhaps because the
-command line option <code>-d</code> was specified) all threads will abort
-(the process will <code>exit(0)</code>) if an exception is raised in any
-thread. See also <code>Thread::abort_on_exception=</code>.</p>
+              <p>Returns the status of the global “abort on exception&#39;&#39; condition.</p>
+
+<p>The default is <code>false</code>.</p>
+
+<p>When set to <code>true</code>, if any thread is aborted by an exception,
+the raised exception will be re-raised in the main thread.</p>
+
+<p>Can also be specified by the global $DEBUG flag or command line option
+<code>-d</code>.</p>
+
+<p>See also <a
+href="Thread.html#method-c-abort_on_exception-3D">::abort_on_exception=</a>.</p>
+
+<p>There is also an instance level method to set this for a specific thread,
+see <a
+href="Thread.html#method-i-abort_on_exception">abort_on_exception</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-abort_on_exception_source')" id="l_method-c-abort_on_exception_source">show</a>
                 
               </p>
@@ -633,11 +866,12 @@ rb_thread_s_abort_exc(void)
             
             <a href="../classes/Thread.html#method-c-abort_on_exception-3D" name="method-c-abort_on_exception-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>When set to <code>true</code>, all threads will abort if an exception is
-raised. Returns the new state.</p>
+              <p>When set to <code>true</code>, if any thread is aborted by an exception,
+the raised exception will be re-raised in the main thread. Returns the new
+state.</p>
 
 <pre><code>Thread.abort_on_exception = true
 t1 = Thread.new do
@@ -645,26 +879,36 @@ t1 = Thread.new do
   raise &quot;Exception from thread&quot;
 end
 sleep(1)
-puts &quot;not reached&quot;</code></pre>
+puts &quot;not reached&quot;
+</code></pre>
 
-<p><em>produces:</em></p>
+<p>This will produce:</p>
 
 <pre><code>In new thread
 prog.rb:4: Exception from thread (RuntimeError)
  from prog.rb:2:in `initialize&#39;
  from prog.rb:2:in `new&#39;
  from prog.rb:2</code></pre>
+
+<p>See also <a
+href="Thread.html#method-c-abort_on_exception">::abort_on_exception</a>.</p>
+
+<p>There is also an instance level method to set this for a specific thread,
+see <a
+href="Thread.html#method-i-abort_on_exception-3D">abort_on_exception=</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-abort_on_exception-3D_source')" id="l_method-c-abort_on_exception-3D_source">show</a>
                 
               </p>
@@ -672,7 +916,6 @@ prog.rb:4: Exception from thread (RuntimeError)
                 <pre>static VALUE
 rb_thread_s_abort_exc_set(VALUE self, VALUE val)
 {
-    rb_secure(4);
     GET_THREAD()-&gt;vm-&gt;thread_abort_on_exception = RTEST(val);
     return val;
 }</pre>
@@ -689,7 +932,7 @@ rb_thread_s_abort_exc_set(VALUE self, VALUE val)
             
             <a href="../classes/Thread.html#method-c-current" name="method-c-current" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the currently executing thread.</p>
@@ -698,15 +941,17 @@ rb_thread_s_abort_exc_set(VALUE self, VALUE val)
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-current_source')" id="l_method-c-current_source">show</a>
                 
               </p>
@@ -729,28 +974,36 @@ thread_s_current(VALUE klass)
             
             <a href="../classes/Thread.html#method-c-exclusive" name="method-c-exclusive" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Wraps a block in Thread.critical, restoring the original value upon exit
-from the critical section, and returns the value of the block.</p>
+              <p>Wraps the block in a single, VM-global <a
+href="Thread/Mutex.html#method-i-synchronize">Thread::Mutex#synchronize</a>,
+returning the value of the block. A thread executing inside the exclusive
+section will only block other threads which also use the <a
+href="Thread.html#method-c-exclusive">::exclusive</a> mechanism.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-exclusive_source')" id="l_method-c-exclusive_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/3eaded77007e1b8f6c256eca662b11639560c1e3/prelude.rb#L11" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-exclusive_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/prelude.rb, line 10</span>
+                <pre><span class="ruby-comment"># File ruby/prelude.rb, line 11</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">self</span>.<span class="ruby-identifier">exclusive</span>
+  <span class="ruby-identifier">warn</span> <span class="ruby-string">&quot;Thread.exclusive is deprecated, use Thread::Mutex&quot;</span>, <span class="ruby-identifier">caller</span>
   <span class="ruby-constant">MUTEX_FOR_THREAD_EXCLUSIVE</span>.<span class="ruby-identifier">synchronize</span>{
     <span class="ruby-keyword">yield</span>
   }
@@ -767,24 +1020,30 @@ from the critical section, and returns the value of the block.</p>
             
             <a href="../classes/Thread.html#method-c-exit" name="method-c-exit" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Terminates the currently running thread and schedules another thread to be
-run. If this thread is already marked to be killed, <code>exit</code>
-returns the <code>Thread</code>. If this is the main thread, or the last
-thread, exit the process.</p>
+run.</p>
+
+<p>If this thread is already marked to be killed, <a
+href="Thread.html#method-c-exit">::exit</a> returns the <a
+href="Thread.html">Thread</a>.</p>
+
+<p>If this is the main thread, or the last  thread, exit the process.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-exit_source')" id="l_method-c-exit_source">show</a>
                 
               </p>
@@ -807,7 +1066,7 @@ rb_thread_exit(void)
             
             <a href="../classes/Thread.html#method-c-fork" name="method-c-fork" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Basically the same as <a href="Thread.html#method-c-new">::new</a>.
@@ -816,15 +1075,17 @@ calling <code>start</code> in that subclass will not invoke the
 subclass&#39;s <code>initialize</code> method.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-fork_source')" id="l_method-c-fork_source">show</a>
                 
               </p>
@@ -847,7 +1108,7 @@ thread_start(VALUE klass, VALUE args)
             
             <a href="../classes/Thread.html#method-c-handle_interrupt" name="method-c-handle_interrupt" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Changes asynchronous interrupt timing.</p>
@@ -901,7 +1162,7 @@ we can purposefully handle <a href="RuntimeError.html">RuntimeError</a>
 exceptions.</p>
 
 <pre><code>th = Thread.new do
-  Thead.handle_interrupt(RuntimeError =&gt; :never) {
+  Thread.handle_interrupt(RuntimeError =&gt; :never) {
     begin
       # You can write resource allocation code safely.
       Thread.handle_interrupt(RuntimeError =&gt; :immediate) {
@@ -921,33 +1182,33 @@ th.raise &quot;stop&quot;
 exception, it&#39;s safe to write our resource allocation code. Then, the
 ensure block is where we can safely deallocate your resources.</p>
 
-<h4 id="method-c-handle_interrupt-label-Guarding+from+TimeoutError">Guarding from <a href="Timeout/TimeoutError.html">TimeoutError</a></h4>
+<h4 id="method-c-handle_interrupt-label-Guarding+from+Timeout-3A-3AError">Guarding from <a href="Timeout/Error.html">Timeout::Error</a></h4>
 
 <p>In the next example, we will guard from the <a
-href="Timeout/TimeoutError.html">TimeoutError</a> exception. This will help
+href="Timeout/Error.html">Timeout::Error</a> exception. This will help
 prevent from leaking resources when <a
-href="Timeout/TimeoutError.html">TimeoutError</a> exceptions occur during
-normal ensure clause. For this example we use the help of the standard
-library <a href="Timeout.html">Timeout</a>, from lib/timeout.rb</p>
+href="Timeout/Error.html">Timeout::Error</a> exceptions occur during normal
+ensure clause. For this example we use the help of the standard library <a
+href="Timeout.html">Timeout</a>, from lib/timeout.rb</p>
 
 <pre><code>require &#39;timeout&#39;
-Thread.handle_interrupt(TimeoutError =&gt; :never) {
+Thread.handle_interrupt(Timeout::Error =&gt; :never) {
   timeout(10){
-    # TimeoutError doesn&#39;t occur here
-    Thread.handle_interrupt(TimeoutError =&gt; :on_blocking) {
-      # possible to be killed by TimeoutError
+    # Timeout::Error doesn&#39;t occur here
+    Thread.handle_interrupt(Timeout::Error =&gt; :on_blocking) {
+      # possible to be killed by Timeout::Error
       # while blocking operation
     }
-    # TimeoutError doesn&#39;t occur here
+    # Timeout::Error doesn&#39;t occur here
   }
 }
 </code></pre>
 
 <p>In the first part of the <code>timeout</code> block, we can rely on <a
-href="Timeout/TimeoutError.html">TimeoutError</a> being ignored. Then in
-the <code>TimeoutError =&gt; :on_blocking</code> block, any operation that
+href="Timeout/Error.html">Timeout::Error</a> being ignored. Then in the
+<code>Timeout::Error =&gt; :on_blocking</code> block, any operation that
 will block the calling thread is susceptible to a <a
-href="Timeout/TimeoutError.html">TimeoutError</a> exception being raised.</p>
+href="Timeout/Error.html">Timeout::Error</a> exception being raised.</p>
 
 <h4 id="method-c-handle_interrupt-label-Stack+control+settings">Stack control settings</h4>
 
@@ -974,15 +1235,17 @@ considered.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-handle_interrupt_source')" id="l_method-c-handle_interrupt_source">show</a>
                 
               </p>
@@ -992,15 +1255,20 @@ rb_thread_s_handle_interrupt(VALUE self, VALUE mask_arg)
 {
     VALUE mask;
     rb_thread_t *th = GET_THREAD();
-    VALUE r = Qnil;
+    volatile VALUE r = Qnil;
     int state;
 
     if (!rb_block_given_p()) {
         rb_raise(rb_eArgError, &quot;block is needed.&quot;);
     }
 
-    mask = rb_convert_type(mask_arg, T_HASH, &quot;Hash&quot;, &quot;to_hash&quot;);
-    rb_hash_foreach(mask, handle_interrupt_arg_check_i, 0);
+    mask = 0;
+    mask_arg = rb_convert_type(mask_arg, T_HASH, &quot;Hash&quot;, &quot;to_hash&quot;);
+    rb_hash_foreach(mask_arg, handle_interrupt_arg_check_i, (VALUE)&amp;mask);
+    if (!mask) {
+        return rb_yield(Qnil);
+    }
+    OBJ_FREEZE_RAW(mask);
     rb_ary_push(th-&gt;pending_interrupt_mask_stack, mask);
     if (!rb_threadptr_pending_interrupt_empty_p(th)) {
         th-&gt;pending_interrupt_queue_checked = 0;
@@ -1022,7 +1290,7 @@ rb_thread_s_handle_interrupt(VALUE self, VALUE mask_arg)
     RUBY_VM_CHECK_INTS(th);
 
     if (state) {
-        JUMP_TAG(state);
+        TH_JUMP_TAG(th, state);
     }
 
     return r;
@@ -1039,10 +1307,11 @@ rb_thread_s_handle_interrupt(VALUE self, VALUE mask_arg)
             
             <a href="../classes/Thread.html#method-c-kill" name="method-c-kill" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Causes the given <em>thread</em> to exit (see <code>Thread::exit</code>).</p>
+              <p>Causes the given <code>thread</code> to exit, see also <a
+href="Thread.html#method-c-exit">::exit</a>.</p>
 
 <pre><code>count = 0
 a = Thread.new { loop { count += 1 } }
@@ -1053,15 +1322,17 @@ a.alive?         #=&gt; false
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-kill_source')" id="l_method-c-kill_source">show</a>
                 
               </p>
@@ -1084,11 +1355,11 @@ rb_thread_s_kill(VALUE obj, VALUE th)
             
             <a href="../classes/Thread.html#method-c-list" name="method-c-list" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns an array of <code>Thread</code> objects for all threads that are
-either runnable or stopped.</p>
+              <p>Returns an array of <a href="Thread.html">Thread</a> objects for all
+threads that are either runnable or stopped.</p>
 
 <pre><code>Thread.new { sleep(200) }
 Thread.new { 1000000.times {|i| i*i } }
@@ -1096,23 +1367,26 @@ Thread.new { Thread.stop }
 Thread.list.each {|t| p t}
 </code></pre>
 
-<p><em>produces:</em></p>
+<p>This will produce:</p>
 
 <pre><code>#&lt;Thread:0x401b3e84 sleep&gt;
 #&lt;Thread:0x401b3f38 run&gt;
 #&lt;Thread:0x401b3fb0 sleep&gt;
-#&lt;Thread:0x401bdf4c run&gt;</code></pre>
+#&lt;Thread:0x401bdf4c run&gt;
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-list_source')" id="l_method-c-list_source">show</a>
                 
               </p>
@@ -1121,7 +1395,19 @@ Thread.list.each {|t| p t}
 rb_thread_list(void)
 {
     VALUE ary = rb_ary_new();
-    st_foreach(GET_THREAD()-&gt;vm-&gt;living_threads, thread_list_i, ary);
+    rb_vm_t *vm = GET_THREAD()-&gt;vm;
+    rb_thread_t *th = 0;
+
+    list_for_each(&amp;vm-&gt;living_threads, th, vmlt_node) {
+        switch (th-&gt;status) {
+          case THREAD_RUNNABLE:
+          case THREAD_STOPPED:
+          case THREAD_STOPPED_FOREVER:
+            rb_ary_push(ary, th-&gt;self);
+          default:
+            break;
+        }
+    }
     return ary;
 }</pre>
               </div>
@@ -1137,21 +1423,23 @@ rb_thread_list(void)
             
             <a href="../classes/Thread.html#method-c-main" name="method-c-main" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the main thread.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-main_source')" id="l_method-c-main_source">show</a>
                 
               </p>
@@ -1169,14 +1457,12 @@ rb_thread_s_main(VALUE klass)
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>Thread.new { ... }                  &rarr; thread
-Thread.new(*args, &proc)            &rarr; thread
-Thread.new(*args) { |args| ... }    &rarr; thread
+              <b>Thread.new { ... }                  &rarr; thread<br />Thread.new(*args, &proc)            &rarr; thread<br />Thread.new(*args) { |args| ... }    &rarr; thread
 </b>
             
             <a href="../classes/Thread.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Creates a new thread executing the given block.</p>
@@ -1198,15 +1484,17 @@ to call super in your <code>initialize</code> method, otherwise a <a
 href="ThreadError.html">ThreadError</a> will be raised.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -1222,9 +1510,9 @@ thread_s_new(int argc, VALUE *argv, VALUE klass)
 
     rb_obj_call_init(thread, argc, argv);
     GetThreadPtr(thread, th);
-    if (!th-&gt;first_args) {
-        rb_raise(rb_eThreadError, &quot;uninitialized thread - check `%s#initialize&#39;&quot;,
-                 rb_class2name(klass));
+    if (!threadptr_initialized(th)) {
+        rb_raise(rb_eThreadError, &quot;uninitialized thread - check `%&quot;PRIsVALUE&quot;#initialize&#39;&quot;,
+                 klass);
     }
     return thread;
 }</pre>
@@ -1241,22 +1529,24 @@ thread_s_new(int argc, VALUE *argv, VALUE klass)
             
             <a href="../classes/Thread.html#method-c-pass" name="method-c-pass" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Give the thread scheduler a hint to pass execution to another thread. A
 running thread may or may not switch, it depends on OS and processor.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-pass_source')" id="l_method-c-pass_source">show</a>
                 
               </p>
@@ -1280,14 +1570,14 @@ thread_s_pass(VALUE klass)
             
             <a href="../classes/Thread.html#method-c-pending_interrupt-3F" name="method-c-pending_interrupt-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns whether or not the asynchronous queue is empty.</p>
 
 <p>Since <a
 href="Thread.html#method-c-handle_interrupt">::handle_interrupt</a> can be
-used to defer asynchronous events. This method can be used to determine if
+used to defer asynchronous events, this method can be used to determine if
 there are any deferred events.</p>
 
 <p>If you find this method returns true, then you may finish
@@ -1321,8 +1611,7 @@ deferred events.</p>
   }
 }
 ...
-th.raise # stop thread
-</code></pre>
+th.raise # stop thread</code></pre>
 
 <p>This example can also be written as the following, which you should use to
 avoid asynchronous interrupts.</p>
@@ -1339,19 +1628,20 @@ th = Thread.new{
   }
 }
 ...
-flag = false # stop thread
-</code></pre>
+flag = false # stop thread</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-pending_interrupt-3F_source')" id="l_method-c-pending_interrupt-3F_source">show</a>
                 
               </p>
@@ -1367,13 +1657,130 @@ rb_thread_s_pending_interrupt_p(int argc, VALUE *argv, VALUE self)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-c-report_on_exception">
+            
+              <b>Thread.report_on_exception   &rarr; true or false
+</b>
+            
+            <a href="../classes/Thread.html#method-c-report_on_exception" name="method-c-report_on_exception" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the status of the global “report on exception&#39;&#39; condition.</p>
+
+<p>The default is <code>false</code>.</p>
+
+<p>When set to <code>true</code>, all threads will report the exception if an
+exception is raised in any thread.</p>
+
+<p>See also <a
+href="Thread.html#method-c-report_on_exception-3D">::report_on_exception=</a>.</p>
+
+<p>There is also an instance level method to set this for a specific thread,
+see <a
+href="Thread.html#method-i-report_on_exception">report_on_exception</a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-report_on_exception_source')" id="l_method-c-report_on_exception_source">show</a>
+                
+              </p>
+              <div id="method-c-report_on_exception_source" class="dyn-source">
+                <pre>static VALUE
+rb_thread_s_report_exc(void)
+{
+    return GET_THREAD()-&gt;vm-&gt;thread_report_on_exception ? Qtrue : Qfalse;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-c-report_on_exception-3D">
+            
+              <b>Thread.report_on_exception= boolean   &rarr; true or false
+</b>
+            
+            <a href="../classes/Thread.html#method-c-report_on_exception-3D" name="method-c-report_on_exception-3D" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>When set to <code>true</code>, all threads will report the exception if an
+exception is raised.  Returns the new state.</p>
+
+<pre><code>Thread.report_on_exception = true
+t1 = Thread.new do
+  puts  &quot;In new thread&quot;
+  raise &quot;Exception from thread&quot;
+end
+sleep(1)
+puts &quot;In the main thread&quot;
+</code></pre>
+
+<p>This will produce:</p>
+
+<pre><code>In new thread
+prog.rb:4: Exception from thread (RuntimeError)
+ from prog.rb:2:in `initialize&#39;
+ from prog.rb:2:in `new&#39;
+ from prog.rb:2
+In the main thread</code></pre>
+
+<p>See also <a
+href="Thread.html#method-c-report_on_exception">::report_on_exception</a>.</p>
+
+<p>There is also an instance level method to set this for a specific thread,
+see <a
+href="Thread.html#method-i-report_on_exception-3D">report_on_exception=</a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-report_on_exception-3D_source')" id="l_method-c-report_on_exception-3D_source">show</a>
+                
+              </p>
+              <div id="method-c-report_on_exception-3D_source" class="dyn-source">
+                <pre>static VALUE
+rb_thread_s_report_exc_set(VALUE self, VALUE val)
+{
+    GET_THREAD()-&gt;vm-&gt;thread_report_on_exception = RTEST(val);
+    return val;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-c-start">
             
               <b>Thread.start([args]*) {|args| block }   &rarr; thread</b>
             
             <a href="../classes/Thread.html#method-c-start" name="method-c-start" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Basically the same as <a href="Thread.html#method-c-new">::new</a>.
@@ -1382,15 +1789,17 @@ calling <code>start</code> in that subclass will not invoke the
 subclass&#39;s <code>initialize</code> method.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-start_source')" id="l_method-c-start_source">show</a>
                 
               </p>
@@ -1413,7 +1822,7 @@ thread_start(VALUE klass, VALUE args)
             
             <a href="../classes/Thread.html#method-c-stop" name="method-c-stop" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Stops execution of the current thread, putting it into a “sleep&#39;&#39;
@@ -1423,22 +1832,22 @@ state, and schedules execution of another thread.</p>
 sleep 0.1 while a.status!=&#39;sleep&#39;
 print &quot;b&quot;
 a.run
-a.join</code></pre>
-
-<p><em>produces:</em></p>
-
-<pre><code>abc</code></pre>
+a.join
+#=&gt; &quot;abc&quot;
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-stop_source')" id="l_method-c-stop_source">show</a>
                 
               </p>
@@ -1468,11 +1877,11 @@ rb_thread_stop(void)
             
             <a href="../classes/Thread.html#method-i-5B-5D" name="method-i-5B-5D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Attribute Reference—Returns the value of a fiber-local variable (current
-thread&#39;s root fiber if not explicitely inside a <a
+thread&#39;s root fiber if not explicitly inside a <a
 href="Fiber.html">Fiber</a>), using either a symbol or a string name. If
 the specified variable does not exist, returns <code>nil</code>.</p>
 
@@ -1486,16 +1895,18 @@ the specified variable does not exist, returns <code>nil</code>.</p>
 end
 </code></pre>
 
-<p><em>produces:</em></p>
+<p>This will produce:</p>
 
 <pre><code>#&lt;Thread:0x00000002a54220 dead&gt;: A
 #&lt;Thread:0x00000002a541a8 dead&gt;: B
-#&lt;Thread:0x00000002a54130 dead&gt;: C</code></pre>
+#&lt;Thread:0x00000002a54130 dead&gt;: C
+</code></pre>
 
-<p>Thread#[] and Thread#[]= are not thread-local but fiber-local. This
-confusion did not exist in Ruby 1.8 because fibers were only available
-since Ruby 1.9. Ruby 1.9 chooses that the methods behaves fiber-local to
-save following idiom for dynamic scope.</p>
+<p><a href="Thread.html#method-i-5B-5D">#[]</a> and <a
+href="Thread.html#method-i-5B-5D-3D">#[]=</a> are not thread-local but
+fiber-local. This confusion did not exist in Ruby 1.8 because fibers are
+only available since Ruby 1.9. Ruby 1.9 chooses that the methods behaves
+fiber-local to save following idiom for dynamic scope.</p>
 
 <pre><code>def meth(newvalue)
   begin
@@ -1525,27 +1936,32 @@ p Thread.current[:name]
 #=&gt; 2 if thread-local (The value 2 is leaked to outside of meth method.)
 </code></pre>
 
-<p>For thread-local variables, please see <code>Thread#thread_local_get</code>
-and <code>Thread#thread_local_set</code>.</p>
+<p>For thread-local variables, please see <a
+href="Thread.html#method-i-thread_variable_get">thread_variable_get</a> and
+<a href="Thread.html#method-i-thread_variable_set">thread_variable_set</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
                 
               </p>
               <div id="method-i-5B-5D_source" class="dyn-source">
                 <pre>static VALUE
-rb_thread_aref(VALUE thread, VALUE id)
+rb_thread_aref(VALUE thread, VALUE key)
 {
-    return rb_thread_local_aref(thread, rb_to_id(id));
+    ID id = rb_check_id(&amp;key);
+    if (!id) return Qnil;
+    return rb_thread_local_aref(thread, id);
 }</pre>
               </div>
             </div>
@@ -1560,24 +1976,30 @@ rb_thread_aref(VALUE thread, VALUE id)
             
             <a href="../classes/Thread.html#method-i-5B-5D-3D" name="method-i-5B-5D-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Attribute Assignment—Sets or creates the value of a fiber-local variable,
-using either a symbol or a string. See also <code>Thread#[]</code>.  For
-thread-local variables, please see <code>Thread#thread_variable_set</code>
-and <code>Thread#thread_variable_get</code>.</p>
+using either a symbol or a string.</p>
+
+<p>See also <a href="Thread.html#method-i-5B-5D">#[]</a>.</p>
+
+<p>For thread-local variables, please see <a
+href="Thread.html#method-i-thread_variable_set">thread_variable_set</a> and
+<a href="Thread.html#method-i-thread_variable_get">thread_variable_get</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-5B-5D-3D_source')" id="l_method-i-5B-5D-3D_source">show</a>
                 
               </p>
@@ -1600,23 +2022,32 @@ rb_thread_aset(VALUE self, VALUE id, VALUE val)
             
             <a href="../classes/Thread.html#method-i-abort_on_exception" name="method-i-abort_on_exception" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the status of the thread-local “abort on exception&#39;&#39;
-condition for <em>thr</em>. The default is <code>false</code>. See also
-<code>Thread::abort_on_exception=</code>.</p>
+condition for this <code>thr</code>.</p>
+
+<p>The default is <code>false</code>.</p>
+
+<p>See also <a
+href="Thread.html#method-i-abort_on_exception-3D">abort_on_exception=</a>.</p>
+
+<p>There is also a class level method to set this for all threads, see <a
+href="Thread.html#method-c-abort_on_exception">::abort_on_exception</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-abort_on_exception_source')" id="l_method-i-abort_on_exception_source">show</a>
                 
               </p>
@@ -1641,23 +2072,30 @@ rb_thread_abort_exc(VALUE thread)
             
             <a href="../classes/Thread.html#method-i-abort_on_exception-3D" name="method-i-abort_on_exception-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>When set to <code>true</code>, causes all threads (including the main
-program) to abort if an exception is raised in <em>thr</em>. The process
-will effectively <code>exit(0)</code>.</p>
+              <p>When set to <code>true</code>, if this <code>thr</code> is aborted by an
+exception, the raised exception will be re-raised in the main thread.</p>
+
+<p>See also <a
+href="Thread.html#method-i-abort_on_exception">abort_on_exception</a>.</p>
+
+<p>There is also a class level method to set this for all threads, see <a
+href="Thread.html#method-c-abort_on_exception-3D">::abort_on_exception=</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-abort_on_exception-3D_source')" id="l_method-i-abort_on_exception-3D_source">show</a>
                 
               </p>
@@ -1666,7 +2104,6 @@ will effectively <code>exit(0)</code>.</p>
 rb_thread_abort_exc_set(VALUE thread, VALUE val)
 {
     rb_thread_t *th;
-    rb_secure(4);
 
     GetThreadPtr(thread, th);
     th-&gt;abort_on_exception = RTEST(val);
@@ -1685,22 +2122,26 @@ rb_thread_abort_exc_set(VALUE thread, VALUE val)
             
             <a href="../classes/Thread.html#method-i-add_trace_func" name="method-i-add_trace_func" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Adds <em>proc</em> as a handler for tracing. See
-<code>Thread#set_trace_func</code> and <code>set_trace_func</code>.</p>
+              <p>Adds <em>proc</em> as a handler for tracing.</p>
+
+<p>See <a href="Thread.html#method-i-set_trace_func">#set_trace_func</a> and
+<a href="Kernel.html#method-i-set_trace_func">Kernel#set_trace_func</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-add_trace_func_source')" id="l_method-i-add_trace_func_source">show</a>
                 
               </p>
@@ -1710,7 +2151,6 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
 {
     rb_thread_t *th;
 
-    rb_secure(4);
     GetThreadPtr(obj, th);
     thread_add_trace_func(th, trace);
     return trace;
@@ -1728,27 +2168,32 @@ thread_add_trace_func_m(VALUE obj, VALUE trace)
             
             <a href="../classes/Thread.html#method-i-alive-3F" name="method-i-alive-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>thr</em> is running or sleeping.</p>
+              <p>Returns <code>true</code> if <code>thr</code> is running or sleeping.</p>
 
 <pre><code>thr = Thread.new { }
 thr.join                #=&gt; #&lt;Thread:0x401b3fb0 dead&gt;
 Thread.current.alive?   #=&gt; true
 thr.alive?              #=&gt; false
 </code></pre>
+
+<p>See also <a href="Thread.html#method-i-stop-3F">stop?</a> and <a
+href="Thread.html#method-i-status">status</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-alive-3F_source')" id="l_method-i-alive-3F_source">show</a>
                 
               </p>
@@ -1771,26 +2216,28 @@ rb_thread_alive_p(VALUE thread)
         <div class="method">
           <div class="title method-title" id="method-i-backtrace">
             
-              <b>thr.backtrace     &rarr; array
+              <b>thread.backtrace    &rarr; array
 </b>
             
             <a href="../classes/Thread.html#method-i-backtrace" name="method-i-backtrace" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the current backtrace of the target thread.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-backtrace_source')" id="l_method-i-backtrace_source">show</a>
                 
               </p>
@@ -1798,7 +2245,7 @@ rb_thread_alive_p(VALUE thread)
                 <pre>static VALUE
 rb_thread_backtrace_m(int argc, VALUE *argv, VALUE thval)
 {
-    return vm_thread_backtrace(argc, argv, thval);
+    return rb_vm_thread_backtrace(argc, argv, thval);
 }</pre>
               </div>
             </div>
@@ -1808,12 +2255,12 @@ rb_thread_backtrace_m(int argc, VALUE *argv, VALUE thval)
         <div class="method">
           <div class="title method-title" id="method-i-backtrace_locations">
             
-              <b>thr.backtrace_locations(*args)      &rarr; array or nil
+              <b>thread.backtrace_locations(*args)   &rarr; array or nil
 </b>
             
             <a href="../classes/Thread.html#method-i-backtrace_locations" name="method-i-backtrace_locations" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the execution stack for the target thread—an array containing
@@ -1828,15 +2275,17 @@ href="Kernel.html#method-i-caller_locations">Kernel#caller_locations</a>
 except it applies to a specific thread.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-backtrace_locations_source')" id="l_method-i-backtrace_locations_source">show</a>
                 
               </p>
@@ -1844,7 +2293,7 @@ except it applies to a specific thread.</p>
                 <pre>static VALUE
 rb_thread_backtrace_locations_m(int argc, VALUE *argv, VALUE thval)
 {
-    return vm_thread_backtrace_locations(argc, argv, thval);
+    return rb_vm_thread_backtrace_locations(argc, argv, thval);
 }</pre>
               </div>
             </div>
@@ -1854,31 +2303,34 @@ rb_thread_backtrace_locations_m(int argc, VALUE *argv, VALUE thval)
         <div class="method">
           <div class="title method-title" id="method-i-exit">
             
-              <b>thr.exit        &rarr; thr or nil
-thr.kill        &rarr; thr or nil
-thr.terminate   &rarr; thr or nil
+              <b>thr.exit        &rarr; thr or nil<br />thr.kill        &rarr; thr or nil<br />thr.terminate   &rarr; thr or nil
 </b>
             
             <a href="../classes/Thread.html#method-i-exit" name="method-i-exit" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Terminates <em>thr</em> and schedules another thread to be run. If this
-thread is already marked to be killed, <code>exit</code> returns the
-<code>Thread</code>. If this is the main thread, or the last thread, exits
-the process.</p>
+              <p>Terminates <code>thr</code> and schedules another thread to be run.</p>
+
+<p>If this thread is already marked to be killed, <a
+href="Thread.html#method-i-exit">exit</a> returns the <a
+href="Thread.html">Thread</a>.</p>
+
+<p>If this is the main thread, or the last thread, exits the process.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-exit_source')" id="l_method-i-exit_source">show</a>
                 
               </p>
@@ -1890,9 +2342,6 @@ rb_thread_kill(VALUE thread)
 
     GetThreadPtr(thread, th);
 
-    if (th != GET_THREAD() &amp;&amp; th-&gt;safe_level &lt; 4) {
-        rb_secure(4);
-    }
     if (th-&gt;to_kill || th-&gt;status == THREAD_KILLED) {
         return thread;
     }
@@ -1900,13 +2349,14 @@ rb_thread_kill(VALUE thread)
         rb_exit(EXIT_SUCCESS);
     }
 
-    thread_debug(&quot;rb_thread_kill: %p (%p)\n&quot;, (void *)th, (void *)th-&gt;thread_id);
+    thread_debug(&quot;rb_thread_kill: %p (%&quot;PRI_THREAD_ID&quot;)\n&quot;, (void *)th, thread_id_str(th));
 
     if (th == GET_THREAD()) {
         /* kill myself immediately */
         rb_threadptr_to_kill(th);
     }
     else {
+        threadptr_check_pending_interrupt_queue(th);
         rb_threadptr_pending_interrupt_enque(th, eKillSignal);
         rb_threadptr_interrupt(th);
     }
@@ -1925,25 +2375,28 @@ rb_thread_kill(VALUE thread)
             
             <a href="../classes/Thread.html#method-i-group" name="method-i-group" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns the <code>ThreadGroup</code> which contains <em>thr</em>, or nil if
-the thread is not a member of any group.</p>
+              <p>Returns the <a href="ThreadGroup.html">ThreadGroup</a> which contains the
+given thread, or returns <code>nil</code> if <code>thr</code> is not a
+member of any group.</p>
 
 <pre><code>Thread.main.group   #=&gt; #&lt;ThreadGroup:0x4029d914&gt;
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-group_source')" id="l_method-i-group_source">show</a>
                 
               </p>
@@ -1974,21 +2427,23 @@ rb_thread_group(VALUE thread)
             
             <a href="../classes/Thread.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Dump the name, id, and status of <em>thr</em> to a string.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
               </p>
@@ -1996,14 +2451,26 @@ rb_thread_group(VALUE thread)
                 <pre>static VALUE
 rb_thread_inspect(VALUE thread)
 {
-    const char *cname = rb_obj_classname(thread);
+    VALUE cname = rb_class_path(rb_obj_class(thread));
     rb_thread_t *th;
     const char *status;
     VALUE str;
 
     GetThreadPtr(thread, th);
-    status = thread_status_name(th);
-    str = rb_sprintf(&quot;#&lt;%s:%p %s&gt;&quot;, cname, (void *)thread, status);
+    status = thread_status_name(th, TRUE);
+    str = rb_sprintf(&quot;#&lt;%&quot;PRIsVALUE&quot;:%p&quot;, cname, (void *)thread);
+    if (!NIL_P(th-&gt;name)) {
+        rb_str_catf(str, &quot;@%&quot;PRIsVALUE, th-&gt;name);
+    }
+    if (!th-&gt;first_func &amp;&amp; th-&gt;first_proc) {
+        VALUE loc = rb_proc_location(th-&gt;first_proc);
+        if (!NIL_P(loc)) {
+            const VALUE *ptr = RARRAY_CONST_PTR(loc);
+            rb_str_catf(str, &quot;@%&quot;PRIsVALUE&quot;:%&quot;PRIsVALUE, ptr[0], ptr[1]);
+            rb_gc_force_recycle(loc);
+        }
+    }
+    rb_str_catf(str, &quot; %s&gt;&quot;, status);
     OBJ_INFECT(str, thread);
 
     return str;
@@ -2016,58 +2483,62 @@ rb_thread_inspect(VALUE thread)
         <div class="method">
           <div class="title method-title" id="method-i-join">
             
-              <b>thr.join          &rarr; thr
-thr.join(limit)   &rarr; thr
+              <b>thr.join          &rarr; thr<br />thr.join(limit)   &rarr; thr
 </b>
             
             <a href="../classes/Thread.html#method-i-join" name="method-i-join" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>The calling thread will suspend execution and run <em>thr</em>. Does not
-return until <em>thr</em> exits or until <em>limit</em> seconds have
-passed. If the time limit expires, <code>nil</code> will be returned,
-otherwise <em>thr</em> is returned.</p>
+              <p>The calling thread will suspend execution and run this <code>thr</code>.</p>
 
-<p>Any threads not joined will be killed when the main program exits.  If
-<em>thr</em> had previously raised an exception and the
-<code>abort_on_exception</code> and <code>$DEBUG</code> flags are not set
-(so the exception has not yet been processed) it will be processed at this
-time.</p>
+<p>Does not return until <code>thr</code> exits or until the given
+<code>limit</code> seconds have passed.</p>
+
+<p>If the time limit expires, <code>nil</code> will be returned, otherwise
+<code>thr</code> is returned.</p>
+
+<p>Any threads not joined will be killed when the main program exits.</p>
+
+<p>If <code>thr</code> had previously raised an exception and the <a
+href="Thread.html#method-c-abort_on_exception">::abort_on_exception</a> or
+$DEBUG flags are not set, (so the exception has not yet been processed), it
+will be processed at this time.</p>
 
 <pre><code>a = Thread.new { print &quot;a&quot;; sleep(10); print &quot;b&quot;; print &quot;c&quot; }
 x = Thread.new { print &quot;x&quot;; Thread.pass; print &quot;y&quot;; print &quot;z&quot; }
-x.join # Let x thread finish, a will be killed on exit.</code></pre>
+x.join # Let thread x finish, thread a will be killed on exit.
+#=&gt; &quot;axyz&quot;
+</code></pre>
 
-<p><em>produces:</em></p>
-
-<pre><code>axyz</code></pre>
-
-<p>The following example illustrates the <em>limit</em> parameter.</p>
+<p>The following example illustrates the <code>limit</code> parameter.</p>
 
 <pre><code>y = Thread.new { 4.times { sleep 0.1; puts &#39;tick... &#39; }}
-puts &quot;Waiting&quot; until y.join(0.15)</code></pre>
+puts &quot;Waiting&quot; until y.join(0.15)
+</code></pre>
 
-<p><em>produces:</em></p>
+<p>This will produce:</p>
 
 <pre><code>tick...
 Waiting
 tick...
-Waitingtick...
-
+Waiting
+tick...
 tick...</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-join_source')" id="l_method-i-join_source">show</a>
                 
               </p>
@@ -2101,7 +2572,7 @@ thread_join_m(int argc, VALUE *argv, VALUE self)
             
             <a href="../classes/Thread.html#method-i-key-3F" name="method-i-key-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns <code>true</code> if the given string (or symbol) exists as a
@@ -2114,15 +2585,17 @@ me.key?(:stanley)   #=&gt; false
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-key-3F_source')" id="l_method-i-key-3F_source">show</a>
                 
               </p>
@@ -2131,11 +2604,11 @@ me.key?(:stanley)   #=&gt; false
 rb_thread_key_p(VALUE self, VALUE key)
 {
     rb_thread_t *th;
-    ID id = rb_to_id(key);
+    ID id = rb_check_id(&amp;key);
 
     GetThreadPtr(self, th);
 
-    if (!th-&gt;local_storage) {
+    if (!id || !th-&gt;local_storage) {
         return Qfalse;
     }
     if (st_lookup(th-&gt;local_storage, id, 0)) {
@@ -2156,10 +2629,10 @@ rb_thread_key_p(VALUE self, VALUE key)
             
             <a href="../classes/Thread.html#method-i-keys" name="method-i-keys" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns an an array of the names of the fiber-local variables (as Symbols).</p>
+              <p>Returns an array of the names of the fiber-local variables (as Symbols).</p>
 
 <pre><code>thr = Thread.new do
   Thread.current[:cat] = &#39;meow&#39;
@@ -2170,15 +2643,17 @@ thr.keys   #=&gt; [:dog, :cat]
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-keys_source')" id="l_method-i-keys_source">show</a>
                 
               </p>
@@ -2203,31 +2678,34 @@ rb_thread_keys(VALUE self)
         <div class="method">
           <div class="title method-title" id="method-i-kill">
             
-              <b>thr.exit        &rarr; thr or nil
-thr.kill        &rarr; thr or nil
-thr.terminate   &rarr; thr or nil
+              <b>thr.exit        &rarr; thr or nil<br />thr.kill        &rarr; thr or nil<br />thr.terminate   &rarr; thr or nil
 </b>
             
             <a href="../classes/Thread.html#method-i-kill" name="method-i-kill" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Terminates <em>thr</em> and schedules another thread to be run. If this
-thread is already marked to be killed, <code>exit</code> returns the
-<code>Thread</code>. If this is the main thread, or the last thread, exits
-the process.</p>
+              <p>Terminates <code>thr</code> and schedules another thread to be run.</p>
+
+<p>If this thread is already marked to be killed, <a
+href="Thread.html#method-i-exit">exit</a> returns the <a
+href="Thread.html">Thread</a>.</p>
+
+<p>If this is the main thread, or the last thread, exits the process.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-kill_source')" id="l_method-i-kill_source">show</a>
                 
               </p>
@@ -2239,9 +2717,6 @@ rb_thread_kill(VALUE thread)
 
     GetThreadPtr(thread, th);
 
-    if (th != GET_THREAD() &amp;&amp; th-&gt;safe_level &lt; 4) {
-        rb_secure(4);
-    }
     if (th-&gt;to_kill || th-&gt;status == THREAD_KILLED) {
         return thread;
     }
@@ -2249,17 +2724,123 @@ rb_thread_kill(VALUE thread)
         rb_exit(EXIT_SUCCESS);
     }
 
-    thread_debug(&quot;rb_thread_kill: %p (%p)\n&quot;, (void *)th, (void *)th-&gt;thread_id);
+    thread_debug(&quot;rb_thread_kill: %p (%&quot;PRI_THREAD_ID&quot;)\n&quot;, (void *)th, thread_id_str(th));
 
     if (th == GET_THREAD()) {
         /* kill myself immediately */
         rb_threadptr_to_kill(th);
     }
     else {
+        threadptr_check_pending_interrupt_queue(th);
         rb_threadptr_pending_interrupt_enque(th, eKillSignal);
         rb_threadptr_interrupt(th);
     }
     return thread;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-name">
+            
+              <b>thr.name   &rarr; string
+</b>
+            
+            <a href="../classes/Thread.html#method-i-name" name="method-i-name" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>show the name of the thread.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-name_source')" id="l_method-i-name_source">show</a>
+                
+              </p>
+              <div id="method-i-name_source" class="dyn-source">
+                <pre>static VALUE
+rb_thread_getname(VALUE thread)
+{
+    rb_thread_t *th;
+    GetThreadPtr(thread, th);
+    return th-&gt;name;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-name-3D">
+            
+              <b>thr.name=(name)   &rarr; string
+</b>
+            
+            <a href="../classes/Thread.html#method-i-name-3D" name="method-i-name-3D" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>set given name to the ruby thread. On some platform, it may set the name to
+pthread and/or kernel.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-name-3D_source')" id="l_method-i-name-3D_source">show</a>
+                
+              </p>
+              <div id="method-i-name-3D_source" class="dyn-source">
+                <pre>static VALUE
+rb_thread_setname(VALUE thread, VALUE name)
+{
+#ifdef SET_ANOTHER_THREAD_NAME
+    const char *s = &quot;&quot;;
+#endif
+    rb_thread_t *th;
+    GetThreadPtr(thread, th);
+    if (!NIL_P(name)) {
+        rb_encoding *enc;
+        StringValueCStr(name);
+        enc = rb_enc_get(name);
+        if (!rb_enc_asciicompat(enc)) {
+            rb_raise(rb_eArgError, &quot;ASCII incompatible encoding (%s)&quot;,
+                     rb_enc_name(enc));
+        }
+        name = rb_str_new_frozen(name);
+#ifdef SET_ANOTHER_THREAD_NAME
+        s = RSTRING_PTR(name);
+#endif
+    }
+    th-&gt;name = name;
+#if defined(SET_ANOTHER_THREAD_NAME)
+    if (threadptr_initialized(th)) {
+        SET_ANOTHER_THREAD_NAME(th-&gt;thread_id, s);
+    }
+#endif
+    return name;
 }</pre>
               </div>
             </div>
@@ -2274,10 +2855,10 @@ rb_thread_kill(VALUE thread)
             
             <a href="../classes/Thread.html#method-i-pending_interrupt-3F" name="method-i-pending_interrupt-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns whether or not the asychronous queue is empty for the target
+              <p>Returns whether or not the asynchronous queue is empty for the target
 thread.</p>
 
 <p>If <code>error</code> is given, then check only for <code>error</code> type
@@ -2288,15 +2869,17 @@ href="Thread.html#method-c-pending_interrupt-3F">::pending_interrupt?</a>
 for more information.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-pending_interrupt-3F_source')" id="l_method-i-pending_interrupt-3F_source">show</a>
                 
               </p>
@@ -2308,6 +2891,9 @@ rb_thread_pending_interrupt_p(int argc, VALUE *argv, VALUE target_thread)
 
     GetThreadPtr(target_thread, target_th);
 
+    if (!target_th-&gt;pending_interrupt_queue) {
+        return Qfalse;
+    }
     if (rb_threadptr_pending_interrupt_empty_p(target_th)) {
         return Qfalse;
     }
@@ -2341,7 +2927,7 @@ rb_thread_pending_interrupt_p(int argc, VALUE *argv, VALUE target_thread)
             
             <a href="../classes/Thread.html#method-i-priority" name="method-i-priority" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the priority of <em>thr</em>. Default is inherited from the current
@@ -2356,15 +2942,17 @@ platform.</p>
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-priority_source')" id="l_method-i-priority_source">show</a>
                 
               </p>
@@ -2389,7 +2977,7 @@ rb_thread_priority(VALUE thread)
             
             <a href="../classes/Thread.html#method-i-priority-3D" name="method-i-priority-3D" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Sets the priority of <em>thr</em> to <em>integer</em>. Higher-priority
@@ -2415,15 +3003,17 @@ count2    #=&gt; 5832
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-priority-3D_source')" id="l_method-i-priority-3D_source">show</a>
                 
               </p>
@@ -2435,7 +3025,6 @@ rb_thread_priority_set(VALUE thread, VALUE prio)
     int priority;
     GetThreadPtr(thread, th);
 
-    rb_secure(4);
 
 #if USE_NATIVE_THREAD_PRIORITY
     th-&gt;priority = NUM2INT(prio);
@@ -2460,24 +3049,24 @@ rb_thread_priority_set(VALUE thread, VALUE prio)
         <div class="method">
           <div class="title method-title" id="method-i-raise">
             
-              <b>thr.raise
-thr.raise(string)
-thr.raise(exception [, string [, array]])
+              <b>thr.raise<br />thr.raise(string)<br />thr.raise(exception [, string [, array]])
 </b>
             
             <a href="../classes/Thread.html#method-i-raise" name="method-i-raise" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Raises an exception (see <code>Kernel::raise</code>) from <em>thr</em>. The
-caller does not have to be <em>thr</em>.</p>
+              <p>Raises an exception from the given thread. The caller does not have to be
+<code>thr</code>. See <a href="Kernel.html#method-i-raise">Kernel#raise</a>
+for more information.</p>
 
 <pre><code>Thread.abort_on_exception = true
 a = Thread.new { sleep(200) }
-a.raise(&quot;Gotcha&quot;)</code></pre>
+a.raise(&quot;Gotcha&quot;)
+</code></pre>
 
-<p><em>produces:</em></p>
+<p>This will produce:</p>
 
 <pre><code>prog.rb:3: Gotcha (RuntimeError)
  from prog.rb:2:in `initialize&#39;
@@ -2485,15 +3074,17 @@ a.raise(&quot;Gotcha&quot;)</code></pre>
  from prog.rb:2</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-raise_source')" id="l_method-i-raise_source">show</a>
                 
               </p>
@@ -2504,6 +3095,7 @@ thread_raise_m(int argc, VALUE *argv, VALUE self)
     rb_thread_t *target_th;
     rb_thread_t *th = GET_THREAD();
     GetThreadPtr(self, target_th);
+    threadptr_check_pending_interrupt_queue(target_th);
     rb_threadptr_raise(target_th, argc, argv);
 
     /* To perform Thread.current.raise as Kernel.raise */
@@ -2518,6 +3110,107 @@ thread_raise_m(int argc, VALUE *argv, VALUE self)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-i-report_on_exception">
+            
+              <b>thr.report_on_exception   &rarr; true or false
+</b>
+            
+            <a href="../classes/Thread.html#method-i-report_on_exception" name="method-i-report_on_exception" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the status of the thread-local “report on exception&#39;&#39;
+condition for this <code>thr</code>.</p>
+
+<p>The default is <code>false</code>.</p>
+
+<p>See also <a
+href="Thread.html#method-i-report_on_exception-3D">report_on_exception=</a>.</p>
+
+<p>There is also a class level method to set this for all threads, see <a
+href="Thread.html#method-c-report_on_exception">::report_on_exception</a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-report_on_exception_source')" id="l_method-i-report_on_exception_source">show</a>
+                
+              </p>
+              <div id="method-i-report_on_exception_source" class="dyn-source">
+                <pre>static VALUE
+rb_thread_report_exc(VALUE thread)
+{
+    rb_thread_t *th;
+    GetThreadPtr(thread, th);
+    return th-&gt;report_on_exception ? Qtrue : Qfalse;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-report_on_exception-3D">
+            
+              <b>thr.report_on_exception= boolean   &rarr; true or false
+</b>
+            
+            <a href="../classes/Thread.html#method-i-report_on_exception-3D" name="method-i-report_on_exception-3D" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>When set to <code>true</code>, all threads (including the main program)
+will report the exception if an exception is raised in this
+<code>thr</code>.</p>
+
+<p>See also <a
+href="Thread.html#method-i-report_on_exception">report_on_exception</a>.</p>
+
+<p>There is also a class level method to set this for all threads, see <a
+href="Thread.html#method-c-report_on_exception-3D">::report_on_exception=</a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-report_on_exception-3D_source')" id="l_method-i-report_on_exception-3D_source">show</a>
+                
+              </p>
+              <div id="method-i-report_on_exception-3D_source" class="dyn-source">
+                <pre>static VALUE
+rb_thread_report_exc_set(VALUE thread, VALUE val)
+{
+    rb_thread_t *th;
+
+    GetThreadPtr(thread, th);
+    th-&gt;report_on_exception = RTEST(val);
+    return val;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-i-run">
             
               <b>thr.run   &rarr; thr
@@ -2525,33 +3218,40 @@ thread_raise_m(int argc, VALUE *argv, VALUE self)
             
             <a href="../classes/Thread.html#method-i-run" name="method-i-run" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Wakes up <em>thr</em>, making it eligible for scheduling.</p>
+              <p>Wakes up <code>thr</code>, making it eligible for scheduling.</p>
 
 <pre><code>a = Thread.new { puts &quot;a&quot;; Thread.stop; puts &quot;c&quot; }
 sleep 0.1 while a.status!=&#39;sleep&#39;
 puts &quot;Got here&quot;
 a.run
-a.join</code></pre>
+a.join
+</code></pre>
 
-<p><em>produces:</em></p>
+<p>This will produce:</p>
 
 <pre><code>a
 Got here
-c</code></pre>
+c
+</code></pre>
+
+<p>See also the instance method <a
+href="Thread.html#method-i-wakeup">wakeup</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-run_source')" id="l_method-i-run_source">show</a>
                 
               </p>
@@ -2576,27 +3276,29 @@ rb_thread_run(VALUE thread)
             
             <a href="../classes/Thread.html#method-i-safe_level" name="method-i-safe_level" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the safe level in effect for <em>thr</em>. Setting thread-local
 safe levels can help when implementing sandboxes which run insecure code.</p>
 
-<pre><code>thr = Thread.new { $SAFE = 3; sleep }
+<pre><code>thr = Thread.new { $SAFE = 1; sleep }
 Thread.current.safe_level   #=&gt; 0
-thr.safe_level              #=&gt; 3
+thr.safe_level              #=&gt; 1
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-safe_level_source')" id="l_method-i-safe_level_source">show</a>
                 
               </p>
@@ -2617,29 +3319,32 @@ rb_thread_safe_level(VALUE thread)
         <div class="method">
           <div class="title method-title" id="method-i-set_trace_func">
             
-              <b>thr.set_trace_func(proc)    &rarr; proc
-thr.set_trace_func(nil)     &rarr; nil
+              <b>thr.set_trace_func(proc)    &rarr; proc<br />thr.set_trace_func(nil)     &rarr; nil
 </b>
             
             <a href="../classes/Thread.html#method-i-set_trace_func" name="method-i-set_trace_func" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Establishes <em>proc</em> on <em>thr</em> as the handler for tracing, or
-disables tracing if the parameter is <code>nil</code>. See
-<code>set_trace_func</code>.</p>
+disables tracing if the parameter is <code>nil</code>.</p>
+
+<p>See <a
+href="Kernel.html#method-i-set_trace_func">Kernel#set_trace_func</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-set_trace_func_source')" id="l_method-i-set_trace_func_source">show</a>
                 
               </p>
@@ -2649,7 +3354,6 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
 {
     rb_thread_t *th;
 
-    rb_secure(4);
     GetThreadPtr(obj, th);
     rb_threadptr_remove_event_hook(th, call_trace_func, Qundef);
 
@@ -2673,14 +3377,26 @@ thread_set_trace_func_m(VALUE obj, VALUE trace)
             
             <a href="../classes/Thread.html#method-i-status" name="method-i-status" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns the status of <em>thr</em>: “<code>sleep</code>&#39;&#39; if
-<em>thr</em> is sleeping or waiting on I/O, “<code>run</code>&#39;&#39; if
-<em>thr</em> is executing, “<code>aborting</code>&#39;&#39; if <em>thr</em>
-is aborting, <code>false</code> if <em>thr</em> terminated normally, and
-<code>nil</code> if <em>thr</em> terminated with an exception.</p>
+              <p>Returns the status of <code>thr</code>.</p>
+<dl class="rdoc-list label-list"><dt>“sleep”
+<dd>
+<p>Returned if this thread is sleeping or waiting on I/O</p>
+</dd><dt>“run”
+<dd>
+<p>When this thread is executing</p>
+</dd><dt><code>&quot;aborting&quot;</code>
+<dd>
+<p>If this thread is aborting</p>
+</dd><dt><code>false</code>
+<dd>
+<p>When this thread is terminated normally</p>
+</dd><dt><code>nil</code>
+<dd>
+<p>If terminated with an exception.</p>
+</dd></dl>
 
 <pre><code>a = Thread.new { raise(&quot;die now&quot;) }
 b = Thread.new { Thread.stop }
@@ -2693,17 +3409,23 @@ c.status                #=&gt; false
 d.status                #=&gt; &quot;aborting&quot;
 Thread.current.status   #=&gt; &quot;run&quot;
 </code></pre>
+
+<p>See also the instance methods <a
+href="Thread.html#method-i-alive-3F">alive?</a> and <a
+href="Thread.html#method-i-stop-3F">stop?</a></p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-status_source')" id="l_method-i-status_source">show</a>
                 
               </p>
@@ -2721,7 +3443,7 @@ rb_thread_status(VALUE thread)
         }
         return Qfalse;
     }
-    return rb_str_new2(thread_status_name(th));
+    return rb_str_new2(thread_status_name(th, FALSE));
 }</pre>
               </div>
             </div>
@@ -2736,27 +3458,32 @@ rb_thread_status(VALUE thread)
             
             <a href="../classes/Thread.html#method-i-stop-3F" name="method-i-stop-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>thr</em> is dead or sleeping.</p>
+              <p>Returns <code>true</code> if <code>thr</code> is dead or sleeping.</p>
 
 <pre><code>a = Thread.new { Thread.stop }
 b = Thread.current
 a.stop?   #=&gt; true
 b.stop?   #=&gt; false
 </code></pre>
+
+<p>See also <a href="Thread.html#method-i-alive-3F">alive?</a> and <a
+href="Thread.html#method-i-status">status</a>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-stop-3F_source')" id="l_method-i-stop-3F_source">show</a>
                 
               </p>
@@ -2785,24 +3512,29 @@ rb_thread_stop_p(VALUE thread)
             
             <a href="../classes/Thread.html#method-i-terminate" name="method-i-terminate" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Terminates <em>thr</em> and schedules another thread to be run. If this
-thread is already marked to be killed, <code>exit</code> returns the
-<code>Thread</code>. If this is the main thread, or the last thread, exits
-the process.</p>
+              <p>Terminates <code>thr</code> and schedules another thread to be run.</p>
+
+<p>If this thread is already marked to be killed, <a
+href="Thread.html#method-i-exit">exit</a> returns the <a
+href="Thread.html">Thread</a>.</p>
+
+<p>If this is the main thread, or the last thread, exits the process.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-terminate_source')" id="l_method-i-terminate_source">show</a>
                 
               </p>
@@ -2814,9 +3546,6 @@ rb_thread_kill(VALUE thread)
 
     GetThreadPtr(thread, th);
 
-    if (th != GET_THREAD() &amp;&amp; th-&gt;safe_level &lt; 4) {
-        rb_secure(4);
-    }
     if (th-&gt;to_kill || th-&gt;status == THREAD_KILLED) {
         return thread;
     }
@@ -2824,13 +3553,14 @@ rb_thread_kill(VALUE thread)
         rb_exit(EXIT_SUCCESS);
     }
 
-    thread_debug(&quot;rb_thread_kill: %p (%p)\n&quot;, (void *)th, (void *)th-&gt;thread_id);
+    thread_debug(&quot;rb_thread_kill: %p (%&quot;PRI_THREAD_ID&quot;)\n&quot;, (void *)th, thread_id_str(th));
 
     if (th == GET_THREAD()) {
         /* kill myself immediately */
         rb_threadptr_to_kill(th);
     }
     else {
+        threadptr_check_pending_interrupt_queue(th);
         rb_threadptr_pending_interrupt_enque(th, eKillSignal);
         rb_threadptr_interrupt(th);
     }
@@ -2849,7 +3579,7 @@ rb_thread_kill(VALUE thread)
             
             <a href="../classes/Thread.html#method-i-thread_variable-3F" name="method-i-thread_variable-3F" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns <code>true</code> if the given string (or symbol) exists as a
@@ -2861,20 +3591,23 @@ me.thread_variable?(:oliver)    #=&gt; true
 me.thread_variable?(:stanley)   #=&gt; false
 </code></pre>
 
-<p>Note that these are not fiber local variables.  Please see Thread#[] and <a
+<p>Note that these are not fiber local variables.  Please see <a
+href="Thread.html#method-i-5B-5D">#[]</a> and <a
 href="Thread.html#method-i-thread_variable_get">#thread_variable_get</a>
 for more details.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-thread_variable-3F_source')" id="l_method-i-thread_variable-3F_source">show</a>
                 
               </p>
@@ -2883,13 +3616,16 @@ for more details.</p>
 rb_thread_variable_p(VALUE thread, VALUE key)
 {
     VALUE locals;
+    ID id = rb_check_id(&amp;key);
 
-    locals = rb_iv_get(thread, &quot;locals&quot;);
+    if (!id) return Qfalse;
+
+    locals = rb_ivar_get(thread, id_locals);
 
     if (!RHASH(locals)-&gt;ntbl)
         return Qfalse;
 
-    if (st_lookup(RHASH(locals)-&gt;ntbl, ID2SYM(rb_to_id(key)), 0)) {
+    if (st_lookup(RHASH(locals)-&gt;ntbl, ID2SYM(id), 0)) {
         return Qtrue;
     }
 
@@ -2908,12 +3644,13 @@ rb_thread_variable_p(VALUE thread, VALUE key)
             
             <a href="../classes/Thread.html#method-i-thread_variable_get" name="method-i-thread_variable_get" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the value of a thread local variable that has been set.  Note that
 these are different than fiber local values.  For fiber local values,
-please see Thread#[] and Thread#[]=.</p>
+please see <a href="Thread.html#method-i-5B-5D">#[]</a> and <a
+href="Thread.html#method-i-5B-5D-3D">#[]=</a>.</p>
 
 <p><a href="Thread.html">Thread</a> local values are carried along with
 threads, and do not respect fibers.  For example:</p>
@@ -2934,37 +3671,30 @@ threads, and do not respect fibers.  For example:</p>
 <p>The value “bar” is returned for the thread local, where nil is returned for
 the fiber local.  The fiber is executed in the same thread, so the thread
 local values are available.</p>
-
-<p>See also Thread#[]</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-thread_variable_get_source')" id="l_method-i-thread_variable_get_source">show</a>
                 
               </p>
               <div id="method-i-thread_variable_get_source" class="dyn-source">
                 <pre>static VALUE
-rb_thread_variable_get(VALUE thread, VALUE id)
+rb_thread_variable_get(VALUE thread, VALUE key)
 {
     VALUE locals;
-    rb_thread_t *th;
 
-    GetThreadPtr(thread, th);
-
-    if (rb_safe_level() &gt;= 4 &amp;&amp; th != GET_THREAD()) {
-        rb_raise(rb_eSecurityError, &quot;Insecure: can&#39;t modify thread locals&quot;);
-    }
-
-    locals = rb_iv_get(thread, &quot;locals&quot;);
-    return rb_hash_aref(locals, ID2SYM(rb_to_id(id)));
+    locals = rb_ivar_get(thread, id_locals);
+    return rb_hash_aref(locals, rb_to_symbol(key));
 }</pre>
               </div>
             </div>
@@ -2979,24 +3709,26 @@ rb_thread_variable_get(VALUE thread, VALUE id)
             
             <a href="../classes/Thread.html#method-i-thread_variable_set" name="method-i-thread_variable_set" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Sets a thread local with <code>key</code> to <code>value</code>.  Note that
 these are local to threads, and not to fibers.  Please see <a
 href="Thread.html#method-i-thread_variable_get">#thread_variable_get</a>
-and Thread#[] for more information.</p>
+and <a href="Thread.html#method-i-5B-5D">#[]</a> for more information.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-thread_variable_set_source')" id="l_method-i-thread_variable_set_source">show</a>
                 
               </p>
@@ -3005,19 +3737,13 @@ and Thread#[] for more information.</p>
 rb_thread_variable_set(VALUE thread, VALUE id, VALUE val)
 {
     VALUE locals;
-    rb_thread_t *th;
 
-    GetThreadPtr(thread, th);
-
-    if (rb_safe_level() &gt;= 4 &amp;&amp; th != GET_THREAD()) {
-        rb_raise(rb_eSecurityError, &quot;Insecure: can&#39;t modify thread locals&quot;);
-    }
     if (OBJ_FROZEN(thread)) {
         rb_error_frozen(&quot;thread locals&quot;);
     }
 
-    locals = rb_iv_get(thread, &quot;locals&quot;);
-    return rb_hash_aset(locals, ID2SYM(rb_to_id(id)), val);
+    locals = rb_ivar_get(thread, id_locals);
+    return rb_hash_aset(locals, rb_to_symbol(id), val);
 }</pre>
               </div>
             </div>
@@ -3032,11 +3758,10 @@ rb_thread_variable_set(VALUE thread, VALUE id, VALUE val)
             
             <a href="../classes/Thread.html#method-i-thread_variables" name="method-i-thread_variables" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Returns an an array of the names of the thread-local variables (as
-Symbols).</p>
+              <p>Returns an array of the names of the thread-local variables (as Symbols).</p>
 
 <pre><code>thr = Thread.new do
   Thread.current.thread_variable_set(:cat, &#39;meow&#39;)
@@ -3046,20 +3771,23 @@ thr.join               #=&gt; #&lt;Thread:0x401b3f10 dead&gt;
 thr.thread_variables   #=&gt; [:dog, :cat]
 </code></pre>
 
-<p>Note that these are not fiber local variables.  Please see Thread#[] and <a
+<p>Note that these are not fiber local variables.  Please see <a
+href="Thread.html#method-i-5B-5D">#[]</a> and <a
 href="Thread.html#method-i-thread_variable_get">#thread_variable_get</a>
 for more details.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-thread_variables_source')" id="l_method-i-thread_variables_source">show</a>
                 
               </p>
@@ -3070,7 +3798,7 @@ rb_thread_variables(VALUE thread)
     VALUE locals;
     VALUE ary;
 
-    locals = rb_iv_get(thread, &quot;locals&quot;);
+    locals = rb_ivar_get(thread, id_locals);
     ary = rb_ary_new();
     rb_hash_foreach(locals, keys_i, ary);
 
@@ -3089,26 +3817,32 @@ rb_thread_variables(VALUE thread)
             
             <a href="../classes/Thread.html#method-i-value" name="method-i-value" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Waits for <em>thr</em> to complete (via <code>Thread#join</code>) and
-returns its value.</p>
+              <p>Waits for <code>thr</code> to complete, using <a
+href="Thread.html#method-i-join">join</a>, and returns its value or raises
+the exception which terminated the thread.</p>
 
 <pre><code>a = Thread.new { 2 + 2 }
 a.value   #=&gt; 4
+
+b = Thread.new { raise &#39;something went wrong&#39; }
+b.value   #=&gt; RuntimeError: something went wrong
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-value_source')" id="l_method-i-value_source">show</a>
                 
               </p>
@@ -3134,32 +3868,34 @@ thread_value(VALUE self)
             
             <a href="../classes/Thread.html#method-i-wakeup" name="method-i-wakeup" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
-              <p>Marks <em>thr</em> as eligible for scheduling (it may still remain blocked
-on I/O, however). Does not invoke the scheduler (see
-<code>Thread#run</code>).</p>
+              <p>Marks a given thread as eligible for scheduling, however it may still
+remain blocked on I/O.</p>
+
+<p><strong>Note:</strong> This does not invoke the scheduler, see <a
+href="Thread.html#method-i-run">run</a> for more information.</p>
 
 <pre><code>c = Thread.new { Thread.stop; puts &quot;hey!&quot; }
 sleep 0.1 while c.status!=&#39;sleep&#39;
 c.wakeup
-c.join</code></pre>
-
-<p><em>produces:</em></p>
-
-<pre><code>hey!</code></pre>
+c.join
+#=&gt; &quot;hey!&quot;
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-wakeup_source')" id="l_method-i-wakeup_source">show</a>
                 
               </p>
@@ -3180,4 +3916,4 @@ rb_thread_wakeup(VALUE thread)
 
     </div>
   </body>
-</html>    
+</html>

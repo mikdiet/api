@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            Coverage 
+            <span class="type">Module</span>
+            Coverage
             
         </h1>
         <ul class="files">
@@ -38,9 +38,9 @@
 for Ruby. This feature is experimental, so these APIs may be changed in
 future.</p>
 
-<h1 id="label-Usage">Usage</h1>
+<h1 id="module-Coverage-label-Usage">Usage</h1>
 <ol><li>
-<p>require “coverage.so”</p>
+<p>require “coverage”</p>
 </li><li>
 <p>do <a href="Coverage.html#method-c-start">::start</a></p>
 </li><li>
@@ -53,7 +53,7 @@ gives, for each line, the number of line execution by the interpreter. A
 <code>else</code> and <code>end</code>).</p>
 </li></ol>
 
-<h1 id="label-Example">Example</h1>
+<h1 id="module-Coverage-label-Example">Example</h1>
 
 <pre><code>[foo.rb]
 s = 0
@@ -68,7 +68,7 @@ else
 end
 [EOF]
 
-require &quot;coverage.so&quot;
+require &quot;coverage&quot;
 Coverage.start
 require &quot;foo.rb&quot;
 p Coverage.result  #=&gt; {&quot;foo.rb&quot;=&gt;[1, 1, 10, nil, nil, 1, 1, nil, 0, nil]}
@@ -92,6 +92,18 @@ p Coverage.result  #=&gt; {&quot;foo.rb&quot;=&gt;[1, 1, 10, nil, nil, 1, 1, nil
     <!-- Method ref -->
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
+      
+        <dt>P</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-peek_result">peek_result</a>
+              </li>
+            
+          </ul>
+        </dd>
       
         <dt>R</dt>
         <dd>
@@ -141,6 +153,52 @@ p Coverage.result  #=&gt; {&quot;foo.rb&quot;=&gt;[1, 1, 10, nil, nil, 1, 1, nil
       <div class="sectiontitle">Class Public methods</div>
       
         <div class="method">
+          <div class="title method-title" id="method-c-peek_result">
+            
+              <b>Coverage.peek_result  => hash
+</b>
+            
+            <a href="../classes/Coverage.html#method-c-peek_result" name="method-c-peek_result" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a hash that contains filename as key and coverage array as value.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-peek_result_source')" id="l_method-c-peek_result_source">show</a>
+                
+              </p>
+              <div id="method-c-peek_result_source" class="dyn-source">
+                <pre>static VALUE
+rb_coverage_peek_result(VALUE klass)
+{
+    VALUE coverages = rb_get_coverages();
+    VALUE ncoverages = rb_hash_new();
+    if (!RTEST(coverages)) {
+        rb_raise(rb_eRuntimeError, &quot;coverage measurement is not enabled&quot;);
+    }
+    st_foreach(RHASH_TBL(coverages), coverage_peek_result_i, ncoverages);
+    rb_hash_freeze(ncoverages);
+    return ncoverages;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-c-result">
             
               <b>Coverage.result  => hash
@@ -148,22 +206,24 @@ p Coverage.result  #=&gt; {&quot;foo.rb&quot;=&gt;[1, 1, 10, nil, nil, 1, 1, nil
             
             <a href="../classes/Coverage.html#method-c-result" name="method-c-result" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns a hash that contains filename as key and coverage array as value
 and disables coverage measurement.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-result_source')" id="l_method-c-result_source">show</a>
                 
               </p>
@@ -171,13 +231,7 @@ and disables coverage measurement.</p>
                 <pre>static VALUE
 rb_coverage_result(VALUE klass)
 {
-    VALUE coverages = rb_get_coverages();
-    VALUE ncoverages = rb_hash_new();
-    if (!RTEST(coverages)) {
-        rb_raise(rb_eRuntimeError, &quot;coverage measurement is not enabled&quot;);
-    }
-    st_foreach(RHASH_TBL(coverages), coverage_result_i, ncoverages);
-    rb_hash_freeze(ncoverages);
+    VALUE ncoverages = rb_coverage_peek_result(klass);
     rb_reset_coverages();
     return ncoverages;
 }</pre>
@@ -194,21 +248,23 @@ rb_coverage_result(VALUE klass)
             
             <a href="../classes/Coverage.html#method-c-start" name="method-c-start" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Enables coverage measurement.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-start_source')" id="l_method-c-start_source">show</a>
                 
               </p>
@@ -216,12 +272,11 @@ rb_coverage_result(VALUE klass)
                 <pre>static VALUE
 rb_coverage_start(VALUE klass)
 {
-    if (!RTEST(rb_get_coverages())) {
-        if (rb_coverages == Qundef) {
-            rb_coverages = rb_hash_new();
-            RBASIC(rb_coverages)-&gt;klass = 0;
-        }
-        rb_set_coverages(rb_coverages);
+    VALUE coverages = rb_get_coverages();
+    if (!RTEST(coverages)) {
+        coverages = rb_hash_new();
+        rb_obj_hide(coverages);
+        rb_set_coverages(coverages);
     }
     return Qnil;
 }</pre>
@@ -233,4 +288,4 @@ rb_coverage_start(VALUE klass)
 
     </div>
   </body>
-</html>    
+</html>

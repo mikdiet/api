@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            Marshal 
+            <span class="type">Module</span>
+            Marshal
             
         </h1>
         <ul class="files">
@@ -68,7 +68,7 @@ marshal_dump and marshal_load or _dump and _load.  marshal_dump will take
 precedence over _dump if both are defined.  marshal_dump may result in
 smaller <a href="Marshal.html">Marshal</a> strings.</p>
 
-<h2 id="label-Security+considerations">Security considerations</h2>
+<h2 id="module-Marshal-label-Security+considerations">Security considerations</h2>
 
 <p>By design, <a href="Marshal.html#method-c-load">::load</a> can deserialize
 almost any class loaded into the Ruby process. In many cases this can lead
@@ -85,7 +85,7 @@ or another serialization format that is only able to load simple,
 href="Hash.html">Hash</a>, etc. Never allow user input to specify arbitrary
 types to deserialize into.</p>
 
-<h2 id="label-marshal_dump+and+marshal_load">marshal_dump and marshal_load</h2>
+<h2 id="module-Marshal-label-marshal_dump+and+marshal_load">marshal_dump and marshal_load</h2>
 
 <p>When dumping an object the method marshal_dump will be called. marshal_dump
 must return a result containing the information necessary for marshal_load
@@ -114,7 +114,7 @@ marshal_load must recreate the object from the information in the result.</p>
 end
 </code></pre>
 
-<h2 id="label-_dump+and+_load">_dump and _load</h2>
+<h2 id="module-Marshal-label-_dump+and+_load">_dump and _load</h2>
 
 <p>Use _dump and _load when you need to allocate the object you&#39;re
 restoring yourself.</p>
@@ -147,9 +147,9 @@ of the same class.</p>
 end
 </code></pre>
 
-<p>Since Marhsal.dump outputs a string you can have _dump return a <a
-href="Marshal.html">Marshal</a> string which is Marshal.loaded in _load for
-complex objects.</p>
+<p>Since <a href="Marshal.html#method-c-dump">::dump</a> outputs a string you
+can have _dump return a <a href="Marshal.html">Marshal</a> string which is
+Marshal.loaded in _load for complex objects.</p>
 
     </div>
   
@@ -232,7 +232,7 @@ complex objects.</p>
           
             <tr valign='top'>
               <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
+              <td colspan="2" class="attr-desc"><p>major version</p></td>
             </tr>
           
         
@@ -244,7 +244,7 @@ complex objects.</p>
           
             <tr valign='top'>
               <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
+              <td colspan="2" class="attr-desc"><p>minor version</p></td>
             </tr>
           
         
@@ -267,7 +267,7 @@ complex objects.</p>
             
             <a href="../classes/Marshal.html#method-c-dump" name="method-c-dump" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Serializes obj and all descendant objects. If anIO is specified, the
@@ -298,7 +298,7 @@ obj.say_hello  #=&gt; &quot;hello\n&quot;
 <ul><li>
 <p>anonymous Class/Module.</p>
 </li><li>
-<p>objects which related to its system (ex: <a href="Dir.html">Dir</a>, <a
+<p>objects which are related to system (ex: <a href="Dir.html">Dir</a>, <a
 href="File/Stat.html">File::Stat</a>, <a href="IO.html">IO</a>, <a
 href="File.html">File</a>, <a href="Socket.html">Socket</a> and so on)</p>
 </li><li>
@@ -309,19 +309,21 @@ href="UnboundMethod.html">UnboundMethod</a>, <a href="Proc.html">Proc</a>,
 href="ThreadGroup.html">ThreadGroup</a>, <a
 href="Continuation.html">Continuation</a></p>
 </li><li>
-<p>objects which defines singleton methods</p>
+<p>objects which define singleton methods</p>
 </li></ul>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-dump_source')" id="l_method-c-dump_source">show</a>
                 
               </p>
@@ -331,8 +333,6 @@ marshal_dump(int argc, VALUE *argv)
 {
     VALUE obj, port, a1, a2;
     int limit = -1;
-    struct dump_arg *arg;
-    volatile VALUE wrapper;
 
     port = Qnil;
     rb_scan_args(argc, argv, &quot;12&quot;, &amp;obj, &amp;a1, &amp;a2);
@@ -346,39 +346,7 @@ marshal_dump(int argc, VALUE *argv)
         else if (NIL_P(a1)) io_needed();
         else port = a1;
     }
-    RB_GC_GUARD(wrapper) = TypedData_Make_Struct(rb_cData, struct dump_arg, &amp;dump_arg_data, arg);
-    arg-&gt;dest = 0;
-    arg-&gt;symbols = st_init_numtable();
-    arg-&gt;data    = st_init_numtable();
-    arg-&gt;infection = 0;
-    arg-&gt;compat_tbl = st_init_numtable();
-    arg-&gt;encodings = 0;
-    arg-&gt;str = rb_str_buf_new(0);
-    if (!NIL_P(port)) {
-        if (!rb_respond_to(port, s_write)) {
-            io_needed();
-        }
-        arg-&gt;dest = port;
-        if (rb_check_funcall(port, s_binmode, 0, 0) != Qundef) {
-            check_dump_arg(arg, s_binmode);
-        }
-    }
-    else {
-        port = arg-&gt;str;
-    }
-
-    w_byte(MARSHAL_MAJOR, arg);
-    w_byte(MARSHAL_MINOR, arg);
-
-    w_object(obj, arg, limit);
-    if (arg-&gt;dest) {
-        rb_io_write(arg-&gt;dest, arg-&gt;str);
-        rb_str_resize(arg-&gt;str, 0);
-    }
-    clear_dump_arg(arg);
-    RB_GC_GUARD(wrapper);
-
-    return port;
+    return rb_marshal_dump_limited(obj, port, limit);
 }</pre>
               </div>
             </div>
@@ -392,28 +360,30 @@ marshal_dump(int argc, VALUE *argv)
             
             <a href="../classes/Marshal.html#method-c-load" name="method-c-load" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the result of converting the serialized data in source into a Ruby
 object (possibly with associated subordinate objects). source may be either
 an instance of <a href="IO.html">IO</a> or an object that responds to
-to_str. If proc is specified, it will be passed each object as it is
-deserialized.</p>
+to_str. If proc is specified, each object will be passed to the proc, as
+the object is being deserialized.</p>
 
 <p>Never pass untrusted data (including user supplied input) to this method.
 Please see the overview for further details.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-load_source')" id="l_method-c-load_source">show</a>
                 
               </p>
@@ -422,59 +392,11 @@ Please see the overview for further details.</p>
 marshal_load(int argc, VALUE *argv)
 {
     VALUE port, proc;
-    int major, minor, infection = 0;
-    VALUE v;
-    volatile VALUE wrapper;
-    struct load_arg *arg;
 
-    rb_scan_args(argc, argv, &quot;11&quot;, &amp;port, &amp;proc);
-    v = rb_check_string_type(port);
-    if (!NIL_P(v)) {
-        infection = (int)FL_TEST(port, MARSHAL_INFECTION); /* original taintedness */
-        port = v;
-    }
-    else if (rb_respond_to(port, s_getbyte) &amp;&amp; rb_respond_to(port, s_read)) {
-        rb_check_funcall(port, s_binmode, 0, 0);
-        infection = (int)(FL_TAINT | FL_TEST(port, FL_UNTRUSTED));
-    }
-    else {
-        io_needed();
-    }
-    RB_GC_GUARD(wrapper) = TypedData_Make_Struct(rb_cData, struct load_arg, &amp;load_arg_data, arg);
-    arg-&gt;infection = infection;
-    arg-&gt;src = port;
-    arg-&gt;offset = 0;
-    arg-&gt;symbols = st_init_numtable();
-    arg-&gt;data    = st_init_numtable();
-    arg-&gt;compat_tbl = st_init_numtable();
-    arg-&gt;proc = 0;
-    arg-&gt;readable = 0;
-
-    if (NIL_P(v))
-        arg-&gt;buf = xmalloc(BUFSIZ);
-    else
-        arg-&gt;buf = 0;
-
-    major = r_byte(arg);
-    minor = r_byte(arg);
-    if (major != MARSHAL_MAJOR || minor &gt; MARSHAL_MINOR) {
-        clear_load_arg(arg);
-        rb_raise(rb_eTypeError, &quot;incompatible marshal file format (can&#39;t be read)\n\
-\tformat version %d.%d required; %d.%d given&quot;,
-                 MARSHAL_MAJOR, MARSHAL_MINOR, major, minor);
-    }
-    if (RTEST(ruby_verbose) &amp;&amp; minor != MARSHAL_MINOR) {
-        rb_warn(&quot;incompatible marshal file format (can be read)\n\
-\tformat version %d.%d required; %d.%d given&quot;,
-                MARSHAL_MAJOR, MARSHAL_MINOR, major, minor);
-    }
-
-    if (!NIL_P(proc)) arg-&gt;proc = proc;
-    v = r_object(arg);
-    clear_load_arg(arg);
-    RB_GC_GUARD(wrapper);
-
-    return v;
+    rb_check_arity(argc, 1, 2);
+    port = argv[0];
+    proc = argc &gt; 1 ? argv[1] : Qnil;
+    return rb_marshal_load_with_proc(port, proc);
 }</pre>
               </div>
             </div>
@@ -488,28 +410,30 @@ marshal_load(int argc, VALUE *argv)
             
             <a href="../classes/Marshal.html#method-c-restore" name="method-c-restore" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Returns the result of converting the serialized data in source into a Ruby
 object (possibly with associated subordinate objects). source may be either
 an instance of <a href="IO.html">IO</a> or an object that responds to
-to_str. If proc is specified, it will be passed each object as it is
-deserialized.</p>
+to_str. If proc is specified, each object will be passed to the proc, as
+the object is being deserialized.</p>
 
 <p>Never pass untrusted data (including user supplied input) to this method.
 Please see the overview for further details.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-restore_source')" id="l_method-c-restore_source">show</a>
                 
               </p>
@@ -518,59 +442,11 @@ Please see the overview for further details.</p>
 marshal_load(int argc, VALUE *argv)
 {
     VALUE port, proc;
-    int major, minor, infection = 0;
-    VALUE v;
-    volatile VALUE wrapper;
-    struct load_arg *arg;
 
-    rb_scan_args(argc, argv, &quot;11&quot;, &amp;port, &amp;proc);
-    v = rb_check_string_type(port);
-    if (!NIL_P(v)) {
-        infection = (int)FL_TEST(port, MARSHAL_INFECTION); /* original taintedness */
-        port = v;
-    }
-    else if (rb_respond_to(port, s_getbyte) &amp;&amp; rb_respond_to(port, s_read)) {
-        rb_check_funcall(port, s_binmode, 0, 0);
-        infection = (int)(FL_TAINT | FL_TEST(port, FL_UNTRUSTED));
-    }
-    else {
-        io_needed();
-    }
-    RB_GC_GUARD(wrapper) = TypedData_Make_Struct(rb_cData, struct load_arg, &amp;load_arg_data, arg);
-    arg-&gt;infection = infection;
-    arg-&gt;src = port;
-    arg-&gt;offset = 0;
-    arg-&gt;symbols = st_init_numtable();
-    arg-&gt;data    = st_init_numtable();
-    arg-&gt;compat_tbl = st_init_numtable();
-    arg-&gt;proc = 0;
-    arg-&gt;readable = 0;
-
-    if (NIL_P(v))
-        arg-&gt;buf = xmalloc(BUFSIZ);
-    else
-        arg-&gt;buf = 0;
-
-    major = r_byte(arg);
-    minor = r_byte(arg);
-    if (major != MARSHAL_MAJOR || minor &gt; MARSHAL_MINOR) {
-        clear_load_arg(arg);
-        rb_raise(rb_eTypeError, &quot;incompatible marshal file format (can&#39;t be read)\n\
-\tformat version %d.%d required; %d.%d given&quot;,
-                 MARSHAL_MAJOR, MARSHAL_MINOR, major, minor);
-    }
-    if (RTEST(ruby_verbose) &amp;&amp; minor != MARSHAL_MINOR) {
-        rb_warn(&quot;incompatible marshal file format (can be read)\n\
-\tformat version %d.%d required; %d.%d given&quot;,
-                MARSHAL_MAJOR, MARSHAL_MINOR, major, minor);
-    }
-
-    if (!NIL_P(proc)) arg-&gt;proc = proc;
-    v = r_object(arg);
-    clear_load_arg(arg);
-    RB_GC_GUARD(wrapper);
-
-    return v;
+    rb_check_arity(argc, 1, 2);
+    port = argv[0];
+    proc = argc &gt; 1 ? argv[1] : Qnil;
+    return rb_marshal_load_with_proc(port, proc);
 }</pre>
               </div>
             </div>
@@ -580,4 +456,4 @@ marshal_load(int argc, VALUE *argv)
 
     </div>
   </body>
-</html>    
+</html>

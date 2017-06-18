@@ -15,12 +15,12 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Module</span> 
-            WEBrick::Utils 
+            <span class="type">Module</span>
+            WEBrick::Utils
             
         </h1>
         <ul class="files">
@@ -125,18 +125,6 @@
           </ul>
         </dd>
       
-        <dt>T</dt>
-        <dd>
-          <ul>
-            
-              
-              <li>
-                <a href="#method-c-timeout">timeout</a>
-              </li>
-            
-          </ul>
-        </dd>
-      
     </dl>
   
 
@@ -183,11 +171,11 @@
         <div class="method">
           <div class="title method-title" id="method-c-create_listeners">
             
-              <b>create_listeners</b>(address, port, logger=nil)
+              <b>create_listeners</b>(address, port)
             
             <a href="../../classes/WEBrick/Utils.html#method-c-create_listeners" name="method-c-create_listeners" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Creates TCP server sockets bound to <code>address</code>:<code>port</code>
@@ -196,44 +184,35 @@ and returns them.</p>
 <p>It will create IPV4 and IPV6 sockets on all interfaces.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-create_listeners_source')" id="l_method-c-create_listeners_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/1fc0c08694510e56672bcd5f6a044538467811be/lib/webrick/utils.rb#L61" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-create_listeners_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 71</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">create_listeners</span>(<span class="ruby-identifier">address</span>, <span class="ruby-identifier">port</span>, <span class="ruby-identifier">logger</span>=<span class="ruby-keyword">nil</span>)
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 61</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">create_listeners</span>(<span class="ruby-identifier">address</span>, <span class="ruby-identifier">port</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">port</span>
     <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-string">&quot;must specify port&quot;</span>
   <span class="ruby-keyword">end</span>
-  <span class="ruby-identifier">res</span> = <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-identifier">getaddrinfo</span>(<span class="ruby-identifier">address</span>, <span class="ruby-identifier">port</span>,
-                            <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_UNSPEC</span>,   <span class="ruby-comment"># address family</span>
-                            <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">SOCK_STREAM</span>, <span class="ruby-comment"># socket type</span>
-                            <span class="ruby-number">0</span>,                   <span class="ruby-comment"># protocol</span>
-                            <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AI_PASSIVE</span>)  <span class="ruby-comment"># flag</span>
-  <span class="ruby-identifier">last_error</span> = <span class="ruby-keyword">nil</span>
-  <span class="ruby-identifier">sockets</span> = []
-  <span class="ruby-identifier">res</span>.<span class="ruby-identifier">each</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">ai</span><span class="ruby-operator">|</span>
-    <span class="ruby-keyword">begin</span>
-      <span class="ruby-identifier">logger</span>.<span class="ruby-identifier">debug</span>(<span class="ruby-node">&quot;TCPServer.new(#{ai[3]}, #{port})&quot;</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">logger</span>
-      <span class="ruby-identifier">sock</span> = <span class="ruby-constant">TCPServer</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">ai</span>[<span class="ruby-number">3</span>], <span class="ruby-identifier">port</span>)
-      <span class="ruby-identifier">port</span> = <span class="ruby-identifier">sock</span>.<span class="ruby-identifier">addr</span>[<span class="ruby-number">1</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">port</span> <span class="ruby-operator">==</span> <span class="ruby-number">0</span>
-      <span class="ruby-constant">Utils</span><span class="ruby-operator">::</span><span class="ruby-identifier">set_close_on_exec</span>(<span class="ruby-identifier">sock</span>)
-      <span class="ruby-identifier">sockets</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">sock</span>
-    <span class="ruby-keyword">rescue</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">ex</span>
-      <span class="ruby-identifier">logger</span>.<span class="ruby-identifier">warn</span>(<span class="ruby-node">&quot;TCPServer Error: #{ex}&quot;</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">logger</span>
-      <span class="ruby-identifier">last_error</span>  = <span class="ruby-identifier">ex</span>
-    <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">sockets</span> = <span class="ruby-constant">Socket</span>.<span class="ruby-identifier">tcp_server_sockets</span>(<span class="ruby-identifier">address</span>, <span class="ruby-identifier">port</span>)
+  <span class="ruby-identifier">sockets</span> = <span class="ruby-identifier">sockets</span>.<span class="ruby-identifier">map</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">s</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">s</span>.<span class="ruby-identifier">autoclose</span> = <span class="ruby-keyword">false</span>
+    <span class="ruby-identifier">ts</span> = <span class="ruby-constant">TCPServer</span>.<span class="ruby-identifier">for_fd</span>(<span class="ruby-identifier">s</span>.<span class="ruby-identifier">fileno</span>)
+    <span class="ruby-identifier">s</span>.<span class="ruby-identifier">close</span>
+    <span class="ruby-identifier">ts</span>
   }
-  <span class="ruby-identifier">raise</span> <span class="ruby-identifier">last_error</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">sockets</span>.<span class="ruby-identifier">empty?</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">sockets</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -248,7 +227,7 @@ and returns them.</p>
             
             <a href="../../classes/WEBrick/Utils.html#method-c-create_self_signed_cert" name="method-c-create_self_signed_cert" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Creates a self-signed certificate with the given number of
@@ -256,20 +235,24 @@ and returns them.</p>
 be stored in the certificate.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-create_self_signed_cert_source')" id="l_method-c-create_self_signed_cert_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/a6e805f75e308d2b29450b1eb5c0fe960aa412de/lib/webrick/ssl.rb#L95" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-create_self_signed_cert_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/ssl.rb, line 91</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/ssl.rb, line 95</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">create_self_signed_cert</span>(<span class="ruby-identifier">bits</span>, <span class="ruby-identifier">cn</span>, <span class="ruby-identifier">comment</span>)
   <span class="ruby-identifier">rsa</span> = <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">RSA</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">bits</span>){<span class="ruby-operator">|</span><span class="ruby-identifier">p</span>, <span class="ruby-identifier">n</span><span class="ruby-operator">|</span>
     <span class="ruby-keyword">case</span> <span class="ruby-identifier">p</span>
@@ -286,7 +269,8 @@ be stored in the certificate.</p>
   <span class="ruby-identifier">cert</span> = <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">X509</span><span class="ruby-operator">::</span><span class="ruby-constant">Certificate</span>.<span class="ruby-identifier">new</span>
   <span class="ruby-identifier">cert</span>.<span class="ruby-identifier">version</span> = <span class="ruby-number">2</span>
   <span class="ruby-identifier">cert</span>.<span class="ruby-identifier">serial</span> = <span class="ruby-number">1</span>
-  <span class="ruby-identifier">name</span> = <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">X509</span><span class="ruby-operator">::</span><span class="ruby-constant">Name</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">cn</span>)
+  <span class="ruby-identifier">name</span> = (<span class="ruby-identifier">cn</span>.<span class="ruby-identifier">kind_of?</span> <span class="ruby-constant">String</span>) <span class="ruby-operator">?</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">X509</span><span class="ruby-operator">::</span><span class="ruby-constant">Name</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">cn</span>)
+                              <span class="ruby-operator">:</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">X509</span><span class="ruby-operator">::</span><span class="ruby-constant">Name</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">cn</span>)
   <span class="ruby-identifier">cert</span>.<span class="ruby-identifier">subject</span> = <span class="ruby-identifier">name</span>
   <span class="ruby-identifier">cert</span>.<span class="ruby-identifier">issuer</span> = <span class="ruby-identifier">name</span>
   <span class="ruby-identifier">cert</span>.<span class="ruby-identifier">not_before</span> = <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>
@@ -321,26 +305,30 @@ be stored in the certificate.</p>
             
             <a href="../../classes/WEBrick/Utils.html#method-c-getservername" name="method-c-getservername" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>The server hostname</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-getservername_source')" id="l_method-c-getservername_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/1fc0c08694510e56672bcd5f6a044538467811be/lib/webrick/utils.rb#L47" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-getservername_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 57</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 47</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">getservername</span>
   <span class="ruby-identifier">host</span> = <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-identifier">gethostname</span>
   <span class="ruby-keyword">begin</span>
@@ -361,26 +349,30 @@ be stored in the certificate.</p>
             
             <a href="../../classes/WEBrick/Utils.html#method-c-random_string" name="method-c-random_string" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Generates a random string of length <code>len</code></p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-random_string_source')" id="l_method-c-random_string_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/1fc0c08694510e56672bcd5f6a044538467811be/lib/webrick/utils.rb#L84" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-random_string_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 107</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 84</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">random_string</span>(<span class="ruby-identifier">len</span>)
   <span class="ruby-identifier">rand_max</span> = <span class="ruby-constant">RAND_CHARS</span>.<span class="ruby-identifier">bytesize</span>
   <span class="ruby-identifier">ret</span> = <span class="ruby-string">&quot;&quot;</span>
@@ -399,30 +391,32 @@ be stored in the certificate.</p>
             
             <a href="../../classes/WEBrick/Utils.html#method-c-set_close_on_exec" name="method-c-set_close_on_exec" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Sets the close on exec flag for <code>io</code></p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-set_close_on_exec_source')" id="l_method-c-set_close_on_exec_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/1fc0c08694510e56672bcd5f6a044538467811be/lib/webrick/utils.rb#L27" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-set_close_on_exec_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 34</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 27</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">set_close_on_exec</span>(<span class="ruby-identifier">io</span>)
-  <span class="ruby-keyword">if</span> <span class="ruby-keyword">defined?</span>(<span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">FD_CLOEXEC</span>)
-    <span class="ruby-identifier">io</span>.<span class="ruby-identifier">fcntl</span>(<span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">F_SETFD</span>, <span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">FD_CLOEXEC</span>)
-  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">io</span>.<span class="ruby-identifier">close_on_exec</span> = <span class="ruby-keyword">true</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">io</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:close_on_exec=</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -436,33 +430,33 @@ be stored in the certificate.</p>
             
             <a href="../../classes/WEBrick/Utils.html#method-c-set_non_blocking" name="method-c-set_non_blocking" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Sets <a href="../IO.html">IO</a> operations on <code>io</code> to be
 non-blocking</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-set_non_blocking_source')" id="l_method-c-set_non_blocking_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/1fc0c08694510e56672bcd5f6a044538467811be/lib/webrick/utils.rb#L20" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-set_non_blocking_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 23</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 20</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">set_non_blocking</span>(<span class="ruby-identifier">io</span>)
-  <span class="ruby-identifier">flag</span> = <span class="ruby-constant">File</span><span class="ruby-operator">::</span><span class="ruby-constant">NONBLOCK</span>
-  <span class="ruby-keyword">if</span> <span class="ruby-keyword">defined?</span>(<span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">F_GETFL</span>)
-    <span class="ruby-identifier">flag</span> <span class="ruby-operator">|=</span> <span class="ruby-identifier">io</span>.<span class="ruby-identifier">fcntl</span>(<span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">F_GETFL</span>)
-  <span class="ruby-keyword">end</span>
-  <span class="ruby-identifier">io</span>.<span class="ruby-identifier">fcntl</span>(<span class="ruby-constant">Fcntl</span><span class="ruby-operator">::</span><span class="ruby-constant">F_SETFL</span>, <span class="ruby-identifier">flag</span>)
+  <span class="ruby-identifier">io</span>.<span class="ruby-identifier">nonblock</span> = <span class="ruby-keyword">true</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">io</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:nonblock=</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -476,29 +470,32 @@ non-blocking</p>
             
             <a href="../../classes/WEBrick/Utils.html#method-c-su" name="method-c-su" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Changes the process&#39;s uid and gid to the ones of <code>user</code></p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-su_source')" id="l_method-c-su_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/1fc0c08694510e56672bcd5f6a044538467811be/lib/webrick/utils.rb#L34" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-su_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 43</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 34</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">su</span>(<span class="ruby-identifier">user</span>)
-  <span class="ruby-keyword">if</span> <span class="ruby-keyword">defined?</span>(<span class="ruby-constant">Etc</span>)
-    <span class="ruby-identifier">pw</span> = <span class="ruby-constant">Etc</span>.<span class="ruby-identifier">getpwnam</span>(<span class="ruby-identifier">user</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">pw</span> = <span class="ruby-constant">Etc</span>.<span class="ruby-identifier">getpwnam</span>(<span class="ruby-identifier">user</span>)
     <span class="ruby-constant">Process</span><span class="ruby-operator">::</span><span class="ruby-identifier">initgroups</span>(<span class="ruby-identifier">user</span>, <span class="ruby-identifier">pw</span>.<span class="ruby-identifier">gid</span>)
     <span class="ruby-constant">Process</span><span class="ruby-operator">::</span><span class="ruby-constant">Sys</span><span class="ruby-operator">::</span><span class="ruby-identifier">setgid</span>(<span class="ruby-identifier">pw</span>.<span class="ruby-identifier">gid</span>)
     <span class="ruby-constant">Process</span><span class="ruby-operator">::</span><span class="ruby-constant">Sys</span><span class="ruby-operator">::</span><span class="ruby-identifier">setuid</span>(<span class="ruby-identifier">pw</span>.<span class="ruby-identifier">uid</span>)
@@ -510,53 +507,8 @@ non-blocking</p>
             </div>
             
           </div>
-        
-        <div class="method">
-          <div class="title method-title" id="method-c-timeout">
-            
-              <b>timeout</b>(seconds, exception=Timeout::Error)
-            
-            <a href="../../classes/WEBrick/Utils.html#method-c-timeout" name="method-c-timeout" class="permalink">Link</a>
-          </div>
-          
-          
-            <div class="description">
-              <p>Executes the passed block and raises <code>exception</code> if execution
-takes more than <code>seconds</code>.</p>
-
-<p>If <code>seconds</code> is zero or nil, simply executes the block</p>
-            </div>
-          
-          
-          
-          
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source: 
-                <a href="javascript:toggleSource('method-c-timeout_source')" id="l_method-c-timeout_source">show</a>
-                
-              </p>
-              <div id="method-c-timeout_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/utils.rb, line 234</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">timeout</span>(<span class="ruby-identifier">seconds</span>, <span class="ruby-identifier">exception</span>=<span class="ruby-constant">Timeout</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>)
-  <span class="ruby-keyword">return</span> <span class="ruby-keyword">yield</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">seconds</span>.<span class="ruby-identifier">nil?</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">seconds</span>.<span class="ruby-identifier">zero?</span>
-  <span class="ruby-comment"># raise ThreadError, &quot;timeout within critical session&quot; if Thread.critical</span>
-  <span class="ruby-identifier">id</span> = <span class="ruby-constant">TimeoutHandler</span>.<span class="ruby-identifier">register</span>(<span class="ruby-identifier">seconds</span>, <span class="ruby-identifier">exception</span>)
-  <span class="ruby-keyword">begin</span>
-    <span class="ruby-keyword">yield</span>(<span class="ruby-identifier">seconds</span>)
-  <span class="ruby-keyword">ensure</span>
-    <span class="ruby-constant">TimeoutHandler</span>.<span class="ruby-identifier">cancel</span>(<span class="ruby-identifier">id</span>)
-  <span class="ruby-keyword">end</span>
-<span class="ruby-keyword">end</span></pre>
-              </div>
-            </div>
-            
-          </div>
                         </div>
 
     </div>
   </body>
-</html>    
+</html>

@@ -15,7 +15,7 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
@@ -26,8 +26,10 @@
             <li>
                 rails/activemodel/README.rdoc
                 
+                    <a href="https://github.com/rails/rails/blob/6bd417df5075f1006557f6d9e44b5a9637015c70/activemodel/README.rdoc" target="_blank" class="github_url">on GitHub</a>
+                
             </li>
-            <li>Last modified: 2013-06-09 12:42:18 +0300</li>
+            <li>Last modified: 2017-06-18 10:05:11 +0300</li>
         </ul>
     </div>
 
@@ -93,6 +95,7 @@ behavior out of the box:</p>
   end
 end
 
+person = Person.new
 person.clear_name
 person.clear_age
 </code></pre>
@@ -123,7 +126,21 @@ end
 <pre><code>class Person
   include ActiveModel::Dirty
 
-  attr_accessor :name
+  define_attribute_methods :name
+
+  def name
+    @name
+  end
+
+  def name=(val)
+    name_will_change! unless val == @name
+    @name = val
+  end
+
+  def save
+    # do persistence work
+    changes_applied
+  end
 end
 
 person = Person.new
@@ -133,6 +150,7 @@ person.name = &#39;bob&#39;
 person.changed?         # =&gt; true
 person.changed          # =&gt; [&#39;name&#39;]
 person.changes          # =&gt; { &#39;name&#39; =&gt; [nil, &#39;bob&#39;] }
+person.save
 person.name = &#39;robert&#39;
 person.save
 person.previous_changes # =&gt; {&#39;name&#39; =&gt; [&#39;bob, &#39;robert&#39;]}
@@ -155,7 +173,7 @@ seamlessly.</p>
   attr_reader   :errors
 
   def validate!
-    errors.add(:name, &quot;can not be nil&quot;) if name.nil?
+    errors.add(:name, &quot;cannot be nil&quot;) if name.nil?
   end
 
   def self.human_attribute_name(attr, options = {})
@@ -163,8 +181,11 @@ seamlessly.</p>
   end
 end
 
+person = Person.new
+person.name = nil
+person.validate!
 person.errors.full_messages
-# =&gt; [&quot;Name can not be nil&quot;]
+# =&gt; [&quot;Name cannot be nil&quot;]
 </code></pre>
 
 <p><a href="../../../classes/ActiveModel/Errors.html">Learn more</a></p>
@@ -175,7 +196,7 @@ person.errors.full_messages
   extend ActiveModel::Naming
 end
 
-NamedPerson.model_name        # =&gt; &quot;NamedPerson&quot;
+NamedPerson.model_name.name   # =&gt; &quot;NamedPerson&quot;
 NamedPerson.model_name.human  # =&gt; &quot;Named person&quot;
 </code></pre>
 
@@ -183,10 +204,8 @@ NamedPerson.model_name.human  # =&gt; &quot;Named person&quot;
 </li><li>
 <p>Making objects serializable</p>
 
-<p><a
-href="../../../classes/ActiveModel/Serialization.html">ActiveModel::Serialization</a>
-provides a standard interface for your object to provide
-<code>to_json</code> or <code>to_xml</code> serialization.</p>
+<p><code>ActiveModel::Serialization</code> provides a standard interface for
+your object to provide <code>to_json</code> serialization.</p>
 
 <pre><code>class SerialPerson
   include ActiveModel::Serialization
@@ -207,13 +226,6 @@ end
 
 s = SerialPerson.new
 s.to_json             # =&gt; &quot;{\&quot;name\&quot;:null}&quot;
-
-class SerialPerson
-  include ActiveModel::Serializers::Xml
-end
-
-s = SerialPerson.new
-s.to_xml              # =&gt; &quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;\n&lt;serial-person...
 </code></pre>
 
 <p><a href="../../../classes/ActiveModel/Serialization.html">Learn more</a></p>
@@ -251,16 +263,16 @@ person.valid?  # =&gt; false
 </li><li>
 <p>Custom validators</p>
 
-<pre><code>class ValidatorPerson
+<pre><code>class HasNameValidator &lt; ActiveModel::Validator
+  def validate(record)
+    record.errors.add(:name, &quot;must exist&quot;) if record.name.blank?
+  end
+end
+
+class ValidatorPerson
   include ActiveModel::Validations
   validates_with HasNameValidator
   attr_accessor :name
-end
-
-class HasNameValidator &lt; ActiveModel::Validator
-  def validate(record)
-    record.errors[:name] = &quot;must exist&quot; if record.name.blank?
-  end
 end
 
 p = ValidatorPerson.new
@@ -277,7 +289,7 @@ p.valid?                  # =&gt;  true
 
 <p>The latest version of Active Model can be installed with RubyGems:</p>
 
-<pre><code>% [sudo] gem install activemodel</code></pre>
+<pre><code>$ gem install activemodel</code></pre>
 
 <p>Source code can be downloaded as part of the <a
 href="../../../classes/Rails.html">Rails</a> project on GitHub</p>
@@ -301,11 +313,17 @@ href="http://www.opensource.org/licenses/MIT">www.opensource.org/licenses/MIT</a
 <p><a href="http://api.rubyonrails.org">api.rubyonrails.org</a></p>
 </li></ul>
 
-<p>Bug reports and feature requests can be filed with the rest for the Ruby on
-<a href="../../../classes/Rails.html">Rails</a> project here:</p>
+<p>Bug reports can be filed for the Ruby on <a
+href="../../../classes/Rails.html">Rails</a> project here:</p>
 <ul><li>
 <p><a
 href="https://github.com/rails/rails/issues">github.com/rails/rails/issues</a></p>
+</li></ul>
+
+<p>Feature requests should be discussed on the rails-core mailing list here:</p>
+<ul><li>
+<p><a
+href="https://groups.google.com/forum/?fromgroups#!forum/rubyonrails-core">groups.google.com/forum/?fromgroups#!forum/rubyonrails-core</a></p>
 </li></ul>
 
     </div>

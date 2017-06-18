@@ -15,7 +15,7 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
@@ -26,8 +26,10 @@
             <li>
                 ruby/doc/syntax/refinements.rdoc
                 
+                    <a href="https://github.com/ruby/ruby/blob/07efce075bd580e9bcb52b2e67b5489a1b10adde/doc/syntax/refinements.rdoc" target="_blank" class="github_url">on GitHub</a>
+                
             </li>
-            <li>Last modified: 2013-06-09 13:45:34 +0300</li>
+            <li>Last modified: 2017-06-18 10:06:54 +0300</li>
         </ul>
     </div>
 
@@ -47,11 +49,6 @@ programs.</p>
 <p>Refinements are designed to reduce the impact of monkey patching on other
 users of the monkey-patched class.  Refinements provide a way to extend a
 class locally.</p>
-
-<p>Refinements are an experimental feature in Ruby 2.0.  At the time of
-writing, refinements are expected to exist in future versions of Ruby but
-the specification of refinements may change.  You will receive a warning
-the first time you define or activate a refinement.</p>
 
 <p>Here is a basic refinement:</p>
 
@@ -84,21 +81,30 @@ href="../../../../classes/Module.html#method-i-module_eval">Module#module_eval</
 
 <pre><code>using M
 
-x = C.new
+c = C.new
 
-c.foo # prints &quot;C#foo in M&quot;</code></pre>
+c.foo # prints &quot;C#foo in M&quot;
+</code></pre>
 
 <h2 id="label-Scope">Scope</h2>
 
-<p>You may only activate refinements at top-level to the end of the file or in
-a string passed to <a
-href="../../../../classes/Kernel.html#method-i-eval">Kernel#eval</a>,
-Kernel#instance_eval or Kernel#module_eval until the end of the string.</p>
+<p>You may activate refinements at top-level, and inside classes and modules.
+You may not activate refinements in method scope.  Refinements are
+activated until the end of the current class or module definition, or until
+the end of the current file if used at the top-level.</p>
 
-<p>Refinements are lexical in scope.  When control is transferred outside the
-scope the refinement is deactivated.  This means that if you require or
-load a file or call a method that is defined outside the current scope the
-refinement will be deactivated:</p>
+<p>You may activate refinements in a string passed to <a
+href="../../../../classes/Kernel.html#method-i-eval">Kernel#eval</a>.
+Refinements are active the end of the eval string.</p>
+
+<p>Refinements are lexical in scope.  Refinements are only active within a
+scope after the call to using. Any code before the using statement will not
+have the refinement activated.</p>
+
+<p>When control is transferred outside the scope the refinement is
+deactivated. This means that if you require or load a file or call a method
+that is defined outside the current scope the refinement will be
+deactivated:</p>
 
 <pre><code>class C
 end
@@ -191,6 +197,27 @@ end
 # activated here
 </code></pre>
 
+<p>In a class:</p>
+
+<pre><code># not activated here
+class Foo
+  # not activated here
+  def foo
+    # not activated here
+  end
+  using M
+  # activated here
+  def bar
+    # activated here
+  end
+  # activated here
+end
+# not activated here
+</code></pre>
+
+<p>Note that the refinements in M are not activated automatically if the class
+Foo is reopened later.</p>
+
 <p>In eval:</p>
 
 <pre><code># not activated here
@@ -199,7 +226,8 @@ eval &lt;&lt;EOF
   using M
   # activated here
 EOF
-# not activated here</code></pre>
+# not activated here
+</code></pre>
 
 <p>When not evaluated:</p>
 
@@ -207,7 +235,8 @@ EOF
 if false
   using M
 end
-# not activated here</code></pre>
+# not activated here
+</code></pre>
 
 <p>When defining multiple refinements in the same module, inside a refine
 block all refinements from the same module are active when a refined method
@@ -306,7 +335,7 @@ during method lookup.</p>
 <h2 id="label-Further+Reading">Further Reading</h2>
 
 <p>See <a
-href="http://bugs.ruby-lang.org/projects/ruby-trunk/wiki/RefinementsSpec">bugs.ruby-lang.org/projects/ruby-trunk/wiki/RefinementsSpec</a>
+href="https://bugs.ruby-lang.org/projects/ruby-trunk/wiki/RefinementsSpec">bugs.ruby-lang.org/projects/ruby-trunk/wiki/RefinementsSpec</a>
 for the current specification for implementing refinements.  The
 specification also contains more details.</p>
 

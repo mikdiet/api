@@ -15,14 +15,14 @@
 
 </head>
 
-<body>     
+<body>
     <div class="banner">
         
         <h1>
-            <span class="type">Class</span> 
-            OpenSSL::PKey::PKey 
+            <span class="type">Class</span>
+            OpenSSL::PKey::PKey
             
-                <span class="parent">&lt; 
+                <span class="parent">&lt;
                     
                     <a href="../../Object.html">Object</a>
                     
@@ -137,22 +137,24 @@ href="DH.html">OpenSSL::PKey::DH</a></p>
             
             <a href="../../../classes/OpenSSL/PKey/PKey.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>Because <a href="PKey.html">PKey</a> is an abstract class, actually calling
 this method explicitly will raise a <code>NotImplementedError</code>.</p>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
               </p>
@@ -161,7 +163,7 @@ this method explicitly will raise a <code>NotImplementedError</code>.</p>
 ossl_pkey_initialize(VALUE self)
 {
     if (rb_obj_is_instance_of(self, cPKey)) {
-        ossl_raise(rb_eNotImpError, &quot;OpenSSL::PKey::PKey is an abstract class.&quot;);
+        ossl_raise(rb_eTypeError, &quot;OpenSSL::PKey::PKey can&#39;t be instantiated directly&quot;);
     }
     return self;
 }</pre>
@@ -180,7 +182,7 @@ ossl_pkey_initialize(VALUE self)
             
             <a href="../../../classes/OpenSSL/PKey/PKey.html#method-i-sign" name="method-i-sign" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>To sign the <code>String</code> <code>data</code>, <code>digest</code>, an
@@ -196,18 +198,21 @@ the operation.</p>
 <pre><code>data = &#39;Sign me!&#39;
 digest = OpenSSL::Digest::SHA256.new
 pkey = OpenSSL::PKey::RSA.new(2048)
-signature = pkey.sign(digest, data)</code></pre>
+signature = pkey.sign(digest, data)
+</code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-sign_source')" id="l_method-i-sign_source">show</a>
                 
               </p>
@@ -216,21 +221,32 @@ signature = pkey.sign(digest, data)</code></pre>
 ossl_pkey_sign(VALUE self, VALUE digest, VALUE data)
 {
     EVP_PKEY *pkey;
-    EVP_MD_CTX ctx;
+    const EVP_MD *md;
+    EVP_MD_CTX *ctx;
     unsigned int buf_len;
     VALUE str;
+    int result;
 
-    if (rb_funcall(self, id_private_q, 0, NULL) != Qtrue) {
-        ossl_raise(rb_eArgError, &quot;Private key is needed.&quot;);
-    }
-    GetPKey(self, pkey);
-    EVP_SignInit(&amp;ctx, GetDigestPtr(digest));
+    pkey = GetPrivPKeyPtr(self);
+    md = GetDigestPtr(digest);
     StringValue(data);
-    EVP_SignUpdate(&amp;ctx, RSTRING_PTR(data), RSTRING_LEN(data));
-    str = rb_str_new(0, EVP_PKEY_size(pkey)+16);
-    if (!EVP_SignFinal(&amp;ctx, (unsigned char *)RSTRING_PTR(str), &amp;buf_len, pkey))
-        ossl_raise(ePKeyError, NULL);
-    assert((long)buf_len &lt;= RSTRING_LEN(str));
+    str = rb_str_new(0, EVP_PKEY_size(pkey));
+
+    ctx = EVP_MD_CTX_new();
+    if (!ctx)
+        ossl_raise(ePKeyError, &quot;EVP_MD_CTX_new&quot;);
+    if (!EVP_SignInit_ex(ctx, md, NULL)) {
+        EVP_MD_CTX_free(ctx);
+        ossl_raise(ePKeyError, &quot;EVP_SignInit_ex&quot;);
+    }
+    if (!EVP_SignUpdate(ctx, RSTRING_PTR(data), RSTRING_LEN(data))) {
+        EVP_MD_CTX_free(ctx);
+        ossl_raise(ePKeyError, &quot;EVP_SignUpdate&quot;);
+    }
+    result = EVP_SignFinal(ctx, (unsigned char *)RSTRING_PTR(str), &amp;buf_len, pkey);
+    EVP_MD_CTX_free(ctx);
+    if (!result)
+        ossl_raise(ePKeyError, &quot;EVP_SignFinal&quot;);
     rb_str_set_len(str, buf_len);
 
     return str;
@@ -248,7 +264,7 @@ ossl_pkey_sign(VALUE self, VALUE digest, VALUE data)
             
             <a href="../../../classes/OpenSSL/PKey/PKey.html#method-i-verify" name="method-i-verify" class="permalink">Link</a>
           </div>
-          
+
           
             <div class="description">
               <p>To verify the <code>String</code> <code>signature</code>,
@@ -273,15 +289,17 @@ puts pub_key.verify(digest, signature, data) # =&gt; true
 </code></pre>
             </div>
           
+
           
+
           
-          
+
           
             
             <div class="sourcecode">
               
               <p class="source-link">
-                Source: 
+                Source:
                 <a href="javascript:toggleSource('method-i-verify_source')" id="l_method-i-verify_source">show</a>
                 
               </p>
@@ -290,22 +308,39 @@ puts pub_key.verify(digest, signature, data) # =&gt; true
 ossl_pkey_verify(VALUE self, VALUE digest, VALUE sig, VALUE data)
 {
     EVP_PKEY *pkey;
-    EVP_MD_CTX ctx;
+    const EVP_MD *md;
+    EVP_MD_CTX *ctx;
+    int siglen, result;
 
     GetPKey(self, pkey);
-    EVP_VerifyInit(&amp;ctx, GetDigestPtr(digest));
+    pkey_check_public_key(pkey);
+    md = GetDigestPtr(digest);
     StringValue(sig);
+    siglen = RSTRING_LENINT(sig);
     StringValue(data);
-    EVP_VerifyUpdate(&amp;ctx, RSTRING_PTR(data), RSTRING_LEN(data));
-    switch (EVP_VerifyFinal(&amp;ctx, (unsigned char *)RSTRING_PTR(sig), RSTRING_LENINT(sig), pkey)) {
+
+    ctx = EVP_MD_CTX_new();
+    if (!ctx)
+        ossl_raise(ePKeyError, &quot;EVP_MD_CTX_new&quot;);
+    if (!EVP_VerifyInit_ex(ctx, md, NULL)) {
+        EVP_MD_CTX_free(ctx);
+        ossl_raise(ePKeyError, &quot;EVP_VerifyInit_ex&quot;);
+    }
+    if (!EVP_VerifyUpdate(ctx, RSTRING_PTR(data), RSTRING_LEN(data))) {
+        EVP_MD_CTX_free(ctx);
+        ossl_raise(ePKeyError, &quot;EVP_VerifyUpdate&quot;);
+    }
+    result = EVP_VerifyFinal(ctx, (unsigned char *)RSTRING_PTR(sig), siglen, pkey);
+    EVP_MD_CTX_free(ctx);
+    switch (result) {
     case 0:
+        ossl_clear_error();
         return Qfalse;
     case 1:
         return Qtrue;
     default:
-        ossl_raise(ePKeyError, NULL);
+        ossl_raise(ePKeyError, &quot;EVP_VerifyFinal&quot;);
     }
-    return Qnil; /* dummy */
 }</pre>
               </div>
             </div>
@@ -315,4 +350,4 @@ ossl_pkey_verify(VALUE self, VALUE digest, VALUE sig, VALUE data)
 
     </div>
   </body>
-</html>    
+</html>
