@@ -4,7 +4,7 @@ lock "~> 3.11.0"
 load File.expand_path('../recipes/nginx.rb', __FILE__)
 
 set :application, "api"
-set :repo_url, "git@github.com:Mik-die/api.git"
+set :repo_url, "git@github.com:mikdiet/api.git"
 set :subdomains, %w(api.rusrails.ru new-api.rusrails.ru)
 set :local_user, 'admin'
 set :use_sudo, false
