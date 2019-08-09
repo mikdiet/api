@@ -1,18 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <title>IPSocket</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="../css/reset.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../css/main.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../css/github.css" type="text/css" media="screen" />
 <script src="../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
 <script src="../js/main.js" type="text/javascript" charset="utf-8"></script>
 <script src="../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
 
+
+    <meta property="og:title" value="IPSocket">
+
+  
+    
+    <meta name="description" content="IPSocket is the super class of TCPSocket and UDPSocket.">
+    <meta property="og:description" content="IPSocket is the super class of TCPSocket and UDPSocket.">
+  
+
+    <meta name="keywords" content="IPSocket class">
+  
+    <meta name="keywords" content="inspect, addr, peeraddr, recvfrom, getaddress">
+  
 </head>
 
 <body>
@@ -40,9 +50,7 @@
   
     <div class="description">
       
-<p><a href="IPSocket.html">IPSocket</a> is the super class of <a
-href="TCPSocket.html">TCPSocket</a> and <a
-href="UDPSocket.html">UDPSocket</a>.</p>
+<p><a href="IPSocket.html"><code>IPSocket</code></a> is the super class of <a href="TCPSocket.html"><code>TCPSocket</code></a> and <a href="UDPSocket.html"><code>UDPSocket</code></a>.</p>
 
     </div>
   
@@ -82,6 +90,18 @@ href="UDPSocket.html">UDPSocket</a>.</p>
               
               <li>
                 <a href="#method-c-getaddress">getaddress</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>I</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-inspect">inspect</a>
               </li>
             
           </ul>
@@ -190,7 +210,9 @@ ip_s_getaddress(VALUE obj, VALUE host)
             </div>
             
           </div>
-                  
+        
+      
+    
       <div class="sectiontitle">Instance Public methods</div>
       
         <div class="method">
@@ -204,15 +226,9 @@ ip_s_getaddress(VALUE obj, VALUE host)
 
           
             <div class="description">
-              <p>Returns the local address as an array which contains address_family, port,
-hostname and numeric_address.</p>
+              <p>Returns the local address as an array which contains address_family, port, hostname and numeric_address.</p>
 
-<p>If <code>reverse_lookup</code> is <code>true</code> or
-<code>:hostname</code>, hostname is obtained from numeric_address using
-reverse lookup. Or if it is <code>false</code>, or <code>:numeric</code>,
-hostname is same as numeric_address. Or if it is <code>nil</code> or
-omitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See
-<code>Socket.getaddrinfo</code> also.</p>
+<p>If <code>reverse_lookup</code> is <code>true</code> or <code>:hostname</code>, hostname is obtained from numeric_address using reverse lookup. Or if it is <code>false</code>, or <code>:numeric</code>, hostname is same as numeric_address. Or if it is <code>nil</code> or omitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See <code>Socket.getaddrinfo</code> also.</p>
 
 <pre><code>TCPSocket.open(&quot;www.ruby-lang.org&quot;, 80) {|sock|
   p sock.addr #=&gt; [&quot;AF_INET&quot;, 49429, &quot;hal&quot;, &quot;192.168.0.128&quot;]
@@ -261,6 +277,70 @@ ip_addr(int argc, VALUE *argv, VALUE sock)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-i-inspect">
+            
+              <b>ipsocket.inspect   &rarr; string
+</b>
+            
+            <a href="../classes/IPSocket.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Return a string describing this <a href="IPSocket.html"><code>IPSocket</code></a> object.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
+                
+              </p>
+              <div id="method-i-inspect_source" class="dyn-source">
+                <pre>static VALUE
+ip_inspect(VALUE sock)
+{
+    VALUE str = rb_call_super(0, 0);
+    rb_io_t *fptr = RFILE(sock)-&gt;fptr;
+    union_sockaddr addr;
+    socklen_t len = (socklen_t)sizeof addr;
+    ID id;
+    if (fptr &amp;&amp; fptr-&gt;fd &gt;= 0 &amp;&amp;
+        getsockname(fptr-&gt;fd, &amp;addr.addr, &amp;len) &gt;= 0 &amp;&amp;
+        (id = rsock_intern_family(addr.addr.sa_family)) != 0) {
+        VALUE family = rb_id2str(id);
+        char hbuf[1024], pbuf[1024];
+        long slen = RSTRING_LEN(str);
+        const char last = (slen &gt; 1 &amp;&amp; RSTRING_PTR(str)[slen - 1] == &#39;&gt;&#39;) ?
+            (--slen, &#39;&gt;&#39;) : 0;
+        str = rb_str_subseq(str, 0, slen);
+        rb_str_cat_cstr(str, &quot;, &quot;);
+        rb_str_append(str, family);
+        if (!rb_getnameinfo(&amp;addr.addr, len, hbuf, sizeof(hbuf),
+                            pbuf, sizeof(pbuf), NI_NUMERICHOST | NI_NUMERICSERV)) {
+            rb_str_cat_cstr(str, &quot;, &quot;);
+            rb_str_cat_cstr(str, hbuf);
+            rb_str_cat_cstr(str, &quot;, &quot;);
+            rb_str_cat_cstr(str, pbuf);
+        }
+        if (last) rb_str_cat(str, &amp;last, 1);
+    }
+    return str;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-i-peeraddr">
             
               <b>ipsocket.peeraddr([reverse_lookup]) => [address_family, port, hostname, numeric_address]
@@ -271,16 +351,9 @@ ip_addr(int argc, VALUE *argv, VALUE sock)
 
           
             <div class="description">
-              <p>Returns the remote address as an array which contains address_family, port,
-hostname and numeric_address. It is defined for connection oriented socket
-such as <a href="TCPSocket.html">TCPSocket</a>.</p>
+              <p>Returns the remote address as an array which contains address_family, port, hostname and numeric_address. It is defined for connection oriented socket such as <a href="TCPSocket.html"><code>TCPSocket</code></a>.</p>
 
-<p>If <code>reverse_lookup</code> is <code>true</code> or
-<code>:hostname</code>, hostname is obtained from numeric_address using
-reverse lookup. Or if it is <code>false</code>, or <code>:numeric</code>,
-hostname is same as numeric_address. Or if it is <code>nil</code> or
-omitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See
-<code>Socket.getaddrinfo</code> also.</p>
+<p>If <code>reverse_lookup</code> is <code>true</code> or <code>:hostname</code>, hostname is obtained from numeric_address using reverse lookup. Or if it is <code>false</code>, or <code>:numeric</code>, hostname is same as numeric_address. Or if it is <code>nil</code> or omitted, obeys to <code>ipsocket.do_not_reverse_lookup</code>. See <code>Socket.getaddrinfo</code> also.</p>
 
 <pre><code>TCPSocket.open(&quot;www.ruby-lang.org&quot;, 80) {|sock|
   p sock.peeraddr #=&gt; [&quot;AF_INET&quot;, 80, &quot;carbon.ruby-lang.org&quot;, &quot;221.186.184.68&quot;]
@@ -339,8 +412,7 @@ ip_peeraddr(int argc, VALUE *argv, VALUE sock)
 
           
             <div class="description">
-              <p>Receives a message and return the message as a string and an address which
-the message come from.</p>
+              <p>Receives a message and return the message as a string and an address which the message come from.</p>
 
 <p><em>maxlen</em> is the maximum number of bytes to receive.</p>
 
@@ -380,7 +452,11 @@ ip_recvfrom(int argc, VALUE *argv, VALUE sock)
             </div>
             
           </div>
-                    </div>
+        
+      
+    
+  
+</div>
 
     </div>
   </body>

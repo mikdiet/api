@@ -1,18 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <title>Module::Concerning</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="../../css/reset.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../css/main.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../css/github.css" type="text/css" media="screen" />
 <script src="../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../js/main.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
 
+
+    <meta property="og:title" value="Module::Concerning">
+
+  
+    
+    <meta name="description" content="Bite-sized separation of concerns  We often find ourselves with a medium-sized chunk of behavior that we&#39;d like to extract, but only mix in to a single class.">
+    <meta property="og:description" content="Bite-sized separation of concerns  We often find ourselves with a medium-sized chunk of behavior that we&#39;d like to extract, but only mix in to a single class.">
+  
+
+    <meta name="keywords" content="Module::Concerning class">
+  
+    <meta name="keywords" content="concerning, concern">
+  
 </head>
 
 <body>
@@ -36,24 +46,17 @@
       
 <h1 id="module-Module::Concerning-label-Bite-sized+separation+of+concerns">Bite-sized separation of concerns</h1>
 
-<p>We often find ourselves with a medium-sized chunk of behavior that we&#39;d
-like to extract, but only mix in to a single class.</p>
+<p>We often find ourselves with a medium-sized chunk of behavior that we&#39;d like to extract, but only mix in to a single class.</p>
 
-<p>Extracting a plain old Ruby object to encapsulate it and collaborate or
-delegate to the original object is often a good choice, but when
-there&#39;s no additional state to encapsulate or we&#39;re making
-DSL-style declarations about the parent class, introducing new
-collaborators can obfuscate rather than simplify.</p>
+<p>Extracting a plain old Ruby object to encapsulate it and collaborate or delegate to the original object is often a good choice, but when there&#39;s no additional state to encapsulate or we&#39;re making DSL-style declarations about the parent class, introducing new collaborators can obfuscate rather than simplify.</p>
 
-<p>The typical route is to just dump everything in a monolithic class, perhaps
-with a comment, as a least-bad alternative. Using modules in separate files
-means tedious sifting to get a big-picture view.</p>
+<p>The typical route is to just dump everything in a monolithic class, perhaps with a comment, as a least-bad alternative. Using modules in separate files means tedious sifting to get a big-picture view.</p>
 
 <h1 id="module-Module::Concerning-label-Dissatisfying+ways+to+separate+small+concerns">Dissatisfying ways to separate small concerns</h1>
 
 <h2 id="module-Module::Concerning-label-Using+comments-3A">Using comments:</h2>
 
-<pre><code>class Todo
+<pre><code>class Todo &lt; ApplicationRecord
   # Other todo implementation
   # ...
 
@@ -61,7 +64,6 @@ means tedious sifting to get a big-picture view.</p>
   has_many :events
 
   before_create :track_creation
-  after_destroy :track_deletion
 
   private
     def track_creation
@@ -74,7 +76,7 @@ end
 
 <p>Noisy syntax.</p>
 
-<pre><code>class Todo
+<pre><code>class Todo &lt; ApplicationRecord
   # Other todo implementation
   # ...
 
@@ -84,7 +86,6 @@ end
     included do
       has_many :events
       before_create :track_creation
-      after_destroy :track_deletion
     end
 
     private
@@ -98,12 +99,9 @@ end
 
 <h2 id="module-Module::Concerning-label-Mix-in+noise+exiled+to+its+own+file-3A">Mix-in noise exiled to its own file:</h2>
 
-<p>Once our chunk of behavior starts pushing the scroll-to-understand-it
-boundary, we give in and move it to a separate file. At this size, the
-increased overhead can be a reasonable tradeoff even if it reduces our
-at-a-glance perception of how things work.</p>
+<p>Once our chunk of behavior starts pushing the scroll-to-understand-it boundary, we give in and move it to a separate file. At this size, the increased overhead can be a reasonable tradeoff even if it reduces our at-a-glance perception of how things work.</p>
 
-<pre><code>class Todo
+<pre><code>class Todo &lt; ApplicationRecord
   # Other todo implementation
   # ...
 
@@ -111,12 +109,11 @@ at-a-glance perception of how things work.</p>
 end
 </code></pre>
 
-<h1 id="module-Module::Concerning-label-Introducing+Module-23concerning">Introducing <a href="Concerning.html#method-i-concerning">#concerning</a></h1>
+<h1 id="module-Module::Concerning-label-Introducing+Module-23concerning">Introducing <a href="Concerning.html#method-i-concerning"><code>Module#concerning</code></a></h1>
 
-<p>By quieting the mix-in noise, we arrive at a natural, low-ceremony way to
-separate bite-sized concerns.</p>
+<p>By quieting the mix-in noise, we arrive at a natural, low-ceremony way to separate bite-sized concerns.</p>
 
-<pre><code>class Todo
+<pre><code>class Todo &lt; ApplicationRecord
   # Other todo implementation
   # ...
 
@@ -124,7 +121,6 @@ separate bite-sized concerns.</p>
     included do
       has_many :events
       before_create :track_creation
-      after_destroy :track_deletion
     end
 
     private
@@ -135,7 +131,7 @@ separate bite-sized concerns.</p>
 end
 
 Todo.ancestors
-# =&gt; [Todo, Todo::EventTracking, Object]
+# =&gt; [Todo, Todo::EventTracking, ApplicationRecord, Object]
 </code></pre>
 
 <p>This small step has some wonderful ripple effects. We can</p>
@@ -144,8 +140,7 @@ Todo.ancestors
 </li><li>
 <p>clean up monolithic junk-drawer classes by separating their concerns, and</p>
 </li><li>
-<p>stop leaning on protected/private for crude “this is internal stuff”
-modularity.</p>
+<p>stop leaning on protected/private for crude “this is internal stuff” modularity.</p>
 </li></ul>
 
     </div>
@@ -204,7 +199,8 @@ modularity.</p>
 
 
     <!-- Methods -->
-        
+    
+    
       <div class="sectiontitle">Instance Public methods</div>
       
         <div class="method">
@@ -221,7 +217,8 @@ modularity.</p>
 
 <pre><code>concern :EventTracking do
   ...
-end</code></pre>
+end
+</code></pre>
 
 <p>is equivalent to</p>
 
@@ -229,7 +226,8 @@ end</code></pre>
   extend ActiveSupport::Concern
 
   ...
-end</code></pre>
+end
+</code></pre>
             </div>
           
 
@@ -245,12 +243,12 @@ end</code></pre>
                 Source:
                 <a href="javascript:toggleSource('method-i-concern_source')" id="l_method-i-concern_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/d66e7835bea9505f7003e5038aa19b6ea95ceea1/activesupport/lib/active_support/core_ext/module/concerning.rb#L127" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/activesupport/lib/active_support/core_ext/module/concerning.rb#L126" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-concern_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/core_ext/module/concerning.rb, line 127</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">concern</span>(<span class="ruby-identifier">topic</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">module_definition</span>)
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/core_ext/module/concerning.rb, line 126</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">concern</span>(<span class="ruby-identifier">topic</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">module_definition</span>)
   <span class="ruby-identifier">const_set</span> <span class="ruby-identifier">topic</span>, <span class="ruby-constant">Module</span>.<span class="ruby-identifier">new</span> {
     <span class="ruby-identifier">extend</span> <span class="ruby-operator">::</span><span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">Concern</span>
     <span class="ruby-identifier">module_eval</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">module_definition</span>)
@@ -287,19 +285,23 @@ end</code></pre>
                 Source:
                 <a href="javascript:toggleSource('method-i-concerning_source')" id="l_method-i-concerning_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/d66e7835bea9505f7003e5038aa19b6ea95ceea1/activesupport/lib/active_support/core_ext/module/concerning.rb#L110" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/activesupport/lib/active_support/core_ext/module/concerning.rb#L109" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-concerning_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/core_ext/module/concerning.rb, line 110</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">concerning</span>(<span class="ruby-identifier">topic</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/core_ext/module/concerning.rb, line 109</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">concerning</span>(<span class="ruby-identifier">topic</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-identifier">include</span> <span class="ruby-identifier">concern</span>(<span class="ruby-identifier">topic</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
           </div>
-                    </div>
+        
+      
+    
+  
+</div>
 
     </div>
   </body>

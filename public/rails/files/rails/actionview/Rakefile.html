@@ -1,15 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <title>Rakefile</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="../../../css/reset.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../../css/main.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../../css/github.css" type="text/css" media="screen" />
 <script src="../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../../js/main.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
 
@@ -26,10 +23,10 @@
             <li>
                 rails/actionview/Rakefile
                 
-                    <a href="https://github.com/rails/rails/blob/154c879e097ba088a8eee1d55f4d9703b70680b7/actionview/Rakefile" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/actionview/Rakefile" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2017-06-18 10:15:05 +0300</li>
+            <li>Last modified: 2019-08-09 23:12:34 +0300</li>
         </ul>
     </div>
 
@@ -38,9 +35,9 @@
   
     <div class="description">
       
-<p>require “rake/testtask” require “fileutils” require “open3”</p>
+<p># frozen_string_literal: true</p>
 
-<p>dir = File.dirname(__FILE__)</p>
+<p>require “rake/testtask” require “fileutils” require “open3”</p>
 
 <p>desc “Default Task” task default: :test</p>
 
@@ -48,8 +45,7 @@
 
 <p># Run the unit tests</p>
 
-<p>desc “Run all unit tests” task test: [“test:template”,
-“test:integration:action_pack”, “test:integration:active_record”]</p>
+<p>desc “Run all unit tests” task test: [“test:template”, “test:integration:action_pack”, “test:integration:active_record”]</p>
 
 <p>namespace :test do</p>
 
@@ -70,12 +66,12 @@ end
 task :ujs do
   begin
     Dir.mkdir(&quot;log&quot;)
-    pid = spawn(&quot;bundle exec rackup test/ujs/config.ru -p 4567 -s puma &gt; log/test.log 2&gt;&amp;1&quot;)
+    pid = spawn(&quot;bundle exec rackup test/ujs/config.ru -p 4567 -s puma &gt; log/test.log 2&gt;&amp;1&quot;, pgroup: true)
 
     start_time = Time.now
 
     loop do
-      break if system(&quot;lsof -i :4567 &gt;/dev/null&quot;)
+      break if system(&quot;lsof -i :4567&quot;, 1 =&gt; File::NULL)
 
       if Time.now - start_time &gt; 5
         puts &quot;Timed out after 5 seconds&quot;
@@ -83,11 +79,11 @@ task :ujs do
       end
     end
 
-    system(&quot;npm run lint &amp;&amp; phantomjs ../ci/phantomjs.js http://localhost:4567/&quot;)
-    status = $?.to_i
+    system(&quot;npm run lint &amp;&amp; bundle exec ruby ../ci/qunit-selenium-runner.rb http://localhost:4567/&quot;)
+    status = $?.exitstatus
   ensure
-    Process.kill(&quot;KILL&quot;, pid) if pid
-    FileUtils.rm_f(&quot;log&quot;)
+    Process.kill(&quot;KILL&quot;, -pid) if pid
+    FileUtils.rm_rf(&quot;log&quot;)
   end
 
   exit status
@@ -139,7 +135,7 @@ end
 desc &quot;Verify compiled Action View assets&quot;
 task :verify do
   file = &quot;lib/assets/compiled/rails-ujs.js&quot;
-  pathname = Pathname.new(&quot;#{dir}/#{file}&quot;)
+  pathname = Pathname.new(&quot;#{__dir__}/#{file}&quot;)
 
   print &quot;[verify] #{file} exists &quot;
   if pathname.exist?
@@ -157,13 +153,13 @@ task :verify do
     fail
   end
 
-  print &quot;[verify] #{dir} can be required as a module &quot;
+  print &quot;[verify] #{__dir__} can be required as a module &quot;
   js = &lt;&lt;-JS
     window = { Event: class {} }
     class Element {}
-    require(&#39;#{dir}&#39;)
+    require(&#39;#{__dir__}&#39;)
   JS
-  stdout, stderr, status = Open3.capture3(&quot;node&quot;, &quot;--print&quot;, js)
+  _, stderr, status = Open3.capture3(&quot;node&quot;, &quot;--print&quot;, js)
   if status.success?
     puts &quot;[OK]&quot;
   else
@@ -177,7 +173,7 @@ end
 
 <p>task :lines do</p>
 
-<pre><code>load File.expand_path(&quot;..&quot;, File.dirname(__FILE__)) + &quot;/tools/line_statistics&quot;
+<pre><code>load File.join(File.expand_path(&quot;..&quot;, __dir__), &quot;/tools/line_statistics&quot;)
 files = FileList[&quot;lib/**/*.rb&quot;]
 CodeTools::LineStatistics.new(files).print_loc
 </code></pre>
@@ -217,7 +213,11 @@ CodeTools::LineStatistics.new(files).print_loc
 
 
     <!-- Methods -->
-              </div>
+    
+    
+    
+  
+</div>
 
     </div>
   </body>

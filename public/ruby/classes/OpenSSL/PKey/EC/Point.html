@@ -1,18 +1,24 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <title>OpenSSL::PKey::EC::Point</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="../../../../css/reset.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../../../css/main.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../../../css/github.css" type="text/css" media="screen" />
 <script src="../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
 
+
+    <meta property="og:title" value="OpenSSL::PKey::EC::Point">
+
+  
+
+    <meta name="keywords" content="OpenSSL::PKey::EC::Point class">
+  
+    <meta name="keywords" content="to_bn, new, initialize_copy, eql?, infinity?, on_curve?, make_affine!, invert!, set_to_infinity!, to_octet_string, mul, ==">
+  
 </head>
 
 <body>
@@ -30,6 +36,8 @@
             
         </h1>
         <ul class="files">
+            
+            <li><a href="../../../../files/ruby/ext/openssl/lib/openssl/pkey_rb.html">ruby/ext/openssl/lib/openssl/pkey.rb</a></li>
             
             <li><a href="../../../../files/ruby/ext/openssl/ossl_pkey_c.html">ruby/ext/openssl/ossl_pkey.c</a></li>
             
@@ -101,6 +109,11 @@
             
               
               <li>
+                <a href="#method-i-initialize_copy">initialize_copy</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-invert-21">invert!</a>
               </li>
             
@@ -166,7 +179,12 @@
             
               
               <li>
-                <a href="#method-i-to_bn">to_bn</a>
+                <a href="#method-i-to_bn">to_bn</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-to_octet_string">to_octet_string</a>
               </li>
             
           </ul>
@@ -212,7 +230,7 @@
         <div class="method">
           <div class="title method-title" id="method-c-new">
             
-              <b>OpenSSL::PKey::EC::Point.new(point)<br />OpenSSL::PKey::EC::Point.new(group)<br />OpenSSL::PKey::EC::Point.new(group, bn)
+              <b>OpenSSL::PKey::EC::Point.new(point)<br />OpenSSL::PKey::EC::Point.new(group [, encoded_point])
 </b>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Point.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -220,8 +238,9 @@
 
           
             <div class="description">
-              <p>See the <a href="../../../OpenSSL.html">OpenSSL</a> documentation for
-EC_POINT_*</p>
+              <p>Creates a new instance of <a href="Point.html"><code>OpenSSL::PKey::EC::Point</code></a>. If the only argument is an instance of <a href="Point.html"><code>EC::Point</code></a>, a copy is returned. Otherwise, creates a point that belongs to <em>group</em>.</p>
+
+<p><em>encoded_point</em> is the octet string representation of the point. This must be either a <a href="../../../String.html"><code>String</code></a> or an <a href="../../BN.html"><code>OpenSSL::BN</code></a>.</p>
             </div>
           
 
@@ -242,65 +261,45 @@ EC_POINT_*</p>
                 <pre>static VALUE ossl_ec_point_initialize(int argc, VALUE *argv, VALUE self)
 {
     EC_POINT *point;
-    VALUE arg1, arg2;
-    VALUE group_v = Qnil;
-    const EC_GROUP *group = NULL;
+    VALUE group_v, arg2;
+    const EC_GROUP *group;
 
     TypedData_Get_Struct(self, EC_POINT, &amp;ossl_ec_point_type, point);
     if (point)
-        ossl_raise(eEC_POINT, &quot;EC_POINT already initialized&quot;);
+        rb_raise(eEC_POINT, &quot;EC_POINT already initialized&quot;);
 
-    switch (rb_scan_args(argc, argv, &quot;11&quot;, &amp;arg1, &amp;arg2)) {
-    case 1:
-        if (rb_obj_is_kind_of(arg1, cEC_POINT)) {
-            const EC_POINT *arg_point;
-
-            group_v = rb_attr_get(arg1, id_i_group);
-            SafeGetECGroup(group_v, group);
-            SafeGetECPoint(arg1, arg_point);
-
-            point = EC_POINT_dup(arg_point, group);
-        } else if (rb_obj_is_kind_of(arg1, cEC_GROUP)) {
-            group_v = arg1;
-            SafeGetECGroup(group_v, group);
-
-            point = EC_POINT_new(group);
-        } else {
-            ossl_raise(eEC_POINT, &quot;wrong argument type: must be OpenSSL::PKey::EC::Point or OpenSSL::Pkey::EC::Group&quot;);
-        }
-
-        break;
-     case 2:
-        if (!rb_obj_is_kind_of(arg1, cEC_GROUP))
-            ossl_raise(rb_eArgError, &quot;1st argument must be OpenSSL::PKey::EC::Group&quot;);
-        group_v = arg1;
-        SafeGetECGroup(group_v, group);
-
-        if (rb_obj_is_kind_of(arg2, cBN)) {
-            const BIGNUM *bn = GetBNPtr(arg2);
-
-            point = EC_POINT_bn2point(group, bn, NULL, ossl_bn_ctx);
-        } else {
-            BIO *in = ossl_obj2bio(arg1);
-
-/* BUG: finish me */
-
-            BIO_free(in);
-
-            if (point == NULL) {
-                ossl_raise(eEC_POINT, &quot;unknown type for 2nd arg&quot;);
-            }
-        }
-        break;
-    default:
-        ossl_raise(rb_eArgError, &quot;wrong number of arguments&quot;);
+    rb_scan_args(argc, argv, &quot;11&quot;, &amp;group_v, &amp;arg2);
+    if (rb_obj_is_kind_of(group_v, cEC_POINT)) {
+        if (argc != 1)
+            rb_raise(rb_eArgError, &quot;invalid second argument&quot;);
+        return ossl_ec_point_initialize_copy(self, group_v);
     }
 
-    if (point == NULL)
-        ossl_raise(eEC_POINT, NULL);
-
-    if (NIL_P(group_v))
-        ossl_raise(rb_eRuntimeError, &quot;missing group (internal error)&quot;);
+    GetECGroup(group_v, group);
+    if (argc == 1) {
+        point = EC_POINT_new(group);
+        if (!point)
+            ossl_raise(eEC_POINT, &quot;EC_POINT_new&quot;);
+    }
+    else {
+        if (rb_obj_is_kind_of(arg2, cBN)) {
+            point = EC_POINT_bn2point(group, GetBNPtr(arg2), NULL, ossl_bn_ctx);
+            if (!point)
+                ossl_raise(eEC_POINT, &quot;EC_POINT_bn2point&quot;);
+        }
+        else {
+            StringValue(arg2);
+            point = EC_POINT_new(group);
+            if (!point)
+                ossl_raise(eEC_POINT, &quot;EC_POINT_new&quot;);
+            if (!EC_POINT_oct2point(group, point,
+                                    (unsigned char *)RSTRING_PTR(arg2),
+                                    RSTRING_LEN(arg2), ossl_bn_ctx)) {
+                EC_POINT_free(point);
+                ossl_raise(eEC_POINT, &quot;EC_POINT_oct2point&quot;);
+            }
+        }
+    }
 
     RTYPEDDATA_DATA(self) = point;
     rb_ivar_set(self, id_i_group, group_v);
@@ -311,7 +310,9 @@ EC_POINT_*</p>
             </div>
             
           </div>
-                  
+        
+      
+    
       <div class="sectiontitle">Instance Public methods</div>
       
         <div class="method">
@@ -382,8 +383,8 @@ EC_POINT_*</p>
         return Qfalse;
 
     GetECPoint(a, point1);
-    SafeGetECPoint(b, point2);
-    SafeGetECGroup(group_v1, group);
+    GetECPoint(b, point2);
+    GetECGroup(group_v1, group);
 
     if (EC_POINT_cmp(group, point1, point2, ossl_bn_ctx) == 1)
         return Qfalse;
@@ -438,6 +439,62 @@ EC_POINT_*</p>
     }
 
     UNREACHABLE;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-initialize_copy">
+            
+              <b>initialize_copy</b>(p1)
+            
+            <a href="../../../../classes/OpenSSL/PKey/EC/Point.html#method-i-initialize_copy" name="method-i-initialize_copy" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-initialize_copy_source')" id="l_method-i-initialize_copy_source">show</a>
+                
+              </p>
+              <div id="method-i-initialize_copy_source" class="dyn-source">
+                <pre>static VALUE
+ossl_ec_point_initialize_copy(VALUE self, VALUE other)
+{
+    EC_POINT *point, *point_new;
+    EC_GROUP *group;
+    VALUE group_v;
+
+    TypedData_Get_Struct(self, EC_POINT, &amp;ossl_ec_point_type, point_new);
+    if (point_new)
+        ossl_raise(eEC_POINT, &quot;EC::Point already initialized&quot;);
+    GetECPoint(other, point);
+
+    group_v = rb_obj_dup(rb_attr_get(other, id_i_group));
+    GetECGroup(group_v, group);
+
+    point_new = EC_POINT_dup(point, group);
+    if (!point_new)
+        ossl_raise(eEC_POINT, &quot;EC_POINT_dup&quot;);
+    RTYPEDDATA_DATA(self) = point_new;
+    rb_ivar_set(self, id_i_group, group_v);
+
+    return self;
 }</pre>
               </div>
             </div>
@@ -549,18 +606,9 @@ EC_POINT_*</p>
             <div class="description">
               <p>Performs elliptic curve point multiplication.</p>
 
-<p>The first form calculates <code>bn1 * point + bn2 * G</code>, where
-<code>G</code> is the generator of the group of <code>point</code>.
-<code>bn2</code> may be ommitted, and in that case, the result is just
-<code>bn1 * point</code>.</p>
+<p>The first form calculates <code>bn1 * point + bn2 * G</code>, where <code>G</code> is the generator of the group of <em>point</em>. <em>bn2</em> may be omitted, and in that case, the result is just <code>bn1 * point</code>.</p>
 
-<p>The second form calculates <code>bns[0] * point + bns[1] * points[0] + ...
-+ bns[-1] * points[-1] + bn2 * G</code>. <code>bn2</code> may be ommitted.
-<code>bns</code> must be an array of <a
-href="../../BN.html">OpenSSL::BN</a>. <code>points</code> must be an array
-of <a href="Point.html">OpenSSL::PKey::EC::Point</a>. Please note that
-<code>points[0]</code> is not multiplied by <code>bns[0]</code>, but
-<code>bns[1]</code>.</p>
+<p>The second form calculates <code>bns[0] * point + bns[1] * points[0] + ... + bns[-1] * points[-1] + bn2 * G</code>. <em>bn2</em> may be omitted. <em>bns</em> must be an array of <a href="../../BN.html"><code>OpenSSL::BN</code></a>. <em>points</em> must be an array of <a href="Point.html"><code>OpenSSL::PKey::EC::Point</code></a>. Please note that <code>points[0]</code> is not multiplied by <code>bns[0]</code>, but <code>bns[1]</code>.</p>
             </div>
           
 
@@ -587,7 +635,7 @@ of <a href="Point.html">OpenSSL::PKey::EC::Point</a>. Please note that
     const BIGNUM *bn_g = NULL;
 
     GetECPoint(self, point_self);
-    SafeGetECGroup(group_v, group);
+    GetECGroup(group_v, group);
 
     result = rb_obj_alloc(cEC_POINT);
     ossl_ec_point_initialize(1, &amp;group_v, result);
@@ -628,7 +676,7 @@ of <a href="Point.html">OpenSSL::PKey::EC::Point</a>. Please note that
         points = ALLOCV_N(const EC_POINT *, tmp_p, num);
         points[0] = point_self; /* self */
         for (i = 0; i &lt; num - 1; i++)
-            SafeGetECPoint(RARRAY_AREF(arg2, i), points[i + 1]);
+            GetECPoint(RARRAY_AREF(arg2, i), points[i + 1]);
 
         if (!NIL_P(arg3))
             bn_g = GetBNPtr(arg3);
@@ -748,7 +796,7 @@ of <a href="Point.html">OpenSSL::PKey::EC::Point</a>. Please note that
         <div class="method">
           <div class="title method-title" id="method-i-to_bn">
             
-              <b>point.to_bn(conversion_form = nil) => OpenSSL::BN
+              <b>point.to_bn([conversion_form]) &rarr; OpenSSL::BN
 </b>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Point.html#method-i-to_bn" name="method-i-to_bn" class="permalink">Link</a>
@@ -756,13 +804,11 @@ of <a href="Point.html">OpenSSL::PKey::EC::Point</a>. Please note that
 
           
             <div class="description">
-              <p>Convert the <a href="../EC.html">EC</a> point into an octet string and
-store in an <a href="../../BN.html">OpenSSL::BN</a>. If
-<code>conversion_form</code> is given, the point data is converted using
-the specified form. If not given, the default form set in the <a
-href="Group.html">EC::Group</a> object is used.</p>
+              <p>Returns the octet string representation of the <a href="../EC.html"><code>EC</code></a> point as an instance of <a href="../../BN.html"><code>OpenSSL::BN</code></a>.</p>
 
-<p>See also EC::Point#point_conversion_form=.</p>
+<p>If <em>conversion_form</em> is not given, the <em>point_conversion_form</em> attribute set to the group is used.</p>
+
+<p>See <a href="Point.html#method-i-to_octet_string"><code>to_octet_string</code></a> for more information.</p>
             </div>
           
 
@@ -778,38 +824,89 @@ href="Group.html">EC::Group</a> object is used.</p>
                 Source:
                 <a href="javascript:toggleSource('method-i-to_bn_source')" id="l_method-i-to_bn_source">show</a>
                 
+                  | <a href="https://github.com/ruby/ruby/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/ext/openssl/lib/openssl/pkey.rb#L20" target="_blank" class="github_url">on GitHub</a>
+                
               </p>
               <div id="method-i-to_bn_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 20</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_bn</span>(<span class="ruby-identifier">conversion_form</span> = <span class="ruby-identifier">group</span>.<span class="ruby-identifier">point_conversion_form</span>)
+  <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">BN</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">to_octet_string</span>(<span class="ruby-identifier">conversion_form</span>), <span class="ruby-value">2</span>)
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-to_octet_string">
+            
+              <b>point.to_octet_string(conversion_form) &rarr; String
+</b>
+            
+            <a href="../../../../classes/OpenSSL/PKey/EC/Point.html#method-i-to_octet_string" name="method-i-to_octet_string" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the octet string representation of the elliptic curve point.</p>
+
+<p><em>conversion_form</em> specifies how the point is converted. Possible values are:</p>
+<ul><li>
+<p><code>:compressed</code></p>
+</li><li>
+<p><code>:uncompressed</code></p>
+</li><li>
+<p><code>:hybrid</code></p>
+</li></ul>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_octet_string_source')" id="l_method-i-to_octet_string_source">show</a>
+                
+              </p>
+              <div id="method-i-to_octet_string_source" class="dyn-source">
                 <pre>static VALUE
-ossl_ec_point_to_bn(int argc, VALUE *argv, VALUE self)
+ossl_ec_point_to_octet_string(VALUE self, VALUE conversion_form)
 {
     EC_POINT *point;
-    VALUE form_obj, bn_obj;
     const EC_GROUP *group;
     point_conversion_form_t form;
-    BIGNUM *bn;
+    VALUE str;
+    size_t len;
 
     GetECPoint(self, point);
     GetECPointGroup(self, group);
-    rb_scan_args(argc, argv, &quot;01&quot;, &amp;form_obj);
-    if (NIL_P(form_obj))
-        form = EC_GROUP_get_point_conversion_form(group);
-    else
-        form = parse_point_conversion_form_symbol(form_obj);
+    form = parse_point_conversion_form_symbol(conversion_form);
 
-    bn_obj = rb_obj_alloc(cBN);
-    bn = GetBNPtr(bn_obj);
-
-    if (EC_POINT_point2bn(group, point, form, bn, ossl_bn_ctx) == NULL)
-        ossl_raise(eEC_POINT, &quot;EC_POINT_point2bn&quot;);
-
-    return bn_obj;
+    len = EC_POINT_point2oct(group, point, form, NULL, 0, ossl_bn_ctx);
+    if (!len)
+        ossl_raise(eEC_POINT, &quot;EC_POINT_point2oct&quot;);
+    str = rb_str_new(NULL, (long)len);
+    if (!EC_POINT_point2oct(group, point, form,
+                            (unsigned char *)RSTRING_PTR(str), len,
+                            ossl_bn_ctx))
+        ossl_raise(eEC_POINT, &quot;EC_POINT_point2oct&quot;);
+    return str;
 }</pre>
               </div>
             </div>
             
           </div>
-                    </div>
+        
+      
+    
+  
+</div>
 
     </div>
   </body>

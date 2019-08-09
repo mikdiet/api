@@ -1,18 +1,24 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <title>Gem::Commands::PushCommand</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="../../../css/reset.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../../css/main.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../../css/github.css" type="text/css" media="screen" />
 <script src="../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../../js/main.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
 
+
+    <meta property="og:title" value="Gem::Commands::PushCommand">
+
+  
+
+    <meta name="keywords" content="Gem::Commands::PushCommand class">
+  
+    <meta name="keywords" content="new, execute, send_gem">
+  
 </head>
 
 <body>
@@ -162,20 +168,25 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/b6139464f544ec511f741f5bbae2fb13adc51c21/lib/rubygems/commands/push_command.rb#L29" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/lib/rubygems/commands/push_command.rb#L29" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
                 <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/push_command.rb, line 29</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">initialize</span>
-  <span class="ruby-keyword">super</span> <span class="ruby-string">&#39;push&#39;</span>, <span class="ruby-string">&#39;Push a gem up to the gem server&#39;</span>, <span class="ruby-value">:host</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">host</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>
+  <span class="ruby-keyword">super</span> <span class="ruby-string">&#39;push&#39;</span>, <span class="ruby-string">&#39;Push a gem up to the gem server&#39;</span>, <span class="ruby-value">:host</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">host</span>
+
+  <span class="ruby-ivar">@user_defined_host</span> = <span class="ruby-keyword">false</span>
 
   <span class="ruby-identifier">add_proxy_option</span>
   <span class="ruby-identifier">add_key_option</span>
+  <span class="ruby-identifier">add_otp_option</span>
 
   <span class="ruby-identifier">add_option</span>(<span class="ruby-string">&#39;--host HOST&#39;</span>,
-             <span class="ruby-string">&#39;Push to another gemcutter-compatible host&#39;</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span>, <span class="ruby-identifier">options</span><span class="ruby-operator">|</span>
+             <span class="ruby-string">&#39;Push to another gemcutter-compatible host&#39;</span>,
+             <span class="ruby-string">&#39;  (e.g. https://rubygems.org)&#39;</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span>, <span class="ruby-identifier">options</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">options</span>[<span class="ruby-value">:host</span>] = <span class="ruby-identifier">value</span>
+    <span class="ruby-ivar">@user_defined_host</span> = <span class="ruby-keyword">true</span>
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-ivar">@host</span> = <span class="ruby-keyword">nil</span>
@@ -184,7 +195,9 @@
             </div>
             
           </div>
-                  
+        
+      
+    
       <div class="sectiontitle">Instance Public methods</div>
       
         <div class="method">
@@ -213,17 +226,37 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-execute_source')" id="l_method-i-execute_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/b6139464f544ec511f741f5bbae2fb13adc51c21/lib/rubygems/commands/push_command.rb#L43" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/lib/rubygems/commands/push_command.rb#L48" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-execute_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/push_command.rb, line 43</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">execute</span>
-  <span class="ruby-ivar">@host</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:host</span>]
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/push_command.rb, line 48</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">execute</span>
+  <span class="ruby-identifier">gem_name</span> = <span class="ruby-identifier">get_one_gem_name</span>
+  <span class="ruby-identifier">default_gem_server</span>, <span class="ruby-identifier">push_host</span> = <span class="ruby-identifier">get_hosts_for</span>(<span class="ruby-identifier">gem_name</span>)
+
+  <span class="ruby-identifier">default_host</span> = <span class="ruby-keyword">nil</span>
+  <span class="ruby-identifier">user_defined_host</span> = <span class="ruby-keyword">nil</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@user_defined_host</span>
+    <span class="ruby-identifier">user_defined_host</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:host</span>]
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">default_host</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:host</span>]
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-ivar">@host</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">user_defined_host</span>
+            <span class="ruby-identifier">user_defined_host</span>
+          <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">default_gem_server</span>
+            <span class="ruby-identifier">default_gem_server</span>
+          <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">push_host</span>
+            <span class="ruby-identifier">push_host</span>
+          <span class="ruby-keyword">else</span>
+            <span class="ruby-identifier">default_host</span>
+          <span class="ruby-keyword">end</span>
 
   <span class="ruby-identifier">sign_in</span> <span class="ruby-ivar">@host</span>
 
-  <span class="ruby-identifier">send_gem</span> <span class="ruby-identifier">get_one_gem_name</span>
+  <span class="ruby-identifier">send_gem</span>(<span class="ruby-identifier">gem_name</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -256,21 +289,21 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-send_gem_source')" id="l_method-i-send_gem_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/b6139464f544ec511f741f5bbae2fb13adc51c21/lib/rubygems/commands/push_command.rb#L51" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/lib/rubygems/commands/push_command.rb#L76" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-send_gem_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/push_command.rb, line 51</span>
-  <span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">send_gem</span> <span class="ruby-identifier">name</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/push_command.rb, line 76</span>
+  <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">send_gem</span>(<span class="ruby-identifier">name</span>)
     <span class="ruby-identifier">args</span> = [<span class="ruby-value">:post</span>, <span class="ruby-string">&quot;api/v1/gems&quot;</span>]
 
     <span class="ruby-identifier">latest_rubygems_version</span> = <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">latest_rubygems_version</span>
 
     <span class="ruby-keyword">if</span> <span class="ruby-identifier">latest_rubygems_version</span> <span class="ruby-operator">&lt;</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">rubygems_version</span> <span class="ruby-keyword">and</span>
          <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">rubygems_version</span>.<span class="ruby-identifier">prerelease?</span> <span class="ruby-keyword">and</span>
-         <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Version</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&#39;2.0.0.rc.2&#39;</span>) <span class="ruby-operator">!=</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">rubygems_version</span> <span class="ruby-keyword">then</span>
-      <span class="ruby-identifier">alert_error</span> <span class="ruby-value">&lt;&lt;-ERROR
-You are using a beta release of RubyGems (#{Gem::VERSION}) which is not
+         <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Version</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&#39;2.0.0.rc.2&#39;</span>) <span class="ruby-operator">!=</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">rubygems_version</span>
+      <span class="ruby-identifier">alert_error</span> <span class="ruby-identifier">&lt;&lt;-ERROR</span>
+<span class="ruby-value">You are using a beta release of RubyGems (#{Gem::VERSION}) which is not
 allowed to push gems.  Please downgrade or upgrade to a release version.
 
 The latest released RubyGems version is #{latest_rubygems_version}
@@ -279,13 +312,13 @@ You can upgrade or downgrade to the latest release version with:
 
   gem update --system=#{latest_rubygems_version}
 
-      ERROR</span>
-      <span class="ruby-identifier">terminate_interaction</span> <span class="ruby-number">1</span>
+</span><span class="ruby-identifier">      ERROR</span>
+      <span class="ruby-identifier">terminate_interaction</span> <span class="ruby-value">1</span>
     <span class="ruby-keyword">end</span>
 
     <span class="ruby-identifier">gem_data</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Package</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">name</span>)
 
-    <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@host</span> <span class="ruby-keyword">then</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@host</span>
       <span class="ruby-ivar">@host</span> = <span class="ruby-identifier">gem_data</span>.<span class="ruby-identifier">spec</span>.<span class="ruby-identifier">metadata</span>[<span class="ruby-string">&#39;default_gem_server&#39;</span>]
     <span class="ruby-keyword">end</span>
 
@@ -302,11 +335,10 @@ You can upgrade or downgrade to the latest release version with:
 
     <span class="ruby-identifier">say</span> <span class="ruby-node">&quot;Pushing gem to #{@host || Gem.host}...&quot;</span>
 
-    <span class="ruby-identifier">response</span> = <span class="ruby-identifier">rubygems_api_request</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">request</span><span class="ruby-operator">|</span>
-      <span class="ruby-identifier">request</span>.<span class="ruby-identifier">body</span> = <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">read_binary</span> <span class="ruby-identifier">name</span>
-      <span class="ruby-identifier">request</span>.<span class="ruby-identifier">add_field</span> <span class="ruby-string">&quot;Content-Length&quot;</span>, <span class="ruby-identifier">request</span>.<span class="ruby-identifier">body</span>.<span class="ruby-identifier">size</span>
-      <span class="ruby-identifier">request</span>.<span class="ruby-identifier">add_field</span> <span class="ruby-string">&quot;Content-Type&quot;</span>,   <span class="ruby-string">&quot;application/octet-stream&quot;</span>
-      <span class="ruby-identifier">request</span>.<span class="ruby-identifier">add_field</span> <span class="ruby-string">&quot;Authorization&quot;</span>,  <span class="ruby-identifier">api_key</span>
+    <span class="ruby-identifier">response</span> = <span class="ruby-identifier">send_push_request</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">args</span>)
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">need_otp?</span> <span class="ruby-identifier">response</span>
+      <span class="ruby-identifier">response</span> = <span class="ruby-identifier">send_push_request</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">args</span>, <span class="ruby-keyword">true</span>)
     <span class="ruby-keyword">end</span>
 
     <span class="ruby-identifier">with_response</span> <span class="ruby-identifier">response</span>
@@ -315,7 +347,11 @@ You can upgrade or downgrade to the latest release version with:
             </div>
             
           </div>
-                    </div>
+        
+      
+    
+  
+</div>
 
     </div>
   </body>

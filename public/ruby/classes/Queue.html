@@ -1,18 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <title>Queue</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="../css/reset.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../css/main.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../css/github.css" type="text/css" media="screen" />
 <script src="../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
 <script src="../js/main.js" type="text/javascript" charset="utf-8"></script>
 <script src="../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
 
+
+    <meta property="og:title" value="Queue">
+
+  
+    
+    <meta name="description" content="The Queue class implements multi-producer, multi-consumer queues. It is especially useful in threaded programming when information must be exchanged safely between multiple threads.">
+    <meta property="og:description" content="The Queue class implements multi-producer, multi-consumer queues. It is especially useful in threaded programming when information must be exchanged safely between multiple threads.">
+  
+
+    <meta name="keywords" content="Queue class">
+  
+    <meta name="keywords" content="new, close, closed?, push, pop, empty?, clear, length, num_waiting, enq, <<, deq, shift, size">
+  
 </head>
 
 <body>
@@ -40,19 +50,13 @@
   
     <div class="description">
       
-<p>The <a href="Queue.html">Queue</a> class implements multi-producer,
-multi-consumer queues. It is especially useful in threaded programming when
-information must be exchanged safely between multiple threads. The <a
-href="Queue.html">Queue</a> class implements all the required locking
-semantics.</p>
+<p>The <a href="Queue.html"><code>Queue</code></a> class implements multi-producer, multi-consumer queues. It is especially useful in threaded programming when information must be exchanged safely between multiple threads. The <a href="Queue.html"><code>Queue</code></a> class implements all the required locking semantics.</p>
 
-<p>The class implements FIFO type of queue. In a FIFO queue, the first tasks
-added are the first retrieved.</p>
+<p>The class implements FIFO type of queue. In a FIFO queue, the first tasks added are the first retrieved.</p>
 
 <p>Example:</p>
 
-<pre><code>require &#39;thread&#39;
-queue = Queue.new
+<pre><code>queue = Queue.new
 
 producer = Thread.new do
   5.times do |i|
@@ -69,6 +73,8 @@ consumer = Thread.new do
      puts &quot;consumed #{value}&quot;
   end
 end
+
+consumer.join
 </code></pre>
 
     </div>
@@ -270,15 +276,18 @@ end
                 <pre>static VALUE
 rb_queue_initialize(VALUE self)
 {
-    RSTRUCT_SET(self, QUEUE_QUE, ary_buf_new());
-    RSTRUCT_SET(self, QUEUE_WAITERS, ary_buf_new());
+    struct rb_queue *q = queue_ptr(self);
+    RB_OBJ_WRITE(self, &amp;q-&gt;que, ary_buf_new());
+    list_head_init(queue_waitq(q));
     return self;
 }</pre>
               </div>
             </div>
             
           </div>
-                  
+        
+      
+    
       <div class="sectiontitle">Instance Public methods</div>
       
         <div class="method">
@@ -337,7 +346,9 @@ rb_queue_initialize(VALUE self)
                 <pre>static VALUE
 rb_queue_clear(VALUE self)
 {
-    rb_ary_clear(GET_QUEUE_QUE(self));
+    struct rb_queue *q = queue_ptr(self);
+
+    rb_ary_clear(check_array(self, q-&gt;que));
     return self;
 }</pre>
               </div>
@@ -364,15 +375,14 @@ rb_queue_clear(VALUE self)
 </li><li>
 <p><code>close</code> will be ignored.</p>
 </li><li>
-<p>calling enq/push/&lt;&lt; will return nil.</p>
+<p>calling enq/push/&lt;&lt; will raise a <code>ClosedQueueError</code>.</p>
 </li><li>
-<p>when <code>empty?</code> is false, calling deq/pop/shift will return an
-object from the queue as usual.</p>
+<p>when <code>empty?</code> is false, calling deq/pop/shift will return an object from the queue as usual.</p>
+</li><li>
+<p>when <code>empty?</code> is true, deq(false) will not suspend the thread and will return nil. deq(true) will raise a <code>ThreadError</code>.</p>
 </li></ul>
 
-<p><a href="ClosedQueueError.html">ClosedQueueError</a> is inherited from <a
-href="StopIteration.html">StopIteration</a>, so that you can break loop
-block.</p>
+<p><a href="ClosedQueueError.html"><code>ClosedQueueError</code></a> is inherited from <a href="StopIteration.html"><code>StopIteration</code></a>, so that you can break loop block.</p>
 
 <pre><code>Example:
 
@@ -382,7 +392,8 @@ block.</p>
         # ...
       end
     }
-    q.close</code></pre>
+    q.close
+</code></pre>
             </div>
           
 
@@ -403,7 +414,15 @@ block.</p>
                 <pre>static VALUE
 rb_queue_close(VALUE self)
 {
-    return queue_do_close(self, FALSE);
+    struct rb_queue *q = queue_ptr(self);
+
+    if (!queue_closed_p(self)) {
+        FL_SET(self, QUEUE_CLOSED);
+
+        wakeup_all(queue_waitq(q));
+    }
+
+    return self;
 }</pre>
               </div>
             </div>
@@ -506,7 +525,7 @@ rb_queue_closed_p(VALUE self)
                 <pre>static VALUE
 rb_queue_empty_p(VALUE self)
 {
-    return queue_length(self) == 0 ? Qtrue : Qfalse;
+    return queue_length(self, queue_ptr(self)) == 0 ? Qtrue : Qfalse;
 }</pre>
               </div>
             </div>
@@ -574,8 +593,7 @@ rb_queue_empty_p(VALUE self)
                 <pre>static VALUE
 rb_queue_length(VALUE self)
 {
-    unsigned long len = queue_length(self);
-    return ULONG2NUM(len);
+    return LONG2NUM(queue_length(self, queue_ptr(self)));
 }</pre>
               </div>
             </div>
@@ -613,8 +631,9 @@ rb_queue_length(VALUE self)
                 <pre>static VALUE
 rb_queue_num_waiting(VALUE self)
 {
-    unsigned long len = queue_num_waiting(self);
-    return ULONG2NUM(len);
+    struct rb_queue *q = queue_ptr(self);
+
+    return INT2NUM(q-&gt;num_waiting);
 }</pre>
               </div>
             </div>
@@ -634,9 +653,7 @@ rb_queue_num_waiting(VALUE self)
             <div class="description">
               <p>Retrieves data from the queue.</p>
 
-<p>If the queue is empty, the calling thread is suspended until data is pushed
-onto the queue. If <code>non_block</code> is true, the thread isn&#39;t
-suspended, and <code>ThreadError</code> is raised.</p>
+<p>If the queue is empty, the calling thread is suspended until data is pushed onto the queue. If <code>non_block</code> is true, the thread isn&#39;t suspended, and <code>ThreadError</code> is raised.</p>
             </div>
           
 
@@ -662,7 +679,7 @@ suspended, and <code>ThreadError</code> is raised.</p>
 rb_queue_pop(int argc, VALUE *argv, VALUE self)
 {
     int should_block = queue_pop_should_block(argc, argv);
-    return queue_do_pop(self, should_block);
+    return queue_do_pop(self, queue_ptr(self), should_block);
 }</pre>
               </div>
             </div>
@@ -705,7 +722,7 @@ rb_queue_pop(int argc, VALUE *argv, VALUE self)
                 <pre>static VALUE
 rb_queue_push(VALUE self, VALUE obj)
 {
-    return queue_do_push(self, obj);
+    return queue_do_push(self, queue_ptr(self), obj);
 }</pre>
               </div>
             </div>
@@ -761,7 +778,11 @@ rb_queue_push(VALUE self, VALUE obj)
 
           
           </div>
-                    </div>
+        
+      
+    
+  
+</div>
 
     </div>
   </body>

@@ -1,15 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <title>framework.rake</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="../../../../../../css/reset.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../../../../../css/main.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../../../../../css/github.css" type="text/css" media="screen" />
 <script src="../../../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../../../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
 
@@ -26,10 +23,10 @@
             <li>
                 rails/railties/lib/rails/tasks/framework.rake
                 
-                    <a href="https://github.com/rails/rails/blob/50a184b6ccb473417e6e6016895f07d5cc6e1b84/railties/lib/rails/tasks/framework.rake" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/railties/lib/rails/tasks/framework.rake" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2017-06-18 10:15:06 +0300</li>
+            <li>Last modified: 2019-08-09 23:12:35 +0300</li>
         </ul>
     </div>
 
@@ -38,6 +35,8 @@
   
     <div class="description">
       
+<p># frozen_string_literal: true</p>
+
 <p>namespace :app do</p>
 
 <pre><code>desc &quot;Update configs and some other initially generated files (or use just update:configs or update:bin)&quot;
@@ -50,14 +49,14 @@ task template: :environment do
   template = File.expand_path(template) if template !~ %r{\A[A-Za-z][A-Za-z0-9+\-\.]*://}
   require &quot;rails/generators&quot;
   require &quot;rails/generators/rails/app/app_generator&quot;
-  generator = Rails::Generators::AppGenerator.new [Rails.root], {}, destination_root: Rails.root
+  generator = Rails::Generators::AppGenerator.new [Rails.root], {}, { destination_root: Rails.root }
   generator.apply template, verbose: false
 end
 
 namespace :templates do
   # desc &quot;Copy all the templates from rails to the application directory for customization. Already existing local copies will be overwritten&quot;
   task :copy do
-    generators_lib = File.expand_path(&quot;../../generators&quot;, __FILE__)
+    generators_lib = File.expand_path(&quot;../generators&quot;, __dir__)
     project_templates = &quot;#{Rails.root}/lib/templates&quot;
 
     default_templates = { &quot;erb&quot;   =&gt; %w{controller mailer scaffold},
@@ -77,38 +76,21 @@ namespace :templates do
 end
 
 namespace :update do
-  class RailsUpdate
-    def self.invoke_from_app_generator(method)
-      app_generator.send(method)
-    end
+  require &quot;rails/app_updater&quot;
 
-    def self.app_generator
-      @app_generator ||= begin
-        require &quot;rails/generators&quot;
-        require &quot;rails/generators/rails/app/app_generator&quot;
-        gen = Rails::Generators::AppGenerator.new [&quot;rails&quot;],
-                                                  { api: !!Rails.application.config.api_only, update: true },
-                                                  destination_root: Rails.root
-        File.exist?(Rails.root.join(&quot;config&quot;, &quot;application.rb&quot;)) ?
-          gen.send(:app_const) : gen.send(:valid_const?)
-        gen
-      end
-    end
-  end
-
-  # desc &quot;Update config/boot.rb from your current rails install&quot;
+  # desc &quot;Update config files from your current rails install&quot;
   task :configs do
-    RailsUpdate.invoke_from_app_generator :create_boot_file
-    RailsUpdate.invoke_from_app_generator :update_config_files
+    Rails::AppUpdater.invoke_from_app_generator :create_boot_file
+    Rails::AppUpdater.invoke_from_app_generator :update_config_files
   end
 
   # desc &quot;Adds new executables to the application bin/ directory&quot;
   task :bin do
-    RailsUpdate.invoke_from_app_generator :update_bin_files
+    Rails::AppUpdater.invoke_from_app_generator :update_bin_files
   end
 
   task :upgrade_guide_info do
-    RailsUpdate.invoke_from_app_generator :display_upgrade_guide_info
+    Rails::AppUpdater.invoke_from_app_generator :display_upgrade_guide_info
   end
 end
 </code></pre>
@@ -148,7 +130,11 @@ end
 
 
     <!-- Methods -->
-              </div>
+    
+    
+    
+  
+</div>
 
     </div>
   </body>

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Bundler::GemVersionPromoter</title>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../css/github.css" type="text/css" media="screen" />
+<script src="../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+
+    <meta property="og:title" value="Bundler::GemVersionPromoter">
+
+  
+    
+    <meta name="description" content="This class contains all of the logic for determining the next version of a Gem to update to based on the requested level (patch, minor, major).">
+    <meta property="og:description" content="This class contains all of the logic for determining the next version of a Gem to update to based on the requested level (patch, minor, major).">
+  
+
+    <meta name="keywords" content="Bundler::GemVersionPromoter class">
+  
+    <meta name="keywords" content="new, level=, sort_versions, major?, minor?">
+  
+</head>
+
+<body>
+    <div class="banner">
+        
+        <h1>
+            <span class="type">Class</span>
+            Bundler::GemVersionPromoter
+            
+                <span class="parent">&lt;
+                    
+                    <a href="../Object.html">Object</a>
+                    
+                </span>
+            
+        </h1>
+        <ul class="files">
+            
+            <li><a href="../../files/ruby/lib/bundler/gem_version_promoter_rb.html">ruby/lib/bundler/gem_version_promoter.rb</a></li>
+            
+        </ul>
+    </div>
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>This class contains all of the logic for determining the next version of a Gem to update to based on the requested level (patch, minor, major). Primarily designed to work with <a href="Resolver.html"><code>Resolver</code></a> which will provide it the list of available dependency versions as found in its index, before returning it to to the resolution engine to select the best version.</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>L</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-level-3D">level=</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>M</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-major-3F">major?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-minor-3F">minor?</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>N</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-new">new</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>S</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-sort_versions">sort_versions</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+      <!-- Section constants -->
+      <div class="sectiontitle">Constants</div>
+      <table border='0' cellpadding='5'>
+        
+          <tr valign='top'>
+            <td class="attr-name">DEBUG</td>
+            <td>=</td>
+            <td class="attr-value">ENV[&quot;DEBUG_RESOLVER&quot;]</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+      </table>
+    
+
+
+    
+      <!-- Section attributes -->
+      <div class="sectiontitle">Attributes</div>
+      <table border='0' cellpadding='5'>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [R]
+            </td>
+            <td class='attr-name'>level</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [R]
+            </td>
+            <td class='attr-name'>locked_specs</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [RW]
+            </td>
+            <td class='attr-name'>prerelease_specified</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [RW]
+            </td>
+            <td class='attr-name'>strict</td>
+            <td class='attr-desc'><p>By default, strict is false, meaning every available version of a gem is returned from sort_versions. The order gives preference to the requested level (:patch, :minor, :major) but in complicated requirement cases some gems will by necessity by promoted past the requested level, or even reverted to older versions.</p>
+
+<p>If strict is set to true, the results from <a href="GemVersionPromoter.html#method-i-sort_versions"><code>sort_versions</code></a> will be truncated, eliminating any version outside the current level scope. This can lead to unexpected outcomes or even <a href="VersionConflict.html"><code>VersionConflict</code></a> exceptions that report a version of a gem not existing for versions that indeed do existing in the referenced source.</p></td>
+          </tr>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [R]
+            </td>
+            <td class='attr-name'>unlock_gems</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+      </table>
+    
+
+
+    <!-- Methods -->
+    
+      <div class="sectiontitle">Class Public methods</div>
+      
+        <div class="method">
+          <div class="title method-title" id="method-c-new">
+            
+              <b>new</b>(locked_specs = SpecSet.new([]), unlock_gems = [])
+            
+            <a href="../../classes/Bundler/GemVersionPromoter.html#method-c-new" name="method-c-new" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Given a list of <a href="GemVersionPromoter.html#attribute-i-locked_specs"><code>locked_specs</code></a> and a list of gems to unlock creates a <a href="GemVersionPromoter.html"><code>GemVersionPromoter</code></a> instance.</p>
+
+<p>@param <a href="GemVersionPromoter.html#attribute-i-locked_specs"><code>locked_specs</code></a> [SpecSet] All current locked specs. Unlike <a href="Definition.html"><code>Definition</code></a></p>
+
+<pre><code>where this list is empty if all gems are being updated, this should
+always be populated for all gems so this class can properly function.
+</code></pre>
+
+<p>@param <a href="GemVersionPromoter.html#attribute-i-unlock_gems"><code>unlock_gems</code></a> [String] List of gem names being unlocked. If empty,</p>
+
+<pre><code>all gems will be considered unlocked.
+</code></pre>
+
+<p>@return [GemVersionPromoter]</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/lib/bundler/gem_version_promoter.rb#L38" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-new_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/gem_version_promoter.rb, line 38</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">locked_specs</span> = <span class="ruby-constant">SpecSet</span>.<span class="ruby-identifier">new</span>([]), <span class="ruby-identifier">unlock_gems</span> = [])
+  <span class="ruby-ivar">@level</span> = <span class="ruby-value">:major</span>
+  <span class="ruby-ivar">@strict</span> = <span class="ruby-keyword">false</span>
+  <span class="ruby-ivar">@locked_specs</span> = <span class="ruby-identifier">locked_specs</span>
+  <span class="ruby-ivar">@unlock_gems</span> = <span class="ruby-identifier">unlock_gems</span>
+  <span class="ruby-ivar">@sort_versions</span> = {}
+  <span class="ruby-ivar">@prerelease_specified</span> = {}
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
+    
+      <div class="sectiontitle">Instance Public methods</div>
+      
+        <div class="method">
+          <div class="title method-title" id="method-i-level-3D">
+            
+              <b>level=</b>(value)
+            
+            <a href="../../classes/Bundler/GemVersionPromoter.html#method-i-level-3D" name="method-i-level-3D" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>@param value [Symbol] One of three Symbols: :major, :minor or :patch.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-level-3D_source')" id="l_method-i-level-3D_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/lib/bundler/gem_version_promoter.rb#L48" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-level-3D_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/gem_version_promoter.rb, line 48</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">level=</span>(<span class="ruby-identifier">value</span>)
+  <span class="ruby-identifier">v</span> = <span class="ruby-keyword">case</span> <span class="ruby-identifier">value</span>
+      <span class="ruby-keyword">when</span> <span class="ruby-constant">String</span>, <span class="ruby-constant">Symbol</span>
+        <span class="ruby-identifier">value</span>.<span class="ruby-identifier">to_sym</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;Unexpected level #{v}. Must be :major, :minor or :patch&quot;</span> <span class="ruby-keyword">unless</span> [<span class="ruby-value">:major</span>, <span class="ruby-value">:minor</span>, <span class="ruby-value">:patch</span>].<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">v</span>)
+  <span class="ruby-ivar">@level</span> = <span class="ruby-identifier">v</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-major-3F">
+            
+              <b>major?</b>()
+            
+            <a href="../../classes/Bundler/GemVersionPromoter.html#method-i-major-3F" name="method-i-major-3F" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>@return [bool] Convenience method for testing value of level variable.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-major-3F_source')" id="l_method-i-major-3F_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/lib/bundler/gem_version_promoter.rb#L92" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-major-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/gem_version_promoter.rb, line 92</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">major?</span>
+  <span class="ruby-identifier">level</span> <span class="ruby-operator">==</span> <span class="ruby-value">:major</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-minor-3F">
+            
+              <b>minor?</b>()
+            
+            <a href="../../classes/Bundler/GemVersionPromoter.html#method-i-minor-3F" name="method-i-minor-3F" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>@return [bool] Convenience method for testing value of level variable.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-minor-3F_source')" id="l_method-i-minor-3F_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/lib/bundler/gem_version_promoter.rb#L97" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-minor-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/gem_version_promoter.rb, line 97</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">minor?</span>
+  <span class="ruby-identifier">level</span> <span class="ruby-operator">==</span> <span class="ruby-value">:minor</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-sort_versions">
+            
+              <b>sort_versions</b>(dep, spec_groups)
+            
+            <a href="../../classes/Bundler/GemVersionPromoter.html#method-i-sort_versions" name="method-i-sort_versions" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Given a <a href="Dependency.html"><code>Dependency</code></a> and an <a href="../Array.html"><code>Array</code></a> of SpecGroups of available versions for a gem, this method will return the <a href="../Array.html"><code>Array</code></a> of SpecGroups sorted (and possibly truncated if strict is true) in an order to give preference to the current level (:major, :minor or :patch) when resolution is deciding what versions best resolve all dependencies in the bundle. @param dep [Dependency] The <a href="Dependency.html"><code>Dependency</code></a> of the gem. @param spec_groups [SpecGroup] An array of SpecGroups for the same gem</p>
+
+<pre><code>named in the @dep param.
+</code></pre>
+
+<p>@return [SpecGroup] A new instance of the SpecGroup <a href="../Array.html"><code>Array</code></a> sorted and</p>
+
+<pre><code>possibly filtered.
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-sort_versions_source')" id="l_method-i-sort_versions_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/lib/bundler/gem_version_promoter.rb#L68" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-sort_versions_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/gem_version_promoter.rb, line 68</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">sort_versions</span>(<span class="ruby-identifier">dep</span>, <span class="ruby-identifier">spec_groups</span>)
+  <span class="ruby-identifier">before_result</span> = <span class="ruby-node">&quot;before sort_versions: #{debug_format_result(dep, spec_groups).inspect}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-constant">DEBUG</span>
+
+  <span class="ruby-ivar">@sort_versions</span>[<span class="ruby-identifier">dep</span>] <span class="ruby-operator">||=</span> <span class="ruby-keyword">begin</span>
+    <span class="ruby-identifier">gem_name</span> = <span class="ruby-identifier">dep</span>.<span class="ruby-identifier">name</span>
+
+    <span class="ruby-comment"># An Array per version returned, different entries for different platforms.</span>
+    <span class="ruby-comment"># We only need the version here so it&#39;s ok to hard code this to the first instance.</span>
+    <span class="ruby-identifier">locked_spec</span> = <span class="ruby-identifier">locked_specs</span>[<span class="ruby-identifier">gem_name</span>].<span class="ruby-identifier">first</span>
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">strict</span>
+      <span class="ruby-identifier">filter_dep_specs</span>(<span class="ruby-identifier">spec_groups</span>, <span class="ruby-identifier">locked_spec</span>)
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-identifier">sort_dep_specs</span>(<span class="ruby-identifier">spec_groups</span>, <span class="ruby-identifier">locked_spec</span>)
+    <span class="ruby-keyword">end</span>.<span class="ruby-identifier">tap</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">specs</span><span class="ruby-operator">|</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-constant">DEBUG</span>
+        <span class="ruby-constant">STDERR</span>.<span class="ruby-identifier">puts</span> <span class="ruby-identifier">before_result</span>
+        <span class="ruby-constant">STDERR</span>.<span class="ruby-identifier">puts</span> <span class="ruby-node">&quot; after sort_versions: #{debug_format_result(dep, specs).inspect}&quot;</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

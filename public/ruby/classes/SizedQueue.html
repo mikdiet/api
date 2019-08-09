@@ -1,18 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <title>SizedQueue</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="../css/reset.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../css/main.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../css/github.css" type="text/css" media="screen" />
 <script src="../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
 <script src="../js/main.js" type="text/javascript" charset="utf-8"></script>
 <script src="../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
 
+
+    <meta property="og:title" value="SizedQueue">
+
+  
+    
+    <meta name="description" content="This class represents queues of specified size capacity.  The push operation may be blocked if the capacity is full.  See Queue for an example of how a SizedQueue works.">
+    <meta property="og:description" content="This class represents queues of specified size capacity.  The push operation may be blocked if the capacity is full.  See Queue for an example of how a SizedQueue works.">
+  
+
+    <meta name="keywords" content="SizedQueue class">
+  
+    <meta name="keywords" content="new, close, max, max=, push, pop, empty?, clear, length, num_waiting, enq, <<, deq, shift, size">
+  
 </head>
 
 <body>
@@ -40,11 +50,9 @@
   
     <div class="description">
       
-<p>This class represents queues of specified size capacity.  The push
-operation may be blocked if the capacity is full.</p>
+<p>This class represents queues of specified size capacity.  The push operation may be blocked if the capacity is full.</p>
 
-<p>See <a href="Queue.html">Queue</a> for an example of how a <a
-href="SizedQueue.html">SizedQueue</a> works.</p>
+<p>See <a href="Queue.html"><code>Queue</code></a> for an example of how a <a href="SizedQueue.html"><code>SizedQueue</code></a> works.</p>
 
     </div>
   
@@ -112,7 +120,24 @@ href="SizedQueue.html">SizedQueue</a> works.</p>
             
               
               <li>
+                <a href="#method-i-empty-3F">empty?</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-enq">enq</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>L</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-length">length</a>
               </li>
             
           </ul>
@@ -175,7 +200,12 @@ href="SizedQueue.html">SizedQueue</a> works.</p>
             
               
               <li>
-                <a href="#method-i-shift">shift</a>
+                <a href="#method-i-shift">shift</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-size">size</a>
               </li>
             
           </ul>
@@ -237,16 +267,17 @@ href="SizedQueue.html">SizedQueue</a> works.</p>
 rb_szqueue_initialize(VALUE self, VALUE vmax)
 {
     long max;
+    struct rb_szqueue *sq = szqueue_ptr(self);
 
     max = NUM2LONG(vmax);
     if (max &lt;= 0) {
         rb_raise(rb_eArgError, &quot;queue size must be positive&quot;);
     }
 
-    RSTRUCT_SET(self, QUEUE_QUE, ary_buf_new());
-    RSTRUCT_SET(self, QUEUE_WAITERS, ary_buf_new());
-    RSTRUCT_SET(self, SZQUEUE_WAITERS, ary_buf_new());
-    RSTRUCT_SET(self, SZQUEUE_MAX, vmax);
+    RB_OBJ_WRITE(self, &amp;sq-&gt;q.que, ary_buf_new());
+    list_head_init(szqueue_waitq(sq));
+    list_head_init(szqueue_pushq(sq));
+    sq-&gt;max = max;
 
     return self;
 }</pre>
@@ -254,7 +285,9 @@ rb_szqueue_initialize(VALUE self, VALUE vmax)
             </div>
             
           </div>
-                  
+        
+      
+    
       <div class="sectiontitle">Instance Public methods</div>
       
         <div class="method">
@@ -313,8 +346,10 @@ rb_szqueue_initialize(VALUE self, VALUE vmax)
                 <pre>static VALUE
 rb_szqueue_clear(VALUE self)
 {
-    rb_ary_clear(GET_QUEUE_QUE(self));
-    wakeup_all_threads(GET_SZQUEUE_WAITERS(self));
+    struct rb_szqueue *sq = szqueue_ptr(self);
+
+    rb_ary_clear(check_array(self, sq-&gt;q.que));
+    wakeup_all(szqueue_pushq(sq));
     return self;
 }</pre>
               </div>
@@ -333,12 +368,11 @@ rb_szqueue_clear(VALUE self)
 
           
             <div class="description">
-              <p>Similar to <a href="Queue.html#method-i-close">Queue#close</a>.</p>
+              <p>Similar to <a href="Queue.html#method-i-close"><code>Queue#close</code></a>.</p>
 
 <p>The difference is behavior with waiting enqueuing threads.</p>
 
-<p>If there are waiting enqueuing threads, they are interrupted by raising
-ClosedQueueError(&#39;queue closed&#39;).</p>
+<p>If there are waiting enqueuing threads, they are interrupted by raising ClosedQueueError(&#39;queue closed&#39;).</p>
             </div>
           
 
@@ -359,7 +393,14 @@ ClosedQueueError(&#39;queue closed&#39;).</p>
                 <pre>static VALUE
 rb_szqueue_close(VALUE self)
 {
-    return queue_do_close(self, TRUE);
+    if (!queue_closed_p(self)) {
+        struct rb_szqueue *sq = szqueue_ptr(self);
+
+        FL_SET(self, QUEUE_CLOSED);
+        wakeup_all(szqueue_waitq(sq));
+        wakeup_all(szqueue_pushq(sq));
+    }
+    return self;
 }</pre>
               </div>
             </div>
@@ -392,6 +433,47 @@ rb_szqueue_close(VALUE self)
           </div>
         
         <div class="method">
+          <div class="title method-title" id="method-i-empty-3F">
+            
+              <b>empty?
+</b>
+            
+            <a href="../classes/SizedQueue.html#method-i-empty-3F" name="method-i-empty-3F" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns <code>true</code> if the queue is empty.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-empty-3F_source')" id="l_method-i-empty-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-empty-3F_source" class="dyn-source">
+                <pre>static VALUE
+rb_szqueue_empty_p(VALUE self)
+{
+    struct rb_szqueue *sq = szqueue_ptr(self);
+
+    return queue_length(self, &amp;sq-&gt;q) == 0 ? Qtrue : Qfalse;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <div class="title method-title" id="method-i-enq">
             
               <b>enq</b>(*args)
@@ -414,6 +496,51 @@ rb_szqueue_close(VALUE self)
           
 
           
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-length">
+            
+              <b>length<br />size
+</b>
+            
+            <a href="../classes/SizedQueue.html#method-i-length" name="method-i-length" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the length of the queue.</p>
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="SizedQueue.html#method-i-size">size</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-length_source')" id="l_method-i-length_source">show</a>
+                
+              </p>
+              <div id="method-i-length_source" class="dyn-source">
+                <pre>static VALUE
+rb_szqueue_length(VALUE self)
+{
+    struct rb_szqueue *sq = szqueue_ptr(self);
+
+    return LONG2NUM(queue_length(self, &amp;sq-&gt;q));
+}</pre>
+              </div>
+            </div>
+            
           </div>
         
         <div class="method">
@@ -447,7 +574,7 @@ rb_szqueue_close(VALUE self)
                 <pre>static VALUE
 rb_szqueue_max_get(VALUE self)
 {
-    return GET_SZQUEUE_MAX(self);
+    return LONG2NUM(szqueue_ptr(self)-&gt;max);
 }</pre>
               </div>
             </div>
@@ -486,19 +613,18 @@ rb_szqueue_max_get(VALUE self)
                 <pre>static VALUE
 rb_szqueue_max_set(VALUE self, VALUE vmax)
 {
-    long max = NUM2LONG(vmax), diff = 0;
-    VALUE t;
+    long max = NUM2LONG(vmax);
+    long diff = 0;
+    struct rb_szqueue *sq = szqueue_ptr(self);
 
     if (max &lt;= 0) {
         rb_raise(rb_eArgError, &quot;queue size must be positive&quot;);
     }
-    if ((unsigned long)max &gt; GET_SZQUEUE_ULONGMAX(self)) {
-        diff = max - GET_SZQUEUE_ULONGMAX(self);
+    if (max &gt; sq-&gt;max) {
+        diff = max - sq-&gt;max;
     }
-    RSTRUCT_SET(self, SZQUEUE_MAX, vmax);
-    while (diff-- &gt; 0 &amp;&amp; !NIL_P(t = rb_ary_shift(GET_SZQUEUE_WAITERS(self)))) {
-        rb_thread_wakeup_alive(t);
-    }
+    sq-&gt;max = max;
+    sync_wakeup(szqueue_pushq(sq), diff);
     return vmax;
 }</pre>
               </div>
@@ -537,8 +663,9 @@ rb_szqueue_max_set(VALUE self, VALUE vmax)
                 <pre>static VALUE
 rb_szqueue_num_waiting(VALUE self)
 {
-    long len = queue_num_waiting(self) + szqueue_num_waiting_producer(self);
-    return ULONG2NUM(len);
+    struct rb_szqueue *sq = szqueue_ptr(self);
+
+    return INT2NUM(sq-&gt;q.num_waiting + sq-&gt;num_waiting_push);
 }</pre>
               </div>
             </div>
@@ -558,9 +685,7 @@ rb_szqueue_num_waiting(VALUE self)
             <div class="description">
               <p>Retrieves data from the queue.</p>
 
-<p>If the queue is empty, the calling thread is suspended until data is pushed
-onto the queue. If <code>non_block</code> is true, the thread isn&#39;t
-suspended, and <code>ThreadError</code> is raised.</p>
+<p>If the queue is empty, the calling thread is suspended until data is pushed onto the queue. If <code>non_block</code> is true, the thread isn&#39;t suspended, and <code>ThreadError</code> is raised.</p>
             </div>
           
 
@@ -606,10 +731,7 @@ rb_szqueue_pop(int argc, VALUE *argv, VALUE self)
             <div class="description">
               <p>Pushes <code>object</code> to the queue.</p>
 
-<p>If there is no space left in the queue, waits until space becomes
-available, unless <code>non_block</code> is true.  If
-<code>non_block</code> is true, the thread isn&#39;t suspended, and
-<code>ThreadError</code> is raised.</p>
+<p>If there is no space left in the queue, waits until space becomes available, unless <code>non_block</code> is true.  If <code>non_block</code> is true, the thread isn&#39;t suspended, and <code>ThreadError</code> is raised.</p>
             </div>
           
 
@@ -634,12 +756,10 @@ available, unless <code>non_block</code> is true.  If
                 <pre>static VALUE
 rb_szqueue_push(int argc, VALUE *argv, VALUE self)
 {
-    struct waiting_delete args;
+    struct rb_szqueue *sq = szqueue_ptr(self);
     int should_block = szqueue_push_should_block(argc, argv);
-    args.waiting = GET_SZQUEUE_WAITERS(self);
-    args.th      = rb_thread_current();
 
-    while (queue_length(self) &gt;= GET_SZQUEUE_ULONGMAX(self)) {
+    while (queue_length(self, &amp;sq-&gt;q) &gt;= sq-&gt;max) {
         if (!should_block) {
             rb_raise(rb_eThreadError, &quot;queue full&quot;);
         }
@@ -647,8 +767,15 @@ rb_szqueue_push(int argc, VALUE *argv, VALUE self)
             goto closed;
         }
         else {
-            rb_ary_push(args.waiting, args.th);
-            rb_ensure(queue_sleep, Qfalse, queue_delete_from_waiting, (VALUE)&amp;args);
+            struct queue_waiter qw;
+            struct list_head *pushq = szqueue_pushq(sq);
+
+            qw.w.th = GET_THREAD();
+            qw.as.sq = sq;
+            list_add_tail(pushq, &amp;qw.w.node);
+            sq-&gt;num_waiting_push++;
+
+            rb_ensure(queue_sleep, self, szqueue_sleep_done, (VALUE)&amp;qw);
         }
     }
 
@@ -657,7 +784,7 @@ rb_szqueue_push(int argc, VALUE *argv, VALUE self)
         raise_closed_queue_error(self);
     }
 
-    return queue_do_push(self, argv[0]);
+    return queue_do_push(self, &amp;sq-&gt;q, argv[0]);
 }</pre>
               </div>
             </div>
@@ -688,7 +815,36 @@ rb_szqueue_push(int argc, VALUE *argv, VALUE self)
 
           
           </div>
-                    </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-size">
+            
+              <b>size</b>()
+            
+            <a href="../classes/SizedQueue.html#method-i-size" name="method-i-size" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="SizedQueue.html#method-i-length">length</a>
+            </div>
+          
+
+          
+          </div>
+        
+      
+    
+  
+</div>
 
     </div>
   </body>

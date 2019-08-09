@@ -1,18 +1,28 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <title>ConditionVariable</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="../css/reset.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../css/main.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../css/github.css" type="text/css" media="screen" />
 <script src="../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
 <script src="../js/main.js" type="text/javascript" charset="utf-8"></script>
 <script src="../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
 
+
+    <meta property="og:title" value="ConditionVariable">
+
+  
+    
+    <meta name="description" content="ConditionVariable objects augment class Mutex. Using condition variables, it is possible to suspend while in the middle of a critical section until a resource becomes available.">
+    <meta property="og:description" content="ConditionVariable objects augment class Mutex. Using condition variables, it is possible to suspend while in the middle of a critical section until a resource becomes available.">
+  
+
+    <meta name="keywords" content="ConditionVariable class">
+  
+    <meta name="keywords" content="new, wait, signal, broadcast">
+  
 </head>
 
 <body>
@@ -40,15 +50,11 @@
   
     <div class="description">
       
-<p><a href="ConditionVariable.html">ConditionVariable</a> objects augment
-class Mutex. Using condition variables, it is possible to suspend while in
-the middle of a critical section until a resource becomes available.</p>
+<p><a href="ConditionVariable.html"><code>ConditionVariable</code></a> objects augment class <a href="Mutex.html"><code>Mutex</code></a>. Using condition variables, it is possible to suspend while in the middle of a critical section until a resource becomes available.</p>
 
 <p>Example:</p>
 
-<pre><code>require &#39;thread&#39;
-
-mutex = Mutex.new
+<pre><code>mutex = Mutex.new
 resource = ConditionVariable.new
 
 a = Thread.new {
@@ -188,14 +194,17 @@ b = Thread.new {
                 <pre>static VALUE
 rb_condvar_initialize(VALUE self)
 {
-    RSTRUCT_SET(self, CONDVAR_WAITERS, ary_buf_new());
+    struct rb_condvar *cv = condvar_ptr(self);
+    list_head_init(&amp;cv-&gt;waitq);
     return self;
 }</pre>
               </div>
             </div>
             
           </div>
-                  
+        
+      
+    
       <div class="sectiontitle">Instance Public methods</div>
       
         <div class="method">
@@ -229,7 +238,8 @@ rb_condvar_initialize(VALUE self)
                 <pre>static VALUE
 rb_condvar_broadcast(VALUE self)
 {
-    wakeup_all_threads(GET_CONDVAR_WAITERS(self));
+    struct rb_condvar *cv = condvar_ptr(self);
+    wakeup_all(&amp;cv-&gt;waitq);
     return self;
 }</pre>
               </div>
@@ -268,7 +278,8 @@ rb_condvar_broadcast(VALUE self)
                 <pre>static VALUE
 rb_condvar_signal(VALUE self)
 {
-    wakeup_first_thread(GET_CONDVAR_WAITERS(self));
+    struct rb_condvar *cv = condvar_ptr(self);
+    wakeup_one(&amp;cv-&gt;waitq);
     return self;
 }</pre>
               </div>
@@ -287,12 +298,9 @@ rb_condvar_signal(VALUE self)
 
           
             <div class="description">
-              <p>Releases the lock held in <code>mutex</code> and waits; reacquires the lock
-on wakeup.</p>
+              <p>Releases the lock held in <code>mutex</code> and waits; reacquires the lock on wakeup.</p>
 
-<p>If <code>timeout</code> is given, this method returns after
-<code>timeout</code> seconds passed, even if no other thread doesn&#39;t
-signal.</p>
+<p>If <code>timeout</code> is given, this method returns after <code>timeout</code> seconds passed, even if no other thread doesn&#39;t signal.</p>
             </div>
           
 
@@ -313,16 +321,15 @@ signal.</p>
                 <pre>static VALUE
 rb_condvar_wait(int argc, VALUE *argv, VALUE self)
 {
-    VALUE waiters = GET_CONDVAR_WAITERS(self);
-    VALUE mutex, timeout;
+    struct rb_condvar *cv = condvar_ptr(self);
     struct sleep_call args;
+    struct sync_waiter w;
 
-    rb_scan_args(argc, argv, &quot;11&quot;, &amp;mutex, &amp;timeout);
+    rb_scan_args(argc, argv, &quot;11&quot;, &amp;args.mutex, &amp;args.timeout);
 
-    args.mutex   = mutex;
-    args.timeout = timeout;
-    rb_ary_push(waiters, rb_thread_current());
-    rb_ensure(do_sleep, (VALUE)&amp;args, delete_current_thread, waiters);
+    w.th = GET_THREAD();
+    list_add_tail(&amp;cv-&gt;waitq, &amp;w.node);
+    rb_ensure(do_sleep, (VALUE)&amp;args, delete_from_waitq, (VALUE)&amp;w);
 
     return self;
 }</pre>
@@ -330,7 +337,11 @@ rb_condvar_wait(int argc, VALUE *argv, VALUE self)
             </div>
             
           </div>
-                    </div>
+        
+      
+    
+  
+</div>
 
     </div>
   </body>

@@ -5,7 +5,7 @@ git fetch -t
 rm -rf public rubydoc railsdoc
 bundle exec sdoc --template=rails -o rubydoc -g --debug ruby
 bundle exec sdoc --template=rails -o railsdoc -g --exclude=test --debug -m "rails/README.md" rails
-bundle exec sdoc-merge --title "Rails v5.1.1, Ruby v2.4.1" --op public --names "rails, ruby" railsdoc rubydoc
+bundle exec sdoc-merge --title "Rails v5.2.3, Ruby v2.6.3" --op public --names "rails, ruby" railsdoc rubydoc
 ```
 
 # Deployment

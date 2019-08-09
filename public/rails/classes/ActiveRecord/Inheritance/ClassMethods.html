@@ -1,18 +1,24 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <title>ActiveRecord::Inheritance::ClassMethods</title>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <link rel="stylesheet" href="../../../css/reset.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../../css/main.css" type="text/css" media="screen" />
 <link rel="stylesheet" href="../../../css/github.css" type="text/css" media="screen" />
 <script src="../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
-<script src="../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../../js/main.js" type="text/javascript" charset="utf-8"></script>
 <script src="../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
 
+
+    <meta property="og:title" value="ActiveRecord::Inheritance::ClassMethods">
+
+  
+
+    <meta name="keywords" content="ActiveRecord::Inheritance::ClassMethods class">
+  
+    <meta name="keywords" content="new, descends_from_active_record?, base_class, abstract_class?, sti_name, polymorphic_name, inherited, compute_type">
+  
 </head>
 
 <body>
@@ -121,6 +127,18 @@
           </ul>
         </dd>
       
+        <dt>P</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-polymorphic_name">polymorphic_name</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>S</dt>
         <dd>
           <ul>
@@ -159,24 +177,39 @@
               [RW]
             </td>
             <td class='attr-name'>abstract_class</td>
-            <td class='attr-desc'><p>Set this to true if this is an abstract class (see
-<code>abstract_class?</code>). If you are using inheritance with <a
-href="../../ActiveRecord.html">ActiveRecord</a> and don&#39;t want child
-classes to utilize the implied STI table name of the parent class, this
-will need to be true. For example, given the following:</p>
+            <td class='attr-desc'><p>Set this to <code>true</code> if this is an abstract class (see <code>abstract_class?</code>). If you are using inheritance with Active Record and don&#39;t want a class to be considered as part of the STI hierarchy, you must set this to true. <code>ApplicationRecord</code>, for example, is generated as an abstract class.</p>
 
-<pre><code>class SuperClass &lt; ActiveRecord::Base
-  self.abstract_class = true
-end
-class Child &lt; SuperClass
-  self.table_name = &#39;the_table_i_really_want&#39;
-end
+<p>Consider the following default behaviour:</p>
+
+<pre><code>Shape = Class.new(ActiveRecord::Base)
+Polygon = Class.new(Shape)
+Square = Class.new(Polygon)
+
+Shape.table_name   # =&gt; &quot;shapes&quot;
+Polygon.table_name # =&gt; &quot;shapes&quot;
+Square.table_name  # =&gt; &quot;shapes&quot;
+Shape.create!      # =&gt; #&lt;Shape id: 1, type: nil&gt;
+Polygon.create!    # =&gt; #&lt;Polygon id: 2, type: &quot;Polygon&quot;&gt;
+Square.create!     # =&gt; #&lt;Square id: 3, type: &quot;Square&quot;&gt;
 </code></pre>
 
-<p><code>self.abstract_class = true</code> is required to make
-<code>Child&lt;.find,.create, or any Arel method&gt;</code> use
-<code>the_table_i_really_want</code> instead of a table called
-<code>super_classes</code></p></td>
+<p>However, when using <code>abstract_class</code>, <code>Shape</code> is omitted from the hierarchy:</p>
+
+<pre><code>class Shape &lt; ActiveRecord::Base
+  self.abstract_class = true
+end
+Polygon = Class.new(Shape)
+Square = Class.new(Polygon)
+
+Shape.table_name   # =&gt; nil
+Polygon.table_name # =&gt; &quot;polygons&quot;
+Square.table_name  # =&gt; &quot;polygons&quot;
+Shape.create!      # =&gt; NotImplementedError: Shape is an abstract class and cannot be instantiated.
+Polygon.create!    # =&gt; #&lt;Polygon id: 1, type: nil&gt;
+Square.create!     # =&gt; #&lt;Square id: 2, type: &quot;Square&quot;&gt;
+</code></pre>
+
+<p>Note that in the above example, to disallow the creation of a plain <code>Polygon</code>, you should use <code>validates :type, presence: true</code>, instead of setting it as an abstract class. This way, <code>Polygon</code> will stay in the hierarchy, and Active Record will continue to correctly derive the table name.</p></td>
           </tr>
         
       </table>
@@ -184,7 +217,8 @@ end
 
 
     <!-- Methods -->
-        
+    
+    
       <div class="sectiontitle">Instance Public methods</div>
       
         <div class="method">
@@ -213,12 +247,12 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-abstract_class-3F_source')" id="l_method-i-abstract_class-3F_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/cdf8a2b49307953fbcd93df9fdec3c23063740b1/activerecord/lib/active_record/inheritance.rb#L125" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/activerecord/lib/active_record/inheritance.rb#L151" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-abstract_class-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 125</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">abstract_class?</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 151</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">abstract_class?</span>
   <span class="ruby-keyword">defined?</span>(<span class="ruby-ivar">@abstract_class</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-ivar">@abstract_class</span> <span class="ruby-operator">==</span> <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -236,18 +270,11 @@ end
 
           
             <div class="description">
-              <p>Returns the class descending directly from <a
-href="../Base.html">ActiveRecord::Base</a>, or an abstract class, if any,
-in the inheritance hierarchy.</p>
+              <p>Returns the class descending directly from <a href="../Base.html"><code>ActiveRecord::Base</code></a>, or an abstract class, if any, in the inheritance hierarchy.</p>
 
-<p>If A extends <a href="../Base.html">ActiveRecord::Base</a>, A.base_class
-will return A. If B descends from A through some arbitrarily deep
-hierarchy, B.base_class will return A.</p>
+<p>If A extends <a href="../Base.html"><code>ActiveRecord::Base</code></a>, A.base_class will return A. If B descends from A through some arbitrarily deep hierarchy, B.base_class will return A.</p>
 
-<p>If B &lt; A and C &lt; B and if A is an <a
-href="ClassMethods.html#attribute-i-abstract_class">#abstract_class</a>
-then both B.base_class and C.base_class would return B as the answer since
-A is an abstract_class.</p>
+<p>If B &lt; A and C &lt; B and if A is an <a href="ClassMethods.html#attribute-i-abstract_class"><code>abstract_class</code></a> then both B.base_class and C.base_class would return B as the answer since A is an abstract_class.</p>
             </div>
           
 
@@ -263,12 +290,12 @@ A is an abstract_class.</p>
                 Source:
                 <a href="javascript:toggleSource('method-i-base_class_source')" id="l_method-i-base_class_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/cdf8a2b49307953fbcd93df9fdec3c23063740b1/activerecord/lib/active_record/inheritance.rb#L95" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/activerecord/lib/active_record/inheritance.rb#L95" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-base_class_source" class="dyn-source">
                 <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 95</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">base_class</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">base_class</span>
   <span class="ruby-keyword">unless</span> <span class="ruby-keyword">self</span> <span class="ruby-operator">&lt;</span> <span class="ruby-constant">Base</span>
     <span class="ruby-identifier">raise</span> <span class="ruby-constant">ActiveRecordError</span>, <span class="ruby-node">&quot;#{name} doesn&#39;t belong in a hierarchy descending from ActiveRecord&quot;</span>
   <span class="ruby-keyword">end</span>
@@ -294,8 +321,7 @@ A is an abstract_class.</p>
 
           
             <div class="description">
-              <p>Returns <code>true</code> if this does not need STI type condition. Returns
-<code>false</code> if STI type condition needs to be applied.</p>
+              <p>Returns <code>true</code> if this does not need STI type condition. Returns <code>false</code> if STI type condition needs to be applied.</p>
             </div>
           
 
@@ -311,12 +337,12 @@ A is an abstract_class.</p>
                 Source:
                 <a href="javascript:toggleSource('method-i-descends_from_active_record-3F_source')" id="l_method-i-descends_from_active_record-3F_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/cdf8a2b49307953fbcd93df9fdec3c23063740b1/activerecord/lib/active_record/inheritance.rb#L72" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/activerecord/lib/active_record/inheritance.rb#L72" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-descends_from_active_record-3F_source" class="dyn-source">
                 <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 72</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">descends_from_active_record?</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">descends_from_active_record?</span>
   <span class="ruby-keyword">if</span> <span class="ruby-keyword">self</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Base</span>
     <span class="ruby-keyword">false</span>
   <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">superclass</span>.<span class="ruby-identifier">abstract_class?</span>
@@ -356,12 +382,12 @@ A is an abstract_class.</p>
                 Source:
                 <a href="javascript:toggleSource('method-i-inherited_source')" id="l_method-i-inherited_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/cdf8a2b49307953fbcd93df9fdec3c23063740b1/activerecord/lib/active_record/inheritance.rb#L133" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/activerecord/lib/active_record/inheritance.rb#L163" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-inherited_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 133</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">inherited</span>(<span class="ruby-identifier">subclass</span>)
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 163</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">inherited</span>(<span class="ruby-identifier">subclass</span>)
   <span class="ruby-identifier">subclass</span>.<span class="ruby-identifier">instance_variable_set</span>(<span class="ruby-value">:@_type_candidates_cache</span>, <span class="ruby-constant">Concurrent</span><span class="ruby-operator">::</span><span class="ruby-constant">Map</span>.<span class="ruby-identifier">new</span>)
   <span class="ruby-keyword">super</span>
 <span class="ruby-keyword">end</span></pre>
@@ -373,16 +399,14 @@ A is an abstract_class.</p>
         <div class="method">
           <div class="title method-title" id="method-i-new">
             
-              <b>new</b>(*args, &amp;block)
+              <b>new</b>(attributes = nil, &amp;block)
             
             <a href="../../../classes/ActiveRecord/Inheritance/ClassMethods.html#method-i-new" name="method-i-new" class="permalink">Link</a>
           </div>
 
           
             <div class="description">
-              <p>Determines if one of the attributes passed in is the inheritance column,
-and if the inheritance column is attr accessible, it initializes an
-instance of the given subclass instead of the base class.</p>
+              <p>Determines if one of the attributes passed in is the inheritance column, and if the inheritance column is attr accessible, it initializes an instance of the given subclass instead of the base class.</p>
             </div>
           
 
@@ -398,19 +422,18 @@ instance of the given subclass instead of the base class.</p>
                 Source:
                 <a href="javascript:toggleSource('method-i-new_source')" id="l_method-i-new_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/cdf8a2b49307953fbcd93df9fdec3c23063740b1/activerecord/lib/active_record/inheritance.rb#L49" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/activerecord/lib/active_record/inheritance.rb#L50" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 49</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">new</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 50</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">new</span>(<span class="ruby-identifier">attributes</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">abstract_class?</span> <span class="ruby-operator">||</span> <span class="ruby-keyword">self</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Base</span>
     <span class="ruby-identifier">raise</span> <span class="ruby-constant">NotImplementedError</span>, <span class="ruby-node">&quot;#{self} is an abstract class and cannot be instantiated.&quot;</span>
   <span class="ruby-keyword">end</span>
 
-  <span class="ruby-identifier">attrs</span> = <span class="ruby-identifier">args</span>.<span class="ruby-identifier">first</span>
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">has_attribute?</span>(<span class="ruby-identifier">inheritance_column</span>)
-    <span class="ruby-identifier">subclass</span> = <span class="ruby-identifier">subclass_from_attributes</span>(<span class="ruby-identifier">attrs</span>)
+    <span class="ruby-identifier">subclass</span> = <span class="ruby-identifier">subclass_from_attributes</span>(<span class="ruby-identifier">attributes</span>)
 
     <span class="ruby-keyword">if</span> <span class="ruby-identifier">subclass</span>.<span class="ruby-identifier">nil?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">base_class</span> <span class="ruby-operator">==</span> <span class="ruby-keyword">self</span>
       <span class="ruby-identifier">subclass</span> = <span class="ruby-identifier">subclass_from_attributes</span>(<span class="ruby-identifier">column_defaults</span>)
@@ -418,10 +441,49 @@ instance of the given subclass instead of the base class.</p>
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">subclass</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">subclass</span> <span class="ruby-operator">!=</span> <span class="ruby-keyword">self</span>
-    <span class="ruby-identifier">subclass</span>.<span class="ruby-identifier">new</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+    <span class="ruby-identifier">subclass</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">attributes</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-keyword">else</span>
     <span class="ruby-keyword">super</span>
   <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-polymorphic_name">
+            
+              <b>polymorphic_name</b>()
+            
+            <a href="../../../classes/ActiveRecord/Inheritance/ClassMethods.html#method-i-polymorphic_name" name="method-i-polymorphic_name" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-polymorphic_name_source')" id="l_method-i-polymorphic_name_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/activerecord/lib/active_record/inheritance.rb#L159" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-polymorphic_name_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 159</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">polymorphic_name</span>
+  <span class="ruby-identifier">base_class</span>.<span class="ruby-identifier">name</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -454,19 +516,20 @@ instance of the given subclass instead of the base class.</p>
                 Source:
                 <a href="javascript:toggleSource('method-i-sti_name_source')" id="l_method-i-sti_name_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/cdf8a2b49307953fbcd93df9fdec3c23063740b1/activerecord/lib/active_record/inheritance.rb#L129" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/activerecord/lib/active_record/inheritance.rb#L155" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-sti_name_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 129</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">sti_name</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 155</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">sti_name</span>
   <span class="ruby-identifier">store_full_sti_class</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">name</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">demodulize</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
           </div>
-              
+        
+      
       <div class="sectiontitle">Instance Protected methods</div>
       
         <div class="method">
@@ -479,9 +542,7 @@ instance of the given subclass instead of the base class.</p>
 
           
             <div class="description">
-              <p>Returns the class type of the record using the current module as a prefix.
-So descendants of MyApp::Business::Account would appear as
-MyApp::Business::AccountSubclass.</p>
+              <p>Returns the class type of the record using the current module as a prefix. So descendants of MyApp::Business::Account would appear as MyApp::Business::AccountSubclass.</p>
             </div>
           
 
@@ -497,12 +558,12 @@ MyApp::Business::AccountSubclass.</p>
                 Source:
                 <a href="javascript:toggleSource('method-i-compute_type_source')" id="l_method-i-compute_type_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/cdf8a2b49307953fbcd93df9fdec3c23063740b1/activerecord/lib/active_record/inheritance.rb#L142" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/45b6b7f57f1a2eb757eb612fcc94e42d5908ec21/activerecord/lib/active_record/inheritance.rb#L172" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-compute_type_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 142</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword ruby-title">compute_type</span>(<span class="ruby-identifier">type_name</span>)
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/inheritance.rb, line 172</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">compute_type</span>(<span class="ruby-identifier">type_name</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">type_name</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-string">&quot;::&quot;</span>.<span class="ruby-identifier">freeze</span>)
     <span class="ruby-comment"># If the type is prefixed with a scope operator then we assume that</span>
     <span class="ruby-comment"># the type_name is an absolute reference.</span>
@@ -533,7 +594,11 @@ MyApp::Business::AccountSubclass.</p>
             </div>
             
           </div>
-                    </div>
+        
+      
+    
+  
+</div>
 
     </div>
   </body>
