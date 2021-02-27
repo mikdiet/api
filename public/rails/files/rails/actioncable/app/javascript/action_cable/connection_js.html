@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>connection.js</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>
+    <div class="banner">
+        
+        <h1>
+            connection.js
+        </h1>
+        <ul class="files">
+            
+            <li>
+                rails/actioncable/app/javascript/action_cable/connection.js
+                
+                    <a href="https://github.com/mikdiet/api/blob/d92e58be3292401c670683bea89f743ac3273e05/rails/actioncable/app/javascript/action_cable/connection.js" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2021-02-27 11:59:48 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>import adapters from “./adapters” import ConnectionMonitor from
+“./connection_monitor” import INTERNAL from “./internal” import logger from
+“./logger”</p>
+
+<p>// Encapsulate the cable connection held by the consumer. This is an
+internal class not intended for direct user manipulation.</p>
+
+<p>const {message_types, protocols} = INTERNAL const supportedProtocols =
+protocols.slice(0, protocols.length - 1)</p>
+
+<p>const indexOf = [].indexOf</p>
+
+<p>class Connection {</p>
+
+<pre><code>constructor(consumer) {
+  this.open = this.open.bind(this)
+  this.consumer = consumer
+  this.subscriptions = this.consumer.subscriptions
+  this.monitor = new ConnectionMonitor(this)
+  this.disconnected = true
+}
+
+send(data) {
+  if (this.isOpen()) {
+    this.webSocket.send(JSON.stringify(data))
+    return true
+  } else {
+    return false
+  }
+}
+
+open() {
+  if (this.isActive()) {
+    logger.log(`Attempted to open WebSocket, but existing socket is ${this.getState()}`)
+    return false
+  } else {
+    logger.log(`Opening WebSocket, current state is ${this.getState()}, subprotocols: ${protocols}`)
+    if (this.webSocket) { this.uninstallEventHandlers() }
+    this.webSocket = new adapters.WebSocket(this.consumer.url, protocols)
+    this.installEventHandlers()
+    this.monitor.start()
+    return true
+  }
+}
+
+close({allowReconnect} = {allowReconnect: true}) {
+  if (!allowReconnect) { this.monitor.stop() }
+  if (this.isActive()) {
+    return this.webSocket.close()
+  }
+}
+
+reopen() {
+  logger.log(`Reopening WebSocket, current state is ${this.getState()}`)
+  if (this.isActive()) {
+    try {
+      return this.close()
+    } catch (error) {
+      logger.log(&quot;Failed to reopen WebSocket&quot;, error)
+    }
+    finally {
+      logger.log(`Reopening WebSocket in ${this.constructor.reopenDelay}ms`)
+      setTimeout(this.open, this.constructor.reopenDelay)
+    }
+  } else {
+    return this.open()
+  }
+}
+
+getProtocol() {
+  if (this.webSocket) {
+    return this.webSocket.protocol
+  }
+}
+
+isOpen() {
+  return this.isState(&quot;open&quot;)
+}
+
+isActive() {
+  return this.isState(&quot;open&quot;, &quot;connecting&quot;)
+}
+
+// Private
+
+isProtocolSupported() {
+  return indexOf.call(supportedProtocols, this.getProtocol()) &gt;= 0
+}
+
+isState(...states) {
+  return indexOf.call(states, this.getState()) &gt;= 0
+}
+
+getState() {
+  if (this.webSocket) {
+    for (let state in adapters.WebSocket) {
+      if (adapters.WebSocket[state] === this.webSocket.readyState) {
+        return state.toLowerCase()
+      }
+    }
+  }
+  return null
+}
+
+installEventHandlers() {
+  for (let eventName in this.events) {
+    const handler = this.events[eventName].bind(this)
+    this.webSocket[`on${eventName}`] = handler
+  }
+}
+
+uninstallEventHandlers() {
+  for (let eventName in this.events) {
+    this.webSocket[`on${eventName}`] = function() {}
+  }
+}</code></pre>
+
+<p>}</p>
+
+<p>Connection.reopenDelay = 500</p>
+
+<p>Connection.prototype.events = {</p>
+
+<pre><code>message(event) {
+  if (!this.isProtocolSupported()) { return }
+  const {identifier, message, reason, reconnect, type} = JSON.parse(event.data)
+  switch (type) {
+    case message_types.welcome:
+      this.monitor.recordConnect()
+      return this.subscriptions.reload()
+    case message_types.disconnect:
+      logger.log(`Disconnecting. Reason: ${reason}`)
+      return this.close({allowReconnect: reconnect})
+    case message_types.ping:
+      return this.monitor.recordPing()
+    case message_types.confirmation:
+      return this.subscriptions.notify(identifier, &quot;connected&quot;)
+    case message_types.rejection:
+      return this.subscriptions.reject(identifier)
+    default:
+      return this.subscriptions.notify(identifier, &quot;received&quot;, message)
+  }
+},
+
+open() {
+  logger.log(`WebSocket onopen event, using &#39;${this.getProtocol()}&#39; subprotocol`)
+  this.disconnected = false
+  if (!this.isProtocolSupported()) {
+    logger.log(&quot;Protocol is unsupported. Stopping monitor and disconnecting.&quot;)
+    return this.close({allowReconnect: false})
+  }
+},
+
+close(event) {
+  logger.log(&quot;WebSocket onclose event&quot;)
+  if (this.disconnected) { return }
+  this.disconnected = true
+  this.monitor.recordDisconnect()
+  return this.subscriptions.notifyAll(&quot;disconnected&quot;, {willAttemptReconnect: this.monitor.isRunning()})
+},
+
+error() {
+  logger.log(&quot;WebSocket onerror event&quot;)
+}</code></pre>
+
+<p>}</p>
+
+<p>export default Connection</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,222 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Rakefile</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>
+    <div class="banner">
+        
+        <h1>
+            Rakefile
+        </h1>
+        <ul class="files">
+            
+            <li>
+                rails/railties/Rakefile
+                
+                    <a href="https://github.com/mikdiet/api/blob/d92e58be3292401c670683bea89f743ac3273e05/rails/railties/Rakefile" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2021-02-27 11:59:49 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p># frozen_string_literal: true</p>
+
+<p>require “rake/testtask”</p>
+
+<p>task default: :test</p>
+
+<p>task :package</p>
+
+<p>desc “Run all unit tests” task test: “test:isolated”</p>
+
+<p>namespace :test do</p>
+
+<pre><code>task :isolated do
+  estimated_duration = {
+    &quot;test/application/test_runner_test.rb&quot; =&gt; 201,
+    &quot;test/application/assets_test.rb&quot; =&gt; 131,
+    &quot;test/application/rake/migrations_test.rb&quot; =&gt; 65,
+    &quot;test/generators/scaffold_generator_test.rb&quot; =&gt; 57,
+    &quot;test/generators/plugin_test_runner_test.rb&quot; =&gt; 57,
+    &quot;test/application/test_test.rb&quot; =&gt; 52,
+    &quot;test/application/configuration_test.rb&quot; =&gt; 49,
+    &quot;test/generators/app_generator_test.rb&quot; =&gt; 43,
+    &quot;test/application/rake/dbs_test.rb&quot; =&gt; 43,
+    &quot;test/application/rake_test.rb&quot; =&gt; 33,
+    &quot;test/generators/plugin_generator_test.rb&quot; =&gt; 30,
+    &quot;test/railties/engine_test.rb&quot; =&gt; 27,
+    &quot;test/generators/scaffold_controller_generator_test.rb&quot; =&gt; 23,
+    &quot;test/railties/generators_test.rb&quot; =&gt; 19,
+    &quot;test/application/console_test.rb&quot; =&gt; 16,
+    &quot;test/engine/commands_test.rb&quot; =&gt; 15,
+    &quot;test/application/routing_test.rb&quot; =&gt; 15,
+    &quot;test/application/mailer_previews_test.rb&quot; =&gt; 15,
+    &quot;test/application/rake/multi_dbs_test.rb&quot; =&gt; 13,
+    &quot;test/application/asset_debugging_test.rb&quot; =&gt; 12,
+    &quot;test/application/bin_setup_test.rb&quot; =&gt; 11,
+    &quot;test/engine/test_test.rb&quot; =&gt; 10,
+    &quot;test/application/runner_test.rb&quot; =&gt; 10,
+  }
+  estimated_duration.default = 1
+
+  dash_i = [
+    &quot;test&quot;,
+    &quot;lib&quot;,
+    &quot;../activesupport/lib&quot;,
+    &quot;../actionpack/lib&quot;,
+    &quot;../actionview/lib&quot;,
+    &quot;../activemodel/lib&quot;
+  ].map { |dir| File.expand_path(dir, __dir__) }
+
+  dash_i.reverse_each do |x|
+    $:.unshift(x) unless $:.include?(x)
+  end
+  $-w = true
+
+  require &quot;bundler/setup&quot; unless defined?(Bundler)
+  require &quot;active_support&quot;
+
+  # Only generate the template app once.
+  require_relative &quot;test/isolation/abstract_unit&quot;
+
+  failing_files = []
+
+  dirs = (ENV[&quot;TEST_DIR&quot;] || ENV[&quot;TEST_DIRS&quot;] || &quot;**&quot;).split(&quot;,&quot;)
+  test_options = ENV[&quot;TESTOPTS&quot;].to_s.split(/[\s]+/)
+
+  test_patterns = dirs.map { |dir| &quot;test/#{dir}  _test.rb&quot; }
+  test_files = Dir[*test_patterns].select do |file|
+    !file.start_with?(&quot;test/fixtures/&quot;) &amp;&amp; !file.start_with?(&quot;test/isolation/assets/&quot;)
+  end
+
+  if ENV[&quot;BUILDKITE_PARALLEL_JOB_COUNT&quot;]
+    n = ENV[&quot;BUILDKITE_PARALLEL_JOB&quot;].to_i
+    m = ENV[&quot;BUILDKITE_PARALLEL_JOB_COUNT&quot;].to_i
+
+    buckets = Array.new(m) { [] }
+    allocations = Array.new(m) { 0 }
+    test_files.sort_by { |file| [-estimated_duration[file], file] }.each do |file|
+      idx = allocations.index(allocations.min)
+      buckets[idx] &lt;&lt; file
+      allocations[idx] += estimated_duration[file]
+    end
+
+    puts &quot;Running #{buckets[n].size} of #{test_files.size} test files, estimated duration #{allocations[n]}s&quot;
+
+    test_files = buckets[n]
+  end
+
+  test_files.each do |file|
+    puts &quot;--- #{file}&quot;
+    fake_command = Shellwords.join([
+      FileUtils::RUBY,
+      &quot;-w&quot;,
+       dash_i.map { |dir| &quot;-I#{Pathname.new(dir).relative_path_from(Pathname.pwd)}&quot; },
+      file,
+    ])
+    puts fake_command
+
+    if Process.respond_to?(:fork)
+      # We could run these in parallel, but pretty much all of the
+      # railties tests already run in parallel, so ¯\_(⊙︿⊙)_/¯
+      Process.waitpid fork {
+        ARGV.clear.concat test_options
+        Rake.application = nil
+
+        load file
+      }
+    else
+      Process.wait spawn(fake_command)
+    end
+
+    unless $?.success?
+      failing_files &lt;&lt; file
+      puts &quot;^^^ +++&quot;
+    end
+  end
+
+  puts &quot;--- All tests completed&quot;
+  unless failing_files.empty?
+    puts &quot;^^^ +++&quot;
+    puts
+    puts &quot;Failed in:&quot;
+    failing_files.each do |file|
+      puts &quot;  #{file}&quot;
+    end
+    puts
+
+    exit 1
+  end
+end
+</code></pre>
+
+<p>end</p>
+
+<p>Rake::TestTask.new(“test:regular”) do |t|</p>
+
+<pre><code>t.libs &lt;&lt; &quot;test&quot; &lt;&lt; &quot;#{__dir__}/../activesupport/lib&quot;
+t.pattern = &quot;test/   *_test.rb&quot;
+t.warning = true
+t.verbose = true
+t.ruby_opts = [&quot;--dev&quot;] if defined?(JRUBY_VERSION)
+</code></pre>
+
+<p>end</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>

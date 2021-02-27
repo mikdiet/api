@@ -1,0 +1,1542 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Proc</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../css/github.css" type="text/css" media="screen" />
+<script src="../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>
+    <div class="banner">
+        
+        <h1>
+            <span class="type">Class</span>
+            Proc
+            
+                <span class="parent">&lt;
+                    
+                    <a href="Object.html">Object</a>
+                    
+                </span>
+            
+        </h1>
+        <ul class="files">
+            
+            <li><a href="../files/ruby/proc_c.html">ruby/proc.c</a></li>
+            
+        </ul>
+    </div>
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>A <code>Proc</code> object is an encapsulation of a block of code, which
+can be stored in a local variable, passed to a method or another <a
+href="Proc.html">Proc</a>, and can be called. <a href="Proc.html">Proc</a>
+is an essential concept in Ruby and a core of its functional programming
+features.</p>
+
+<pre><code>square = Proc.new {|x| x**2 }
+
+square.call(3)  #=&gt; 9
+# shorthands:
+square.(3)      #=&gt; 9
+square[3]       #=&gt; 9
+</code></pre>
+
+<p><a href="Proc.html">Proc</a> objects are <em>closures</em>, meaning they
+remember and can use the entire context in which they were created.</p>
+
+<pre><code>def gen_times(factor)
+  Proc.new {|n| n*factor } # remembers the value of factor at the moment of creation
+end
+
+times3 = gen_times(3)
+times5 = gen_times(5)
+
+times3.call(12)               #=&gt; 36
+times5.call(5)                #=&gt; 25
+times3.call(times5.call(4))   #=&gt; 60
+</code></pre>
+
+<h2 id="class-Proc-label-Creation">Creation</h2>
+
+<p>There are several methods to create a <a href="Proc.html">Proc</a></p>
+<ul><li>
+<p>Use the <a href="Proc.html">Proc</a> class constructor:</p>
+
+<pre><code>proc1 = Proc.new {|x| x**2 }
+</code></pre>
+</li><li>
+<p>Use the <a href="Kernel.html#method-i-proc">Kernel#proc</a> method as a
+shorthand of <a href="Proc.html#method-c-new">::new</a>:</p>
+
+<pre><code>proc2 = proc {|x| x**2 }
+</code></pre>
+</li><li>
+<p>Receiving a block of code into proc argument (note the <code>&amp;</code>):</p>
+
+<pre><code>def make_proc(&amp;block)
+  block
+end
+
+proc3 = make_proc {|x| x**2 }
+</code></pre>
+</li><li>
+<p>Construct a proc with lambda semantics using the <a
+href="Kernel.html#method-i-lambda">Kernel#lambda</a> method (see below for
+explanations about lambdas):</p>
+
+<pre><code>lambda1 = lambda {|x| x**2 }
+</code></pre>
+</li><li>
+<p>Use the Lambda literal syntax (also constructs a proc with lambda
+semantics):</p>
+
+<pre><code>lambda2 = -&gt;(x) { x**2 }
+</code></pre>
+</li></ul>
+
+<h2 id="class-Proc-label-Lambda+and+non-lambda+semantics">Lambda and non-lambda semantics</h2>
+
+<p>Procs are coming in two flavors: lambda and non-lambda (regular procs).
+Differences are:</p>
+<ul><li>
+<p>In lambdas, <code>return</code> means exit from this lambda;</p>
+</li><li>
+<p>In regular procs, <code>return</code> means exit from embracing method (and
+will throw <code>LocalJumpError</code> if invoked outside the method);</p>
+</li><li>
+<p>In lambdas, arguments are treated in the same way as in methods: strict,
+with <code>ArgumentError</code> for mismatching argument number, and no
+additional argument processing;</p>
+</li><li>
+<p>Regular procs accept arguments more generously: missing arguments are
+filled with <code>nil</code>, single <a href="Array.html">Array</a>
+arguments are deconstructed if the proc has multiple arguments, and there
+is no error raised on extra arguments.</p>
+</li></ul>
+
+<p>Examples:</p>
+
+<pre><code>p = proc {|x, y| &quot;x=#{x}, y=#{y}&quot; }
+p.call(1, 2)      #=&gt; &quot;x=1, y=2&quot;
+p.call([1, 2])    #=&gt; &quot;x=1, y=2&quot;, array deconstructed
+p.call(1, 2, 8)   #=&gt; &quot;x=1, y=2&quot;, extra argument discarded
+p.call(1)         #=&gt; &quot;x=1, y=&quot;, nil substituted instead of error
+
+l = lambda {|x, y| &quot;x=#{x}, y=#{y}&quot; }
+l.call(1, 2)      #=&gt; &quot;x=1, y=2&quot;
+l.call([1, 2])    # ArgumentError: wrong number of arguments (given 1, expected 2)
+l.call(1, 2, 8)   # ArgumentError: wrong number of arguments (given 3, expected 2)
+l.call(1)         # ArgumentError: wrong number of arguments (given 1, expected 2)
+
+def test_return
+  -&gt; { return 3 }.call      # just returns from lambda into method body
+  proc { return 4 }.call    # returns from method
+  return 5
+end
+
+test_return # =&gt; 4, return from proc
+</code></pre>
+
+<p>Lambdas are useful as self-sufficient functions, in particular useful as
+arguments to higher-order functions, behaving exactly like Ruby methods.</p>
+
+<p>Procs are useful for implementing iterators:</p>
+
+<pre><code>def test
+  [[1, 2], [3, 4], [5, 6]].map {|a, b| return a if a + b &gt; 10 }
+                            #  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+end
+</code></pre>
+
+<p>Inside <code>map</code>, the block of code is treated as a regular
+(non-lambda) proc, which means that the internal arrays will be
+deconstructed to pairs of arguments, and <code>return</code> will exit from
+the method <code>test</code>. That would not be possible with a stricter
+lambda.</p>
+
+<p>You can tell a lambda from a regular proc by using the <a
+href="Proc.html#method-i-lambda-3F">lambda?</a> instance method.</p>
+
+<p>Lambda semantics is typically preserved during the proc lifetime, including
+<code>&amp;</code>-deconstruction to a block of code:</p>
+
+<pre><code>p = proc {|x, y| x }
+l = lambda {|x, y| x }
+[[1, 2], [3, 4]].map(&amp;p) #=&gt; [1, 2]
+[[1, 2], [3, 4]].map(&amp;l) # ArgumentError: wrong number of arguments (given 1, expected 2)
+</code></pre>
+
+<p>The only exception is dynamic method definition: even if defined by passing
+a non-lambda proc, methods still have normal semantics of argument
+checking.</p>
+
+<pre><code>class C
+  define_method(:e, &amp;proc {})
+end
+C.new.e(1,2)       #=&gt; ArgumentError
+C.new.method(:e).to_proc.lambda?   #=&gt; true
+</code></pre>
+
+<p>This exception ensures that methods never have unusual argument passing
+conventions, and makes it easy to have wrappers defining methods that
+behave as usual.</p>
+
+<pre><code>class C
+  def self.def2(name, &amp;body)
+    define_method(name, &amp;body)
+  end
+
+  def2(:f) {}
+end
+C.new.f(1,2)       #=&gt; ArgumentError
+</code></pre>
+
+<p>The wrapper <em>def2</em> receives <code>body</code> as a non-lambda proc,
+yet defines a method which has normal semantics.</p>
+
+<h2 id="class-Proc-label-Conversion+of+other+objects+to+procs">Conversion of other objects to procs</h2>
+
+<p>Any object that implements the <code>to_proc</code> method can be converted
+into a proc by the <code>&amp;</code> operator, and therefore con be
+consumed by iterators.</p>
+
+<pre><code>class Greater
+  def initialize(greating)
+    @greating = greating
+  end
+
+  def to_proc
+    proc {|name| &quot;#{@greating}, #{name}!&quot; }
+  end
+end
+
+hi = Greater.new(&quot;Hi&quot;)
+hey = Greater.new(&quot;Hey&quot;)
+[&quot;Bob&quot;, &quot;Jane&quot;].map(&amp;hi)    #=&gt; [&quot;Hi, Bob!&quot;, &quot;Hi, Jane!&quot;]
+[&quot;Bob&quot;, &quot;Jane&quot;].map(&amp;hey)   #=&gt; [&quot;Hey, Bob!&quot;, &quot;Hey, Jane!&quot;]
+</code></pre>
+
+<p>Of the Ruby core classes, this method is implemented by <a
+href="Symbol.html">Symbol</a>, <a href="Method.html">Method</a>, and <a
+href="Hash.html">Hash</a>.</p>
+
+<pre><code>:to_s.to_proc.call(1)           #=&gt; &quot;1&quot;
+[1, 2].map(&amp;:to_s)              #=&gt; [&quot;1&quot;, &quot;2&quot;]
+
+method(:puts).to_proc.call(1)   # prints 1
+[1, 2].each(&amp;method(:puts))     # prints 1, 2
+
+{test: 1}.to_proc.call(:test)       #=&gt; 1
+%i[test many keys].map(&amp;{test: 1})  #=&gt; [1, nil, nil]
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>#</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-3C-3C">&lt;&lt;</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-3D-3D-3D">===</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-3E-3E">&gt;&gt;</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-5B-5D">[]</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>A</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-arity">arity</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>B</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-binding">binding</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>C</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-call">call</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-curry">curry</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>H</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-hash">hash</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>I</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-inspect">inspect</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>L</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-lambda-3F">lambda?</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>N</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-new">new</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>P</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-parameters">parameters</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>S</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-source_location">source_location</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>T</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-to_proc">to_proc</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-to_s">to_s</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>Y</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-yield">yield</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+      <div class="sectiontitle">Class Public methods</div>
+      
+        <div class="method">
+          <div class="title method-title" id="method-c-new">
+            
+              <b>Proc.new {|...| block } &rarr; a_proc<br />Proc.new                &rarr; a_proc
+</b>
+            
+            <a href="../classes/Proc.html#method-c-new" name="method-c-new" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Creates a new <code>Proc</code> object, bound to the current context.
+<code>Proc::new</code> may be called without a block only within a method
+with an attached block, in which case that block is converted to the
+<code>Proc</code> object.</p>
+
+<pre><code>def proc_from
+  Proc.new
+end
+proc = proc_from { &quot;hello&quot; }
+proc.call   #=&gt; &quot;hello&quot;
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+                
+              </p>
+              <div id="method-c-new_source" class="dyn-source">
+                <pre>static VALUE
+rb_proc_s_new(int argc, VALUE *argv, VALUE klass)
+{
+    VALUE block = proc_new(klass, FALSE);
+
+    rb_obj_call_init(block, argc, argv);
+    return block;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+                  
+      <div class="sectiontitle">Instance Public methods</div>
+      
+        <div class="method">
+          <div class="title method-title" id="method-i-3C-3C">
+            
+              <b>prc << g &rarr; a_proc
+</b>
+            
+            <a href="../classes/Proc.html#method-i-3C-3C" name="method-i-3C-3C" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a proc that is the composition of this proc and the given
+<em>g</em>. The returned proc takes a variable number of arguments, calls
+<em>g</em> with them then calls this proc with the result.</p>
+
+<pre><code>f = proc {|x| x * x }
+g = proc {|x| x + x }
+p (f &lt;&lt; g).call(2) #=&gt; 16
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-3C-3C_source')" id="l_method-i-3C-3C_source">show</a>
+                
+              </p>
+              <div id="method-i-3C-3C_source" class="dyn-source">
+                <pre>static VALUE
+proc_compose_to_left(VALUE self, VALUE g)
+{
+    VALUE proc, args, procs[2];
+    rb_proc_t *procp;
+    int is_lambda;
+
+    procs[0] = self;
+    procs[1] = g;
+    args = rb_ary_tmp_new_from_values(0, 2, procs);
+
+    GetProcPtr(self, procp);
+    is_lambda = procp-&gt;is_lambda;
+
+    proc = rb_proc_new(compose, args);
+    GetProcPtr(proc, procp);
+    procp-&gt;is_lambda = is_lambda;
+
+    return proc;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-3D-3D-3D">
+            
+              <b>proc === obj   &rarr; result_of_proc</b>
+            
+            <a href="../classes/Proc.html#method-i-3D-3D-3D" name="method-i-3D-3D-3D" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Invokes the block with <code>obj</code> as the proc&#39;s parameter like <a
+href="Proc.html#method-i-call">#call</a>. This allows a proc object to be
+the target of a <code>when</code> clause in a case statement.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-3D-3D-3D_source')" id="l_method-i-3D-3D-3D_source">show</a>
+                
+              </p>
+              <div id="method-i-3D-3D-3D_source" class="dyn-source">
+                <pre>static VALUE
+proc_call(int argc, VALUE *argv, VALUE procval)
+{
+    /* removed */
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-3E-3E">
+            
+              <b>prc >> g &rarr; a_proc
+</b>
+            
+            <a href="../classes/Proc.html#method-i-3E-3E" name="method-i-3E-3E" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a proc that is the composition of this proc and the given
+<em>g</em>. The returned proc takes a variable number of arguments, calls
+<em>g</em> with them then calls this proc with the result.</p>
+
+<pre><code>f = proc {|x| x * x }
+g = proc {|x| x + x }
+p (f &gt;&gt; g).call(2) #=&gt; 8
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-3E-3E_source')" id="l_method-i-3E-3E_source">show</a>
+                
+              </p>
+              <div id="method-i-3E-3E_source" class="dyn-source">
+                <pre>static VALUE
+proc_compose_to_right(VALUE self, VALUE g)
+{
+    VALUE proc, args, procs[2];
+    rb_proc_t *procp;
+    int is_lambda;
+
+    procs[0] = g;
+    procs[1] = self;
+    args = rb_ary_tmp_new_from_values(0, 2, procs);
+
+    GetProcPtr(self, procp);
+    is_lambda = procp-&gt;is_lambda;
+
+    proc = rb_proc_new(compose, args);
+    GetProcPtr(proc, procp);
+    procp-&gt;is_lambda = is_lambda;
+
+    return proc;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-5B-5D">
+            
+              <b>prc[params,...]        &rarr; obj</b>
+            
+            <a href="../classes/Proc.html#method-i-5B-5D" name="method-i-5B-5D" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Invokes the block, setting the block&#39;s parameters to the values in
+<em>params</em> using something close to method calling semantics. Returns
+the value of the last expression evaluated in the block.</p>
+
+<pre><code>a_proc = Proc.new {|scalar, *values| values.map {|value| value*scalar } }
+a_proc.call(9, 1, 2, 3)    #=&gt; [9, 18, 27]
+a_proc[9, 1, 2, 3]         #=&gt; [9, 18, 27]
+a_proc.(9, 1, 2, 3)        #=&gt; [9, 18, 27]
+a_proc.yield(9, 1, 2, 3)   #=&gt; [9, 18, 27]
+</code></pre>
+
+<p>Note that <code>prc.()</code> invokes <code>prc.call()</code> with the
+parameters given.  It&#39;s syntactic sugar to hide “call”.</p>
+
+<p>For procs created using <code>lambda</code> or <code>-&gt;()</code> an
+error is generated if the wrong number of parameters are passed to the
+proc. For procs created using <code>Proc.new</code> or
+<code>Kernel.proc</code>, extra parameters are silently discarded and
+missing parameters are set to <code>nil</code>.</p>
+
+<pre><code>a_proc = proc {|a,b| [a,b] }
+a_proc.call(1)   #=&gt; [1, nil]
+
+a_proc = lambda {|a,b| [a,b] }
+a_proc.call(1)   # ArgumentError: wrong number of arguments (given 1, expected 2)
+</code></pre>
+
+<p>See also <a href="Proc.html#method-i-lambda-3F">#lambda?</a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
+                
+              </p>
+              <div id="method-i-5B-5D_source" class="dyn-source">
+                <pre>static VALUE
+proc_call(int argc, VALUE *argv, VALUE procval)
+{
+    /* removed */
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-arity">
+            
+              <b>prc.arity &rarr; integer
+</b>
+            
+            <a href="../classes/Proc.html#method-i-arity" name="method-i-arity" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the number of mandatory arguments. If the block is declared to take
+no arguments, returns 0. If the block is known to take exactly n arguments,
+returns n. If the block has optional arguments, returns -n-1, where n is
+the number of mandatory arguments, with the exception for blocks that are
+not lambdas and have only a finite number of optional arguments; in this
+latter case, returns n. Keyword arguments will be considered as a single
+additional argument, that argument being mandatory if any keyword argument
+is mandatory. A <code>proc</code> with no argument declarations is the same
+as a block declaring <code>||</code> as its arguments.</p>
+
+<pre><code>proc {}.arity                  #=&gt;  0
+proc { || }.arity              #=&gt;  0
+proc { |a| }.arity             #=&gt;  1
+proc { |a, b| }.arity          #=&gt;  2
+proc { |a, b, c| }.arity       #=&gt;  3
+proc { |*a| }.arity            #=&gt; -1
+proc { |a, *b| }.arity         #=&gt; -2
+proc { |a, *b, c| }.arity      #=&gt; -3
+proc { |x:, y:, z:0| }.arity   #=&gt;  1
+proc { |*a, x:, y:0| }.arity   #=&gt; -2
+
+proc   { |a=0| }.arity         #=&gt;  0
+lambda { |a=0| }.arity         #=&gt; -1
+proc   { |a=0, b| }.arity      #=&gt;  1
+lambda { |a=0, b| }.arity      #=&gt; -2
+proc   { |a=0, b=0| }.arity    #=&gt;  0
+lambda { |a=0, b=0| }.arity    #=&gt; -1
+proc   { |a, b=0| }.arity      #=&gt;  1
+lambda { |a, b=0| }.arity      #=&gt; -2
+proc   { |(a, b), c=0| }.arity #=&gt;  1
+lambda { |(a, b), c=0| }.arity #=&gt; -2
+proc   { |a, x:0, y:0| }.arity #=&gt;  1
+lambda { |a, x:0, y:0| }.arity #=&gt; -2
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-arity_source')" id="l_method-i-arity_source">show</a>
+                
+              </p>
+              <div id="method-i-arity_source" class="dyn-source">
+                <pre>static VALUE
+proc_arity(VALUE self)
+{
+    int arity = rb_proc_arity(self);
+    return INT2FIX(arity);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-binding">
+            
+              <b>prc.binding    &rarr; binding
+</b>
+            
+            <a href="../classes/Proc.html#method-i-binding" name="method-i-binding" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the binding associated with <em>prc</em>.</p>
+
+<pre><code>def fred(param)
+  proc {}
+end
+
+b = fred(99)
+eval(&quot;param&quot;, b.binding)   #=&gt; 99
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-binding_source')" id="l_method-i-binding_source">show</a>
+                
+              </p>
+              <div id="method-i-binding_source" class="dyn-source">
+                <pre>static VALUE
+proc_binding(VALUE self)
+{
+    VALUE bindval, binding_self = Qundef;
+    rb_binding_t *bind;
+    const rb_proc_t *proc;
+    const rb_iseq_t *iseq = NULL;
+    const struct rb_block *block;
+    const rb_env_t *env = NULL;
+
+    GetProcPtr(self, proc);
+    block = &amp;proc-&gt;block;
+
+  again:
+    switch (vm_block_type(block)) {
+      case block_type_iseq:
+        iseq = block-&gt;as.captured.code.iseq;
+        binding_self = block-&gt;as.captured.self;
+        env = VM_ENV_ENVVAL_PTR(block-&gt;as.captured.ep);
+        break;
+      case block_type_proc:
+        GetProcPtr(block-&gt;as.proc, proc);
+        block = &amp;proc-&gt;block;
+        goto again;
+      case block_type_symbol:
+        goto error;
+      case block_type_ifunc:
+        {
+            const struct vm_ifunc *ifunc = block-&gt;as.captured.code.ifunc;
+            if (IS_METHOD_PROC_IFUNC(ifunc)) {
+                VALUE method = (VALUE)ifunc-&gt;data;
+                VALUE name = rb_fstring_lit(&quot;&lt;empty_iseq&gt;&quot;);
+                rb_iseq_t *empty;
+                binding_self = method_receiver(method);
+                iseq = rb_method_iseq(method);
+                env = VM_ENV_ENVVAL_PTR(block-&gt;as.captured.ep);
+                env = env_clone(env, method_cref(method));
+                /* set empty iseq */
+                empty = rb_iseq_new(NULL, name, name, Qnil, 0, ISEQ_TYPE_TOP);
+                RB_OBJ_WRITE(env, &amp;env-&gt;iseq, empty);
+                break;
+            }
+            else {
+              error:
+                rb_raise(rb_eArgError, &quot;Can&#39;t create Binding from C level Proc&quot;);
+                return Qnil;
+            }
+        }
+    }
+
+    bindval = rb_binding_alloc(rb_cBinding);
+    GetBindingPtr(bindval, bind);
+    RB_OBJ_WRITE(bindval, &amp;bind-&gt;block.as.captured.self, binding_self);
+    RB_OBJ_WRITE(bindval, &amp;bind-&gt;block.as.captured.code.iseq, env-&gt;iseq);
+    rb_vm_block_ep_update(bindval, &amp;bind-&gt;block, env-&gt;ep);
+    RB_OBJ_WRITTEN(bindval, Qundef, VM_ENV_ENVVAL(env-&gt;ep));
+
+    if (iseq) {
+        rb_iseq_check(iseq);
+        RB_OBJ_WRITE(bindval, &amp;bind-&gt;pathobj, iseq-&gt;body-&gt;location.pathobj);
+        bind-&gt;first_lineno = FIX2INT(rb_iseq_first_lineno(iseq));
+    }
+    else {
+        RB_OBJ_WRITE(bindval, &amp;bind-&gt;pathobj,
+                     rb_iseq_pathobj_new(rb_fstring_lit(&quot;(binding)&quot;), Qnil));
+        bind-&gt;first_lineno = 1;
+    }
+
+    return bindval;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-call">
+            
+              <b>prc.call(params,...)   &rarr; obj</b>
+            
+            <a href="../classes/Proc.html#method-i-call" name="method-i-call" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Invokes the block, setting the block&#39;s parameters to the values in
+<em>params</em> using something close to method calling semantics. Returns
+the value of the last expression evaluated in the block.</p>
+
+<pre><code>a_proc = Proc.new {|scalar, *values| values.map {|value| value*scalar } }
+a_proc.call(9, 1, 2, 3)    #=&gt; [9, 18, 27]
+a_proc[9, 1, 2, 3]         #=&gt; [9, 18, 27]
+a_proc.(9, 1, 2, 3)        #=&gt; [9, 18, 27]
+a_proc.yield(9, 1, 2, 3)   #=&gt; [9, 18, 27]
+</code></pre>
+
+<p>Note that <code>prc.()</code> invokes <code>prc.call()</code> with the
+parameters given.  It&#39;s syntactic sugar to hide “call”.</p>
+
+<p>For procs created using <code>lambda</code> or <code>-&gt;()</code> an
+error is generated if the wrong number of parameters are passed to the
+proc. For procs created using <code>Proc.new</code> or
+<code>Kernel.proc</code>, extra parameters are silently discarded and
+missing parameters are set to <code>nil</code>.</p>
+
+<pre><code>a_proc = proc {|a,b| [a,b] }
+a_proc.call(1)   #=&gt; [1, nil]
+
+a_proc = lambda {|a,b| [a,b] }
+a_proc.call(1)   # ArgumentError: wrong number of arguments (given 1, expected 2)
+</code></pre>
+
+<p>See also <a href="Proc.html#method-i-lambda-3F">#lambda?</a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-call_source')" id="l_method-i-call_source">show</a>
+                
+              </p>
+              <div id="method-i-call_source" class="dyn-source">
+                <pre>static VALUE
+proc_call(int argc, VALUE *argv, VALUE procval)
+{
+    /* removed */
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-curry">
+            
+              <b>prc.curry         &rarr; a_proc<br />prc.curry(arity)  &rarr; a_proc
+</b>
+            
+            <a href="../classes/Proc.html#method-i-curry" name="method-i-curry" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a curried proc. If the optional <em>arity</em> argument is given,
+it determines the number of arguments. A curried proc receives some
+arguments. If a sufficient number of arguments are supplied, it passes the
+supplied arguments to the original proc and returns the result. Otherwise,
+returns another curried proc that takes the rest of arguments.</p>
+
+<pre><code>b = proc {|x, y, z| (x||0) + (y||0) + (z||0) }
+p b.curry[1][2][3]           #=&gt; 6
+p b.curry[1, 2][3, 4]        #=&gt; 6
+p b.curry(5)[1][2][3][4][5]  #=&gt; 6
+p b.curry(5)[1, 2][3, 4][5]  #=&gt; 6
+p b.curry(1)[1]              #=&gt; 1
+
+b = proc {|x, y, z, *w| (x||0) + (y||0) + (z||0) + w.inject(0, &amp;:+) }
+p b.curry[1][2][3]           #=&gt; 6
+p b.curry[1, 2][3, 4]        #=&gt; 10
+p b.curry(5)[1][2][3][4][5]  #=&gt; 15
+p b.curry(5)[1, 2][3, 4][5]  #=&gt; 15
+p b.curry(1)[1]              #=&gt; 1
+
+b = lambda {|x, y, z| (x||0) + (y||0) + (z||0) }
+p b.curry[1][2][3]           #=&gt; 6
+p b.curry[1, 2][3, 4]        #=&gt; wrong number of arguments (given 4, expected 3)
+p b.curry(5)                 #=&gt; wrong number of arguments (given 5, expected 3)
+p b.curry(1)                 #=&gt; wrong number of arguments (given 1, expected 3)
+
+b = lambda {|x, y, z, *w| (x||0) + (y||0) + (z||0) + w.inject(0, &amp;:+) }
+p b.curry[1][2][3]           #=&gt; 6
+p b.curry[1, 2][3, 4]        #=&gt; 10
+p b.curry(5)[1][2][3][4][5]  #=&gt; 15
+p b.curry(5)[1, 2][3, 4][5]  #=&gt; 15
+p b.curry(1)                 #=&gt; wrong number of arguments (given 1, expected 3)
+
+b = proc { :foo }
+p b.curry[]                  #=&gt; :foo
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-curry_source')" id="l_method-i-curry_source">show</a>
+                
+              </p>
+              <div id="method-i-curry_source" class="dyn-source">
+                <pre>static VALUE
+proc_curry(int argc, const VALUE *argv, VALUE self)
+{
+    int sarity, max_arity, min_arity = rb_proc_min_max_arity(self, &amp;max_arity);
+    VALUE arity;
+
+    if (rb_check_arity(argc, 0, 1) == 0 || NIL_P(arity = argv[0])) {
+        arity = INT2FIX(min_arity);
+    }
+    else {
+        sarity = FIX2INT(arity);
+        if (rb_proc_lambda_p(self)) {
+            rb_check_arity(sarity, min_arity, max_arity);
+        }
+    }
+
+    return make_curry_proc(self, rb_ary_new(), arity);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-hash">
+            
+              <b>prc.hash   &rarr;  integer
+</b>
+            
+            <a href="../classes/Proc.html#method-i-hash" name="method-i-hash" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns a hash value corresponding to proc body.</p>
+
+<p>See also Object#hash.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-hash_source')" id="l_method-i-hash_source">show</a>
+                
+              </p>
+              <div id="method-i-hash_source" class="dyn-source">
+                <pre>static VALUE
+proc_hash(VALUE self)
+{
+    st_index_t hash;
+    hash = rb_hash_start(0);
+    hash = rb_hash_proc(hash, self);
+    hash = rb_hash_end(hash);
+    return ST2FIX(hash);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-inspect">
+            
+              <b>inspect</b>()
+            
+            <a href="../classes/Proc.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Proc.html#method-i-to_s">to_s</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-lambda-3F">
+            
+              <b>prc.lambda? &rarr; true or false
+</b>
+            
+            <a href="../classes/Proc.html#method-i-lambda-3F" name="method-i-lambda-3F" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns <code>true</code> for a <a href="Proc.html">Proc</a> object for
+which argument handling is rigid. Such procs are typically generated by
+<code>lambda</code>.</p>
+
+<p>A <a href="Proc.html">Proc</a> object generated by <code>proc</code>
+ignores extra arguments.</p>
+
+<pre><code>proc {|a,b| [a,b] }.call(1,2,3)    #=&gt; [1,2]
+</code></pre>
+
+<p>It provides <code>nil</code> for missing arguments.</p>
+
+<pre><code>proc {|a,b| [a,b] }.call(1)        #=&gt; [1,nil]
+</code></pre>
+
+<p>It expands a single array argument.</p>
+
+<pre><code>proc {|a,b| [a,b] }.call([1,2])    #=&gt; [1,2]
+</code></pre>
+
+<p>A <a href="Proc.html">Proc</a> object generated by <code>lambda</code>
+doesn&#39;t have such tricks.</p>
+
+<pre><code>lambda {|a,b| [a,b] }.call(1,2,3)  #=&gt; ArgumentError
+lambda {|a,b| [a,b] }.call(1)      #=&gt; ArgumentError
+lambda {|a,b| [a,b] }.call([1,2])  #=&gt; ArgumentError
+</code></pre>
+
+<p><a href="Proc.html#method-i-lambda-3F">#lambda?</a> is a predicate for the
+tricks. It returns <code>true</code> if no tricks apply.</p>
+
+<pre><code>lambda {}.lambda?            #=&gt; true
+proc {}.lambda?              #=&gt; false
+</code></pre>
+
+<p><a href="Proc.html#method-c-new">::new</a> is the same as
+<code>proc</code>.</p>
+
+<pre><code>Proc.new {}.lambda?          #=&gt; false
+</code></pre>
+
+<p><code>lambda</code>, <code>proc</code> and <a
+href="Proc.html#method-c-new">::new</a> preserve the tricks of a <a
+href="Proc.html">Proc</a> object given by <code>&amp;</code> argument.</p>
+
+<pre><code>lambda(&amp;lambda {}).lambda?   #=&gt; true
+proc(&amp;lambda {}).lambda?     #=&gt; true
+Proc.new(&amp;lambda {}).lambda? #=&gt; true
+
+lambda(&amp;proc {}).lambda?     #=&gt; false
+proc(&amp;proc {}).lambda?       #=&gt; false
+Proc.new(&amp;proc {}).lambda?   #=&gt; false
+</code></pre>
+
+<p>A <a href="Proc.html">Proc</a> object generated by <code>&amp;</code>
+argument has the tricks</p>
+
+<pre><code>def n(&amp;b) b.lambda? end
+n {}                         #=&gt; false
+</code></pre>
+
+<p>The <code>&amp;</code> argument preserves the tricks if a <a
+href="Proc.html">Proc</a> object is given by <code>&amp;</code> argument.</p>
+
+<pre><code>n(&amp;lambda {})                #=&gt; true
+n(&amp;proc {})                  #=&gt; false
+n(&amp;Proc.new {})              #=&gt; false
+</code></pre>
+
+<p>A <a href="Proc.html">Proc</a> object converted from a method has no
+tricks.</p>
+
+<pre><code>def m() end
+method(:m).to_proc.lambda?   #=&gt; true
+
+n(&amp;method(:m))               #=&gt; true
+n(&amp;method(:m).to_proc)       #=&gt; true
+</code></pre>
+
+<p><code>define_method</code> is treated the same as method definition. The
+defined method has no tricks.</p>
+
+<pre><code>class C
+  define_method(:d) {}
+end
+C.new.d(1,2)       #=&gt; ArgumentError
+C.new.method(:d).to_proc.lambda?   #=&gt; true
+</code></pre>
+
+<p><code>define_method</code> always defines a method without the tricks, even
+if a non-lambda <a href="Proc.html">Proc</a> object is given. This is the
+only exception for which the tricks are not preserved.</p>
+
+<pre><code>class C
+  define_method(:e, &amp;proc {})
+end
+C.new.e(1,2)       #=&gt; ArgumentError
+C.new.method(:e).to_proc.lambda?   #=&gt; true
+</code></pre>
+
+<p>This exception ensures that methods never have tricks and makes it easy to
+have wrappers to define methods that behave as usual.</p>
+
+<pre><code>class C
+  def self.def2(name, &amp;body)
+    define_method(name, &amp;body)
+  end
+
+  def2(:f) {}
+end
+C.new.f(1,2)       #=&gt; ArgumentError
+</code></pre>
+
+<p>The wrapper <em>def2</em> defines a method which has no tricks.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-lambda-3F_source')" id="l_method-i-lambda-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-lambda-3F_source" class="dyn-source">
+                <pre>VALUE
+rb_proc_lambda_p(VALUE procval)
+{
+    rb_proc_t *proc;
+    GetProcPtr(procval, proc);
+
+    return proc-&gt;is_lambda ? Qtrue : Qfalse;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-parameters">
+            
+              <b>prc.parameters  &rarr; array
+</b>
+            
+            <a href="../classes/Proc.html#method-i-parameters" name="method-i-parameters" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the parameter information of this proc.</p>
+
+<pre><code>prc = lambda{|x, y=42, *other|}
+prc.parameters  #=&gt; [[:req, :x], [:opt, :y], [:rest, :other]]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-parameters_source')" id="l_method-i-parameters_source">show</a>
+                
+              </p>
+              <div id="method-i-parameters_source" class="dyn-source">
+                <pre>static VALUE
+rb_proc_parameters(VALUE self)
+{
+    int is_proc;
+    const rb_iseq_t *iseq = rb_proc_get_iseq(self, &amp;is_proc);
+    if (!iseq) {
+        return rb_unnamed_parameters(rb_proc_arity(self));
+    }
+    return rb_iseq_parameters(iseq, is_proc);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-source_location">
+            
+              <b>prc.source_location  &rarr; [String, Integer]
+</b>
+            
+            <a href="../classes/Proc.html#method-i-source_location" name="method-i-source_location" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the Ruby source filename and line number containing this proc or
+<code>nil</code> if this proc was not defined in Ruby (i.e. native).</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-source_location_source')" id="l_method-i-source_location_source">show</a>
+                
+              </p>
+              <div id="method-i-source_location_source" class="dyn-source">
+                <pre>VALUE
+rb_proc_location(VALUE self)
+{
+    return iseq_location(rb_proc_get_iseq(self, 0));
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-to_proc">
+            
+              <b>prc.to_proc &rarr; proc
+</b>
+            
+            <a href="../classes/Proc.html#method-i-to_proc" name="method-i-to_proc" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Part of the protocol for converting objects to <code>Proc</code> objects.
+Instances of class <code>Proc</code> simply return themselves.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_proc_source')" id="l_method-i-to_proc_source">show</a>
+                
+              </p>
+              <div id="method-i-to_proc_source" class="dyn-source">
+                <pre>static VALUE
+proc_to_proc(VALUE self)
+{
+    return self;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-to_s">
+            
+              <b>prc.to_s   &rarr; string
+</b>
+            
+            <a href="../classes/Proc.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Returns the unique identifier for this proc, along with an indication of
+where the proc was defined.</p>
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="Proc.html#method-i-inspect">inspect</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_s_source')" id="l_method-i-to_s_source">show</a>
+                
+              </p>
+              <div id="method-i-to_s_source" class="dyn-source">
+                <pre>static VALUE
+proc_to_s(VALUE self)
+{
+    const rb_proc_t *proc;
+    GetProcPtr(self, proc);
+    return rb_block_to_s(self, &amp;proc-&gt;block, proc-&gt;is_lambda ? &quot; (lambda)&quot; : NULL);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <div class="title method-title" id="method-i-yield">
+            
+              <b>prc.yield(params,...)  &rarr; obj</b>
+            
+            <a href="../classes/Proc.html#method-i-yield" name="method-i-yield" class="permalink">Link</a>
+          </div>
+
+          
+            <div class="description">
+              <p>Invokes the block, setting the block&#39;s parameters to the values in
+<em>params</em> using something close to method calling semantics. Returns
+the value of the last expression evaluated in the block.</p>
+
+<pre><code>a_proc = Proc.new {|scalar, *values| values.map {|value| value*scalar } }
+a_proc.call(9, 1, 2, 3)    #=&gt; [9, 18, 27]
+a_proc[9, 1, 2, 3]         #=&gt; [9, 18, 27]
+a_proc.(9, 1, 2, 3)        #=&gt; [9, 18, 27]
+a_proc.yield(9, 1, 2, 3)   #=&gt; [9, 18, 27]
+</code></pre>
+
+<p>Note that <code>prc.()</code> invokes <code>prc.call()</code> with the
+parameters given.  It&#39;s syntactic sugar to hide “call”.</p>
+
+<p>For procs created using <code>lambda</code> or <code>-&gt;()</code> an
+error is generated if the wrong number of parameters are passed to the
+proc. For procs created using <code>Proc.new</code> or
+<code>Kernel.proc</code>, extra parameters are silently discarded and
+missing parameters are set to <code>nil</code>.</p>
+
+<pre><code>a_proc = proc {|a,b| [a,b] }
+a_proc.call(1)   #=&gt; [1, nil]
+
+a_proc = lambda {|a,b| [a,b] }
+a_proc.call(1)   # ArgumentError: wrong number of arguments (given 1, expected 2)
+</code></pre>
+
+<p>See also <a href="Proc.html#method-i-lambda-3F">#lambda?</a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-yield_source')" id="l_method-i-yield_source">show</a>
+                
+              </p>
+              <div id="method-i-yield_source" class="dyn-source">
+                <pre>static VALUE
+proc_call(int argc, VALUE *argv, VALUE procval)
+{
+    /* removed */
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+                    </div>
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>disable.coffee</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <link rel="stylesheet" href="../../../../../../../../css/reset.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../../../../../css/main.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="../../../../../../../../css/github.css" type="text/css" media="screen" />
+<script src="../../../../../../../../js/jquery-1.3.2.min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../../../js/jquery-effect.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../../../js/main.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../../../../../../../js/highlight.pack.js" type="text/javascript" charset="utf-8"></script>
+
+</head>
+
+<body>
+    <div class="banner">
+        
+        <h1>
+            disable.coffee
+        </h1>
+        <ul class="files">
+            
+            <li>
+                rails/actionview/app/assets/javascripts/rails-ujs/features/disable.coffee
+                
+                    <a href="https://github.com/mikdiet/api/blob/d92e58be3292401c670683bea89f743ac3273e05/rails/actionview/app/assets/javascripts/rails-ujs/features/disable.coffee" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2021-02-27 11:59:48 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>#= require_tree ../utils</p>
+
+<p>{ matches, getData, setData, stopEverything, formElements } = <a
+href="../../../../../../../../classes/Rails.html">Rails</a></p>
+
+<p>Rails.handleDisabledElement = (e) -&gt;</p>
+
+<pre><code>element = this
+stopEverything(e) if element.disabled
+</code></pre>
+
+<p># Unified function to enable an element (link, button and form)
+Rails.enableElement = (e) -&gt;</p>
+
+<pre><code>if e instanceof Event
+  return if isXhrRedirect(e)
+  element = e.target
+else
+  element = e
+
+if matches(element, Rails.linkDisableSelector)
+  enableLinkElement(element)
+else if matches(element, Rails.buttonDisableSelector) or matches(element, Rails.formEnableSelector)
+  enableFormElement(element)
+else if matches(element, Rails.formSubmitSelector)
+  enableFormElements(element)</code></pre>
+
+<p># Unified function to disable an element (link, button and form)
+Rails.disableElement = (e) -&gt;</p>
+
+<pre><code>element = if e instanceof Event then e.target else e
+if matches(element, Rails.linkDisableSelector)
+  disableLinkElement(element)
+else if matches(element, Rails.buttonDisableSelector) or matches(element, Rails.formDisableSelector)
+  disableFormElement(element)
+else if matches(element, Rails.formSubmitSelector)
+  disableFormElements(element)</code></pre>
+
+<p>#  Replace element&#39;s html with the &#39;data-disable-with&#39; after
+storing original html #  and prevent clicking on it disableLinkElement =
+(element) -&gt;</p>
+
+<pre><code>return if getData(element, &#39;ujs:disabled&#39;)
+replacement = element.getAttribute(&#39;data-disable-with&#39;)
+if replacement?
+  setData(element, &#39;ujs:enable-with&#39;, element.innerHTML) # store enabled state
+  element.innerHTML = replacement
+element.addEventListener(&#39;click&#39;, stopEverything) # prevent further clicking
+setData(element, &#39;ujs:disabled&#39;, true)</code></pre>
+
+<p># Restore element to its original state which was disabled by
+&#39;disableLinkElement&#39; above enableLinkElement = (element) -&gt;</p>
+
+<pre><code>originalText = getData(element, &#39;ujs:enable-with&#39;)
+if originalText?
+  element.innerHTML = originalText # set to old enabled state
+  setData(element, &#39;ujs:enable-with&#39;, null) # clean up cache
+element.removeEventListener(&#39;click&#39;, stopEverything) # enable element
+setData(element, &#39;ujs:disabled&#39;, null)</code></pre>
+
+<p># Disables form elements: #  - Caches element value in
+&#39;ujs:enable-with&#39; data store #  - Replaces element text with value
+of &#39;data-disable-with&#39; attribute #  - Sets disabled property to
+true disableFormElements = (form) -&gt;</p>
+
+<pre><code>formElements(form, Rails.formDisableSelector).forEach(disableFormElement)
+</code></pre>
+
+<p>disableFormElement = (element) -&gt;</p>
+
+<pre><code>return if getData(element, &#39;ujs:disabled&#39;)
+replacement = element.getAttribute(&#39;data-disable-with&#39;)
+if replacement?
+  if matches(element, &#39;button&#39;)
+    setData(element, &#39;ujs:enable-with&#39;, element.innerHTML)
+    element.innerHTML = replacement
+  else
+    setData(element, &#39;ujs:enable-with&#39;, element.value)
+    element.value = replacement
+element.disabled = true
+setData(element, &#39;ujs:disabled&#39;, true)</code></pre>
+
+<p># Re-enables disabled form elements: #  - Replaces element text with cached
+value from &#39;ujs:enable-with&#39; data store (created in
+`disableFormElements`) #  - Sets disabled property to false
+enableFormElements = (form) -&gt;</p>
+
+<pre><code>formElements(form, Rails.formEnableSelector).forEach(enableFormElement)
+</code></pre>
+
+<p>enableFormElement = (element) -&gt;</p>
+
+<pre><code>originalText = getData(element, &#39;ujs:enable-with&#39;)
+if originalText?
+  if matches(element, &#39;button&#39;)
+    element.innerHTML = originalText
+  else
+    element.value = originalText
+  setData(element, &#39;ujs:enable-with&#39;, null) # clean up cache
+element.disabled = false
+setData(element, &#39;ujs:disabled&#39;, null)</code></pre>
+
+<p>isXhrRedirect = (event) -&gt;</p>
+
+<pre><code>xhr = event.detail?[0]
+xhr?.getResponseHeader(&quot;X-Xhr-Redirect&quot;)?</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+              </div>
+
+    </div>
+  </body>
+</html>
