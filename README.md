@@ -25,11 +25,11 @@ This is a part of [Rusrails][https://github.com/morsbox/rusrails] project. Full 
 Setup:
 
 ```
-cap production nginx:setup
+bundle exec cap production nginx:setup
 ```
 
 Deployment:
 
 ```
-cap production deploy
+bundle exec cap production deploy
 ```
