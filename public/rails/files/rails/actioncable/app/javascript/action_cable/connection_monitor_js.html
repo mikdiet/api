@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>connection_monitor.js</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle([]);
+  }
+})
+</script>
+
+
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            connection_monitor.js
+        </h2>
+        <ul class="files">
+            
+            <li>
+                rails/actioncable/app/javascript/action_cable/connection_monitor.js
+                
+            </li>
+            <li>Last modified: 2021-04-30 00:51:49 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>import logger from “./logger”</p>
+
+<p>// Responsible for ensuring the cable connection is in good health by validating the heartbeat pings sent from the server, and attempting // revival reconnections if things go astray. Internal class, not intended for direct user manipulation.</p>
+
+<p>const now = () =&gt; new Date().getTime()</p>
+
+<p>const secondsSince = time =&gt; (now() - time) / 1000</p>
+
+<p>const clamp = (number, min, max) =&gt; Math.max(min, Math.min(max, number))</p>
+
+<p>class ConnectionMonitor {</p>
+
+<pre><code>constructor(connection) {
+  this.visibilityDidChange = this.visibilityDidChange.bind(this)
+  this.connection = connection
+  this.reconnectAttempts = 0
+}
+
+start() {
+  if (!this.isRunning()) {
+    this.startedAt = now()
+    delete this.stoppedAt
+    this.startPolling()
+    addEventListener(&quot;visibilitychange&quot;, this.visibilityDidChange)
+    logger.log(`ConnectionMonitor started. pollInterval = ${this.getPollInterval()} ms`)
+  }
+}
+
+stop() {
+  if (this.isRunning()) {
+    this.stoppedAt = now()
+    this.stopPolling()
+    removeEventListener(&quot;visibilitychange&quot;, this.visibilityDidChange)
+    logger.log(&quot;ConnectionMonitor stopped&quot;)
+  }
+}
+
+isRunning() {
+  return this.startedAt &amp;&amp; !this.stoppedAt
+}
+
+recordPing() {
+  this.pingedAt = now()
+}
+
+recordConnect() {
+  this.reconnectAttempts = 0
+  this.recordPing()
+  delete this.disconnectedAt
+  logger.log(&quot;ConnectionMonitor recorded connect&quot;)
+}
+
+recordDisconnect() {
+  this.disconnectedAt = now()
+  logger.log(&quot;ConnectionMonitor recorded disconnect&quot;)
+}
+
+// Private
+
+startPolling() {
+  this.stopPolling()
+  this.poll()
+}
+
+stopPolling() {
+  clearTimeout(this.pollTimeout)
+}
+
+poll() {
+  this.pollTimeout = setTimeout(() =&gt; {
+    this.reconnectIfStale()
+    this.poll()
+  }
+  , this.getPollInterval())
+}
+
+getPollInterval() {
+  const {min, max, multiplier} = this.constructor.pollInterval
+  const interval = multiplier * Math.log(this.reconnectAttempts + 1)
+  return Math.round(clamp(interval, min, max) * 1000)
+}
+
+reconnectIfStale() {
+  if (this.connectionIsStale()) {
+    logger.log(`ConnectionMonitor detected stale connection. reconnectAttempts = ${this.reconnectAttempts}, pollInterval = ${this.getPollInterval()} ms, time disconnected = ${secondsSince(this.disconnectedAt)} s, stale threshold = ${this.constructor.staleThreshold} s`)
+    this.reconnectAttempts++
+    if (this.disconnectedRecently()) {
+      logger.log(&quot;ConnectionMonitor skipping reopening recent disconnect&quot;)
+    } else {
+      logger.log(&quot;ConnectionMonitor reopening&quot;)
+      this.connection.reopen()
+    }
+  }
+}
+
+connectionIsStale() {
+  return secondsSince(this.pingedAt ? this.pingedAt : this.startedAt) &gt; this.constructor.staleThreshold
+}
+
+disconnectedRecently() {
+  return this.disconnectedAt &amp;&amp; (secondsSince(this.disconnectedAt) &lt; this.constructor.staleThreshold)
+}
+
+visibilityDidChange() {
+  if (document.visibilityState === &quot;visible&quot;) {
+    setTimeout(() =&gt; {
+      if (this.connectionIsStale() || !this.connection.isOpen()) {
+        logger.log(`ConnectionMonitor reopening stale connection on visibilitychange. visbilityState = ${document.visibilityState}`)
+        this.connection.reopen()
+      }
+    }
+    , 200)
+  }
+}
+</code></pre>
+
+<p>}</p>
+
+<p>ConnectionMonitor.pollInterval = {</p>
+
+<pre><code>min: 3,
+max: 30,
+multiplier: 5
+</code></pre>
+
+<p>}</p>
+
+<p>ConnectionMonitor.staleThreshold = 6 // Server::Connections::BEAT_INTERVAL * 2 (missed two pings)</p>
+
+<p>export default ConnectionMonitor</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

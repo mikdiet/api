@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ActionMailer::Parameterized</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle(["ActionMailer", "Parameterized"]);
+  }
+})
+</script>
+
+
+
+    <meta property="og:title" value="ActionMailer::Parameterized">
+
+  
+    
+    <meta name="description" content="Provides the option to parameterize mailers in order to share instance variable setup, processing, and common headers.">
+    <meta property="og:description" content="Provides the option to parameterize mailers in order to share instance variable setup, processing, and common headers.">
+  
+
+    <meta name="keywords" content="ActionMailer::Parameterized class, ">
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            <span class="type">Module</span>
+            ActionMailer::Parameterized
+            
+        </h2>
+        <ul class="files">
+            
+            <li><a href="../../files/rails/actionmailer/lib/action_mailer/parameterized_rb.html">rails/actionmailer/lib/action_mailer/parameterized.rb</a></li>
+            
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>Provides the option to parameterize mailers in order to share instance variable setup, processing, and common headers.</p>
+
+<p>Consider this example that does not use parameterization:</p>
+
+<pre><code>class InvitationsMailer &lt; ApplicationMailer
+  def account_invitation(inviter, invitee)
+    @account = inviter.account
+    @inviter = inviter
+    @invitee = invitee
+
+    subject = &quot;#{@inviter.name} invited you to their Basecamp (#{@account.name})&quot;
+
+    mail \
+      subject:   subject,
+      to:        invitee.email_address,
+      from:      common_address(inviter),
+      reply_to:  inviter.email_address_with_name
+  end
+
+  def project_invitation(project, inviter, invitee)
+    @account = inviter.account
+    @project = project
+    @inviter = inviter
+    @invitee = invitee
+    @summarizer = ProjectInvitationSummarizer.new(@project.bucket)
+
+    subject = &quot;#{@inviter.name.familiar} added you to a project in Basecamp (#{@account.name})&quot;
+
+    mail \
+      subject:   subject,
+      to:        invitee.email_address,
+      from:      common_address(inviter),
+      reply_to:  inviter.email_address_with_name
+  end
+
+  def bulk_project_invitation(projects, inviter, invitee)
+    @account  = inviter.account
+    @projects = projects.sort_by(&amp;:name)
+    @inviter  = inviter
+    @invitee  = invitee
+
+    subject = &quot;#{@inviter.name.familiar} added you to some new stuff in Basecamp (#{@account.name})&quot;
+
+    mail \
+      subject:   subject,
+      to:        invitee.email_address,
+      from:      common_address(inviter),
+      reply_to:  inviter.email_address_with_name
+  end
+end
+
+InvitationsMailer.account_invitation(person_a, person_b).deliver_later
+</code></pre>
+
+<p>Using parameterized mailers, this can be rewritten as:</p>
+
+<pre><code>class InvitationsMailer &lt; ApplicationMailer
+  before_action { @inviter, @invitee = params[:inviter], params[:invitee] }
+  before_action { @account = params[:inviter].account }
+
+  default to:       -&gt; { @invitee.email_address },
+          from:     -&gt; { common_address(@inviter) },
+          reply_to: -&gt; { @inviter.email_address_with_name }
+
+  def account_invitation
+    mail subject: &quot;#{@inviter.name} invited you to their Basecamp (#{@account.name})&quot;
+  end
+
+  def project_invitation
+    @project    = params[:project]
+    @summarizer = ProjectInvitationSummarizer.new(@project.bucket)
+
+    mail subject: &quot;#{@inviter.name.familiar} added you to a project in Basecamp (#{@account.name})&quot;
+  end
+
+  def bulk_project_invitation
+    @projects = params[:projects].sort_by(&amp;:name)
+
+    mail subject: &quot;#{@inviter.name.familiar} added you to some new stuff in Basecamp (#{@account.name})&quot;
+  end
+end
+
+InvitationsMailer.with(inviter: person_a, invitee: person_b).account_invitation.deliver_later
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+    <!-- Namespace -->
+    <div class="sectiontitle">Namespace</div>
+    <ul>
+      
+        <li>
+          <span class="type">MODULE</span>
+          <a href="Parameterized/ClassMethods.html">ActionMailer::Parameterized::ClassMethods</a>
+        </li>
+      
+    </ul>
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

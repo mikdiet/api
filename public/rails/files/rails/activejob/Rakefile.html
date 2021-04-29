@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Rakefile</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle([]);
+  }
+})
+</script>
+
+
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            Rakefile
+        </h2>
+        <ul class="files">
+            
+            <li>
+                rails/activejob/Rakefile
+                
+            </li>
+            <li>Last modified: 2021-04-30 00:51:49 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p># frozen_string_literal: true</p>
+
+<p>require “rake/testtask”</p>
+
+<p>ACTIVEJOB_ADAPTERS = %w(async inline delayed_job que queue_classic resque sidekiq sneakers sucker_punch backburner test) ACTIVEJOB_ADAPTERS.delete(“queue_classic”) if defined?(JRUBY_VERSION)</p>
+
+<p>task default: :test task test: “test:default”</p>
+
+<p>task :package</p>
+
+<p>namespace :test do</p>
+
+<pre><code>desc &quot;Run all adapter tests&quot;
+task :default do
+  run_without_aborting ACTIVEJOB_ADAPTERS.map { |a| &quot;test:#{a}&quot; }
+end
+
+desc &quot;Run all adapter tests in isolation&quot;
+task :isolated do
+  run_without_aborting ACTIVEJOB_ADAPTERS.map { |a| &quot;test:isolated:#{a}&quot; }
+end
+
+desc &quot;Run integration tests for all adapters&quot;
+task :integration do
+  run_without_aborting (ACTIVEJOB_ADAPTERS - [&quot;test&quot;]).map { |a| &quot;test:integration:#{a}&quot; }
+end
+
+task &quot;env:integration&quot; do
+  ENV[&quot;AJ_INTEGRATION_TESTS&quot;] = &quot;1&quot;
+  ENV[&quot;SKIP_REQUIRE_WEBPACKER&quot;] = &quot;true&quot;
+end
+
+ACTIVEJOB_ADAPTERS.each do |adapter|
+  task(&quot;env:#{adapter}&quot;) { ENV[&quot;AJ_ADAPTER&quot;] = adapter }
+
+  Rake::TestTask.new(adapter =&gt; &quot;test:env:#{adapter}&quot;) do |t|
+    t.description = &quot;Run adapter tests for #{adapter}&quot;
+    t.libs &lt;&lt; &quot;test&quot;
+    t.test_files = FileList[&quot;test/cases/**/*_test.rb&quot;]
+    t.verbose = true
+    t.warning = true
+    t.ruby_opts = [&quot;--dev&quot;] if defined?(JRUBY_VERSION)
+  end
+
+  namespace :isolated do
+    task adapter =&gt; &quot;test:env:#{adapter}&quot; do
+      Dir.glob(&quot;#{__dir__}/test/cases/**/*_test.rb&quot;).all? do |file|
+        sh(Gem.ruby, &quot;-w&quot;, &quot;-I#{__dir__}/lib&quot;, &quot;-I#{__dir__}/test&quot;, file)
+      end || raise(&quot;Failures&quot;)
+    end
+  end
+
+  namespace :integration do
+    Rake::TestTask.new(adapter =&gt; [&quot;test:env:#{adapter}&quot;, &quot;test:env:integration&quot;]) do |t|
+      t.description = &quot;Run integration tests for #{adapter}&quot;
+      t.libs &lt;&lt; &quot;test&quot;
+      t.test_files = FileList[&quot;test/integration/**/*_test.rb&quot;]
+      t.verbose = true
+      t.warning = true
+      t.ruby_opts = [&quot;--dev&quot;] if defined?(JRUBY_VERSION)
+    end
+  end
+end
+</code></pre>
+
+<p>end</p>
+
+<p>def run_without_aborting(tasks)</p>
+
+<pre><code>errors = []
+
+tasks.each do |task|
+  Rake::Task[task].invoke
+rescue Exception
+  errors &lt;&lt; task
+end
+
+abort &quot;Errors running #{errors.join(&#39;, &#39;)}&quot; if errors.any?
+</code></pre>
+
+<p>end</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

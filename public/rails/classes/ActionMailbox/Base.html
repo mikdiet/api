@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ActionMailbox::Base</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle(["ActionMailbox", "Base"]);
+  }
+})
+</script>
+
+
+
+    <meta property="og:title" value="ActionMailbox::Base">
+
+  
+    
+    <meta name="description" content="The base class for all application mailboxes. Not intended to be inherited from directly. Inherit from ApplicationMailbox instead, as that&#39;s where the app-specific routing is configured.">
+    <meta property="og:description" content="The base class for all application mailboxes. Not intended to be inherited from directly. Inherit from ApplicationMailbox instead, as that&#39;s where the app-specific routing is configured.">
+  
+
+    <meta name="keywords" content="ActionMailbox::Base class, receive, new, process, bounce_with">
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            <span class="type">Class</span>
+            ActionMailbox::Base
+            
+                <span class="parent">&lt;
+                    
+                    <a href="../Object.html">Object</a>
+                    
+                </span>
+            
+        </h2>
+        <ul class="files">
+            
+            <li><a href="../../files/rails/actionmailbox/lib/action_mailbox/base_rb.html">rails/actionmailbox/lib/action_mailbox/base.rb</a></li>
+            
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>The base class for all application mailboxes. Not intended to be inherited from directly. Inherit from <code>ApplicationMailbox</code> instead, as that&#39;s where the app-specific routing is configured. This routing is specified in the following ways:</p>
+
+<pre><code>class ApplicationMailbox &lt; ActionMailbox::Base
+  # Any of the recipients of the mail (whether to, cc, bcc) are matched against the regexp.
+  routing /^replies@/i =&gt; :replies
+
+  # Any of the recipients of the mail (whether to, cc, bcc) needs to be an exact match for the string.
+  routing &quot;help@example.com&quot; =&gt; :help
+
+  # Any callable (proc, lambda, etc) object is passed the inbound_email record and is a match if true.
+  routing -&gt;(inbound_email) { inbound_email.mail.to.size &gt; 2 } =&gt; :multiple_recipients
+
+  # Any object responding to #match? is called with the inbound_email record as an argument. Match if true.
+  routing CustomAddress.new =&gt; :custom
+
+  # Any inbound_email that has not been already matched will be sent to the BackstopMailbox.
+  routing :all =&gt; :backstop
+end
+</code></pre>
+
+<p>Application mailboxes need to overwrite the <code>#process</code> method, which is invoked by the framework after callbacks have been run. The callbacks available are: <code>before_processing</code>, <code>after_processing</code>, and <code>around_processing</code>. The primary use case is ensure certain preconditions to processing are fulfilled using <code>before_processing</code> callbacks.</p>
+
+<p>If a precondition fails to be met, you can halt the processing using the <code>#bounced!</code> method, which will silently prevent any further processing, but not actually send out any bounce notice. You can also pair this behavior with the invocation of an Action Mailer class responsible for sending out an actual bounce email. This is done using the <code>#bounce_with</code> method, which takes the mail object returned by an Action Mailer method, like so:</p>
+
+<pre><code>class ForwardsMailbox &lt; ApplicationMailbox
+  before_processing :ensure_sender_is_a_user
+
+  private
+    def ensure_sender_is_a_user
+      unless User.exist?(email_address: mail.from)
+        bounce_with UserRequiredMailer.missing(inbound_email)
+      end
+    end
+end
+</code></pre>
+
+<p>During the processing of the inbound email, the status will be tracked. Before processing begins, the email will normally have the <code>pending</code> status. Once processing begins, just before callbacks and the <code>#process</code> method is called, the status is changed to <code>processing</code>. If processing is allowed to complete, the status is changed to <code>delivered</code>. If a bounce is triggered, then <code>bounced</code>. If an unhandled exception is bubbled up, then <code>failed</code>.</p>
+
+<p>Exceptions can be handled at the class level using the familiar <code>Rescuable</code> approach:</p>
+
+<pre><code>class ForwardsMailbox &lt; ApplicationMailbox
+  rescue_from(ApplicationSpecificVerificationError) { bounced! }
+end
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>B</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-bounce_with">bounce_with</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>N</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-new">new</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>P</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-process">process</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>R</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-receive">receive</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
+  
+
+  
+    <!-- Includes -->
+    <div class="sectiontitle">Included Modules</div>
+    <ul>
+      
+        <li>
+          
+            <a href="../ActiveSupport/Rescuable.html">
+              ActiveSupport::Rescuable
+            </a>
+          
+        </li>
+      
+    </ul>
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+      <!-- Section attributes -->
+      <h2 class="sectiontitle">Attributes</h2>
+      <table border='0' cellpadding='5'>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [R]
+            </td>
+            <td class='attr-name'>inbound_email</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+      </table>
+    
+
+
+    <!-- Methods -->
+    
+      <h2 class="sectiontitle">Class Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-c-new">
+            
+              <b>new</b>(inbound_email)
+            
+            <a href="../../classes/ActionMailbox/Base.html#method-c-new" name="method-c-new" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+                
+              </p>
+              <div id="method-c-new_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/actionmailbox/lib/action_mailbox/base.rb, line 76</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">inbound_email</span>)
+  <span class="ruby-ivar">@inbound_email</span> = <span class="ruby-identifier">inbound_email</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-receive">
+            
+              <b>receive</b>(inbound_email)
+            
+            <a href="../../classes/ActionMailbox/Base.html#method-c-receive" name="method-c-receive" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-receive_source')" id="l_method-c-receive_source">show</a>
+                
+              </p>
+              <div id="method-c-receive_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/actionmailbox/lib/action_mailbox/base.rb, line 72</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">receive</span>(<span class="ruby-identifier">inbound_email</span>)
+  <span class="ruby-identifier">new</span>(<span class="ruby-identifier">inbound_email</span>).<span class="ruby-identifier">perform_processing</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
+    
+      <h2 class="sectiontitle">Instance Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-i-bounce_with">
+            
+              <b>bounce_with</b>(message)
+            
+            <a href="../../classes/ActionMailbox/Base.html#method-i-bounce_with" name="method-i-bounce_with" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Enqueues the given <code>message</code> for delivery and changes the inbound email&#39;s status to <code>:bounced</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-bounce_with_source')" id="l_method-i-bounce_with_source">show</a>
+                
+              </p>
+              <div id="method-i-bounce_with_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/actionmailbox/lib/action_mailbox/base.rb, line 101</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">bounce_with</span>(<span class="ruby-identifier">message</span>)
+  <span class="ruby-identifier">inbound_email</span>.<span class="ruby-identifier">bounced!</span>
+  <span class="ruby-identifier">message</span>.<span class="ruby-identifier">deliver_later</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-process">
+            
+              <b>process</b>()
+            
+            <a href="../../classes/ActionMailbox/Base.html#method-i-process" name="method-i-process" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-process_source')" id="l_method-i-process_source">show</a>
+                
+              </p>
+              <div id="method-i-process_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/actionmailbox/lib/action_mailbox/base.rb, line 91</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">process</span>
+  <span class="ruby-comment"># Overwrite in subclasses</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

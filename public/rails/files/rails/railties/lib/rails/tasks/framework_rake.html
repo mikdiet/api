@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>framework.rake</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle([]);
+  }
+})
+</script>
+
+
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            framework.rake
+        </h2>
+        <ul class="files">
+            
+            <li>
+                rails/railties/lib/rails/tasks/framework.rake
+                
+            </li>
+            <li>Last modified: 2021-04-30 00:51:49 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p># frozen_string_literal: true</p>
+
+<p>namespace :app do</p>
+
+<pre><code>desc &quot;Update configs and some other initially generated files (or use just update:configs or update:bin)&quot;
+task update: [ &quot;update:configs&quot;, &quot;update:bin&quot;, &quot;update:active_storage&quot;, &quot;update:upgrade_guide_info&quot; ]
+
+desc &quot;Applies the template supplied by LOCATION=(/path/to/template) or URL&quot;
+task template: :environment do
+  template = ENV[&quot;LOCATION&quot;]
+  raise &quot;No LOCATION value given. Please set LOCATION either as path to a file or a URL&quot; if template.blank?
+  template = File.expand_path(template) if !%r{\A[A-Za-z][A-Za-z0-9+\-\.]*://}.match?(template)
+  require &quot;rails/generators&quot;
+  require &quot;rails/generators/rails/app/app_generator&quot;
+  generator = Rails::Generators::AppGenerator.new [Rails.root], {}, { destination_root: Rails.root }
+  generator.apply template, verbose: false
+end
+
+namespace :templates do
+  # desc &quot;Copy all the templates from rails to the application directory for customization. Already existing local copies will be overwritten&quot;
+  task :copy do
+    generators_lib = File.expand_path(&quot;../generators&quot;, __dir__)
+    project_templates = &quot;#{Rails.root}/lib/templates&quot;
+
+    default_templates = { &quot;erb&quot;   =&gt; %w{controller mailer scaffold},
+                          &quot;rails&quot; =&gt; %w{controller helper scaffold_controller assets} }
+
+    default_templates.each do |type, names|
+      local_template_type_dir = File.join(project_templates, type)
+      mkdir_p local_template_type_dir, verbose: false
+
+      names.each do |name|
+        dst_name = File.join(local_template_type_dir, name)
+        src_name = File.join(generators_lib, type, name, &quot;templates&quot;)
+        cp_r src_name, dst_name, verbose: false
+      end
+    end
+  end
+end
+
+namespace :update do
+  require &quot;rails/app_updater&quot;
+
+  # desc &quot;Update config files from your current rails install&quot;
+  task :configs do
+    Rails::AppUpdater.invoke_from_app_generator :create_boot_file
+    Rails::AppUpdater.invoke_from_app_generator :update_config_files
+  end
+
+  # desc &quot;Adds new executables to the application bin/ directory&quot;
+  task :bin do
+    Rails::AppUpdater.invoke_from_app_generator :update_bin_files
+  end
+
+  task :active_storage do
+    Rails::AppUpdater.invoke_from_app_generator :update_active_storage
+  end
+
+  task :upgrade_guide_info do
+    Rails::AppUpdater.invoke_from_app_generator :display_upgrade_guide_info
+  end
+end
+</code></pre>
+
+<p>end</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

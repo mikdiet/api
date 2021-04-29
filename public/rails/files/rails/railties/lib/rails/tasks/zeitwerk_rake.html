@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>zeitwerk.rake</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle([]);
+  }
+})
+</script>
+
+
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            zeitwerk.rake
+        </h2>
+        <ul class="files">
+            
+            <li>
+                rails/railties/lib/rails/tasks/zeitwerk.rake
+                
+            </li>
+            <li>Last modified: 2021-04-30 00:51:49 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p># frozen_string_literal: true</p>
+
+<p>ensure_zeitwerk_mode = -&gt;() do</p>
+
+<pre><code>unless Rails.autoloaders.zeitwerk_enabled?
+  abort &quot;Please, enable :zeitwerk mode in config/application.rb and try again.&quot;
+end
+</code></pre>
+
+<p>end</p>
+
+<p>eager_load = -&gt;() do</p>
+
+<pre><code>puts &quot;Hold on, I am eager loading the application.&quot;
+Zeitwerk::Loader.eager_load_all
+</code></pre>
+
+<p>end</p>
+
+<p>report_not_checked = -&gt;(not_checked) do</p>
+
+<pre><code>puts
+puts &lt;&lt;~EOS
+  WARNING: The following directories will only be checked if you configure
+  them to be eager loaded:
+EOS
+puts
+
+not_checked.each { |dir| puts &quot;  #{dir}&quot; }
+puts
+
+puts &lt;&lt;~EOS
+  You may verify them manually, or add them to config.eager_load_paths
+  in config/application.rb and run zeitwerk:check again.
+EOS
+puts
+</code></pre>
+
+<p>end</p>
+
+<p>report = -&gt;(not_checked) do</p>
+
+<pre><code>if not_checked.any?
+  report_not_checked[not_checked]
+  puts &quot;Otherwise, all is good!&quot;
+else
+  puts &quot;All is good!&quot;
+end
+</code></pre>
+
+<p>end</p>
+
+<p>namespace :zeitwerk do</p>
+
+<pre><code>desc &quot;Checks project structure for Zeitwerk compatibility&quot;
+task check: :environment do
+  ensure_zeitwerk_mode[]
+
+  begin
+    eager_load[]
+  rescue NameError =&gt; e
+    if e.message =~ /expected file .*? to define constant [\w:]+/
+      abort $&amp;.sub(/expected file #{Regexp.escape(Rails.root.to_s)}./, &quot;expected file &quot;)
+    else
+      raise
+    end
+  end
+
+  require &quot;active_support/core_ext/object/try&quot;
+  eager_load_paths = Rails.configuration.eager_load_namespaces.map do |eln|
+    # Quick regression fix for 6.0.3 to support namespaces that do not have
+    # eager load paths, like the recently added i18n. I&#39;ll rewrite this task.
+    eln.try(:config).try(:eager_load_paths)
+  end.compact.flatten
+
+  not_checked = ActiveSupport::Dependencies.autoload_paths - eager_load_paths
+  not_checked.select! { |dir| Dir.exist?(dir) }
+  not_checked.reject! { |dir| Dir.empty?(dir) }
+
+  report[not_checked]
+end
+</code></pre>
+
+<p>end</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

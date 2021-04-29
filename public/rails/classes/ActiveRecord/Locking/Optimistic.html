@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ActiveRecord::Locking::Optimistic</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle(["ActiveRecord", "Locking", "Optimistic"]);
+  }
+})
+</script>
+
+
+
+    <meta property="og:title" value="ActiveRecord::Locking::Optimistic">
+
+  
+    
+    <meta name="description" content="What is Optimistic Locking  Optimistic locking allows multiple users to access the same record for edits, and assumes a minimum of conflicts with the data.">
+    <meta property="og:description" content="What is Optimistic Locking  Optimistic locking allows multiple users to access the same record for edits, and assumes a minimum of conflicts with the data.">
+  
+
+    <meta name="keywords" content="ActiveRecord::Locking::Optimistic class, ">
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            <span class="type">Module</span>
+            ActiveRecord::Locking::Optimistic
+            
+        </h2>
+        <ul class="files">
+            
+            <li><a href="../../../files/rails/activerecord/lib/active_record/locking/optimistic_rb.html">rails/activerecord/lib/active_record/locking/optimistic.rb</a></li>
+            
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h2 id="module-ActiveRecord::Locking::Optimistic-label-What+is+Optimistic+Locking">What is <a href="Optimistic.html"><code>Optimistic</code></a> <a href="../Locking.html"><code>Locking</code></a></h2>
+
+<p><a href="Optimistic.html"><code>Optimistic</code></a> locking allows multiple users to access the same record for edits, and assumes a minimum of conflicts with the data. It does this by checking whether another process has made changes to a record since it was opened, an <code>ActiveRecord::StaleObjectError</code> exception is thrown if that has occurred and the update is ignored.</p>
+
+<p>Check out <code>ActiveRecord::Locking::Pessimistic</code> for an alternative.</p>
+
+<h2 id="module-ActiveRecord::Locking::Optimistic-label-Usage">Usage</h2>
+
+<p>Active Record supports optimistic locking if the <code>lock_version</code> field is present. Each update to the record increments the <code>lock_version</code> column and the locking facilities ensure that records instantiated twice will let the last one saved raise a <code>StaleObjectError</code> if the first was also updated. Example:</p>
+
+<pre><code>p1 = Person.find(1)
+p2 = Person.find(1)
+
+p1.first_name = &quot;Michael&quot;
+p1.save
+
+p2.first_name = &quot;should fail&quot;
+p2.save # Raises an ActiveRecord::StaleObjectError
+</code></pre>
+
+<p><a href="Optimistic.html"><code>Optimistic</code></a> locking will also check for stale data when objects are destroyed. Example:</p>
+
+<pre><code>p1 = Person.find(1)
+p2 = Person.find(1)
+
+p1.first_name = &quot;Michael&quot;
+p1.save
+
+p2.destroy # Raises an ActiveRecord::StaleObjectError
+</code></pre>
+
+<p>You&#39;re then responsible for dealing with the conflict by rescuing the exception and either rolling back, merging, or otherwise apply the business logic needed to resolve the conflict.</p>
+
+<p>This locking mechanism will function inside a single Ruby process. To make it work across all web requests, the recommended approach is to add <code>lock_version</code> as a hidden field to your form.</p>
+
+<p>This behavior can be turned off by setting <code>ActiveRecord::Base.lock_optimistically = false</code>. To override the name of the <code>lock_version</code> column, set the <code>locking_column</code> class attribute:</p>
+
+<pre><code>class Person &lt; ActiveRecord::Base
+  self.locking_column = :lock_person
+end
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+    <!-- Namespace -->
+    <div class="sectiontitle">Namespace</div>
+    <ul>
+      
+        <li>
+          <span class="type">MODULE</span>
+          <a href="Optimistic/ClassMethods.html">ActiveRecord::Locking::Optimistic::ClassMethods</a>
+        </li>
+      
+    </ul>
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ActionController::StrongParameters</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle(["ActionController", "StrongParameters"]);
+  }
+})
+</script>
+
+
+
+    <meta property="og:title" value="ActionController::StrongParameters">
+
+  
+    
+    <meta name="description" content="Strong Parameters  It provides an interface for protecting attributes from end-user assignment.">
+    <meta property="og:description" content="Strong Parameters  It provides an interface for protecting attributes from end-user assignment.">
+  
+
+    <meta name="keywords" content="ActionController::StrongParameters class, params, params=">
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            <span class="type">Module</span>
+            ActionController::StrongParameters
+            
+        </h2>
+        <ul class="files">
+            
+            <li><a href="../../files/rails/actionpack/lib/action_controller/metal/strong_parameters_rb.html">rails/actionpack/lib/action_controller/metal/strong_parameters.rb</a></li>
+            
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h2 id="module-ActionController::StrongParameters-label-Strong+Parameters">Strong Parameters</h2>
+
+<p>It provides an interface for protecting attributes from end-user assignment. This makes Action Controller parameters forbidden to be used in Active Model mass assignment until they have been explicitly enumerated.</p>
+
+<p>In addition, parameters can be marked as required and flow through a predefined raise/rescue flow to end up as a <code>400 Bad Request</code> with no effort.</p>
+
+<pre><code>class PeopleController &lt; ActionController::Base
+  # Using &quot;Person.create(params[:person])&quot; would raise an
+  # ActiveModel::ForbiddenAttributesError exception because it&#39;d
+  # be using mass assignment without an explicit permit step.
+  # This is the recommended form:
+  def create
+    Person.create(person_params)
+  end
+
+  # This will pass with flying colors as long as there&#39;s a person key in the
+  # parameters, otherwise it&#39;ll raise an ActionController::ParameterMissing
+  # exception, which will get caught by ActionController::Base and turned
+  # into a 400 Bad Request reply.
+  def update
+    redirect_to current_account.people.find(params[:id]).tap { |person|
+      person.update!(person_params)
+    }
+  end
+
+  private
+    # Using a private method to encapsulate the permissible parameters is
+    # a good pattern since you&#39;ll be able to reuse the same permit
+    # list between create and update. Also, you can specialize this method
+    # with per-user checking of permissible attributes.
+    def person_params
+      params.require(:person).permit(:name, :age)
+    end
+end
+</code></pre>
+
+<p>In order to use <code>accepts_nested_attributes_for</code> with Strong Parameters, you will need to specify which nested attributes should be permitted. You might want to allow <code>:id</code> and <code>:_destroy</code>, see <a href="../ActiveRecord/NestedAttributes.html"><code>ActiveRecord::NestedAttributes</code></a> for more information.</p>
+
+<pre><code>class Person
+  has_many :pets
+  accepts_nested_attributes_for :pets
+end
+
+class PeopleController &lt; ActionController::Base
+  def create
+    Person.create(person_params)
+  end
+
+  ...
+
+  private
+
+    def person_params
+      # It&#39;s mandatory to specify the nested attributes that should be permitted.
+      # If you use `permit` with just the key that points to the nested attributes hash,
+      # it will return an empty hash.
+      params.require(:person).permit(:name, :age, pets_attributes: [ :id, :name, :category ])
+    end
+end
+</code></pre>
+
+<p>See <a href="Parameters.html#method-i-require"><code>ActionController::Parameters.require</code></a> and <a href="Parameters.html#method-i-permit"><code>ActionController::Parameters.permit</code></a> for more information.</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>P</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-params">params</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-params-3D">params=</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+      <h2 class="sectiontitle">Instance Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-i-params">
+            
+              <b>params</b>()
+            
+            <a href="../../classes/ActionController/StrongParameters.html#method-i-params" name="method-i-params" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a new <a href="Parameters.html"><code>ActionController::Parameters</code></a> object that has been instantiated with the <code>request.parameters</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-params_source')" id="l_method-i-params_source">show</a>
+                
+              </p>
+              <div id="method-i-params_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_controller/metal/strong_parameters.rb, line 1098</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">params</span>
+  <span class="ruby-ivar">@_params</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Parameters</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">request</span>.<span class="ruby-identifier">parameters</span>)
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-params-3D">
+            
+              <b>params=</b>(value)
+            
+            <a href="../../classes/ActionController/StrongParameters.html#method-i-params-3D" name="method-i-params-3D" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Assigns the given <code>value</code> to the <code>params</code> hash. If <code>value</code> is a <a href="../Hash.html"><code>Hash</code></a>, this will create an <a href="Parameters.html"><code>ActionController::Parameters</code></a> object that has been instantiated with the given <code>value</code> hash.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-params-3D_source')" id="l_method-i-params-3D_source">show</a>
+                
+              </p>
+              <div id="method-i-params-3D_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_controller/metal/strong_parameters.rb, line 1105</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">params=</span>(<span class="ruby-identifier">value</span>)
+  <span class="ruby-ivar">@_params</span> = <span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Hash</span>) <span class="ruby-operator">?</span> <span class="ruby-constant">Parameters</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span>) <span class="ruby-operator">:</span> <span class="ruby-identifier">value</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

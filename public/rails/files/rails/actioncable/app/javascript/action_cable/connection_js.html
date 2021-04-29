@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>connection.js</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle([]);
+  }
+})
+</script>
+
+
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            connection.js
+        </h2>
+        <ul class="files">
+            
+            <li>
+                rails/actioncable/app/javascript/action_cable/connection.js
+                
+            </li>
+            <li>Last modified: 2021-04-30 00:51:49 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>import adapters from “./adapters” import ConnectionMonitor from “./connection_monitor” import INTERNAL from “./internal” import logger from “./logger”</p>
+
+<p>// Encapsulate the cable connection held by the consumer. This is an internal class not intended for direct user manipulation.</p>
+
+<p>const {message_types, protocols} = INTERNAL const supportedProtocols = protocols.slice(0, protocols.length - 1)</p>
+
+<p>const indexOf = [].indexOf</p>
+
+<p>class Connection {</p>
+
+<pre><code>constructor(consumer) {
+  this.open = this.open.bind(this)
+  this.consumer = consumer
+  this.subscriptions = this.consumer.subscriptions
+  this.monitor = new ConnectionMonitor(this)
+  this.disconnected = true
+}
+
+send(data) {
+  if (this.isOpen()) {
+    this.webSocket.send(JSON.stringify(data))
+    return true
+  } else {
+    return false
+  }
+}
+
+open() {
+  if (this.isActive()) {
+    logger.log(`Attempted to open WebSocket, but existing socket is ${this.getState()}`)
+    return false
+  } else {
+    logger.log(`Opening WebSocket, current state is ${this.getState()}, subprotocols: ${protocols}`)
+    if (this.webSocket) { this.uninstallEventHandlers() }
+    this.webSocket = new adapters.WebSocket(this.consumer.url, protocols)
+    this.installEventHandlers()
+    this.monitor.start()
+    return true
+  }
+}
+
+close({allowReconnect} = {allowReconnect: true}) {
+  if (!allowReconnect) { this.monitor.stop() }
+  if (this.isActive()) {
+    return this.webSocket.close()
+  }
+}
+
+reopen() {
+  logger.log(`Reopening WebSocket, current state is ${this.getState()}`)
+  if (this.isActive()) {
+    try {
+      return this.close()
+    } catch (error) {
+      logger.log(&quot;Failed to reopen WebSocket&quot;, error)
+    }
+    finally {
+      logger.log(`Reopening WebSocket in ${this.constructor.reopenDelay}ms`)
+      setTimeout(this.open, this.constructor.reopenDelay)
+    }
+  } else {
+    return this.open()
+  }
+}
+
+getProtocol() {
+  if (this.webSocket) {
+    return this.webSocket.protocol
+  }
+}
+
+isOpen() {
+  return this.isState(&quot;open&quot;)
+}
+
+isActive() {
+  return this.isState(&quot;open&quot;, &quot;connecting&quot;)
+}
+
+// Private
+
+isProtocolSupported() {
+  return indexOf.call(supportedProtocols, this.getProtocol()) &gt;= 0
+}
+
+isState(...states) {
+  return indexOf.call(states, this.getState()) &gt;= 0
+}
+
+getState() {
+  if (this.webSocket) {
+    for (let state in adapters.WebSocket) {
+      if (adapters.WebSocket[state] === this.webSocket.readyState) {
+        return state.toLowerCase()
+      }
+    }
+  }
+  return null
+}
+
+installEventHandlers() {
+  for (let eventName in this.events) {
+    const handler = this.events[eventName].bind(this)
+    this.webSocket[`on${eventName}`] = handler
+  }
+}
+
+uninstallEventHandlers() {
+  for (let eventName in this.events) {
+    this.webSocket[`on${eventName}`] = function() {}
+  }
+}
+</code></pre>
+
+<p>}</p>
+
+<p>Connection.reopenDelay = 500</p>
+
+<p>Connection.prototype.events = {</p>
+
+<pre><code>message(event) {
+  if (!this.isProtocolSupported()) { return }
+  const {identifier, message, reason, reconnect, type} = JSON.parse(event.data)
+  switch (type) {
+    case message_types.welcome:
+      this.monitor.recordConnect()
+      return this.subscriptions.reload()
+    case message_types.disconnect:
+      logger.log(`Disconnecting. Reason: ${reason}`)
+      return this.close({allowReconnect: reconnect})
+    case message_types.ping:
+      return this.monitor.recordPing()
+    case message_types.confirmation:
+      return this.subscriptions.notify(identifier, &quot;connected&quot;)
+    case message_types.rejection:
+      return this.subscriptions.reject(identifier)
+    default:
+      return this.subscriptions.notify(identifier, &quot;received&quot;, message)
+  }
+},
+
+open() {
+  logger.log(`WebSocket onopen event, using &#39;${this.getProtocol()}&#39; subprotocol`)
+  this.disconnected = false
+  if (!this.isProtocolSupported()) {
+    logger.log(&quot;Protocol is unsupported. Stopping monitor and disconnecting.&quot;)
+    return this.close({allowReconnect: false})
+  }
+},
+
+close(event) {
+  logger.log(&quot;WebSocket onclose event&quot;)
+  if (this.disconnected) { return }
+  this.disconnected = true
+  this.monitor.recordDisconnect()
+  return this.subscriptions.notifyAll(&quot;disconnected&quot;, {willAttemptReconnect: this.monitor.isRunning()})
+},
+
+error() {
+  logger.log(&quot;WebSocket onerror event&quot;)
+}
+</code></pre>
+
+<p>}</p>
+
+<p>export default Connection</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

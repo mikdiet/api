@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Rakefile</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle([]);
+  }
+})
+</script>
+
+
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            Rakefile
+        </h2>
+        <ul class="files">
+            
+            <li>
+                rails/actionview/Rakefile
+                
+            </li>
+            <li>Last modified: 2021-04-30 00:51:49 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p># frozen_string_literal: true</p>
+
+<p>require “rake/testtask” require “fileutils” require “open3”</p>
+
+<p>desc “Default Task” task default: :test</p>
+
+<p>task package: %w( assets:compile assets:verify )</p>
+
+<p># Run the unit tests</p>
+
+<p>desc “Run all unit tests” task test: [“test:template”, “test:integration:action_pack”, “test:integration:active_record”]</p>
+
+<p>namespace :test do</p>
+
+<pre><code>task :isolated do
+  Dir.glob(&quot;test/{actionpack,activerecord,template}/**/*_test.rb&quot;).all? do |file|
+    sh(Gem.ruby, &quot;-w&quot;, &quot;-Ilib:test&quot;, file)
+  end || raise(&quot;Failures&quot;)
+end
+
+Rake::TestTask.new(:template) do |t|
+  t.libs &lt;&lt; &quot;test&quot;
+  t.test_files = Dir.glob(&quot;test/template/**/*_test.rb&quot;)
+  t.warning = true
+  t.verbose = true
+  t.ruby_opts = [&quot;--dev&quot;] if defined?(JRUBY_VERSION)
+end
+
+desc &quot;Run tests for rails-ujs&quot;
+task :ujs do
+  system(&quot;npm run lint&quot;)
+  exit $?.exitstatus unless $?.success?
+
+  begin
+    listen_host = &quot;localhost&quot;
+    listen_port = &quot;4567&quot;
+
+    runner_command = %w(ruby ../ci/qunit-selenium-runner.rb)
+    if ENV[&quot;SELENIUM_DRIVER_URL&quot;]
+      require &quot;socket&quot;
+      runner_command += %W(http://#{Socket.gethostname}:#{listen_port}/ #{ENV[&quot;SELENIUM_DRIVER_URL&quot;]})
+      listen_host = &quot;0.0.0.0&quot;
+    else
+      runner_command += %W(http://localhost:#{listen_port}/)
+    end
+
+    Dir.mkdir(&quot;log&quot;)
+    pid = File.open(&quot;log/test.log&quot;, &quot;w&quot;) do |f|
+      spawn(*%W(rackup test/ujs/config.ru -o #{listen_host} -p #{listen_port} -s puma), out: f, err: f, pgroup: true)
+    end
+
+    start_time = Time.now
+
+    loop do
+      break if system(&quot;lsof -i :4567&quot;, 1 =&gt; File::NULL)
+
+      if Time.now - start_time &gt; 5
+        puts &quot;Failed to start puma after 5 seconds&quot;
+        puts
+        puts File.read(&quot;log/test.log&quot;)
+        exit 1
+      end
+
+      sleep 0.2
+    end
+
+    system(*runner_command)
+    status = $?.exitstatus
+  ensure
+    Process.kill(&quot;KILL&quot;, -pid) if pid
+    FileUtils.rm_rf(&quot;log&quot;)
+  end
+
+  exit status
+end
+
+namespace :integration do
+  # Active Record Integration Tests
+  Rake::TestTask.new(:active_record) do |t|
+    t.libs &lt;&lt; &quot;test&quot;
+    t.test_files = Dir.glob(&quot;test/activerecord/*_test.rb&quot;)
+    t.warning = true
+    t.verbose = true
+    t.ruby_opts = [&quot;--dev&quot;] if defined?(JRUBY_VERSION)
+  end
+
+  # Action Pack Integration Tests
+  Rake::TestTask.new(:action_pack) do |t|
+    t.libs &lt;&lt; &quot;test&quot;
+    t.test_files = Dir.glob(&quot;test/actionpack/**/*_test.rb&quot;)
+    t.warning = true
+    t.verbose = true
+    t.ruby_opts = [&quot;--dev&quot;] if defined?(JRUBY_VERSION)
+  end
+end
+</code></pre>
+
+<p>end</p>
+
+<p>namespace :ujs do</p>
+
+<pre><code>desc &quot;Starts the test server&quot;
+task :server do
+  system &quot;bundle exec rackup test/ujs/config.ru -p 4567 -s puma&quot;
+end
+</code></pre>
+
+<p>end</p>
+
+<p>namespace :assets do</p>
+
+<pre><code>desc &quot;Compile Action View assets&quot;
+task :compile do
+  require &quot;blade&quot;
+  require &quot;sprockets&quot;
+  require &quot;sprockets/export&quot;
+  Blade.build
+end
+
+desc &quot;Verify compiled Action View assets&quot;
+task :verify do
+  file = &quot;lib/assets/compiled/rails-ujs.js&quot;
+  pathname = Pathname.new(&quot;#{__dir__}/#{file}&quot;)
+
+  print &quot;[verify] #{file} exists &quot;
+  if pathname.exist?
+    puts &quot;[OK]&quot;
+  else
+    $stderr.puts &quot;[FAIL]&quot;
+    fail
+  end
+
+  print &quot;[verify] #{file} is a UMD module &quot;
+  if /module\.exports.*define\.amd/m.match?(pathname.read)
+    puts &quot;[OK]&quot;
+  else
+    $stderr.puts &quot;[FAIL]&quot;
+    fail
+  end
+
+  print &quot;[verify] #{__dir__} can be required as a module &quot;
+  js = &lt;&lt;-JS
+    window = { Event: class {} }
+    class Element {}
+    require(&#39;#{__dir__}&#39;)
+  JS
+  _, stderr, status = Open3.capture3(&quot;node&quot;, &quot;--print&quot;, js)
+  if status.success?
+    puts &quot;[OK]&quot;
+  else
+    $stderr.puts &quot;[FAIL]\n#{stderr}&quot;
+    fail
+  end
+end
+</code></pre>
+
+<p>end</p>
+
+<p>task :lines do</p>
+
+<pre><code>load File.expand_path(&quot;../tools/line_statistics&quot;, __dir__)
+files = FileList[&quot;lib/**/*.rb&quot;]
+CodeTools::LineStatistics.new(files).print_loc
+</code></pre>
+
+<p>end</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

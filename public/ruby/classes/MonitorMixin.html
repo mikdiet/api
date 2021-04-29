@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>MonitorMixin</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle(["MonitorMixin"]);
+  }
+})
+</script>
+
+
+
+    <meta property="og:title" value="MonitorMixin">
+
+  
+    
+    <meta name="description" content="In concurrent programming, a monitor is an object or module intended to be used safely by more than one thread.">
+    <meta property="og:description" content="In concurrent programming, a monitor is an object or module intended to be used safely by more than one thread.">
+  
+
+    <meta name="keywords" content="MonitorMixin class, extend_object, mon_try_enter, try_mon_enter, mon_enter, mon_exit, mon_locked?, mon_owned?, mon_synchronize, synchronize, new_cond, new">
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            <span class="type">Module</span>
+            MonitorMixin
+            
+        </h2>
+        <ul class="files">
+            
+            <li><a href="../files/ruby/lib/monitor_rb.html">ruby/lib/monitor.rb</a></li>
+            
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>In concurrent programming, a monitor is an object or module intended to be used safely by more than one thread.  The defining characteristic of a monitor is that its methods are executed with mutual exclusion.  That is, at each point in time, at most one thread may be executing any of its methods. This mutual exclusion greatly simplifies reasoning about the implementation of monitors compared to reasoning about parallel code that updates a data structure.</p>
+
+<p>You can read more about the general principles on the Wikipedia page for <a href="http://en.wikipedia.org/wiki/Monitor_%28synchronization%29">Monitors</a></p>
+
+<h2 id="module-MonitorMixin-label-Examples">Examples</h2>
+
+<h3 id="module-MonitorMixin-label-Simple+object.extend">Simple object.extend</h3>
+
+<pre><code>require &#39;monitor.rb&#39;
+
+buf = []
+buf.extend(MonitorMixin)
+empty_cond = buf.new_cond
+
+# consumer
+Thread.start do
+  loop do
+    buf.synchronize do
+      empty_cond.wait_while { buf.empty? }
+      print buf.shift
+    end
+  end
+end
+
+# producer
+while line = ARGF.gets
+  buf.synchronize do
+    buf.push(line)
+    empty_cond.signal
+  end
+end
+</code></pre>
+
+<p>The consumer thread waits for the producer thread to push a line to buf while <code>buf.empty?</code>.  The producer thread (main thread) reads a line from <a href="ARGF.html"><code>ARGF</code></a> and pushes it into buf then calls <code>empty_cond.signal</code> to notify the consumer thread of new data.</p>
+
+<h3 id="module-MonitorMixin-label-Simple+Class+include">Simple <a href="Class.html"><code>Class</code></a> include</h3>
+
+<pre><code>require &#39;monitor&#39;
+
+class SynchronizedArray &lt; Array
+
+  include MonitorMixin
+
+  def initialize(*args)
+    super(*args)
+  end
+
+  alias :old_shift :shift
+  alias :old_unshift :unshift
+
+  def shift(n=1)
+    self.synchronize do
+      self.old_shift(n)
+    end
+  end
+
+  def unshift(item)
+    self.synchronize do
+      self.old_unshift(item)
+    end
+  end
+
+  # other methods ...
+end
+</code></pre>
+
+<p><code>SynchronizedArray</code> implements an <a href="Array.html"><code>Array</code></a> with synchronized access to items. This <a href="Class.html"><code>Class</code></a> is implemented as subclass of <a href="Array.html"><code>Array</code></a> which includes the <a href="MonitorMixin.html"><code>MonitorMixin</code></a> module.</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+    <!-- Namespace -->
+    <div class="sectiontitle">Namespace</div>
+    <ul>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="MonitorMixin/ConditionVariable.html">MonitorMixin::ConditionVariable</a>
+        </li>
+      
+    </ul>
+  
+
+
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>E</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-extend_object">extend_object</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>M</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-mon_enter">mon_enter</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_exit">mon_exit</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_locked-3F">mon_locked?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_owned-3F">mon_owned?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_synchronize">mon_synchronize</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_try_enter">mon_try_enter</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>N</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-new">new</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-new_cond">new_cond</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>S</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-synchronize">synchronize</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>T</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-try_mon_enter">try_mon_enter</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+      <!-- Section constants -->
+      <h2 class="sectiontitle">Constants</h2>
+      <table border='0' cellpadding='5'>
+        
+          <tr valign='top'>
+            <td class="attr-name">EXCEPTION_IMMEDIATE</td>
+            <td>=</td>
+            <td class="attr-value">{Exception =&gt; :immediate}.freeze</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+          <tr valign='top'>
+            <td class="attr-name">EXCEPTION_NEVER</td>
+            <td>=</td>
+            <td class="attr-value">{Exception =&gt; :never}.freeze</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+      </table>
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+      <h2 class="sectiontitle">Class Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-c-extend_object">
+            
+              <b>extend_object</b>(obj)
+            
+            <a href="../classes/MonitorMixin.html#method-c-extend_object" name="method-c-extend_object" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-extend_object_source')" id="l_method-c-extend_object_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/2ee2f17971c7622412cdf503c832efcb07e11334/lib/monitor.rb#L165" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-extend_object_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/monitor.rb, line 165</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">extend_object</span>(<span class="ruby-identifier">obj</span>)
+  <span class="ruby-keyword">super</span>(<span class="ruby-identifier">obj</span>)
+  <span class="ruby-identifier">obj</span>.<span class="ruby-identifier">__send__</span>(<span class="ruby-value">:mon_initialize</span>)
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-new">
+            
+              <b>new</b>(*args)
+            
+            <a href="../classes/MonitorMixin.html#method-c-new" name="method-c-new" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Use <code>extend MonitorMixin</code> or <code>include MonitorMixin</code> instead of this constructor.  Have look at the examples above to understand how to use this module.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/2ee2f17971c7622412cdf503c832efcb07e11334/lib/monitor.rb#L255" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-new_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/monitor.rb, line 255</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-keyword">super</span>
+  <span class="ruby-identifier">mon_initialize</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
+    
+      <h2 class="sectiontitle">Instance Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_enter">
+            
+              <b>mon_enter</b>()
+            
+            <a href="../classes/MonitorMixin.html#method-i-mon_enter" name="method-i-mon_enter" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Enters exclusive section.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-mon_enter_source')" id="l_method-i-mon_enter_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/2ee2f17971c7622412cdf503c832efcb07e11334/lib/monitor.rb#L190" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-mon_enter_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/monitor.rb, line 190</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_enter</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@mon_owner</span> <span class="ruby-operator">!=</span> <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>
+    <span class="ruby-ivar">@mon_mutex</span>.<span class="ruby-identifier">lock</span>
+    <span class="ruby-ivar">@mon_owner</span> = <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>
+    <span class="ruby-ivar">@mon_count</span> = <span class="ruby-value">0</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-ivar">@mon_count</span> <span class="ruby-operator">+=</span> <span class="ruby-value">1</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_exit">
+            
+              <b>mon_exit</b>()
+            
+            <a href="../classes/MonitorMixin.html#method-i-mon_exit" name="method-i-mon_exit" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Leaves exclusive section.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-mon_exit_source')" id="l_method-i-mon_exit_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/2ee2f17971c7622412cdf503c832efcb07e11334/lib/monitor.rb#L202" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-mon_exit_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/monitor.rb, line 202</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_exit</span>
+  <span class="ruby-identifier">mon_check_owner</span>
+  <span class="ruby-ivar">@mon_count</span> <span class="ruby-operator">-=</span><span class="ruby-value">1</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@mon_count</span> <span class="ruby-operator">==</span> <span class="ruby-value">0</span>
+    <span class="ruby-ivar">@mon_owner</span> = <span class="ruby-keyword">nil</span>
+    <span class="ruby-ivar">@mon_mutex</span>.<span class="ruby-identifier">unlock</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_locked-3F">
+            
+              <b>mon_locked?</b>()
+            
+            <a href="../classes/MonitorMixin.html#method-i-mon_locked-3F" name="method-i-mon_locked-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns true if this monitor is locked by any thread</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-mon_locked-3F_source')" id="l_method-i-mon_locked-3F_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/2ee2f17971c7622412cdf503c832efcb07e11334/lib/monitor.rb#L214" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-mon_locked-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/monitor.rb, line 214</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_locked?</span>
+  <span class="ruby-ivar">@mon_mutex</span>.<span class="ruby-identifier">locked?</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_owned-3F">
+            
+              <b>mon_owned?</b>()
+            
+            <a href="../classes/MonitorMixin.html#method-i-mon_owned-3F" name="method-i-mon_owned-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns true if this monitor is locked by current thread.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-mon_owned-3F_source')" id="l_method-i-mon_owned-3F_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/2ee2f17971c7622412cdf503c832efcb07e11334/lib/monitor.rb#L221" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-mon_owned-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/monitor.rb, line 221</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_owned?</span>
+  <span class="ruby-ivar">@mon_mutex</span>.<span class="ruby-identifier">locked?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-ivar">@mon_owner</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_synchronize">
+            
+              <b>mon_synchronize</b>()
+            
+            <a href="../classes/MonitorMixin.html#method-i-mon_synchronize" name="method-i-mon_synchronize" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Enters exclusive section and executes the block.  Leaves the exclusive section automatically when the block exits.  See example under <code>MonitorMixin</code>.</p>
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="MonitorMixin.html#method-i-synchronize">synchronize</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-mon_synchronize_source')" id="l_method-i-mon_synchronize_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/2ee2f17971c7622412cdf503c832efcb07e11334/lib/monitor.rb#L230" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-mon_synchronize_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/monitor.rb, line 230</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_synchronize</span>
+  <span class="ruby-comment"># Prevent interrupt on handling interrupts; for example timeout errors</span>
+  <span class="ruby-comment"># it may break locking state.</span>
+  <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">handle_interrupt</span>(<span class="ruby-constant">EXCEPTION_NEVER</span>){ <span class="ruby-identifier">mon_enter</span> }
+  <span class="ruby-keyword">begin</span>
+    <span class="ruby-keyword">yield</span>
+  <span class="ruby-keyword">ensure</span>
+    <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">handle_interrupt</span>(<span class="ruby-constant">EXCEPTION_NEVER</span>){ <span class="ruby-identifier">mon_exit</span> }
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_try_enter">
+            
+              <b>mon_try_enter</b>()
+            
+            <a href="../classes/MonitorMixin.html#method-i-mon_try_enter" name="method-i-mon_try_enter" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Attempts to enter exclusive section.  Returns <code>false</code> if lock fails.</p>
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="MonitorMixin.html#method-i-try_mon_enter">try_mon_enter</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-mon_try_enter_source')" id="l_method-i-mon_try_enter_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/2ee2f17971c7622412cdf503c832efcb07e11334/lib/monitor.rb#L173" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-mon_try_enter_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/monitor.rb, line 173</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_try_enter</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@mon_owner</span> <span class="ruby-operator">!=</span> <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@mon_mutex</span>.<span class="ruby-identifier">try_lock</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span>
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-ivar">@mon_owner</span> = <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>
+    <span class="ruby-ivar">@mon_count</span> = <span class="ruby-value">0</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-ivar">@mon_count</span> <span class="ruby-operator">+=</span> <span class="ruby-value">1</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">true</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-new_cond">
+            
+              <b>new_cond</b>()
+            
+            <a href="../classes/MonitorMixin.html#method-i-new_cond" name="method-i-new_cond" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Creates a new <a href="MonitorMixin/ConditionVariable.html"><code>MonitorMixin::ConditionVariable</code></a> associated with the receiver.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-new_cond_source')" id="l_method-i-new_cond_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/2ee2f17971c7622412cdf503c832efcb07e11334/lib/monitor.rb#L246" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-new_cond_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/monitor.rb, line 246</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">new_cond</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-constant">ConditionVariable</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>)
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-synchronize">
+            
+              <b>synchronize</b>()
+            
+            <a href="../classes/MonitorMixin.html#method-i-synchronize" name="method-i-synchronize" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="MonitorMixin.html#method-i-mon_synchronize">mon_synchronize</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-try_mon_enter">
+            
+              <b>try_mon_enter</b>()
+            
+            <a href="../classes/MonitorMixin.html#method-i-try_mon_enter" name="method-i-try_mon_enter" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>For backward compatibility</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="MonitorMixin.html#method-i-mon_try_enter">mon_try_enter</a>
+            </div>
+          
+
+          
+          </div>
+        
+      
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

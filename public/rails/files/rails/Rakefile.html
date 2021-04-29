@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Rakefile</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle([]);
+  }
+})
+</script>
+
+
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            Rakefile
+        </h2>
+        <ul class="files">
+            
+            <li>
+                rails/Rakefile
+                
+            </li>
+            <li>Last modified: 2021-04-30 00:51:49 +0300</li>
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p># frozen_string_literal: true</p>
+
+<p>require “net/http”</p>
+
+<p>$:.unshift __dir__ require “tasks/release” require “railties/lib/rails/api/task”</p>
+
+<p>desc “Build gem files for all projects” task build: “all:build”</p>
+
+<p>desc “Build, install and verify the gem files in a generated <a href="../../classes/Rails.html"><code>Rails</code></a> app.” task verify: “all:verify”</p>
+
+<p>desc “Prepare the release” task prep_release: “all:prep_release”</p>
+
+<p>desc “Release all gems to rubygems and create a tag” task release: “all:release”</p>
+
+<p>desc “Run all tests by default” task default: %w(test test:isolated)</p>
+
+<p>%w(test test:isolated package gem).each do |task_name|</p>
+
+<pre><code>desc &quot;Run #{task_name} task for all projects&quot;
+task task_name do
+  errors = []
+  FRAMEWORKS.each do |project|
+    system(%(cd #{project} &amp;&amp; #{$0} #{task_name} --trace)) || errors &lt;&lt; project
+  end
+  fail(&quot;Errors in #{errors.join(&#39;, &#39;)}&quot;) unless errors.empty?
+end
+</code></pre>
+
+<p>end</p>
+
+<p>desc “Smoke-test all projects” task :smoke do</p>
+
+<pre><code>(FRAMEWORKS - %w(activerecord)).each do |project|
+  system %(cd #{project} &amp;&amp; #{$0} test:isolated --trace)
+end
+system %(cd activerecord &amp;&amp; #{$0} sqlite3:isolated_test --trace)
+</code></pre>
+
+<p>end</p>
+
+<p>desc “Install gems for all projects.” task install: “all:install”</p>
+
+<p>desc “Generate documentation for the <a href="../../classes/Rails.html"><code>Rails</code></a> framework” if <a href=""EDGE"">ENV</a></p>
+
+<pre><code>Rails::API::EdgeTask.new(&quot;rdoc&quot;)
+</code></pre>
+
+<p>else</p>
+
+<pre><code>Rails::API::StableTask.new(&quot;rdoc&quot;)
+</code></pre>
+
+<p>end</p>
+
+<p>desc “Bump all versions to match <a href="RAILS_VERSION.html">RAILS_VERSION</a>” task update_versions: “all:update_versions”</p>
+
+<p># We have a webhook configured in GitHub that gets invoked after pushes. # This hook triggers the following tasks: # #   * updates the local checkout #   * updates <a href="../../classes/Rails.html"><code>Rails</code></a> Contributors #   * generates and publishes edge docs #   * if there&#39;s a new stable tag, generates and publishes stable docs # # Everything is automated and you do NOT need to run this task normally. desc “Publishes docs, run this AFTER a new stable tag has been pushed” task :publish_docs do</p>
+
+<pre><code>Net::HTTP.new(&quot;api.rubyonrails.org&quot;, 8080).start do |http|
+  request  = Net::HTTP::Post.new(&quot;/rails-master-hook&quot;)
+  response = http.request(request)
+  puts response.body
+end
+</code></pre>
+
+<p>end</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ActiveRecord::Enum</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle(["ActiveRecord", "Enum"]);
+  }
+})
+</script>
+
+
+
+    <meta property="og:title" value="ActiveRecord::Enum">
+
+  
+    
+    <meta name="description" content="Declare an enum attribute where the values map to integers in the database, but can be queried by name.">
+    <meta property="og:description" content="Declare an enum attribute where the values map to integers in the database, but can be queried by name.">
+  
+
+    <meta name="keywords" content="ActiveRecord::Enum class, enum">
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            <span class="type">Module</span>
+            ActiveRecord::Enum
+            
+        </h2>
+        <ul class="files">
+            
+            <li><a href="../../files/rails/activerecord/lib/active_record/enum_rb.html">rails/activerecord/lib/active_record/enum.rb</a></li>
+            
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>Declare an enum attribute where the values map to integers in the database, but can be queried by name. Example:</p>
+
+<pre><code>class Conversation &lt; ActiveRecord::Base
+  enum status: [ :active, :archived ]
+end
+
+# conversation.update! status: 0
+conversation.active!
+conversation.active? # =&gt; true
+conversation.status  # =&gt; &quot;active&quot;
+
+# conversation.update! status: 1
+conversation.archived!
+conversation.archived? # =&gt; true
+conversation.status    # =&gt; &quot;archived&quot;
+
+# conversation.status = 1
+conversation.status = &quot;archived&quot;
+
+conversation.status = nil
+conversation.status.nil? # =&gt; true
+conversation.status      # =&gt; nil
+</code></pre>
+
+<p>Scopes based on the allowed values of the enum field will be provided as well. With the above example:</p>
+
+<pre><code>Conversation.active
+Conversation.not_active
+Conversation.archived
+Conversation.not_archived
+</code></pre>
+
+<p>Of course, you can also query them directly if the scopes don&#39;t fit your needs:</p>
+
+<pre><code>Conversation.where(status: [:active, :archived])
+Conversation.where.not(status: :active)
+</code></pre>
+
+<p>You can set the default value from the database declaration, like:</p>
+
+<pre><code>create_table :conversations do |t|
+  t.column :status, :integer, default: 0
+end
+</code></pre>
+
+<p>Good practice is to let the first declared status be the default.</p>
+
+<p>Finally, it&#39;s also possible to explicitly map the relation between attribute and database integer with a hash:</p>
+
+<pre><code>class Conversation &lt; ActiveRecord::Base
+  enum status: { active: 0, archived: 1 }
+end
+</code></pre>
+
+<p>Note that when an array is used, the implicit mapping from the values to database integers is derived from the order the values appear in the array. In the example, <code>:active</code> is mapped to <code>0</code> as it&#39;s the first element, and <code>:archived</code> is mapped to <code>1</code>. In general, the <code>i</code>-th element is mapped to <code>i-1</code> in the database.</p>
+
+<p>Therefore, once a value is added to the enum array, its position in the array must be maintained, and new values should only be added to the end of the array. To remove unused values, the explicit hash syntax should be used.</p>
+
+<p>In rare circumstances you might need to access the mapping directly. The mappings are exposed through a class method with the pluralized attribute name, which return the mapping in a <code>HashWithIndifferentAccess</code>:</p>
+
+<pre><code>Conversation.statuses[:active]    # =&gt; 0
+Conversation.statuses[&quot;archived&quot;] # =&gt; 1
+</code></pre>
+
+<p>Use that class method when you need to know the ordinal value of an enum. For example, you can use that when manually building SQL strings:</p>
+
+<pre><code>Conversation.where(&quot;status &lt;&gt; ?&quot;, Conversation.statuses[:archived])
+</code></pre>
+
+<p>You can use the <code>:_prefix</code> or <code>:_suffix</code> options when you need to define multiple enums with same values. If the passed value is <code>true</code>, the methods are prefixed/suffixed with the name of the enum. It is also possible to supply a custom value:</p>
+
+<pre><code>class Conversation &lt; ActiveRecord::Base
+  enum status: [:active, :archived], _suffix: true
+  enum comments_status: [:active, :inactive], _prefix: :comments
+end
+</code></pre>
+
+<p>With the above example, the bang and predicate methods along with the associated scopes are now prefixed and/or suffixed accordingly:</p>
+
+<pre><code>conversation.active_status!
+conversation.archived_status? # =&gt; false
+
+conversation.comments_inactive!
+conversation.comments_active? # =&gt; false
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>E</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-enum">enum</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+      <h2 class="sectiontitle">Instance Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-i-enum">
+            
+              <b>enum</b>(definitions)
+            
+            <a href="../../classes/ActiveRecord/Enum.html#method-i-enum" name="method-i-enum" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-enum_source')" id="l_method-i-enum_source">show</a>
+                
+              </p>
+              <div id="method-i-enum_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/enum.rb, line 150</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">enum</span>(<span class="ruby-identifier">definitions</span>)
+  <span class="ruby-identifier">klass</span> = <span class="ruby-keyword">self</span>
+  <span class="ruby-identifier">enum_prefix</span> = <span class="ruby-identifier">definitions</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value">:_prefix</span>)
+  <span class="ruby-identifier">enum_suffix</span> = <span class="ruby-identifier">definitions</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value">:_suffix</span>)
+  <span class="ruby-identifier">enum_scopes</span> = <span class="ruby-identifier">definitions</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value">:_scopes</span>)
+  <span class="ruby-identifier">definitions</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name</span>, <span class="ruby-identifier">values</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">assert_valid_enum_definition_values</span>(<span class="ruby-identifier">values</span>)
+    <span class="ruby-comment"># statuses = { }</span>
+    <span class="ruby-identifier">enum_values</span> = <span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">HashWithIndifferentAccess</span>.<span class="ruby-identifier">new</span>
+    <span class="ruby-identifier">name</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_s</span>
+
+    <span class="ruby-comment"># def self.statuses() statuses end</span>
+    <span class="ruby-identifier">detect_enum_conflict!</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">name</span>.<span class="ruby-identifier">pluralize</span>, <span class="ruby-keyword">true</span>)
+    <span class="ruby-identifier">singleton_class</span>.<span class="ruby-identifier">define_method</span>(<span class="ruby-identifier">name</span>.<span class="ruby-identifier">pluralize</span>) { <span class="ruby-identifier">enum_values</span> }
+    <span class="ruby-identifier">defined_enums</span>[<span class="ruby-identifier">name</span>] = <span class="ruby-identifier">enum_values</span>
+
+    <span class="ruby-identifier">detect_enum_conflict!</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">name</span>)
+    <span class="ruby-identifier">detect_enum_conflict!</span>(<span class="ruby-identifier">name</span>, <span class="ruby-node">&quot;#{name}=&quot;</span>)
+
+    <span class="ruby-identifier">attr</span> = <span class="ruby-identifier">attribute_alias?</span>(<span class="ruby-identifier">name</span>) <span class="ruby-operator">?</span> <span class="ruby-identifier">attribute_alias</span>(<span class="ruby-identifier">name</span>) <span class="ruby-operator">:</span> <span class="ruby-identifier">name</span>
+    <span class="ruby-identifier">decorate_attribute_type</span>(<span class="ruby-identifier">attr</span>, <span class="ruby-value">:enum</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">subtype</span><span class="ruby-operator">|</span>
+      <span class="ruby-constant">EnumType</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">attr</span>, <span class="ruby-identifier">enum_values</span>, <span class="ruby-identifier">subtype</span>)
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">_enum_methods_module</span>.<span class="ruby-identifier">module_eval</span> <span class="ruby-keyword">do</span>
+      <span class="ruby-identifier">pairs</span> = <span class="ruby-identifier">values</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:each_pair</span>) <span class="ruby-operator">?</span> <span class="ruby-identifier">values</span>.<span class="ruby-identifier">each_pair</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">values</span>.<span class="ruby-identifier">each_with_index</span>
+      <span class="ruby-identifier">pairs</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">label</span>, <span class="ruby-identifier">value</span><span class="ruby-operator">|</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">enum_prefix</span> <span class="ruby-operator">==</span> <span class="ruby-keyword">true</span>
+          <span class="ruby-identifier">prefix</span> = <span class="ruby-node">&quot;#{name}_&quot;</span>
+        <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">enum_prefix</span>
+          <span class="ruby-identifier">prefix</span> = <span class="ruby-node">&quot;#{enum_prefix}_&quot;</span>
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">enum_suffix</span> <span class="ruby-operator">==</span> <span class="ruby-keyword">true</span>
+          <span class="ruby-identifier">suffix</span> = <span class="ruby-node">&quot;_#{name}&quot;</span>
+        <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">enum_suffix</span>
+          <span class="ruby-identifier">suffix</span> = <span class="ruby-node">&quot;_#{enum_suffix}&quot;</span>
+        <span class="ruby-keyword">end</span>
+
+        <span class="ruby-identifier">value_method_name</span> = <span class="ruby-node">&quot;#{prefix}#{label}#{suffix}&quot;</span>
+        <span class="ruby-identifier">enum_values</span>[<span class="ruby-identifier">label</span>] = <span class="ruby-identifier">value</span>
+        <span class="ruby-identifier">label</span> = <span class="ruby-identifier">label</span>.<span class="ruby-identifier">to_s</span>
+
+        <span class="ruby-comment"># def active?() status == &quot;active&quot; end</span>
+        <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">send</span>(<span class="ruby-value">:detect_enum_conflict!</span>, <span class="ruby-identifier">name</span>, <span class="ruby-node">&quot;#{value_method_name}?&quot;</span>)
+        <span class="ruby-identifier">define_method</span>(<span class="ruby-node">&quot;#{value_method_name}?&quot;</span>) { <span class="ruby-keyword">self</span>[<span class="ruby-identifier">attr</span>] <span class="ruby-operator">==</span> <span class="ruby-identifier">label</span> }
+
+        <span class="ruby-comment"># def active!() update!(status: 0) end</span>
+        <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">send</span>(<span class="ruby-value">:detect_enum_conflict!</span>, <span class="ruby-identifier">name</span>, <span class="ruby-node">&quot;#{value_method_name}!&quot;</span>)
+        <span class="ruby-identifier">define_method</span>(<span class="ruby-node">&quot;#{value_method_name}!&quot;</span>) { <span class="ruby-identifier">update!</span>(<span class="ruby-identifier">attr</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">value</span>) }
+
+        <span class="ruby-comment"># scope :active, -&gt; { where(status: 0) }</span>
+        <span class="ruby-comment"># scope :not_active, -&gt; { where.not(status: 0) }</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">enum_scopes</span> <span class="ruby-operator">!=</span> <span class="ruby-keyword">false</span>
+          <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">send</span>(<span class="ruby-value">:detect_negative_condition!</span>, <span class="ruby-identifier">value_method_name</span>)
+
+          <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">send</span>(<span class="ruby-value">:detect_enum_conflict!</span>, <span class="ruby-identifier">name</span>, <span class="ruby-identifier">value_method_name</span>, <span class="ruby-keyword">true</span>)
+          <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">scope</span> <span class="ruby-identifier">value_method_name</span>, <span class="ruby-operator">-&gt;</span> { <span class="ruby-identifier">where</span>(<span class="ruby-identifier">attr</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">value</span>) }
+
+          <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">send</span>(<span class="ruby-value">:detect_enum_conflict!</span>, <span class="ruby-identifier">name</span>, <span class="ruby-node">&quot;not_#{value_method_name}&quot;</span>, <span class="ruby-keyword">true</span>)
+          <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">scope</span> <span class="ruby-node">&quot;not_#{value_method_name}&quot;</span>, <span class="ruby-operator">-&gt;</span> { <span class="ruby-identifier">where</span>.<span class="ruby-identifier">not</span>(<span class="ruby-identifier">attr</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">value</span>) }
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">enum_values</span>.<span class="ruby-identifier">freeze</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>
