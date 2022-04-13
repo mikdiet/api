@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ActiveRecord::DelegatedType</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script type="text/javascript" charset="utf-8">
+document.addEventListener("turbolinks:load", function() {
+  // Only initialize panel if not yet initialized
+  if(!$('#panel .tree ul li').length) {
+    $('#links').hide();
+    var panel = new Searchdoc.Panel($('#panel'), search_data, tree, '/');
+    $('#search').focus();
+    var s = window.location.search.match(/\?q=([^&]+)/);
+    if (s) {
+      s = decodeURIComponent(s[1]).replace(/\+/g, ' ');
+      if (s.length > 0) {
+        $('#search').val(s);
+        panel.search(s, true);
+      }
+    }
+    panel.toggle(["ActiveRecord", "DelegatedType"]);
+  }
+})
+</script>
+
+
+
+    <meta property="og:title" value="ActiveRecord::DelegatedType">
+
+  
+    
+    <meta name="description" content="Delegated types  Class hierarchies can map to relational database tables in many ways.">
+    <meta property="og:description" content="Delegated types  Class hierarchies can map to relational database tables in many ways.">
+  
+
+    <meta name="keywords" content="ActiveRecord::DelegatedType class, delegated_type">
+</head>
+
+<body>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<div class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</div>
+
+
+    <div class="banner">
+        
+        <h2>
+            <span class="type">Module</span>
+            ActiveRecord::DelegatedType
+            
+        </h2>
+        <ul class="files">
+            
+            <li><a href="../../files/rails/activerecord/lib/active_record/delegated_type_rb.html">rails/activerecord/lib/active_record/delegated_type.rb</a></li>
+            
+        </ul>
+    </div>
+
+    <div id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h2 id="module-ActiveRecord::DelegatedType-label-Delegated+types">Delegated types</h2>
+
+<p><a href="../Class.html"><code>Class</code></a> hierarchies can map to relational database tables in many ways. Active Record, for example, offers purely abstract classes, where the superclass doesn&#39;t persist any attributes, and single-table inheritance, where all attributes from all levels of the hierarchy are represented in a single table. Both have their places, but neither are without their drawbacks.</p>
+
+<p>The problem with purely abstract classes is that all concrete subclasses must persist all the shared attributes themselves in their own tables (also known as class-table inheritance). This makes it hard to do queries across the hierarchy. For example, imagine you have the following hierarchy:</p>
+
+<pre><code>Entry &lt; ApplicationRecord
+Message &lt; Entry
+Comment &lt; Entry
+</code></pre>
+
+<p>How do you show a feed that has both <code>Message</code> and <code>Comment</code> records, which can be easily paginated? Well, you can&#39;t! Messages are backed by a messages table and comments by a comments table. You can&#39;t pull from both tables at once and use a consistent OFFSET/LIMIT scheme.</p>
+
+<p>You can get around the pagination problem by using single-table inheritance, but now you&#39;re forced into a single mega table with all the attributes from all subclasses. No matter how divergent. If a Message has a subject, but the comment does not, well, now the comment does anyway! So STI works best when there&#39;s little divergence between the subclasses and their attributes.</p>
+
+<p>But there&#39;s a third way: Delegated types. With this approach, the “superclass” is a concrete class that is represented by its own table, where all the superclass attributes that are shared amongst all the “subclasses” are stored. And then each of the subclasses have their own individual tables for additional attributes that are particular to their implementation. This is similar to what&#39;s called multi-table inheritance in Django, but instead of actual inheritance, this approach uses delegation to form the hierarchy and share responsibilities.</p>
+
+<p>Let&#39;s look at that entry/message/comment example using delegated types:</p>
+
+<pre><code># Schema: entries[ id, account_id, creator_id, created_at, updated_at, entryable_type, entryable_id ]
+class Entry &lt; ApplicationRecord
+  belongs_to :account
+  belongs_to :creator
+  delegated_type :entryable, types: %w[ Message Comment ]
+end
+
+module Entryable
+  extend ActiveSupport::Concern
+
+  included do
+    has_one :entry, as: :entryable, touch: true
+  end
+end
+
+# Schema: messages[ id, subject ]
+class Message &lt; ApplicationRecord
+  include Entryable
+  has_rich_text :content
+end
+
+# Schema: comments[ id, content ]
+class Comment &lt; ApplicationRecord
+  include Entryable
+end
+</code></pre>
+
+<p>As you can see, neither <code>Message</code> nor <code>Comment</code> are meant to stand alone. Crucial metadata for both classes resides in the <code>Entry</code> “superclass”. But the <code>Entry</code> absolutely can stand alone in terms of querying capacity in particular. You can now easily do things like:</p>
+
+<pre><code>Account.entries.order(created_at: :desc).limit(50)
+</code></pre>
+
+<p>Which is exactly what you want when displaying both comments and messages together. The entry itself can be rendered as its delegated type easily, like so:</p>
+
+<pre><code># entries/_entry.html.erb
+&lt;%= render &quot;entries/entryables/#{entry.entryable_name}&quot;, entry: entry %&gt;
+
+# entries/entryables/_message.html.erb
+&lt;div class=&quot;message&quot;&gt;
+  Posted on &lt;%= entry.created_at %&gt; by &lt;%= entry.creator.name %&gt;: &lt;%= entry.message.content %&gt;
+&lt;/div&gt;
+
+# entries/entryables/_comment.html.erb
+&lt;div class=&quot;comment&quot;&gt;
+  &lt;%= entry.creator.name %&gt; said: &lt;%= entry.comment.content %&gt;
+&lt;/div&gt;
+</code></pre>
+
+<h2 id="module-ActiveRecord::DelegatedType-label-Sharing+behavior+with+concerns+and+controllers">Sharing behavior with concerns and controllers</h2>
+
+<p>The entry “superclass” also serves as a perfect place to put all that shared logic that applies to both messages and comments, and which acts primarily on the shared attributes. Imagine:</p>
+
+<pre><code>class Entry &lt; ApplicationRecord
+  include Eventable, Forwardable, Redeliverable
+end
+</code></pre>
+
+<p>Which allows you to have controllers for things like <code>ForwardsController</code> and <code>RedeliverableController</code> that both act on entries, and thus provide the shared functionality to both messages and comments.</p>
+
+<h2 id="module-ActiveRecord::DelegatedType-label-Creating+new+records">Creating new records</h2>
+
+<p>You create a new record that uses delegated typing by creating the delegator and delegatee at the same time, like so:</p>
+
+<pre><code>Entry.create! entryable: Comment.new(content: &quot;Hello!&quot;), creator: Current.user
+</code></pre>
+
+<p>If you need more complicated composition, or you need to perform dependent validation, you should build a factory method or class to take care of the complicated needs. This could be as simple as:</p>
+
+<pre><code>class Entry &lt; ApplicationRecord
+  def self.create_with_comment(content, creator: Current.user)
+    create! entryable: Comment.new(content: content), creator: creator
+  end
+end
+</code></pre>
+
+<h2 id="module-ActiveRecord::DelegatedType-label-Adding+further+delegation">Adding further delegation</h2>
+
+<p>The delegated type shouldn&#39;t just answer the question of what the underlying class is called. In fact, that&#39;s an anti-pattern most of the time. The reason you&#39;re building this hierarchy is to take advantage of polymorphism. So here&#39;s a simple example of that:</p>
+
+<pre><code>class Entry &lt; ApplicationRecord
+  delegated_type :entryable, types: %w[ Message Comment ]
+  delegate :title, to: :entryable
+end
+
+class Message &lt; ApplicationRecord
+  def title
+    subject
+  end
+end
+
+class Comment &lt; ApplicationRecord
+  def title
+    content.truncate(20)
+  end
+end
+</code></pre>
+
+<p>Now you can list a bunch of entries, call +Entry#title+, and polymorphism will provide you with the answer.</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>D</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-delegated_type">delegated_type</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+      <h2 class="sectiontitle">Instance Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-i-delegated_type">
+            
+              <b>delegated_type</b>(role, types:, **options)
+            
+            <a href="../../classes/ActiveRecord/DelegatedType.html#method-i-delegated_type" name="method-i-delegated_type" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Defines this as a class that&#39;ll delegate its type for the passed <code>role</code> to the class references in <code>types</code>. That&#39;ll create a polymorphic <code>belongs_to</code> relationship to that <code>role</code>, and it&#39;ll add all the delegated type convenience methods:</p>
+
+<pre><code>class Entry &lt; ApplicationRecord
+  delegated_type :entryable, types: %w[ Message Comment ], dependent: :destroy
+end
+
+Entry#entryable_class # =&gt; +Message+ or +Comment+
+Entry#entryable_name  # =&gt; &quot;message&quot; or &quot;comment&quot;
+Entry.messages        # =&gt; Entry.where(entryable_type: &quot;Message&quot;)
+Entry#message?        # =&gt; true when entryable_type == &quot;Message&quot;
+Entry#message         # =&gt; returns the message record, when entryable_type == &quot;Message&quot;, otherwise nil
+Entry#message_id      # =&gt; returns entryable_id, when entryable_type == &quot;Message&quot;, otherwise nil
+Entry.comments        # =&gt; Entry.where(entryable_type: &quot;Comment&quot;)
+Entry#comment?        # =&gt; true when entryable_type == &quot;Comment&quot;
+Entry#comment         # =&gt; returns the comment record, when entryable_type == &quot;Comment&quot;, otherwise nil
+Entry#comment_id      # =&gt; returns entryable_id, when entryable_type == &quot;Comment&quot;, otherwise nil
+</code></pre>
+
+<p>The <code>options</code> are passed directly to the <code>belongs_to</code> call, so this is where you declare <code>dependent</code> etc.</p>
+
+<p>You can also declare namespaced types:</p>
+
+<pre><code>class Entry &lt; ApplicationRecord
+  delegated_type :entryable, types: %w[ Message Comment Access::NoticeMessage ], dependent: :destroy
+end
+
+Entry.access_notice_messages
+entry.access_notice_message
+entry.access_notice_message?
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-delegated_type_source')" id="l_method-i-delegated_type_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activerecord/lib/active_record/delegated_type.rb#L170" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-delegated_type_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/delegated_type.rb, line 170</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">delegated_type</span>(<span class="ruby-identifier">role</span>, <span class="ruby-value">types:</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
+  <span class="ruby-identifier">belongs_to</span> <span class="ruby-identifier">role</span>, <span class="ruby-identifier">options</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value">:scope</span>), <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-value">polymorphic:</span> <span class="ruby-keyword">true</span>)
+  <span class="ruby-identifier">define_delegated_type_methods</span> <span class="ruby-identifier">role</span>, <span class="ruby-value">types:</span> <span class="ruby-identifier">types</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
+    
+  
+</div>
+
+    </div>
+  </body>
+</html>

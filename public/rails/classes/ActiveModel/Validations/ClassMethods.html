@@ -231,7 +231,7 @@ User.attribute_method?(:age)  # =&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-attribute_method-3F_source')" id="l_method-i-attribute_method-3F_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activemodel/lib/active_model/validations.rb#L270" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activemodel/lib/active_model/validations.rb#L270" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-attribute_method-3F_source" class="dyn-source">
@@ -303,7 +303,7 @@ Person.validators
                 Source:
                 <a href="javascript:toggleSource('method-i-clear_validators-21_source')" id="l_method-i-clear_validators-21_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activemodel/lib/active_model/validations.rb#L234" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activemodel/lib/active_model/validations.rb#L234" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-clear_validators-21_source" class="dyn-source">
@@ -395,7 +395,7 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-validate_source')" id="l_method-i-validate_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activemodel/lib/active_model/validations.rb#L152" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activemodel/lib/active_model/validations.rb#L152" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-validate_source" class="dyn-source">
@@ -414,10 +414,10 @@ end
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">options</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:on</span>)
     <span class="ruby-identifier">options</span> = <span class="ruby-identifier">options</span>.<span class="ruby-identifier">dup</span>
     <span class="ruby-identifier">options</span>[<span class="ruby-value">:on</span>] = <span class="ruby-constant">Array</span>(<span class="ruby-identifier">options</span>[<span class="ruby-value">:on</span>])
-    <span class="ruby-identifier">options</span>[<span class="ruby-value">:if</span>] = <span class="ruby-constant">Array</span>(<span class="ruby-identifier">options</span>[<span class="ruby-value">:if</span>])
-    <span class="ruby-identifier">options</span>[<span class="ruby-value">:if</span>].<span class="ruby-identifier">unshift</span> <span class="ruby-operator">-&gt;</span>(<span class="ruby-identifier">o</span>) {
-      <span class="ruby-operator">!</span>(<span class="ruby-identifier">options</span>[<span class="ruby-value">:on</span>] <span class="ruby-operator">&amp;</span> <span class="ruby-constant">Array</span>(<span class="ruby-identifier">o</span>.<span class="ruby-identifier">validation_context</span>)).<span class="ruby-identifier">empty?</span>
-    }
+    <span class="ruby-identifier">options</span>[<span class="ruby-value">:if</span>] = [
+      <span class="ruby-operator">-&gt;</span>(<span class="ruby-identifier">o</span>) { <span class="ruby-operator">!</span>(<span class="ruby-identifier">options</span>[<span class="ruby-value">:on</span>] <span class="ruby-operator">&amp;</span> <span class="ruby-constant">Array</span>(<span class="ruby-identifier">o</span>.<span class="ruby-identifier">validation_context</span>)).<span class="ruby-identifier">empty?</span> },
+      <span class="ruby-operator">*</span><span class="ruby-identifier">options</span>[<span class="ruby-value">:if</span>]
+    ]
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-identifier">set_callback</span>(<span class="ruby-value">:validate</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-identifier">options</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
@@ -441,7 +441,8 @@ end
 
 <p>Examples of using the default rails validators:</p>
 
-<pre><code>validates :terms, acceptance: true
+<pre><code>validates :username, absence: true
+validates :terms, acceptance: true
 validates :password, confirmation: true
 validates :username, exclusion: { in: %w(admin superuser) }
 validates :email, format: { with: /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i, on: :create }
@@ -456,7 +457,7 @@ validates :username, presence: true
 <pre><code>class EmailValidator &lt; ActiveModel::EachValidator
   def validate_each(record, attribute, value)
     record.errors.add attribute, (options[:message] || &quot;is not an email&quot;) unless
-      value =~ /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i
+      /\A([^@\s]+)@((?:[-a-z0-9]+\.)+[a-z]{2,})\z/i.match?(value)
   end
 end
 
@@ -476,7 +477,7 @@ end
 
   class TitleValidator &lt; ActiveModel::EachValidator
     def validate_each(record, attribute, value)
-      record.errors.add attribute, &quot;must start with &#39;the&#39;&quot; unless value =~ /\Athe/i
+      record.errors.add attribute, &quot;must start with &#39;the&#39;&quot; unless /\Athe/i.match?(value)
     end
   end
 
@@ -492,7 +493,7 @@ end
 <p>The validators hash can also handle regular expressions, ranges, arrays and strings in shortcut form.</p>
 
 <pre><code>validates :email, format: /@/
-validates :role, inclusion: %(admin contributor)
+validates :role, inclusion: %w(admin contributor)
 validates :password, length: 6..20
 </code></pre>
 
@@ -538,11 +539,11 @@ validates :token, length: 24, strict: TokenLengthException
                 Source:
                 <a href="javascript:toggleSource('method-i-validates_source')" id="l_method-i-validates_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activemodel/lib/active_model/validations/validates.rb#L105" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activemodel/lib/active_model/validations/validates.rb#L106" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-validates_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activemodel/lib/active_model/validations/validates.rb, line 105</span>
+                <pre><span class="ruby-comment"># File rails/activemodel/lib/active_model/validations/validates.rb, line 106</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">validates</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">attributes</span>)
   <span class="ruby-identifier">defaults</span> = <span class="ruby-identifier">attributes</span>.<span class="ruby-identifier">extract_options!</span>.<span class="ruby-identifier">dup</span>
   <span class="ruby-identifier">validations</span> = <span class="ruby-identifier">defaults</span>.<span class="ruby-identifier">slice!</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">_validates_default_keys</span>)
@@ -553,7 +554,6 @@ validates :token, length: 24, strict: TokenLengthException
   <span class="ruby-identifier">defaults</span>[<span class="ruby-value">:attributes</span>] = <span class="ruby-identifier">attributes</span>
 
   <span class="ruby-identifier">validations</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">key</span>, <span class="ruby-identifier">options</span><span class="ruby-operator">|</span>
-    <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">options</span>
     <span class="ruby-identifier">key</span> = <span class="ruby-node">&quot;#{key.to_s.camelize}Validator&quot;</span>
 
     <span class="ruby-keyword">begin</span>
@@ -561,6 +561,8 @@ validates :token, length: 24, strict: TokenLengthException
     <span class="ruby-keyword">rescue</span> <span class="ruby-constant">NameError</span>
       <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;Unknown validator: &#39;#{key}&#39;&quot;</span>
     <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">options</span>
 
     <span class="ruby-identifier">validates_with</span>(<span class="ruby-identifier">validator</span>, <span class="ruby-identifier">defaults</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">_parse_validates_options</span>(<span class="ruby-identifier">options</span>)))
   <span class="ruby-keyword">end</span>
@@ -609,11 +611,11 @@ person.valid?
                 Source:
                 <a href="javascript:toggleSource('method-i-validates-21_source')" id="l_method-i-validates-21_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activemodel/lib/active_model/validations/validates.rb#L146" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activemodel/lib/active_model/validations/validates.rb#L148" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-validates-21_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activemodel/lib/active_model/validations/validates.rb, line 146</span>
+                <pre><span class="ruby-comment"># File rails/activemodel/lib/active_model/validations/validates.rb, line 148</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">validates!</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">attributes</span>)
   <span class="ruby-identifier">options</span> = <span class="ruby-identifier">attributes</span>.<span class="ruby-identifier">extract_options!</span>
   <span class="ruby-identifier">options</span>[<span class="ruby-value">:strict</span>] = <span class="ruby-keyword">true</span>
@@ -642,7 +644,7 @@ person.valid?
   attr_accessor :first_name, :last_name
 
   validates_each :first_name, :last_name, allow_blank: true do |record, attr, value|
-    record.errors.add attr, &#39;starts with z.&#39; if value.to_s[0] == ?z
+    record.errors.add attr, &quot;starts with z.&quot; if value.start_with?(&quot;z&quot;)
   end
 end
 </code></pre>
@@ -674,7 +676,7 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-validates_each_source')" id="l_method-i-validates_each_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activemodel/lib/active_model/validations.rb#L85" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activemodel/lib/active_model/validations.rb#L85" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-validates_each_source" class="dyn-source">
@@ -765,7 +767,7 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-validates_with_source')" id="l_method-i-validates_with_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activemodel/lib/active_model/validations/with.rb#L81" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activemodel/lib/active_model/validations/with.rb#L81" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-validates_with_source" class="dyn-source">
@@ -835,7 +837,7 @@ Person.validators
                 Source:
                 <a href="javascript:toggleSource('method-i-validators_source')" id="l_method-i-validators_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activemodel/lib/active_model/validations.rb#L192" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activemodel/lib/active_model/validations.rb#L192" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-validators_source" class="dyn-source">
@@ -889,7 +891,7 @@ Person.validators_on(:name)
                 Source:
                 <a href="javascript:toggleSource('method-i-validators_on_source')" id="l_method-i-validators_on_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activemodel/lib/active_model/validations.rb#L254" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activemodel/lib/active_model/validations.rb#L254" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-validators_on_source" class="dyn-source">

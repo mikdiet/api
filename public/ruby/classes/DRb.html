@@ -100,6 +100,8 @@ document.addEventListener("turbolinks:load", function() {
             
             <li><a href="../files/ruby/lib/drb/unix_rb.html">ruby/lib/drb/unix.rb</a></li>
             
+            <li><a href="../files/ruby/lib/drb/weakidconv_rb.html">ruby/lib/drb/weakidconv.rb</a></li>
+            
         </ul>
     </div>
 
@@ -155,8 +157,6 @@ end
 
 # The object that handles requests on the server
 FRONT_OBJECT=TimeServer.new
-
-$SAFE = 1   # disable eval() and friends
 
 DRb.start_service(URI, FRONT_OBJECT)
 # Wait for the drb server thread to finish before exiting.
@@ -229,7 +229,7 @@ class LoggerFactory
     def get_logger(name)
         if !@loggers.has_key? name
             # make the filename safe, then declare it to be so
-            fname = name.gsub(/[.\/\\\:]/, &quot;_&quot;).untaint
+            fname = name.gsub(/[.\/\\\:]/, &quot;_&quot;)
             @loggers[name] = Logger.new(name, @basedir + &quot;/&quot; + fname)
         end
         return @loggers[name]
@@ -238,8 +238,6 @@ class LoggerFactory
 end
 
 FRONT_OBJECT=LoggerFactory.new(&quot;/tmp/dlog&quot;)
-
-$SAFE = 1   # disable eval() and friends
 
 DRb.start_service(URI, FRONT_OBJECT)
 DRb.thread.join
@@ -278,7 +276,7 @@ end
 ro.instance_eval(&quot;`rm -rf *`&quot;)
 </code></pre>
 
-<p>The dangers posed by instance_eval and friends are such that a DRbServer should generally be run with $SAFE set to at least level 1.  This will disable eval() and related calls on strings passed across the wire.  The sample usage code given above follows this practice.</p>
+<p>The dangers posed by instance_eval and friends are such that a DRbServer should only be used when clients are trusted.</p>
 
 <p>A DRbServer can be configured with an access control list to selectively allow or deny access from specified IP addresses.  The main druby distribution provides the <a href="ACL.html"><code>ACL</code></a> class for this purpose.  In general, this mechanism should only be used alongside, rather than as a replacement for, a good firewall.</p>
 
@@ -430,7 +428,17 @@ ro.instance_eval(&quot;`rm -rf *`&quot;)
       
         <li>
           <span class="type">CLASS</span>
+          <a href="DRb/ThreadObject.html">DRb::ThreadObject</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
           <a href="DRb/TimerIdConv.html">DRb::TimerIdConv</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="DRb/WeakIdConv.html">DRb::WeakIdConv</a>
         </li>
       
     </ul>
@@ -640,11 +648,11 @@ ro.instance_eval(&quot;`rm -rf *`&quot;)
                 Source:
                 <a href="javascript:toggleSource('method-c-config_source')" id="l_method-c-config_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1778" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1835" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-config_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1778</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1835</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">config</span>
   <span class="ruby-identifier">current_server</span>.<span class="ruby-identifier">config</span>
 <span class="ruby-keyword">rescue</span>
@@ -685,11 +693,11 @@ ro.instance_eval(&quot;`rm -rf *`&quot;)
                 Source:
                 <a href="javascript:toggleSource('method-c-current_server_source')" id="l_method-c-current_server_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1735" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1792" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-current_server_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1735</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1792</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">current_server</span>
   <span class="ruby-identifier">drb</span> = <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>[<span class="ruby-string">&#39;DRb&#39;</span>]
   <span class="ruby-identifier">server</span> = (<span class="ruby-identifier">drb</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">drb</span>[<span class="ruby-string">&#39;server&#39;</span>]) <span class="ruby-operator">?</span> <span class="ruby-identifier">drb</span>[<span class="ruby-string">&#39;server&#39;</span>] <span class="ruby-operator">:</span> <span class="ruby-ivar">@primary_server</span>
@@ -729,11 +737,11 @@ ro.instance_eval(&quot;`rm -rf *`&quot;)
                 Source:
                 <a href="javascript:toggleSource('method-c-fetch_server_source')" id="l_method-c-fetch_server_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1880" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1937" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-fetch_server_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1880</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1937</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fetch_server</span>(<span class="ruby-identifier">uri</span>)
   <span class="ruby-ivar">@server</span>[<span class="ruby-identifier">uri</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -770,11 +778,11 @@ ro.instance_eval(&quot;`rm -rf *`&quot;)
                 Source:
                 <a href="javascript:toggleSource('method-c-front_source')" id="l_method-c-front_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1789" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1846" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-front_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1789</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1846</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">front</span>
   <span class="ruby-identifier">current_server</span>.<span class="ruby-identifier">front</span>
 <span class="ruby-keyword">end</span></pre>
@@ -809,11 +817,11 @@ ro.instance_eval(&quot;`rm -rf *`&quot;)
                 Source:
                 <a href="javascript:toggleSource('method-c-here-3F_source')" id="l_method-c-here-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1768" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1825" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-here-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1768</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1825</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">here?</span>(<span class="ruby-identifier">uri</span>)
   <span class="ruby-identifier">current_server</span>.<span class="ruby-identifier">here?</span>(<span class="ruby-identifier">uri</span>) <span class="ruby-keyword">rescue</span> <span class="ruby-keyword">false</span>
   <span class="ruby-comment"># (current_server.uri rescue nil) == uri</span>
@@ -851,11 +859,11 @@ ro.instance_eval(&quot;`rm -rf *`&quot;)
                 Source:
                 <a href="javascript:toggleSource('method-c-install_acl_source')" id="l_method-c-install_acl_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1834" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1891" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-install_acl_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1834</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1891</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">install_acl</span>(<span class="ruby-identifier">acl</span>)
   <span class="ruby-constant">DRbServer</span>.<span class="ruby-identifier">default_acl</span>(<span class="ruby-identifier">acl</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -894,11 +902,11 @@ ro.instance_eval(&quot;`rm -rf *`&quot;)
                 Source:
                 <a href="javascript:toggleSource('method-c-install_id_conv_source')" id="l_method-c-install_id_conv_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1826" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1883" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-install_id_conv_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1826</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1883</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">install_id_conv</span>(<span class="ruby-identifier">idconv</span>)
   <span class="ruby-constant">DRbServer</span>.<span class="ruby-identifier">default_id_conv</span>(<span class="ruby-identifier">idconv</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -945,11 +953,11 @@ DRb.fetch_server s.uri #=&gt; #&lt;DRb::DRbServer:0x...&gt;
                 Source:
                 <a href="javascript:toggleSource('method-c-regist_server_source')" id="l_method-c-regist_server_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1858" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1915" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-regist_server_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1858</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1915</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">regist_server</span>(<span class="ruby-identifier">server</span>)
   <span class="ruby-ivar">@server</span>[<span class="ruby-identifier">server</span>.<span class="ruby-identifier">uri</span>] = <span class="ruby-identifier">server</span>
   <span class="ruby-identifier">mutex</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
@@ -987,11 +995,11 @@ DRb.fetch_server s.uri #=&gt; #&lt;DRb::DRbServer:0x...&gt;
                 Source:
                 <a href="javascript:toggleSource('method-c-remove_server_source')" id="l_method-c-remove_server_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1867" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1924" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-remove_server_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1867</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1924</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">remove_server</span>(<span class="ruby-identifier">server</span>)
   <span class="ruby-ivar">@server</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">server</span>.<span class="ruby-identifier">uri</span>)
   <span class="ruby-identifier">mutex</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
@@ -1041,11 +1049,11 @@ DRb.fetch_server s.uri #=&gt; #&lt;DRb::DRbServer:0x...&gt;
                 Source:
                 <a href="javascript:toggleSource('method-c-start_service_source')" id="l_method-c-start_service_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1714" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1771" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-start_service_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1714</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1771</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">start_service</span>(<span class="ruby-identifier">uri</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-identifier">front</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-identifier">config</span>=<span class="ruby-keyword">nil</span>)
   <span class="ruby-ivar">@primary_server</span> = <span class="ruby-constant">DRbServer</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">uri</span>, <span class="ruby-identifier">front</span>, <span class="ruby-identifier">config</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1082,11 +1090,11 @@ DRb.fetch_server s.uri #=&gt; #&lt;DRb::DRbServer:0x...&gt;
                 Source:
                 <a href="javascript:toggleSource('method-c-stop_service_source')" id="l_method-c-stop_service_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1747" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1804" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-stop_service_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1747</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1804</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">stop_service</span>
   <span class="ruby-ivar">@primary_server</span>.<span class="ruby-identifier">stop_service</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@primary_server</span>
   <span class="ruby-ivar">@primary_server</span> = <span class="ruby-keyword">nil</span>
@@ -1124,11 +1132,11 @@ DRb.fetch_server s.uri #=&gt; #&lt;DRb::DRbServer:0x...&gt;
                 Source:
                 <a href="javascript:toggleSource('method-c-thread_source')" id="l_method-c-thread_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1815" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1872" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-thread_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1815</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1872</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">thread</span>
   <span class="ruby-ivar">@primary_server</span> <span class="ruby-operator">?</span> <span class="ruby-ivar">@primary_server</span>.<span class="ruby-identifier">thread</span> <span class="ruby-operator">:</span> <span class="ruby-keyword">nil</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1165,11 +1173,11 @@ DRb.fetch_server s.uri #=&gt; #&lt;DRb::DRbServer:0x...&gt;
                 Source:
                 <a href="javascript:toggleSource('method-c-to_id_source')" id="l_method-c-to_id_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1806" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1863" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-to_id_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1806</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1863</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_id</span>(<span class="ruby-identifier">obj</span>)
   <span class="ruby-identifier">current_server</span>.<span class="ruby-identifier">to_id</span>(<span class="ruby-identifier">obj</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1206,11 +1214,11 @@ DRb.fetch_server s.uri #=&gt; #&lt;DRb::DRbServer:0x...&gt;
                 Source:
                 <a href="javascript:toggleSource('method-c-to_obj_source')" id="l_method-c-to_obj_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1798" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1855" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-to_obj_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1798</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1855</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_obj</span>(<span class="ruby-identifier">ref</span>)
   <span class="ruby-identifier">current_server</span>.<span class="ruby-identifier">to_obj</span>(<span class="ruby-identifier">ref</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1247,11 +1255,11 @@ DRb.fetch_server s.uri #=&gt; #&lt;DRb::DRbServer:0x...&gt;
                 Source:
                 <a href="javascript:toggleSource('method-c-uri_source')" id="l_method-c-uri_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/drb/drb.rb#L1756" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1813" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-uri_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1756</span>
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1813</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">uri</span>
   <span class="ruby-identifier">drb</span> = <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>[<span class="ruby-string">&#39;DRb&#39;</span>]
   <span class="ruby-identifier">client</span> = (<span class="ruby-identifier">drb</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">drb</span>[<span class="ruby-string">&#39;client&#39;</span>])

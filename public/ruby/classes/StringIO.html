@@ -43,11 +43,11 @@ document.addEventListener("turbolinks:load", function() {
 
   
     
-    <meta name="description" content="Pseudo I/O on String object.  Commonly used to simulate `$stdio` or `$stderr`  Examples  require &#39;stringio&#39;  io = StringIO.new io.puts &quot;Hello World&quot; io.">
-    <meta property="og:description" content="Pseudo I/O on String object.  Commonly used to simulate `$stdio` or `$stderr`  Examples  require &#39;stringio&#39;  io = StringIO.new io.puts &quot;Hello World&quot; io.">
+    <meta name="description" content="Pseudo I/O on String object, with interface corresponding to IO.  Commonly used to simulate $stdio or $stderr  Examples  require &#39;stringio&#39;  # Writing stream emulation io = StringIO.new io.">
+    <meta property="og:description" content="Pseudo I/O on String object, with interface corresponding to IO.  Commonly used to simulate $stdio or $stderr  Examples  require &#39;stringio&#39;  # Writing stream emulation io = StringIO.new io.">
   
 
-    <meta name="keywords" content="StringIO class, open, new, reopen, string, string=, lineno, lineno=, binmode, close, close_read, close_write, closed?, closed_read?, closed_write?, eof, eof?, fcntl, flush, fsync, pos, pos=, rewind, seek, sync, sync=, tell, each, each_line, lines, each_byte, bytes, each_char, chars, each_codepoint, codepoints, getc, ungetc, ungetbyte, getbyte, gets, readlines, read, write, putc, isatty, tty?, pid, fileno, size, length, truncate, external_encoding, internal_encoding, set_encoding">
+    <meta name="keywords" content="StringIO class, open, new, reopen, string, string=, lineno, lineno=, binmode, close, close_read, close_write, closed?, closed_read?, closed_write?, eof, eof?, fcntl, flush, fsync, pos, pos=, rewind, seek, sync, sync=, tell, each, each_line, lines, each_byte, bytes, each_char, chars, each_codepoint, codepoints, getc, ungetc, ungetbyte, getbyte, gets, readlines, read, write, putc, isatty, tty?, pid, fileno, size, length, truncate, external_encoding, internal_encoding, set_encoding, set_encoding_by_bom">
 </head>
 
 <body>
@@ -96,17 +96,24 @@ document.addEventListener("turbolinks:load", function() {
   
     <div class="description">
       
-<p>Pseudo I/O on <a href="String.html"><code>String</code></a> object.</p>
+<p>Pseudo I/O on <a href="String.html"><code>String</code></a> object, with interface corresponding to <a href="IO.html"><code>IO</code></a>.</p>
 
-<p>Commonly used to simulate `$stdio` or `$stderr`</p>
+<p>Commonly used to simulate <code>$stdio</code> or <code>$stderr</code></p>
 
 <h3 id="class-StringIO-label-Examples">Examples</h3>
 
 <pre><code>require &#39;stringio&#39;
 
+# Writing stream emulation
 io = StringIO.new
 io.puts &quot;Hello World&quot;
 io.string #=&gt; &quot;Hello World\n&quot;
+
+# Reading stream emulation
+io = StringIO.new &quot;first\nsecond\nlast\n&quot;
+io.getc #=&gt; &quot;f&quot;
+io.gets #=&gt; &quot;irst\n&quot;
+io.read #=&gt; &quot;second\nlast\n&quot;
 </code></pre>
 
     </div>
@@ -426,6 +433,11 @@ io.string #=&gt; &quot;Hello World\n&quot;
             
               
               <li>
+                <a href="#method-i-set_encoding_by_bom">set_encoding_by_bom</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-size">size</a>,
               </li>
             
@@ -547,6 +559,24 @@ io.string #=&gt; &quot;Hello World\n&quot;
     
 
     
+      <!-- Section constants -->
+      <h2 class="sectiontitle">Constants</h2>
+      <table border='0' cellpadding='5'>
+        
+          <tr valign='top'>
+            <td class="attr-name">VERSION</td>
+            <td>=</td>
+            <td class="attr-value">rb_str_new_cstr(STRINGIO_VERSION)</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+      </table>
+    
 
 
     
@@ -633,7 +663,7 @@ strio_initialize(int argc, VALUE *argv, VALUE self)
                 <pre>static VALUE
 strio_s_open(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE obj = rb_class_new_instance(argc, argv, klass);
+    VALUE obj = rb_class_new_instance_kw(argc, argv, klass, RB_PASS_CALLED_KEYWORDS);
     if (!rb_block_given_p()) return obj;
     return rb_ensure(rb_yield, obj, strio_finalize, obj);
 }</pre>
@@ -649,14 +679,15 @@ strio_s_open(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-i-binmode">
             
-              <b>binmode</b>()
+              <b>strio.binmode    &rarr; stringio
+</b>
             
             <a href="../classes/StringIO.html#method-i-binmode" name="method-i-binmode" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Puts stream into binary mode. See <a href="IO.html#method-i-binmode"><code>IO#binmode</code></a>.</p>
             </div>
           
 
@@ -742,7 +773,7 @@ strio_bytes(VALUE self)
 
           
             <div class="description">
-              <p>This is a deprecated alias for <code>each_char</code>.</p>
+              <p>This is a deprecated alias for <a href="StringIO.html#method-i-each_char"><code>each_char</code></a>.</p>
             </div>
           
 
@@ -784,7 +815,7 @@ strio_chars(VALUE self)
 
           
             <div class="description">
-              <p>Closes strio.  The <strong>strio</strong> is unavailable for any further data operations; an <code>IOError</code> is raised if such an attempt is made.</p>
+              <p>Closes a <a href="StringIO.html"><code>StringIO</code></a>. The stream is unavailable for any further data operations; an <code>IOError</code> is raised if such an attempt is made.</p>
             </div>
           
 
@@ -825,7 +856,7 @@ strio_close(VALUE self)
 
           
             <div class="description">
-              <p>Closes the read end of a <a href="StringIO.html"><code>StringIO</code></a>.  Will raise an <code>IOError</code> if the <strong>strio</strong> is not readable.</p>
+              <p>Closes the read end of a <a href="StringIO.html"><code>StringIO</code></a>.  Will raise an <code>IOError</code> if the receiver is not readable.</p>
             </div>
           
 
@@ -869,7 +900,7 @@ strio_close_read(VALUE self)
 
           
             <div class="description">
-              <p>Closes the write end of a <a href="StringIO.html"><code>StringIO</code></a>.  Will raise an  <code>IOError</code> if the <strong>strio</strong> is not writeable.</p>
+              <p>Closes the write end of a <a href="StringIO.html"><code>StringIO</code></a>.  Will raise an  <code>IOError</code> if the receiver is not writeable.</p>
             </div>
           
 
@@ -913,7 +944,7 @@ strio_close_write(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <strong>strio</strong> is completely closed, <code>false</code> otherwise.</p>
+              <p>Returns <code>true</code> if the stream is completely closed, <code>false</code> otherwise.</p>
             </div>
           
 
@@ -954,7 +985,7 @@ strio_closed(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <strong>strio</strong> is not readable, <code>false</code> otherwise.</p>
+              <p>Returns <code>true</code> if the stream is not readable, <code>false</code> otherwise.</p>
             </div>
           
 
@@ -995,7 +1026,7 @@ strio_closed_read(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <strong>strio</strong> is not writable, <code>false</code> otherwise.</p>
+              <p>Returns <code>true</code> if the stream is not writable, <code>false</code> otherwise.</p>
             </div>
           
 
@@ -1035,7 +1066,7 @@ strio_closed_write(VALUE self)
 
           
             <div class="description">
-              <p>This is a deprecated alias for <code>each_codepoint</code>.</p>
+              <p>This is a deprecated alias for <a href="StringIO.html#method-i-each_codepoint"><code>each_codepoint</code></a>.</p>
             </div>
           
 
@@ -1069,7 +1100,7 @@ strio_codepoints(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-each">
             
-              <b>strio.each(sep=$/) {|line| block }         &rarr; strio<br />strio.each(limit) {|line| block }          &rarr; strio<br />strio.each(sep, limit) {|line| block }     &rarr; strio<br />strio.each(...)                            &rarr; anEnumerator</b>
+              <b>strio.each(sep=$/, chomp: false) {|line| block }         &rarr; strio<br />strio.each(limit, chomp: false) {|line| block }          &rarr; strio<br />strio.each(sep, limit, chomp: false) {|line| block }     &rarr; strio<br />strio.each(...)                                          &rarr; anEnumerator</b>
             
             <a href="../classes/StringIO.html#method-i-each" name="method-i-each" class="permalink">Link</a>
           </h3>
@@ -1307,7 +1338,7 @@ strio_each_codepoint(VALUE self)
 
           
             <div class="description">
-              <p>Returns true if <strong>strio</strong> is at end of file. The stringio must be opened for reading or an <code>IOError</code> will be raised.</p>
+              <p>Returns true if the stream is at the end of the data (underlying string). The stream must be opened for reading or an <code>IOError</code> will be raised.</p>
             </div>
           
 
@@ -1351,7 +1382,7 @@ strio_eof(VALUE self)
 
           
             <div class="description">
-              <p>Returns true if <strong>strio</strong> is at end of file. The stringio must be opened for reading or an <code>IOError</code> will be raised.</p>
+              <p>Returns true if the stream is at the end of the data (underlying string). The stream must be opened for reading or an <code>IOError</code> will be raised.</p>
             </div>
           
 
@@ -1377,7 +1408,7 @@ strio_eof(VALUE self)
 
           
             <div class="description">
-              <p>Returns the <a href="Encoding.html"><code>Encoding</code></a> object that represents the encoding of the file. If strio is write mode and no encoding is specified, returns <code>nil</code>.</p>
+              <p>Returns the <a href="Encoding.html"><code>Encoding</code></a> object that represents the encoding of the file. If the stream is write mode and no encoding is specified, returns <code>nil</code>.</p>
             </div>
           
 
@@ -1496,7 +1527,7 @@ strio_nil(VALUE self)
 
           
             <div class="description">
-              <p>Returns <strong>strio</strong> itself.  Just for compatibility to <a href="IO.html"><code>IO</code></a>.</p>
+              <p>Returns an object itself.  Just for compatibility to <a href="IO.html"><code>IO</code></a>.</p>
             </div>
           
 
@@ -1664,7 +1695,7 @@ strio_getc(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-gets">
             
-              <b>strio.gets(sep=$/)     &rarr; string or nil<br />strio.gets(limit)      &rarr; string or nil<br />strio.gets(sep, limit) &rarr; string or nil
+              <b>strio.gets(sep=$/, chomp: false)     &rarr; string or nil<br />strio.gets(limit, chomp: false)      &rarr; string or nil<br />strio.gets(sep, limit, chomp: false) &rarr; string or nil
 </b>
             
             <a href="../classes/StringIO.html#method-i-gets" name="method-i-gets" class="permalink">Link</a>
@@ -1721,7 +1752,7 @@ strio_gets(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Returns the <a href="Encoding.html"><code>Encoding</code></a> of the internal string if conversion is specified.  Otherwise returns nil.</p>
+              <p>Returns the <a href="Encoding.html"><code>Encoding</code></a> of the internal string if conversion is specified.  Otherwise returns <code>nil</code>.</p>
             </div>
           
 
@@ -1828,7 +1859,7 @@ strio_false(VALUE self)
 
           
             <div class="description">
-              <p>Returns the current line number in <strong>strio</strong>. The stringio must be opened for reading. <code>lineno</code> counts the number of times  <code>gets</code> is called, rather than the number of newlines  encountered. The two values will differ if <code>gets</code> is  called with a separator other than newline.  See also the  <code>$.</code> variable.</p>
+              <p>Returns the current line number. The stream must be opened for reading. <code>lineno</code> counts the number of times  <code>gets</code> is called, rather than the number of newlines  encountered. The two values will differ if <code>gets</code> is  called with a separator other than newline.  See also the  <code>$.</code> variable.</p>
             </div>
           
 
@@ -1906,7 +1937,7 @@ strio_set_lineno(VALUE self, VALUE lineno)
 
           
             <div class="description">
-              <p>This is a deprecated alias for <code>each_line</code>.</p>
+              <p>This is a deprecated alias for <a href="StringIO.html#method-i-each_line"><code>each_line</code></a>.</p>
             </div>
           
 
@@ -1987,7 +2018,7 @@ strio_nil(VALUE self)
 
           
             <div class="description">
-              <p>Returns the current offset (in bytes) of <strong>strio</strong>.</p>
+              <p>Returns the current offset (in bytes).</p>
             </div>
           
 
@@ -2026,7 +2057,7 @@ strio_get_pos(VALUE self)
 
           
             <div class="description">
-              <p>Seeks to the given position (in bytes) in <strong>strio</strong>.</p>
+              <p>Seeks to the given position (in bytes).</p>
             </div>
           
 
@@ -2174,7 +2205,7 @@ strio_read(int argc, VALUE *argv, VALUE self)
       case 0:
         len = RSTRING_LEN(ptr-&gt;string);
         if (len &lt;= ptr-&gt;pos) {
-            rb_encoding *enc = binary ? rb_ascii8bit_encoding() : get_enc(ptr);
+            rb_encoding *enc = get_enc(ptr);
             if (NIL_P(str)) {
                 str = rb_str_new(0, 0);
             }
@@ -2214,7 +2245,7 @@ strio_read(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-readlines">
             
-              <b>strio.readlines(sep=$/)    &rarr;   array<br />strio.readlines(limit)     &rarr;   array<br />strio.readlines(sep,limit) &rarr;   array
+              <b>strio.readlines(sep=$/, chomp: false)     &rarr;   array<br />strio.readlines(limit, chomp: false)      &rarr;   array<br />strio.readlines(sep, limit, chomp: false) &rarr;   array
 </b>
             
             <a href="../classes/StringIO.html#method-i-readlines" name="method-i-readlines" class="permalink">Link</a>
@@ -2273,7 +2304,7 @@ strio_readlines(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Reinitializes <strong>strio</strong> with the given <em>other_StrIO</em> or <em>string</em> and <em>mode</em> (see StringIO#new).</p>
+              <p>Reinitializes the stream with the given <em>other_StrIO</em> or <em>string</em> and <em>mode</em> (see StringIO#new).</p>
             </div>
           
 
@@ -2316,7 +2347,7 @@ strio_reopen(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Positions <strong>strio</strong> to the beginning of input, resetting <code>lineno</code> to zero.</p>
+              <p>Positions the stream to the beginning of input, resetting <code>lineno</code> to zero.</p>
             </div>
           
 
@@ -2462,6 +2493,47 @@ strio_set_encoding(int argc, VALUE *argv, VALUE self)
     }
 
     return self;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-set_encoding_by_bom">
+            
+              <b>set_encoding_by_bom</b>()
+            
+            <a href="../classes/StringIO.html#method-i-set_encoding_by_bom" name="method-i-set_encoding_by_bom" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-set_encoding_by_bom_source')" id="l_method-i-set_encoding_by_bom_source">show</a>
+                
+              </p>
+              <div id="method-i-set_encoding_by_bom_source" class="dyn-source">
+                <pre>static VALUE
+strio_set_encoding_by_bom(VALUE self)
+{
+    struct StringIO *ptr = StringIO(self);
+
+    if (!set_encoding_by_bom(ptr)) return Qnil;
+    return rb_enc_from_encoding(ptr-&gt;enc);
 }</pre>
               </div>
             </div>
@@ -2690,7 +2762,7 @@ strio_first(VALUE self, VALUE arg)
 
           
             <div class="description">
-              <p>Returns the current offset (in bytes) of <strong>strio</strong>.</p>
+              <p>Returns the current offset (in bytes).</p>
             </div>
           
 
@@ -2729,7 +2801,7 @@ strio_get_pos(VALUE self)
 
           
             <div class="description">
-              <p>Truncates the buffer string to at most <em>integer</em> bytes. The <strong>strio</strong> must be opened for writing.</p>
+              <p>Truncates the buffer string to at most <em>integer</em> bytes. The stream must be opened for writing.</p>
             </div>
           
 
@@ -2827,25 +2899,22 @@ strio_ungetbyte(VALUE self, VALUE c)
     struct StringIO *ptr = readable(self);
 
     check_modifiable(ptr);
-    switch (TYPE(c)) {
-      case T_NIL:
-        return Qnil;
-      case T_FIXNUM:
-      case T_BIGNUM: ;
-        /* rb_int_modulo() not visible from exts */
-        VALUE v = rb_funcall(c, rb_intern(&quot;modulo&quot;), 1, INT2FIX(256));
-        unsigned char cc = NUM2INT(v) &amp; 0xFF;
-        c = rb_str_new((const char *)&amp;cc, 1);
-        break;
-      default:
-        SafeStringValue(c);
+    if (NIL_P(c)) return Qnil;
+    if (RB_INTEGER_TYPE_P(c)) {
+        /* rb_int_and() not visible from exts */
+        VALUE v = rb_funcall(c, &#39;&amp;&#39;, 1, INT2FIX(0xff));
+        const char cc = NUM2INT(v) &amp; 0xFF;
+        strio_unget_bytes(ptr, &amp;cc, 1);
     }
-
-    const char *cp = RSTRING_PTR(c);
-    long cl = RSTRING_LEN(c);
-    if (cl == 0) return Qnil;
-    strio_unget_bytes(ptr, cp, cl);
-    RB_GC_GUARD(c);
+    else {
+        long cl;
+        SafeStringValue(c);
+        cl = RSTRING_LEN(c);
+        if (cl &gt; 0) {
+            strio_unget_bytes(ptr, RSTRING_PTR(c), cl);
+            RB_GC_GUARD(c);
+        }
+    }
     return Qnil;
 }</pre>
               </div>
@@ -2864,7 +2933,7 @@ strio_ungetbyte(VALUE self, VALUE c)
 
           
             <div class="description">
-              <p>Pushes back one character (passed as a parameter) onto <strong>strio</strong> such that a subsequent buffered read will return it.  There is no limitation for multiple pushbacks including pushing back behind the beginning of the buffer string.</p>
+              <p>Pushes back one character (passed as a parameter) such that a subsequent buffered read will return it.  There is no limitation for multiple pushbacks including pushing back behind the beginning of the buffer string.</p>
             </div>
           
 
@@ -2928,7 +2997,7 @@ strio_ungetc(VALUE self, VALUE c)
 
           
             <div class="description">
-              <p>Appends the given string to the underlying buffer string of <strong>strio</strong>. The stream must be opened for writing.  If the argument is not a string, it will be converted to a string using <code>to_s</code>. Returns the number of bytes written.  See <a href="IO.html#method-i-write"><code>IO#write</code></a>.</p>
+              <p>Appends the given string to the underlying buffer string. The stream must be opened for writing.  If the argument is not a string, it will be converted to a string using <code>to_s</code>. Returns the number of bytes written.  See <a href="IO.html#method-i-write"><code>IO#write</code></a>.</p>
             </div>
           
 

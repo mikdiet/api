@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="Fibers are primitives for implementing light weight cooperative concurrency in Ruby. Basically they are a means of creating code blocks that can be paused and resumed, much like threads.">
   
 
-    <meta name="keywords" content="Fiber class, yield, resume, to_s, transfer, alive?, current, inspect">
+    <meta name="keywords" content="Fiber class, yield, resume, raise, to_s, transfer, alive?, current, inspect">
 </head>
 
 <body>
@@ -100,7 +100,7 @@ document.addEventListener("turbolinks:load", function() {
 
 <p>As opposed to other stackless light weight concurrency models, each fiber comes with a stack.  This enables the fiber to be paused from deeply nested function calls within the fiber block.  See the ruby(1) manpage to configure the size of the fiber stack(s).</p>
 
-<p>When a fiber is created it will not run automatically. Rather it must be explicitly asked to run using the <code>Fiber#resume</code> method. The code running inside the fiber can give up control by calling <code>Fiber.yield</code> in which case it yields control back to caller (the caller of the <code>Fiber#resume</code>).</p>
+<p>When a fiber is created it will not run automatically. Rather it must be explicitly asked to run using the <a href="Fiber.html#method-i-resume"><code>Fiber#resume</code></a> method. The code running inside the fiber can give up control by calling <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a> in which case it yields control back to caller (the caller of the <a href="Fiber.html#method-i-resume"><code>Fiber#resume</code></a>).</p>
 
 <p>Upon yielding or termination the <a href="Fiber.html"><code>Fiber</code></a> returns the value of the last executed expression</p>
 
@@ -123,7 +123,7 @@ puts fiber.resume
 FiberError: dead fiber called
 </code></pre>
 
-<p>The <code>Fiber#resume</code> method accepts an arbitrary number of parameters, if it is the first call to <code>resume</code> then they will be passed as block arguments. Otherwise they will be the return value of the call to <code>Fiber.yield</code></p>
+<p>The <a href="Fiber.html#method-i-resume"><code>Fiber#resume</code></a> method accepts an arbitrary number of parameters, if it is the first call to <a href="Fiber.html#method-i-resume"><code>resume</code></a> then they will be passed as block arguments. Otherwise they will be the return value of the call to <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a></p>
 
 <p>Example:</p>
 
@@ -132,14 +132,14 @@ FiberError: dead fiber called
 end
 
 puts fiber.resume 10
-puts fiber.resume 14
-puts fiber.resume 18
+puts fiber.resume 1_000_000
+puts fiber.resume &quot;The fiber will be dead before I can cause trouble&quot;
 </code></pre>
 
 <p><em>produces</em></p>
 
 <pre><code>12
-14
+1000000
 FiberError: dead fiber called
 </code></pre>
 
@@ -201,6 +201,11 @@ FiberError: dead fiber called
         <dt>R</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-raise">raise</a>,
+              </li>
             
               
               <li>
@@ -312,7 +317,7 @@ rb_fiber_s_current(VALUE klass)
 
           
             <div class="description">
-              <p>Yields control back to the context that resumed the fiber, passing along any arguments that were passed to it. The fiber will resume processing at this point when <code>resume</code> is called next. Any arguments passed to the next <code>resume</code> will be the value that this <code>Fiber.yield</code> expression evaluates to.</p>
+              <p>Yields control back to the context that resumed the fiber, passing along any arguments that were passed to it. The fiber will resume processing at this point when <a href="Fiber.html#method-i-resume"><code>resume</code></a> is called next. Any arguments passed to the next <a href="Fiber.html#method-i-resume"><code>resume</code></a> will be the value that this <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a> expression evaluates to.</p>
             </div>
           
 
@@ -333,7 +338,7 @@ rb_fiber_s_current(VALUE klass)
                 <pre>static VALUE
 rb_fiber_s_yield(int argc, VALUE *argv, VALUE klass)
 {
-    return rb_fiber_yield(argc, argv);
+    return rb_fiber_yield_kw(argc, argv, PASS_KW_SPLAT);
 }</pre>
               </div>
             </div>
@@ -374,9 +379,9 @@ rb_fiber_s_yield(int argc, VALUE *argv, VALUE klass)
               </p>
               <div id="method-i-alive-3F_source" class="dyn-source">
                 <pre>VALUE
-rb_fiber_alive_p(VALUE fibval)
+rb_fiber_alive_p(VALUE fiber_value)
 {
-    return FIBER_TERMINATED_P(fiber_ptr(fibval)) ? Qfalse : Qtrue;
+    return FIBER_TERMINATED_P(fiber_ptr(fiber_value)) ? Qfalse : Qtrue;
 }</pre>
               </div>
             </div>
@@ -409,6 +414,48 @@ rb_fiber_alive_p(VALUE fibval)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-raise">
+            
+              <b>fiber.raise                                 &rarr; obj<br />fiber.raise(string)                         &rarr; obj<br />fiber.raise(exception [, string [, array]]) &rarr; obj
+</b>
+            
+            <a href="../classes/Fiber.html#method-i-raise" name="method-i-raise" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Raises an exception in the fiber at the point at which the last <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a> was called, or at the start if neither <code>resume</code> nor <code>raise</code> were called before.</p>
+
+<p>With no arguments, raises a <code>RuntimeError</code>. With a single <code>String</code> argument, raises a <code>RuntimeError</code> with the string as a message.  Otherwise, the first parameter should be the name of an <code>Exception</code> class (or an object that returns an <code>Exception</code> object when sent an <code>exception</code> message). The optional second parameter sets the message associated with the exception, and the third parameter is an array of callback information. Exceptions are caught by the <code>rescue</code> clause of <code>begin...end</code> blocks.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-raise_source')" id="l_method-i-raise_source">show</a>
+                
+              </p>
+              <div id="method-i-raise_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_raise(int argc, VALUE *argv, VALUE fiber)
+{
+    VALUE exc = rb_make_exception(argc, argv);
+    return rb_fiber_resume_kw(fiber, -1, &amp;exc, RB_NO_KEYWORDS);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-resume">
             
               <b>fiber.resume(args, ...) &rarr; obj
@@ -419,9 +466,9 @@ rb_fiber_alive_p(VALUE fibval)
 
           
             <div class="description">
-              <p>Resumes the fiber from the point at which the last <code>Fiber.yield</code> was called, or starts running it if it is the first call to <code>resume</code>. Arguments passed to resume will be the value of the <code>Fiber.yield</code> expression or will be passed as block parameters to the fiber&#39;s block if this is the first <code>resume</code>.</p>
+              <p>Resumes the fiber from the point at which the last <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a> was called, or starts running it if it is the first call to <a href="Fiber.html#method-i-resume"><code>resume</code></a>. Arguments passed to resume will be the value of the <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a> expression or will be passed as block parameters to the fiber&#39;s block if this is the first <a href="Fiber.html#method-i-resume"><code>resume</code></a>.</p>
 
-<p>Alternatively, when resume is called it evaluates to the arguments passed to the next <code>Fiber.yield</code> statement inside the fiber&#39;s block or to the block value if it runs to completion without any <code>Fiber.yield</code></p>
+<p>Alternatively, when resume is called it evaluates to the arguments passed to the next <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a> statement inside the fiber&#39;s block or to the block value if it runs to completion without any <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a></p>
             </div>
           
 
@@ -440,9 +487,9 @@ rb_fiber_alive_p(VALUE fibval)
               </p>
               <div id="method-i-resume_source" class="dyn-source">
                 <pre>static VALUE
-rb_fiber_m_resume(int argc, VALUE *argv, VALUE fib)
+rb_fiber_m_resume(int argc, VALUE *argv, VALUE fiber)
 {
-    return rb_fiber_resume(fib, argc, argv);
+    return rb_fiber_resume_kw(fiber, argc, argv, PASS_KW_SPLAT);
 }</pre>
               </div>
             </div>
@@ -482,22 +529,28 @@ rb_fiber_m_resume(int argc, VALUE *argv, VALUE fib)
               </p>
               <div id="method-i-to_s_source" class="dyn-source">
                 <pre>static VALUE
-fiber_to_s(VALUE fibval)
+fiber_to_s(VALUE fiber_value)
 {
-    const rb_fiber_t *fib = fiber_ptr(fibval);
+    const rb_fiber_t *fiber = fiber_ptr(fiber_value);
     const rb_proc_t *proc;
-    char status_info[0x10];
+    char status_info[0x20];
 
-    snprintf(status_info, 0x10, &quot; (%s)&quot;, fiber_status_name(fib-&gt;status));
-    if (!rb_obj_is_proc(fib-&gt;first_proc)) {
-        VALUE str = rb_any_to_s(fibval);
+    if (fiber-&gt;transferred) {
+        snprintf(status_info, 0x20, &quot; (%s, transferred)&quot;, fiber_status_name(fiber-&gt;status));
+    }
+    else {
+        snprintf(status_info, 0x20, &quot; (%s)&quot;, fiber_status_name(fiber-&gt;status));
+    }
+
+    if (!rb_obj_is_proc(fiber-&gt;first_proc)) {
+        VALUE str = rb_any_to_s(fiber_value);
         strlcat(status_info, &quot;&gt;&quot;, sizeof(status_info));
         rb_str_set_len(str, RSTRING_LEN(str)-1);
         rb_str_cat_cstr(str, status_info);
         return str;
     }
-    GetProcPtr(fib-&gt;first_proc, proc);
-    return rb_block_to_s(fibval, &amp;proc-&gt;block, status_info);
+    GetProcPtr(fiber-&gt;first_proc, proc);
+    return rb_block_to_s(fiber_value, &amp;proc-&gt;block, status_info);
 }</pre>
               </div>
             </div>
@@ -515,17 +568,18 @@ fiber_to_s(VALUE fibval)
 
           
             <div class="description">
-              <p>Transfer control to another fiber, resuming it from where it last stopped or starting it if it was not resumed before. The calling fiber will be suspended much like in a call to <code>Fiber.yield</code>. You need to <code>require &#39;fiber&#39;</code> before using this method.</p>
+              <p>Transfer control to another fiber, resuming it from where it last stopped or starting it if it was not resumed before. The calling fiber will be suspended much like in a call to <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a>. You need to <code>require &#39;fiber&#39;</code> before using this method.</p>
 
 <p>The fiber which receives the transfer call is treats it much like a resume call. Arguments passed to transfer are treated like those passed to resume.</p>
 
-<p>You cannot resume a fiber that transferred control to another one. This will cause a double resume error. You need to transfer control back to this fiber before it can yield and resume.</p>
+<p>You cannot call <code>resume</code> on a fiber that has been transferred to. If you call <code>transfer</code> on a fiber, and later call <code>resume</code> on the the fiber, a <code>FiberError</code> will be raised. Once you call <code>transfer</code> on a fiber, the only way to resume processing the fiber is to call <code>transfer</code> on it again.</p>
 
 <p>Example:</p>
 
 <pre><code>fiber1 = Fiber.new do
   puts &quot;In Fiber 1&quot;
   Fiber.yield
+  puts &quot;In Fiber 1 again&quot;
 end
 
 fiber2 = Fiber.new do
@@ -540,13 +594,17 @@ end
 
 fiber2.resume
 fiber3.resume
+fiber1.resume rescue (p $!)
+fiber1.transfer
 </code></pre>
 
 <p><em>produces</em></p>
 
-<pre><code>In fiber 2
-In fiber 1
-In fiber 3
+<pre><code>In Fiber 2
+In Fiber 1
+In Fiber 3
+#&lt;FiberError: cannot resume transferred Fiber&gt;
+In Fiber 1 again
 </code></pre>
             </div>
           
@@ -566,11 +624,11 @@ In fiber 3
               </p>
               <div id="method-i-transfer_source" class="dyn-source">
                 <pre>static VALUE
-rb_fiber_m_transfer(int argc, VALUE *argv, VALUE fibval)
+rb_fiber_m_transfer(int argc, VALUE *argv, VALUE fiber_value)
 {
-    rb_fiber_t *fib = fiber_ptr(fibval);
-    fib-&gt;transferred = 1;
-    return fiber_switch(fib, argc, argv, 0);
+    rb_fiber_t *fiber = fiber_ptr(fiber_value);
+    fiber-&gt;transferred = 1;
+    return fiber_switch(fiber, argc, argv, 0, PASS_KW_SPLAT);
 }</pre>
               </div>
             </div>

@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="StringScanner provides for lexical scanning operations on a String.  Here is an example of its usage:  s = StringScanner.new(&#39;This is an example string&#39;) s.">
   
 
-    <meta name="keywords" content="StringScanner class, new, must_C_version, reset, terminate, clear, string, string=, concat, <<, pos, pos=, charpos, pointer, pointer=, scan, skip, match?, check, scan_full, scan_until, skip_until, exist?, check_until, search_full, getch, get_byte, getbyte, peek, peep, unscan, beginning_of_line?, eos?, empty?, rest?, matched?, matched, matched_size, [], pre_match, post_match, size, captures, values_at, rest, rest_size, restsize, inspect">
+    <meta name="keywords" content="StringScanner class, new, must_C_version, reset, terminate, clear, string, string=, concat, <<, pos, pos=, charpos, pointer, pointer=, scan, skip, match?, check, scan_full, scan_until, skip_until, exist?, check_until, search_full, getch, get_byte, getbyte, peek, peep, unscan, beginning_of_line?, eos?, empty?, rest?, matched?, matched, matched_size, [], pre_match, post_match, size, captures, values_at, rest, rest_size, restsize, inspect, fixed_anchor?">
 </head>
 
 <body>
@@ -328,6 +328,18 @@ p s.scan(/\w+/)      # -&gt; nil
               
               <li>
                 <a href="#method-i-exist-3F">exist?</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>F</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-fixed_anchor-3F">fixed_anchor?</a>
               </li>
             
           </ul>
@@ -643,7 +655,7 @@ strscan_s_mustc(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>StringScanner.new(string, dup = false)
+              <b>StringScanner.new(string, fixed_anchor: false)<br />StringScanner.new(string, dup = false)
 </b>
             
             <a href="../classes/StringScanner.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -651,7 +663,11 @@ strscan_s_mustc(VALUE self)
 
           
             <div class="description">
-              <p>Creates a new <a href="StringScanner.html"><code>StringScanner</code></a> object to scan over the given <code>string</code>. <code>dup</code> argument is obsolete and not used now.</p>
+              <p>Creates a new <a href="StringScanner.html"><code>StringScanner</code></a> object to scan over the given <code>string</code>.</p>
+
+<p>If <code>fixed_anchor</code> is <code>true</code>, <code>\A</code> always matches the beginning of the string. Otherwise, <code>\A</code> always matches the current position.</p>
+
+<p><code>dup</code> argument is obsolete and not used now.</p>
             </div>
           
 
@@ -673,10 +689,26 @@ strscan_s_mustc(VALUE self)
 strscan_initialize(int argc, VALUE *argv, VALUE self)
 {
     struct strscanner *p;
-    VALUE str, need_dup;
+    VALUE str, options;
 
     p = check_strscan(self);
-    rb_scan_args(argc, argv, &quot;11&quot;, &amp;str, &amp;need_dup);
+    rb_scan_args(argc, argv, &quot;11&quot;, &amp;str, &amp;options);
+    options = rb_check_hash_type(options);
+    if (!NIL_P(options)) {
+        VALUE fixed_anchor;
+        ID keyword_ids[1];
+        keyword_ids[0] = rb_intern(&quot;fixed_anchor&quot;);
+        rb_get_kwargs(options, keyword_ids, 0, 1, &amp;fixed_anchor);
+        if (fixed_anchor == Qundef) {
+            p-&gt;fixed_anchor_p = false;
+        }
+        else {
+            p-&gt;fixed_anchor_p = RTEST(fixed_anchor);
+        }
+    }
+    else {
+        p-&gt;fixed_anchor_p = false;
+    }
     StringValue(str);
     p-&gt;str = str;
 
@@ -803,8 +835,9 @@ strscan_aref(VALUE self, VALUE idx)
     if (i &gt;= p-&gt;regs.num_regs) return Qnil;
     if (p-&gt;regs.beg[i] == -1)  return Qnil;
 
-    return extract_range(p, p-&gt;prev + p-&gt;regs.beg[i],
-                            p-&gt;prev + p-&gt;regs.end[i]);
+    return extract_range(p,
+                         adjust_register_position(p, p-&gt;regs.beg[i]),
+                         adjust_register_position(p, p-&gt;regs.end[i]));
 }</pre>
               </div>
             </div>
@@ -914,8 +947,9 @@ strscan_captures(VALUE self)
     new_ary  = rb_ary_new2(num_regs);
 
     for (i = 1; i &lt; num_regs; i++) {
-        VALUE str = extract_range(p, p-&gt;prev + p-&gt;regs.beg[i],
-                                     p-&gt;prev + p-&gt;regs.end[i]);
+        VALUE str = extract_range(p,
+                                  adjust_register_position(p, p-&gt;regs.beg[i]),
+                                  adjust_register_position(p, p-&gt;regs.end[i]));
         rb_ary_push(new_ary, str);
     }
 
@@ -1304,6 +1338,49 @@ strscan_exist_p(VALUE self, VALUE re)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-fixed_anchor-3F">
+            
+              <b>scanner.fixed_anchor? &rarr; true or false
+</b>
+            
+            <a href="../classes/StringScanner.html#method-i-fixed_anchor-3F" name="method-i-fixed_anchor-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Whether <code>scanner</code> uses fixed anchor mode or not.</p>
+
+<p>If fixed anchor mode is used, <code>\A</code> always matches the beginning of the string. Otherwise, <code>\A</code> always matches the current position.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-fixed_anchor-3F_source')" id="l_method-i-fixed_anchor-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-fixed_anchor-3F_source" class="dyn-source">
+                <pre>static VALUE
+strscan_fixed_anchor_p(VALUE self)
+{
+    struct strscanner *p;
+    p = check_strscan(self);
+    return p-&gt;fixed_anchor_p ? Qtrue : Qfalse;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-get_byte">
             
               <b>get_byte</b>()
@@ -1357,8 +1434,9 @@ strscan_get_byte(VALUE self)
     p-&gt;curr++;
     MATCHED(p);
     adjust_registers_to_matched(p);
-    return extract_range(p, p-&gt;prev + p-&gt;regs.beg[0],
-                            p-&gt;prev + p-&gt;regs.end[0]);
+    return extract_range(p,
+                         adjust_register_position(p, p-&gt;regs.beg[0]),
+                         adjust_register_position(p, p-&gt;regs.end[0]));
 }</pre>
               </div>
             </div>
@@ -1460,8 +1538,9 @@ strscan_getch(VALUE self)
     p-&gt;curr += len;
     MATCHED(p);
     adjust_registers_to_matched(p);
-    return extract_range(p, p-&gt;prev + p-&gt;regs.beg[0],
-                            p-&gt;prev + p-&gt;regs.end[0]);
+    return extract_range(p,
+                         adjust_register_position(p, p-&gt;regs.beg[0]),
+                         adjust_register_position(p, p-&gt;regs.end[0]));
 }</pre>
               </div>
             </div>
@@ -1514,11 +1593,11 @@ strscan_inspect(VALUE self)
     p = check_strscan(self);
     if (NIL_P(p-&gt;str)) {
         a = rb_sprintf(&quot;#&lt;%&quot;PRIsVALUE&quot; (uninitialized)&gt;&quot;, rb_obj_class(self));
-        return infect(a, p);
+        return a;
     }
     if (EOS_P(p)) {
         a = rb_sprintf(&quot;#&lt;%&quot;PRIsVALUE&quot; fin&gt;&quot;, rb_obj_class(self));
-        return infect(a, p);
+        return a;
     }
     if (p-&gt;curr == 0) {
         b = inspect2(p);
@@ -1526,7 +1605,7 @@ strscan_inspect(VALUE self)
                        rb_obj_class(self),
                        p-&gt;curr, S_LEN(p),
                        b);
-        return infect(a, p);
+        return a;
     }
     a = inspect1(p);
     b = inspect2(p);
@@ -1534,7 +1613,7 @@ strscan_inspect(VALUE self)
                    rb_obj_class(self),
                    p-&gt;curr, S_LEN(p),
                    a, b);
-    return infect(a, p);
+    return a;
 }</pre>
               </div>
             </div>
@@ -1557,6 +1636,7 @@ strscan_inspect(VALUE self)
 <pre><code>s = StringScanner.new(&#39;test string&#39;)
 p s.match?(/\w+/)   # -&gt; 4
 p s.match?(/\w+/)   # -&gt; 4
+p s.match?(&quot;test&quot;)  # -&gt; 4
 p s.match?(/\s+/)   # -&gt; nil
 </code></pre>
             </div>
@@ -1626,8 +1706,9 @@ strscan_matched(VALUE self)
 
     GET_SCANNER(self, p);
     if (! MATCHED_P(p)) return Qnil;
-    return extract_range(p, p-&gt;prev + p-&gt;regs.beg[0],
-                            p-&gt;prev + p-&gt;regs.end[0]);
+    return extract_range(p,
+                         adjust_register_position(p, p-&gt;regs.beg[0]),
+                         adjust_register_position(p, p-&gt;regs.end[0]));
 }</pre>
               </div>
             </div>
@@ -1775,7 +1856,7 @@ strscan_peek(VALUE self, VALUE vlen)
 
     len = NUM2LONG(vlen);
     if (EOS_P(p))
-        return infect(str_new(p, &quot;&quot;, 0), p);
+        return str_new(p, &quot;&quot;, 0);
 
     len = minl(len, S_RESTLEN(p));
     return extract_beg_len(p, p-&gt;curr, len);
@@ -1869,7 +1950,7 @@ s.pos               # -&gt; 11
 
           
             <div class="description">
-              <p><a href="Set.html"><code>Set</code></a> the byte position of the scan pointer.</p>
+              <p>Sets the byte position of the scan pointer.</p>
 
 <pre><code>s = StringScanner.new(&#39;test string&#39;)
 s.pos = 7            # -&gt; 7
@@ -1954,7 +2035,7 @@ strscan_get_pos(VALUE self)
 
           
             <div class="description">
-              <p><a href="Set.html"><code>Set</code></a> the byte position of the scan pointer.</p>
+              <p>Sets the byte position of the scan pointer.</p>
 
 <pre><code>s = StringScanner.new(&#39;test string&#39;)
 s.pos = 7            # -&gt; 7
@@ -2042,7 +2123,9 @@ strscan_post_match(VALUE self)
 
     GET_SCANNER(self, p);
     if (! MATCHED_P(p)) return Qnil;
-    return extract_range(p, p-&gt;prev + p-&gt;regs.end[0], S_LEN(p));
+    return extract_range(p,
+                         adjust_register_position(p, p-&gt;regs.end[0]),
+                         S_LEN(p));
 }</pre>
               </div>
             </div>
@@ -2091,7 +2174,9 @@ strscan_pre_match(VALUE self)
 
     GET_SCANNER(self, p);
     if (! MATCHED_P(p)) return Qnil;
-    return extract_range(p, 0, p-&gt;prev + p-&gt;regs.beg[0]);
+    return extract_range(p,
+                         0,
+                         adjust_register_position(p, p-&gt;regs.beg[0]));
 }</pre>
               </div>
             </div>
@@ -2176,7 +2261,7 @@ strscan_rest(VALUE self)
 
     GET_SCANNER(self, p);
     if (EOS_P(p)) {
-        return infect(str_new(p, &quot;&quot;, 0), p);
+        return str_new(p, &quot;&quot;, 0);
     }
     return extract_range(p, p-&gt;curr, S_LEN(p));
 }</pre>
@@ -2333,7 +2418,8 @@ strscan_restsize(VALUE self)
 p s.scan(/\w+/)   # -&gt; &quot;test&quot;
 p s.scan(/\w+/)   # -&gt; nil
 p s.scan(/\s+/)   # -&gt; &quot; &quot;
-p s.scan(/\w+/)   # -&gt; &quot;string&quot;
+p s.scan(&quot;str&quot;)   # -&gt; &quot;str&quot;
+p s.scan(/\w+/)   # -&gt; &quot;ing&quot;
 p s.scan(/./)     # -&gt; nil
 </code></pre>
             </div>
@@ -2555,7 +2641,8 @@ strscan_size(VALUE self)
 p s.skip(/\w+/)   # -&gt; 4
 p s.skip(/\w+/)   # -&gt; nil
 p s.skip(/\s+/)   # -&gt; 1
-p s.skip(/\w+/)   # -&gt; 6
+p s.skip(&quot;st&quot;)    # -&gt; 2
+p s.skip(/\w+/)   # -&gt; 4
 p s.skip(/./)     # -&gt; nil
 </code></pre>
             </div>
@@ -2730,7 +2817,7 @@ strscan_set_string(VALUE self, VALUE str)
 
           
             <div class="description">
-              <p><a href="Set.html"><code>Set</code></a> the scan pointer to the end of the string and clear matching data.</p>
+              <p>Sets the scan pointer to the end of the string and clear matching data.</p>
             </div>
           
 
@@ -2773,7 +2860,7 @@ strscan_terminate(VALUE self)
 
           
             <div class="description">
-              <p><a href="Set.html"><code>Set</code></a> the scan pointer to the previous position.  Only one previous position is remembered, and it changes with each scanning operation.</p>
+              <p>Sets the scan pointer to the previous position.  Only one previous position is remembered, and it changes with each scanning operation.</p>
 
 <pre><code>s = StringScanner.new(&#39;test string&#39;)
 s.scan(/\w+/)        # =&gt; &quot;test&quot;

@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="BasicObject is the parent class of all classes in Ruby.  It&#39;s an explicit blank class.">
   
 
-    <meta name="keywords" content="BasicObject class, __id__, new, ==, equal?, !, !=, instance_eval, instance_exec, __send__">
+    <meta name="keywords" content="BasicObject class, __id__, new, ==, equal?, !, !=, singleton_method_removed, singleton_method_undefined, instance_eval, instance_exec, __send__">
 </head>
 
 <body>
@@ -116,7 +116,7 @@ end
   DELEGATE = [:puts, :p]
 
   def method_missing(name, *args, &amp;block)
-    super unless DELEGATE.include? name
+    return super unless DELEGATE.include? name
     ::Kernel.send(name, *args, &amp;block)
   end
 
@@ -227,6 +227,23 @@ end
           </ul>
         </dd>
       
+        <dt>S</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-singleton_method_removed">singleton_method_removed</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-singleton_method_undefined">singleton_method_undefined</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
     </dl>
   
 
@@ -260,7 +277,7 @@ end
 
           
             <div class="description">
-              <p>Not documented</p>
+              
             </div>
           
 
@@ -279,9 +296,9 @@ end
               </p>
               <div id="method-c-new_source" class="dyn-source">
                 <pre>static VALUE
-rb_obj_dummy(void)
+rb_obj_dummy0(VALUE _)
 {
-    return Qnil;
+    return rb_obj_dummy();
 }</pre>
               </div>
             </div>
@@ -381,9 +398,9 @@ rb_obj_not_equal(VALUE obj1, VALUE obj2)
 
           
             <div class="description">
-              <p>Equality — At the <code>Object</code> level, <code>==</code> returns <code>true</code> only if <code>obj</code> and <code>other</code> are the same object. Typically, this method is overridden in descendant classes to provide class-specific meaning.</p>
+              <p>Equality — At the <a href="Object.html"><code>Object</code></a> level, #== returns <code>true</code> only if <code>obj</code> and <code>other</code> are the same object.  Typically, this method is overridden in descendant classes to provide class-specific meaning.</p>
 
-<p>Unlike <code>==</code>, the <code>equal?</code> method should never be overridden by subclasses as it is used to determine object identity (that is, <code>a.equal?(b)</code> if and only if <code>a</code> is the same object as <code>b</code>):</p>
+<p>Unlike #==, the <a href="BasicObject.html#method-i-equal-3F"><code>equal?</code></a> method should never be overridden by subclasses as it is used to determine object identity (that is, <code>a.equal?(b)</code> if and only if <code>a</code> is the same object as <code>b</code>):</p>
 
 <pre><code>obj = &quot;a&quot;
 other = obj.dup
@@ -393,7 +410,9 @@ obj.equal? other  #=&gt; false
 obj.equal? obj    #=&gt; true
 </code></pre>
 
-<p>The <code>eql?</code> method returns <code>true</code> if <code>obj</code> and <code>other</code> refer to the same hash key.  This is used by <a href="Hash.html"><code>Hash</code></a> to test members for equality.  For objects of class <code>Object</code>, <code>eql?</code> is synonymous with <code>==</code>.  Subclasses normally continue this tradition by aliasing <code>eql?</code> to their overridden <code>==</code> method, but there are exceptions.  <code>Numeric</code> types, for example, perform type conversion across <code>==</code>, but not across <code>eql?</code>, so:</p>
+<p>The eql? method returns <code>true</code> if <code>obj</code> and <code>other</code> refer to the same hash key.  This is used by <a href="Hash.html"><code>Hash</code></a> to test members for equality.  For any pair of objects where eql? returns <code>true</code>, the hash value of both objects must be equal. So any subclass that overrides eql? should also override hash appropriately.</p>
+
+<p>For objects of class <a href="Object.html"><code>Object</code></a>, eql?  is synonymous with #==.  Subclasses normally continue this tradition by aliasing eql? to their overridden #== method, but there are exceptions. <a href="Numeric.html"><code>Numeric</code></a> types, for example, perform type conversion across #==, but not across eql?, so:</p>
 
 <pre><code>1 == 1.0     #=&gt; true
 1.eql? 1.0   #=&gt; false
@@ -446,6 +465,8 @@ rb_obj_equal(VALUE obj1, VALUE obj2)
 <p>The same number will be returned on all calls to <code>object_id</code> for a given object, and no two active objects will share an id.</p>
 
 <p>Note: that some objects of builtin classes are reused for optimization. This is the case for immediate values and frozen string literals.</p>
+
+<p><a href="BasicObject.html"><code>BasicObject</code></a> implements +__id__+, <a href="Kernel.html"><code>Kernel</code></a> implements <code>object_id</code>.</p>
 
 <p>Immediate values are not passed by reference but are passed by value: <code>nil</code>, <code>true</code>, <code>false</code>, Fixnums, Symbols, and some Floats.</p>
 
@@ -502,20 +523,8 @@ rb_obj_id(VALUE obj)
      *  24 if 32-bit, double is 8-byte aligned
      *  40 if 64-bit
      */
-    if (STATIC_SYM_P(obj)) {
-        return (SYM2ID(obj) * sizeof(RVALUE) + (4 &lt;&lt; 2)) | FIXNUM_FLAG;
-    }
-    else if (FLONUM_P(obj)) {
-#if SIZEOF_LONG == SIZEOF_VOIDP
-        return LONG2NUM((SIGNED_VALUE)obj);
-#else
-        return LL2NUM((SIGNED_VALUE)obj);
-#endif
-    }
-    else if (SPECIAL_CONST_P(obj)) {
-        return LONG2NUM((SIGNED_VALUE)obj);
-    }
-    return nonspecial_obj_id(obj);
+
+    return rb_find_object_id(obj, cached_object_id);
 }</pre>
               </div>
             </div>
@@ -534,6 +543,8 @@ rb_obj_id(VALUE obj)
           
             <div class="description">
               <p>Invokes the method identified by <em>symbol</em>, passing it any arguments specified. You can use <code>__send__</code> if the name <code>send</code> clashes with an existing method in <em>obj</em>. When the method is identified by a string, the string is converted to a symbol.</p>
+
+<p><a href="BasicObject.html"><code>BasicObject</code></a> implements +__send__+, <a href="Kernel.html"><code>Kernel</code></a> implements <code>send</code>.</p>
 
 <pre><code>class Klass
   def hello(*args)
@@ -563,7 +574,7 @@ k.send :hello, &quot;gentle&quot;, &quot;readers&quot;   #=&gt; &quot;Hello gent
                 <pre>VALUE
 rb_f_send(int argc, VALUE *argv, VALUE recv)
 {
-    return send_internal(argc, argv, recv, CALL_FCALL);
+    return send_internal_kw(argc, argv, recv, CALL_FCALL);
 }</pre>
               </div>
             </div>
@@ -580,9 +591,9 @@ rb_f_send(int argc, VALUE *argv, VALUE recv)
 
           
             <div class="description">
-              <p>Equality — At the <code>Object</code> level, <code>==</code> returns <code>true</code> only if <code>obj</code> and <code>other</code> are the same object. Typically, this method is overridden in descendant classes to provide class-specific meaning.</p>
+              <p>Equality — At the <a href="Object.html"><code>Object</code></a> level, #== returns <code>true</code> only if <code>obj</code> and <code>other</code> are the same object.  Typically, this method is overridden in descendant classes to provide class-specific meaning.</p>
 
-<p>Unlike <code>==</code>, the <code>equal?</code> method should never be overridden by subclasses as it is used to determine object identity (that is, <code>a.equal?(b)</code> if and only if <code>a</code> is the same object as <code>b</code>):</p>
+<p>Unlike #==, the <a href="BasicObject.html#method-i-equal-3F"><code>equal?</code></a> method should never be overridden by subclasses as it is used to determine object identity (that is, <code>a.equal?(b)</code> if and only if <code>a</code> is the same object as <code>b</code>):</p>
 
 <pre><code>obj = &quot;a&quot;
 other = obj.dup
@@ -592,7 +603,9 @@ obj.equal? other  #=&gt; false
 obj.equal? obj    #=&gt; true
 </code></pre>
 
-<p>The <code>eql?</code> method returns <code>true</code> if <code>obj</code> and <code>other</code> refer to the same hash key.  This is used by <a href="Hash.html"><code>Hash</code></a> to test members for equality.  For objects of class <code>Object</code>, <code>eql?</code> is synonymous with <code>==</code>.  Subclasses normally continue this tradition by aliasing <code>eql?</code> to their overridden <code>==</code> method, but there are exceptions.  <code>Numeric</code> types, for example, perform type conversion across <code>==</code>, but not across <code>eql?</code>, so:</p>
+<p>The eql? method returns <code>true</code> if <code>obj</code> and <code>other</code> refer to the same hash key.  This is used by <a href="Hash.html"><code>Hash</code></a> to test members for equality.  For any pair of objects where eql? returns <code>true</code>, the hash value of both objects must be equal. So any subclass that overrides eql? should also override hash appropriately.</p>
+
+<p>For objects of class <a href="Object.html"><code>Object</code></a>, eql?  is synonymous with #==.  Subclasses normally continue this tradition by aliasing eql? to their overridden #== method, but there are exceptions. <a href="Numeric.html"><code>Numeric</code></a> types, for example, perform type conversion across #==, but not across eql?, so:</p>
 
 <pre><code>1 == 1.0     #=&gt; true
 1.eql? 1.0   #=&gt; false
@@ -659,11 +672,11 @@ k.instance_eval {|obj| obj == self } #=&gt; true
                 
               </p>
               <div id="method-i-instance_eval_source" class="dyn-source">
-                <pre>VALUE
-rb_obj_instance_eval(int argc, const VALUE *argv, VALUE self)
+                <pre>static VALUE
+rb_obj_instance_eval_internal(int argc, const VALUE *argv, VALUE self)
 {
     VALUE klass = singleton_class_for_eval(self);
-    return specific_eval(argc, argv, klass, self);
+    return specific_eval(argc, argv, klass, self, RB_PASS_CALLED_KEYWORDS);
 }</pre>
               </div>
             </div>
@@ -708,15 +721,99 @@ k.instance_exec(5) {|x| @secret+x }   #=&gt; 104
                 
               </p>
               <div id="method-i-instance_exec_source" class="dyn-source">
-                <pre>VALUE
-rb_obj_instance_exec(int argc, const VALUE *argv, VALUE self)
+                <pre>static VALUE
+rb_obj_instance_exec_internal(int argc, const VALUE *argv, VALUE self)
 {
     VALUE klass = singleton_class_for_eval(self);
-    return yield_under(klass, self, argc, argv);
+    return yield_under(klass, self, argc, argv, RB_PASS_CALLED_KEYWORDS);
 }</pre>
               </div>
             </div>
             
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-singleton_method_removed">
+            
+              <b></b>
+            
+            <a href="../classes/BasicObject.html#method-i-singleton_method_removed" name="method-i-singleton_method_removed" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Invoked as a callback whenever a singleton method is added to the receiver.</p>
+
+<pre><code>module Chatty
+  def Chatty.singleton_method_added(id)
+    puts &quot;Adding #{id.id2name}&quot;
+  end
+  def self.one()     end
+  def two()          end
+  def Chatty.three() end
+end
+</code></pre>
+
+<p><em>produces:</em></p>
+
+<pre><code>Adding singleton_method_added
+Adding one
+Adding three
+</code></pre>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="BasicObject.html#method-i-singleton_method_added">singleton_method_added</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-singleton_method_undefined">
+            
+              <b></b>
+            
+            <a href="../classes/BasicObject.html#method-i-singleton_method_undefined" name="method-i-singleton_method_undefined" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Invoked as a callback whenever a singleton method is added to the receiver.</p>
+
+<pre><code>module Chatty
+  def Chatty.singleton_method_added(id)
+    puts &quot;Adding #{id.id2name}&quot;
+  end
+  def self.one()     end
+  def two()          end
+  def Chatty.three() end
+end
+</code></pre>
+
+<p><em>produces:</em></p>
+
+<pre><code>Adding singleton_method_added
+Adding one
+Adding three
+</code></pre>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="BasicObject.html#method-i-singleton_method_added">singleton_method_added</a>
+            </div>
+          
+
+          
           </div>
         
       

@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="Arrays are ordered, integer-indexed collections of any object.  Array indexing starts at 0, as in C or Java.">
   
 
-    <meta name="keywords" content="Array class, [], try_convert, new, initialize_copy, inspect, to_a, to_h, to_ary, ==, eql?, hash, [], []=, at, fetch, first, last, concat, union, difference, <<, push, pop, shift, unshift, insert, each, each_index, reverse_each, length, empty?, find_index, index, rindex, join, reverse, reverse!, rotate, rotate!, sort, sort!, sort_by!, collect, collect!, map, map!, select, select!, filter, filter!, keep_if, values_at, delete, delete_at, delete_if, reject, reject!, zip, transpose, replace, clear, fill, include?, <=>, slice, slice!, assoc, rassoc, +, *, -, &, |, max, min, uniq, uniq!, compact, compact!, flatten, flatten!, count, shuffle!, shuffle, sample, cycle, permutation, combination, repeated_permutation, repeated_combination, product, take, take_while, drop, drop_while, bsearch, bsearch_index, any?, all?, none?, one?, dig, sum, to_s, append, prepend, size, abbrev, dclone, shelljoin, pack">
+    <meta name="keywords" content="Array class, [], try_convert, new, initialize_copy, inspect, to_a, to_h, to_ary, ==, eql?, hash, [], []=, at, fetch, first, last, concat, union, difference, intersection, <<, push, pop, shift, unshift, insert, each, each_index, reverse_each, length, empty?, find_index, index, rindex, join, reverse, reverse!, rotate, rotate!, sort, sort!, sort_by!, collect, collect!, map, map!, select, select!, filter, filter!, keep_if, values_at, delete, delete_at, delete_if, reject, reject!, zip, transpose, replace, clear, fill, include?, <=>, slice, slice!, assoc, rassoc, +, *, -, &, |, max, min, minmax, uniq, uniq!, compact, compact!, flatten, flatten!, count, shuffle!, shuffle, sample, cycle, permutation, combination, repeated_permutation, repeated_combination, product, take, take_while, drop, drop_while, bsearch, bsearch_index, any?, all?, none?, one?, dig, sum, deconstruct, to_s, append, prepend, size, abbrev, dclone, shelljoin, pack">
 </head>
 
 <body>
@@ -96,11 +96,13 @@ document.addEventListener("turbolinks:load", function() {
             
             <li><a href="../files/ruby/lib/pp_rb.html">ruby/lib/pp.rb</a></li>
             
+            <li><a href="../files/ruby/lib/racc/compat_rb.html">ruby/lib/racc/compat.rb</a></li>
+            
             <li><a href="../files/ruby/lib/rexml/xpath_parser_rb.html">ruby/lib/rexml/xpath_parser.rb</a></li>
             
             <li><a href="../files/ruby/lib/shellwords_rb.html">ruby/lib/shellwords.rb</a></li>
             
-            <li><a href="../files/ruby/pack_c.html">ruby/pack.c</a></li>
+            <li><a href="../files/ruby/pack_rb.html">ruby/pack.rb</a></li>
             
         </ul>
     </div>
@@ -340,6 +342,8 @@ arr.keep_if {|a| a &lt; 4}   #=&gt; [1, 2, 3]
 arr                       #=&gt; [1, 2, 3]
 </code></pre>
 
+<p>for pack.c</p>
+
     </div>
   
 
@@ -533,6 +537,11 @@ arr                       #=&gt; [1, 2, 3]
             
               
               <li>
+                <a href="#method-i-deconstruct">deconstruct</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-delete">delete</a>,
               </li>
             
@@ -681,7 +690,12 @@ arr                       #=&gt; [1, 2, 3]
             
               
               <li>
-                <a href="#method-i-inspect">inspect</a>
+                <a href="#method-i-inspect">inspect</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-intersection">intersection</a>
               </li>
             
           </ul>
@@ -749,7 +763,12 @@ arr                       #=&gt; [1, 2, 3]
             
               
               <li>
-                <a href="#method-i-min">min</a>
+                <a href="#method-i-min">min</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-minmax">minmax</a>
               </li>
             
           </ul>
@@ -1302,7 +1321,7 @@ rb_ary_initialize(int argc, VALUE *argv, VALUE ary)
 
           
             <div class="description">
-              <p>Tries to convert <code>obj</code> into an array, using <code>to_ary</code> method.  Returns the converted array or <code>nil</code> if <code>obj</code> cannot be converted for any reason. This method can be used to check if an argument is an array.</p>
+              <p>Tries to convert <code>obj</code> into an array, using the <code>to_ary</code> method.  Returns the converted array or <code>nil</code> if <code>obj</code> cannot be converted. This method can be used to check if an argument is an array.</p>
 
 <pre><code>Array.try_convert([1])   #=&gt; [1]
 Array.try_convert(&quot;1&quot;)   #=&gt; nil
@@ -1496,8 +1515,6 @@ rb_ary_times(VALUE ary, VALUE times)
         }
     }
   out:
-    OBJ_INFECT(ary2, ary);
-
     return ary2;
 }</pre>
               </div>
@@ -1590,12 +1607,14 @@ rb_ary_plus(VALUE x, VALUE y)
             <div class="description">
               <p><a href="Array.html"><code>Array</code></a> Difference</p>
 
-<p>Returns a new array that is a copy of the original array, removing any items that also appear in <code>other_ary</code>. The order is preserved from the original array.</p>
+<p>Returns a new array that is a copy of the original array, removing all occurrences of any item that also appear in <code>other_ary</code>. The order is preserved from the original array.</p>
 
 <p>It compares elements using their <a href="Array.html#method-i-hash"><code>hash</code></a> and <a href="Array.html#method-i-eql-3F"><code>eql?</code></a> methods for efficiency.</p>
 
 <pre><code>[ 1, 1, 2, 2, 3, 3, 4, 5 ] - [ 1, 2, 4 ]  #=&gt;  [ 3, 3, 5 ]
 </code></pre>
+
+<p>Note that while 1 and 2 were only present once in the array argument, and were present twice in the receiver array, all occurrences of each <a href="Integer.html"><code>Integer</code></a> are removed in the returned array.</p>
 
 <p>If you need set-like behavior, see the library class <a href="Set.html"><code>Set</code></a>.</p>
 
@@ -2012,7 +2031,7 @@ Abbrev.abbrev(%w{car box cone}, &quot;ca&quot;)
                 Source:
                 <a href="javascript:toggleSource('method-i-abbrev_source')" id="l_method-i-abbrev_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/abbrev.rb#L129" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/abbrev.rb#L129" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-abbrev_source" class="dyn-source">
@@ -2594,7 +2613,7 @@ a #=&gt;  [&quot;&quot;, &quot;b&quot;, &quot;c!&quot;, &quot;d!&quot;]
 
           
             <div class="aka">
-              Also aliased as: <a href="Array.html#method-i-map-21">map!</a>
+              Also aliased as: <a href="Array.html#method-i-map-21">map!</a>, map!
             </div>
           
 
@@ -3049,17 +3068,55 @@ rb_ary_cycle(int argc, VALUE *argv, VALUE ary)
                 Source:
                 <a href="javascript:toggleSource('method-i-dclone_source')" id="l_method-i-dclone_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/rexml/xpath_parser.rb#L33" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/rexml/xpath_parser.rb#L35" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-dclone_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rexml/xpath_parser.rb, line 33</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rexml/xpath_parser.rb, line 35</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">dclone</span>
   <span class="ruby-identifier">klone</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">clone</span>
   <span class="ruby-identifier">klone</span>.<span class="ruby-identifier">clear</span>
   <span class="ruby-keyword">self</span>.<span class="ruby-identifier">each</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">v</span><span class="ruby-operator">|</span> <span class="ruby-identifier">klone</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">v</span>.<span class="ruby-identifier">dclone</span>}
   <span class="ruby-identifier">klone</span>
 <span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-deconstruct">
+            
+              <b>deconstruct</b>()
+            
+            <a href="../classes/Array.html#method-i-deconstruct" name="method-i-deconstruct" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-deconstruct_source')" id="l_method-i-deconstruct_source">show</a>
+                
+              </p>
+              <div id="method-i-deconstruct_source" class="dyn-source">
+                <pre>static VALUE
+rb_ary_deconstruct(VALUE ary)
+{
+    return ary;
+}</pre>
               </div>
             </div>
             
@@ -3242,7 +3299,7 @@ rb_ary_delete_if(VALUE ary)
         <div class="method">
           <h3 class="title method-title" id="method-i-difference">
             
-              <b>ary.difference(other_ary1, other_ary2, ...)   &rarr; ary
+              <b>ary.difference(other_ary1, other_ary2, ...)   &rarr; new_ary
 </b>
             
             <a href="../classes/Array.html#method-i-difference" name="method-i-difference" class="permalink">Link</a>
@@ -3252,12 +3309,18 @@ rb_ary_delete_if(VALUE ary)
             <div class="description">
               <p><a href="Array.html"><code>Array</code></a> Difference</p>
 
-<p>Returns a new array that is a copy of the receiver, removing any items that also appear in any of the arrays given as arguments. The order is preserved from the original array.</p>
+<p>Returns a new array that is a copy of the original array, removing all occurrences of any item that also appear in <code>other_ary</code>. The order is preserved from the original array.</p>
 
 <p>It compares elements using their <a href="Array.html#method-i-hash"><code>hash</code></a> and <a href="Array.html#method-i-eql-3F"><code>eql?</code></a> methods for efficiency.</p>
 
 <pre><code>[ 1, 1, 2, 2, 3, 3, 4, 5 ].difference([ 1, 2, 4 ])     #=&gt; [ 3, 3, 5 ]
-[ 1, &#39;c&#39;, :s, &#39;yep&#39; ].difference([ 1 ], [ &#39;a&#39;, &#39;c&#39; ])  #=&gt; [ :s, &quot;yep&quot; ]
+</code></pre>
+
+<p>Note that while 1 and 2 were only present once in the array argument, and were present twice in the receiver array, all occurrences of each <a href="Integer.html"><code>Integer</code></a> are removed in the returned array.</p>
+
+<p>Multiple array arguments can be supplied and all occurrences of any element in those supplied arrays that match the receiver will be removed from the returned array.</p>
+
+<pre><code>[ 1, &#39;c&#39;, :s, &#39;yep&#39; ].difference([ 1 ], [ &#39;a&#39;, &#39;c&#39; ])  #=&gt; [ :s, &quot;yep&quot; ]
 </code></pre>
 
 <p>If you need set-like behavior, see the library class <a href="Set.html"><code>Set</code></a>.</p>
@@ -3299,7 +3362,7 @@ rb_ary_difference_multi(int argc, VALUE *argv, VALUE ary)
     for (i = 0; i &lt; RARRAY_LEN(ary); i++) {
         int j;
         VALUE elt = rb_ary_elt(ary, i);
-        for (j = 0; j &lt; argc; j++){
+        for (j = 0; j &lt; argc; j++) {
             if (is_hash[j]) {
                 if (rb_hash_stlike_lookup(argv[j], RARRAY_AREF(ary, i), NULL))
                     break;
@@ -3891,6 +3954,10 @@ a.select {|v| v =~ /[aeiou]/ }    #=&gt; [&quot;a&quot;, &quot;e&quot;]
           
 
           
+            <div class="aka">
+              Also aliased as: map!
+            </div>
+          
 
           
             <div class="aka">
@@ -4106,7 +4173,7 @@ a.flatten(1)              #=&gt; [1, 2, 3, [4, 5]]
                 <pre>static VALUE
 rb_ary_flatten(int argc, VALUE *argv, VALUE ary)
 {
-    int mod = 0, level = -1;
+    int level = -1;
     VALUE result;
 
     if (rb_check_arity(argc, 0, 1) &amp;&amp; !NIL_P(argv[0])) {
@@ -4114,8 +4181,10 @@ rb_ary_flatten(int argc, VALUE *argv, VALUE ary)
         if (level == 0) return ary_make_shared_copy(ary);
     }
 
-    result = flatten(ary, level, &amp;mod);
-    OBJ_INFECT(result, ary);
+    result = flatten(ary, level);
+    if (result == ary) {
+        result = ary_make_shared_copy(ary);
+    }
 
     return result;
 }</pre>
@@ -4176,9 +4245,8 @@ rb_ary_flatten_bang(int argc, VALUE *argv, VALUE ary)
     if (!NIL_P(lv)) level = NUM2INT(lv);
     if (level == 0) return Qnil;
 
-    result = flatten(ary, level, &amp;mod);
-    if (mod == 0) {
-        ary_discard(result);
+    result = flatten(ary, level);
+    if (result == ary) {
         return Qnil;
     }
     if (!(mod = ARY_EMBED_P(result))) rb_obj_freeze(result);
@@ -4207,7 +4275,7 @@ rb_ary_flatten_bang(int argc, VALUE *argv, VALUE ary)
 
 <p>Two arrays with the same content will have the same hash code (and will compare using <a href="Array.html#method-i-eql-3F"><code>eql?</code></a>).</p>
 
-<p>See also Object#hash.</p>
+<p>See also <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
             </div>
           
 
@@ -4381,24 +4449,24 @@ rb_ary_replace(VALUE copy, VALUE orig)
     if (copy == orig) return copy;
 
     if (RARRAY_LEN(orig) &lt;= RARRAY_EMBED_LEN_MAX) {
-        VALUE shared = 0;
+        VALUE shared_root = 0;
 
         if (ARY_OWNS_HEAP_P(copy)) {
             ary_heap_free(copy);
         }
         else if (ARY_SHARED_P(copy)) {
-            shared = ARY_SHARED(copy);
+            shared_root = ARY_SHARED_ROOT(copy);
             FL_UNSET_SHARED(copy);
         }
         FL_SET_EMBED(copy);
         ary_memcpy(copy, 0, RARRAY_LEN(orig), RARRAY_CONST_PTR_TRANSIENT(orig));
-        if (shared) {
-            rb_ary_decrement_share(shared);
+        if (shared_root) {
+            rb_ary_decrement_share(shared_root);
         }
         ARY_SET_LEN(copy, RARRAY_LEN(orig));
     }
     else {
-        VALUE shared = ary_make_shared(orig);
+        VALUE shared_root = ary_make_shared(orig);
         if (ARY_OWNS_HEAP_P(copy)) {
             ary_heap_free(copy);
         }
@@ -4408,7 +4476,7 @@ rb_ary_replace(VALUE copy, VALUE orig)
         FL_UNSET_EMBED(copy);
         ARY_SET_PTR(copy, ARY_HEAP_PTR(orig));
         ARY_SET_LEN(copy, ARY_HEAP_LEN(orig));
-        rb_ary_set_shared(copy, shared);
+        rb_ary_set_shared(copy, shared_root);
     }
     ary_verify(copy);
     return copy;
@@ -4492,7 +4560,7 @@ rb_ary_insert(int argc, VALUE *argv, VALUE ary)
 
           
             <div class="description">
-              <p>Creates a string representation of <code>self</code>.</p>
+              <p>Creates a string representation of <code>self</code>, by calling <a href="Array.html#method-i-inspect"><code>inspect</code></a> on each element.</p>
 
 <pre><code>[ &quot;a&quot;, &quot;b&quot;, &quot;c&quot; ].to_s     #=&gt; &quot;[\&quot;a\&quot;, \&quot;b\&quot;, \&quot;c\&quot;]&quot;
 </code></pre>
@@ -4522,6 +4590,61 @@ rb_ary_inspect(VALUE ary)
 {
     if (RARRAY_LEN(ary) == 0) return rb_usascii_str_new2(&quot;[]&quot;);
     return rb_exec_recursive(inspect_ary, ary, 0);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-intersection">
+            
+              <b>ary.intersection(other_ary1, other_ary2, ...)      &rarr; new_ary
+</b>
+            
+            <a href="../classes/Array.html#method-i-intersection" name="method-i-intersection" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p><a href="Set.html"><code>Set</code></a> Intersection — Returns a new array containing unique elements common to <code>self</code> and <code>other_ary</code>s. Order is preserved from the original array.</p>
+
+<p>It compares elements using their <a href="Array.html#method-i-hash"><code>hash</code></a> and <a href="Array.html#method-i-eql-3F"><code>eql?</code></a> methods for efficiency.</p>
+
+<pre><code>[ 1, 1, 3, 5 ].intersection([ 3, 2, 1 ])                    # =&gt; [ 1, 3 ]
+[ &quot;a&quot;, &quot;b&quot;, &quot;z&quot; ].intersection([ &quot;a&quot;, &quot;b&quot;, &quot;c&quot; ], [ &quot;b&quot; ])  # =&gt; [ &quot;b&quot; ]
+[ &quot;a&quot; ].intersection #=&gt; [ &quot;a&quot; ]
+</code></pre>
+
+<p>See also Array#&amp;.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-intersection_source')" id="l_method-i-intersection_source">show</a>
+                
+              </p>
+              <div id="method-i-intersection_source" class="dyn-source">
+                <pre>static VALUE
+rb_ary_intersection_multi(int argc, VALUE *argv, VALUE ary)
+{
+    VALUE result = rb_ary_dup(ary);
+    int i;
+
+    for (i = 0; i &lt; argc; i++) {
+        result = rb_ary_and(result, argv[i]);
+    }
+
+    return result;
 }</pre>
               </div>
             </div>
@@ -4571,11 +4694,11 @@ rb_ary_join_m(int argc, VALUE *argv, VALUE ary)
 {
     VALUE sep;
 
-    if (rb_check_arity(argc, 0, 1) == 0) {
+    if (rb_check_arity(argc, 0, 1) == 0 || NIL_P(sep = argv[0])) {
         sep = rb_output_fs;
-    }
-    else if (NIL_P(sep = argv[0])) {
-        sep = rb_output_fs;
+        if (!NIL_P(sep)) {
+            rb_warn(&quot;$, is set to non-nil value&quot;);
+        }
     }
 
     return rb_ary_join(ary, sep);
@@ -4819,7 +4942,7 @@ a #=&gt;  [&quot;&quot;, &quot;b&quot;, &quot;c!&quot;, &quot;d!&quot;]
 
           
             <div class="description">
-              <p>Returns the object in <em>ary</em> with the maximum value. The first form assumes all objects implement <code>Comparable</code>; the second uses the block to return <em>a &lt;=&gt; b</em>.</p>
+              <p>Returns the object in <em>ary</em> with the maximum value. The first form assumes all objects implement <a href="Comparable.html"><code>Comparable</code></a>; the second uses the block to return <em>a &lt;=&gt; b</em>.</p>
 
 <pre><code>ary = %w(albatross dog horse)
 ary.max                                   #=&gt; &quot;horse&quot;
@@ -4895,7 +5018,7 @@ rb_ary_max(int argc, VALUE *argv, VALUE ary)
 
           
             <div class="description">
-              <p>Returns the object in <em>ary</em> with the minimum value. The first form assumes all objects implement <code>Comparable</code>; the second uses the block to return <em>a &lt;=&gt; b</em>.</p>
+              <p>Returns the object in <em>ary</em> with the minimum value. The first form assumes all objects implement <a href="Comparable.html"><code>Comparable</code></a>; the second uses the block to return <em>a &lt;=&gt; b</em>.</p>
 
 <pre><code>ary = %w(albatross dog horse)
 ary.min                                   #=&gt; &quot;albatross&quot;
@@ -4954,6 +5077,50 @@ rb_ary_min(int argc, VALUE *argv, VALUE ary)
     }
     if (result == Qundef) return Qnil;
     return result;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-minmax">
+            
+              <b>ary.minmax                       &rarr; [obj, obj]<br />ary.minmax {| a,b | block }      &rarr; [obj, obj]
+</b>
+            
+            <a href="../classes/Array.html#method-i-minmax" name="method-i-minmax" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a two element array which contains the minimum and the maximum value in the array.</p>
+
+<p>Can be given an optional block to override the default comparison method <code>a &lt;=&gt; b</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-minmax_source')" id="l_method-i-minmax_source">show</a>
+                
+              </p>
+              <div id="method-i-minmax_source" class="dyn-source">
+                <pre>static VALUE
+rb_ary_minmax(VALUE ary)
+{
+    if (rb_block_given_p()) {
+        return rb_call_super(0, NULL);
+    }
+    return rb_assoc_new(rb_ary_min(0, 0, ary), rb_ary_max(0, 0, ary));
 }</pre>
               </div>
             </div>
@@ -5103,7 +5270,7 @@ rb_ary_one_p(int argc, VALUE *argv, VALUE ary)
 
           
             <div class="description">
-              <p>Packs the contents of <em>arr</em> into a binary sequence according to the directives in <em>aTemplateString</em> (see the table below) Directives “A,&#39;&#39; “a,&#39;&#39; and “Z&#39;&#39; may be followed by a count, which gives the width of the resulting field. The remaining directives also may take a count, indicating the number of array elements to convert. If the count is an asterisk (“<code>*</code>&#39;&#39;), all remaining array elements will be converted. Any of the directives “<code>sSiIlL</code>&#39;&#39; may be followed by an underscore (“<code>_</code>&#39;&#39;) or exclamation mark (“<code>!</code>&#39;&#39;) to use the underlying platform&#39;s native size for the specified type; otherwise, they use a platform-independent size. Spaces are ignored in the template string. See also <code>String#unpack</code>.</p>
+              <p>Packs the contents of <em>arr</em> into a binary sequence according to the directives in <em>aTemplateString</em> (see the table below) Directives “A,&#39;&#39; “a,&#39;&#39; and “Z&#39;&#39; may be followed by a count, which gives the width of the resulting field. The remaining directives also may take a count, indicating the number of array elements to convert. If the count is an asterisk (“<code>*</code>&#39;&#39;), all remaining array elements will be converted. Any of the directives “<code>sSiIlL</code>&#39;&#39; may be followed by an underscore (“<code>_</code>&#39;&#39;) or exclamation mark (“<code>!</code>&#39;&#39;) to use the underlying platform&#39;s native size for the specified type; otherwise, they use a platform-independent size. Spaces are ignored in the template string. See also <a href="String.html#method-i-unpack"><code>String#unpack</code></a>.</p>
 
 <pre><code>a = [ &quot;a&quot;, &quot;b&quot;, &quot;c&quot; ]
 n = [ 65, 66, 67 ]
@@ -5196,8 +5363,10 @@ h            | String  | hex string (low nibble first)
 u            | String  | UU-encoded string
 M            | String  | quoted printable, MIME encoding (see also RFC2045)
              |         | (text mode but input must use LF and output LF)
-m            | String  | base64 encoded string (see RFC 2045, count is width)
+m            | String  | base64 encoded string (see RFC 2045)
              |         | (if count is 0, no line feed are added, see RFC 4648)
+             |         | (count specifies input bytes between each LF,
+             |         | rounded down to nearest multiple of 3)
 P            | String  | pointer to a structure (fixed-length string)
 p            | String  | pointer to a null-terminated string
 
@@ -5223,623 +5392,14 @@ x            | ---     | null byte
                 Source:
                 <a href="javascript:toggleSource('method-i-pack_source')" id="l_method-i-pack_source">show</a>
                 
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/pack.rb#L133" target="_blank" class="github_url">on GitHub</a>
+                
               </p>
               <div id="method-i-pack_source" class="dyn-source">
-                <pre>static VALUE
-pack_pack(int argc, VALUE *argv, VALUE ary)
-{
-    static const char nul10[] = &quot;\0\0\0\0\0\0\0\0\0\0&quot;;
-    static const char spc10[] = &quot;          &quot;;
-    const char *p, *pend;
-    VALUE fmt, opt = Qnil, res, from, associates = 0, buffer = 0;
-    char type;
-    long len, idx, plen;
-    const char *ptr;
-    int enc_info = 1;           /* 0 - BINARY, 1 - US-ASCII, 2 - UTF-8 */
-#ifdef NATINT_PACK
-    int natint;         /* native integer */
-#endif
-    int integer_size, bigendian_p;
-
-    rb_scan_args(argc, argv, &quot;10:&quot;, &amp;fmt, &amp;opt);
-
-    StringValue(fmt);
-    p = RSTRING_PTR(fmt);
-    pend = p + RSTRING_LEN(fmt);
-    if (!NIL_P(opt)) {
-        static ID keyword_ids[1];
-        if (!keyword_ids[0])
-            CONST_ID(keyword_ids[0], &quot;buffer&quot;);
-
-        rb_get_kwargs(opt, keyword_ids, 0, 1, &amp;buffer);
-
-        if (buffer != Qundef &amp;&amp; !RB_TYPE_P(buffer, T_STRING))
-            rb_raise(rb_eTypeError, &quot;buffer must be String, not %s&quot;, rb_obj_classname(buffer));
-    }
-    if (buffer)
-        res = buffer;
-    else
-        res = rb_str_buf_new(0);
-
-    idx = 0;
-
-#define TOO_FEW (rb_raise(rb_eArgError, toofew), 0)
-#define MORE_ITEM (idx &lt; RARRAY_LEN(ary))
-#define THISFROM (MORE_ITEM ? RARRAY_AREF(ary, idx) : TOO_FEW)
-#define NEXTFROM (MORE_ITEM ? RARRAY_AREF(ary, idx++) : TOO_FEW)
-
-    while (p &lt; pend) {
-        int explicit_endian = 0;
-        if (RSTRING_PTR(fmt) + RSTRING_LEN(fmt) != pend) {
-            rb_raise(rb_eRuntimeError, &quot;format string modified&quot;);
-        }
-        type = *p++;           /* get data type */
-#ifdef NATINT_PACK
-        natint = 0;
-#endif
-
-        if (ISSPACE(type)) continue;
-        if (type == &#39;#&#39;) {
-            while ((p &lt; pend) &amp;&amp; (*p != &#39;\n&#39;)) {
-                p++;
-            }
-            continue;
-        }
-
-        {
-          modifiers:
-            switch (*p) {
-              case &#39;_&#39;:
-              case &#39;!&#39;:
-                if (strchr(natstr, type)) {
-#ifdef NATINT_PACK
-                    natint = 1;
-#endif
-                    p++;
-                }
-                else {
-                    rb_raise(rb_eArgError, &quot;&#39;%c&#39; allowed only after types %s&quot;, *p, natstr);
-                }
-                goto modifiers;
-
-              case &#39;&lt;&#39;:
-              case &#39;&gt;&#39;:
-                if (!strchr(endstr, type)) {
-                    rb_raise(rb_eArgError, &quot;&#39;%c&#39; allowed only after types %s&quot;, *p, endstr);
-                }
-                if (explicit_endian) {
-                    rb_raise(rb_eRangeError, &quot;Can&#39;t use both &#39;&lt;&#39; and &#39;&gt;&#39;&quot;);
-                }
-                explicit_endian = *p++;
-                goto modifiers;
-            }
-        }
-
-        if (*p == &#39;*&#39;) {       /* set data length */
-            len = strchr(&quot;@Xxu&quot;, type) ? 0
-                : strchr(&quot;PMm&quot;, type) ? 1
-                : RARRAY_LEN(ary) - idx;
-            p++;
-        }
-        else if (ISDIGIT(*p)) {
-            errno = 0;
-            len = STRTOUL(p, (char**)&amp;p, 10);
-            if (errno) {
-                rb_raise(rb_eRangeError, &quot;pack length too big&quot;);
-            }
-        }
-        else {
-            len = 1;
-        }
-
-        switch (type) {
-          case &#39;U&#39;:
-            /* if encoding is US-ASCII, upgrade to UTF-8 */
-            if (enc_info == 1) enc_info = 2;
-            break;
-          case &#39;m&#39;: case &#39;M&#39;: case &#39;u&#39;:
-            /* keep US-ASCII (do nothing) */
-            break;
-          default:
-            /* fall back to BINARY */
-            enc_info = 0;
-            break;
-        }
-        switch (type) {
-          case &#39;A&#39;: case &#39;a&#39;: case &#39;Z&#39;:
-          case &#39;B&#39;: case &#39;b&#39;:
-          case &#39;H&#39;: case &#39;h&#39;:
-            from = NEXTFROM;
-            if (NIL_P(from)) {
-                ptr = &quot;&quot;;
-                plen = 0;
-            }
-            else {
-                StringValue(from);
-                ptr = RSTRING_PTR(from);
-                plen = RSTRING_LEN(from);
-                OBJ_INFECT(res, from);
-            }
-
-            if (p[-1] == &#39;*&#39;)
-                len = plen;
-
-            switch (type) {
-              case &#39;a&#39;:                /* arbitrary binary string (null padded)  */
-              case &#39;A&#39;:         /* arbitrary binary string (ASCII space padded) */
-              case &#39;Z&#39;:         /* null terminated string  */
-                if (plen &gt;= len) {
-                    rb_str_buf_cat(res, ptr, len);
-                    if (p[-1] == &#39;*&#39; &amp;&amp; type == &#39;Z&#39;)
-                        rb_str_buf_cat(res, nul10, 1);
-                }
-                else {
-                    rb_str_buf_cat(res, ptr, plen);
-                    len -= plen;
-                    while (len &gt;= 10) {
-                        rb_str_buf_cat(res, (type == &#39;A&#39;)?spc10:nul10, 10);
-                        len -= 10;
-                    }
-                    rb_str_buf_cat(res, (type == &#39;A&#39;)?spc10:nul10, len);
-                }
-                break;
-
-#define castchar(from) (char)((from) &amp; 0xff)
-
-              case &#39;b&#39;:                /* bit string (ascending) */
-                {
-                    int byte = 0;
-                    long i, j = 0;
-
-                    if (len &gt; plen) {
-                        j = (len - plen + 1)/2;
-                        len = plen;
-                    }
-                    for (i=0; i++ &lt; len; ptr++) {
-                        if (*ptr &amp; 1)
-                            byte |= 128;
-                        if (i &amp; 7)
-                            byte &gt;&gt;= 1;
-                        else {
-                            char c = castchar(byte);
-                            rb_str_buf_cat(res, &amp;c, 1);
-                            byte = 0;
-                        }
-                    }
-                    if (len &amp; 7) {
-                        char c;
-                        byte &gt;&gt;= 7 - (len &amp; 7);
-                        c = castchar(byte);
-                        rb_str_buf_cat(res, &amp;c, 1);
-                    }
-                    len = j;
-                    goto grow;
-                }
-                break;
-
-              case &#39;B&#39;:                /* bit string (descending) */
-                {
-                    int byte = 0;
-                    long i, j = 0;
-
-                    if (len &gt; plen) {
-                        j = (len - plen + 1)/2;
-                        len = plen;
-                    }
-                    for (i=0; i++ &lt; len; ptr++) {
-                        byte |= *ptr &amp; 1;
-                        if (i &amp; 7)
-                            byte &lt;&lt;= 1;
-                        else {
-                            char c = castchar(byte);
-                            rb_str_buf_cat(res, &amp;c, 1);
-                            byte = 0;
-                        }
-                    }
-                    if (len &amp; 7) {
-                        char c;
-                        byte &lt;&lt;= 7 - (len &amp; 7);
-                        c = castchar(byte);
-                        rb_str_buf_cat(res, &amp;c, 1);
-                    }
-                    len = j;
-                    goto grow;
-                }
-                break;
-
-              case &#39;h&#39;:                /* hex string (low nibble first) */
-                {
-                    int byte = 0;
-                    long i, j = 0;
-
-                    if (len &gt; plen) {
-                        j = (len + 1) / 2 - (plen + 1) / 2;
-                        len = plen;
-                    }
-                    for (i=0; i++ &lt; len; ptr++) {
-                        if (ISALPHA(*ptr))
-                            byte |= (((*ptr &amp; 15) + 9) &amp; 15) &lt;&lt; 4;
-                        else
-                            byte |= (*ptr &amp; 15) &lt;&lt; 4;
-                        if (i &amp; 1)
-                            byte &gt;&gt;= 4;
-                        else {
-                            char c = castchar(byte);
-                            rb_str_buf_cat(res, &amp;c, 1);
-                            byte = 0;
-                        }
-                    }
-                    if (len &amp; 1) {
-                        char c = castchar(byte);
-                        rb_str_buf_cat(res, &amp;c, 1);
-                    }
-                    len = j;
-                    goto grow;
-                }
-                break;
-
-              case &#39;H&#39;:                /* hex string (high nibble first) */
-                {
-                    int byte = 0;
-                    long i, j = 0;
-
-                    if (len &gt; plen) {
-                        j = (len + 1) / 2 - (plen + 1) / 2;
-                        len = plen;
-                    }
-                    for (i=0; i++ &lt; len; ptr++) {
-                        if (ISALPHA(*ptr))
-                            byte |= ((*ptr &amp; 15) + 9) &amp; 15;
-                        else
-                            byte |= *ptr &amp; 15;
-                        if (i &amp; 1)
-                            byte &lt;&lt;= 4;
-                        else {
-                            char c = castchar(byte);
-                            rb_str_buf_cat(res, &amp;c, 1);
-                            byte = 0;
-                        }
-                    }
-                    if (len &amp; 1) {
-                        char c = castchar(byte);
-                        rb_str_buf_cat(res, &amp;c, 1);
-                    }
-                    len = j;
-                    goto grow;
-                }
-                break;
-            }
-            break;
-
-          case &#39;c&#39;:            /* signed char */
-          case &#39;C&#39;:            /* unsigned char */
-            integer_size = 1;
-            bigendian_p = BIGENDIAN_P(); /* not effective */
-            goto pack_integer;
-
-          case &#39;s&#39;:            /* s for int16_t, s! for signed short */
-            integer_size = NATINT_LEN(short, 2);
-            bigendian_p = BIGENDIAN_P();
-            goto pack_integer;
-
-          case &#39;S&#39;:            /* S for uint16_t, S! for unsigned short */
-            integer_size = NATINT_LEN(short, 2);
-            bigendian_p = BIGENDIAN_P();
-            goto pack_integer;
-
-          case &#39;i&#39;:            /* i and i! for signed int */
-            integer_size = (int)sizeof(int);
-            bigendian_p = BIGENDIAN_P();
-            goto pack_integer;
-
-          case &#39;I&#39;:            /* I and I! for unsigned int */
-            integer_size = (int)sizeof(int);
-            bigendian_p = BIGENDIAN_P();
-            goto pack_integer;
-
-          case &#39;l&#39;:            /* l for int32_t, l! for signed long */
-            integer_size = NATINT_LEN(long, 4);
-            bigendian_p = BIGENDIAN_P();
-            goto pack_integer;
-
-          case &#39;L&#39;:            /* L for uint32_t, L! for unsigned long */
-            integer_size = NATINT_LEN(long, 4);
-            bigendian_p = BIGENDIAN_P();
-            goto pack_integer;
-
-          case &#39;q&#39;:            /* q for int64_t, q! for signed long long */
-            integer_size = NATINT_LEN_Q;
-            bigendian_p = BIGENDIAN_P();
-            goto pack_integer;
-
-          case &#39;Q&#39;:            /* Q for uint64_t, Q! for unsigned long long */
-            integer_size = NATINT_LEN_Q;
-            bigendian_p = BIGENDIAN_P();
-            goto pack_integer;
-
-          case &#39;j&#39;:            /* j for intptr_t */
-            integer_size = sizeof(intptr_t);
-            bigendian_p = BIGENDIAN_P();
-            goto pack_integer;
-
-          case &#39;J&#39;:            /* J for uintptr_t */
-            integer_size = sizeof(uintptr_t);
-            bigendian_p = BIGENDIAN_P();
-            goto pack_integer;
-
-          case &#39;n&#39;:            /* 16 bit (2 bytes) integer (network byte-order)  */
-            integer_size = 2;
-            bigendian_p = 1;
-            goto pack_integer;
-
-          case &#39;N&#39;:            /* 32 bit (4 bytes) integer (network byte-order) */
-            integer_size = 4;
-            bigendian_p = 1;
-            goto pack_integer;
-
-          case &#39;v&#39;:            /* 16 bit (2 bytes) integer (VAX byte-order) */
-            integer_size = 2;
-            bigendian_p = 0;
-            goto pack_integer;
-
-          case &#39;V&#39;:            /* 32 bit (4 bytes) integer (VAX byte-order) */
-            integer_size = 4;
-            bigendian_p = 0;
-            goto pack_integer;
-
-          pack_integer:
-            if (explicit_endian) {
-                bigendian_p = explicit_endian == &#39;&gt;&#39;;
-            }
-            if (integer_size &gt; MAX_INTEGER_PACK_SIZE)
-                rb_bug(&quot;unexpected intger size for pack: %d&quot;, integer_size);
-            while (len-- &gt; 0) {
-                char intbuf[MAX_INTEGER_PACK_SIZE];
-
-                from = NEXTFROM;
-                rb_integer_pack(from, intbuf, integer_size, 1, 0,
-                    INTEGER_PACK_2COMP |
-                    (bigendian_p ? INTEGER_PACK_BIG_ENDIAN : INTEGER_PACK_LITTLE_ENDIAN));
-                rb_str_buf_cat(res, intbuf, integer_size);
-            }
-            break;
-
-          case &#39;f&#39;:            /* single precision float in native format */
-          case &#39;F&#39;:            /* ditto */
-            while (len-- &gt; 0) {
-                float f;
-
-                from = NEXTFROM;
-                f = VALUE_to_float(from);
-                rb_str_buf_cat(res, (char*)&amp;f, sizeof(float));
-            }
-            break;
-
-          case &#39;e&#39;:            /* single precision float in VAX byte-order */
-            while (len-- &gt; 0) {
-                FLOAT_CONVWITH(tmp);
-
-                from = NEXTFROM;
-                tmp.f = VALUE_to_float(from);
-                HTOVF(tmp);
-                rb_str_buf_cat(res, tmp.buf, sizeof(float));
-            }
-            break;
-
-          case &#39;E&#39;:            /* double precision float in VAX byte-order */
-            while (len-- &gt; 0) {
-                DOUBLE_CONVWITH(tmp);
-                from = NEXTFROM;
-                tmp.d = RFLOAT_VALUE(rb_to_float(from));
-                HTOVD(tmp);
-                rb_str_buf_cat(res, tmp.buf, sizeof(double));
-            }
-            break;
-
-          case &#39;d&#39;:            /* double precision float in native format */
-          case &#39;D&#39;:            /* ditto */
-            while (len-- &gt; 0) {
-                double d;
-
-                from = NEXTFROM;
-                d = RFLOAT_VALUE(rb_to_float(from));
-                rb_str_buf_cat(res, (char*)&amp;d, sizeof(double));
-            }
-            break;
-
-          case &#39;g&#39;:            /* single precision float in network byte-order */
-            while (len-- &gt; 0) {
-                FLOAT_CONVWITH(tmp);
-                from = NEXTFROM;
-                tmp.f = VALUE_to_float(from);
-                HTONF(tmp);
-                rb_str_buf_cat(res, tmp.buf, sizeof(float));
-            }
-            break;
-
-          case &#39;G&#39;:            /* double precision float in network byte-order */
-            while (len-- &gt; 0) {
-                DOUBLE_CONVWITH(tmp);
-
-                from = NEXTFROM;
-                tmp.d = RFLOAT_VALUE(rb_to_float(from));
-                HTOND(tmp);
-                rb_str_buf_cat(res, tmp.buf, sizeof(double));
-            }
-            break;
-
-          case &#39;x&#39;:            /* null byte */
-          grow:
-            while (len &gt;= 10) {
-                rb_str_buf_cat(res, nul10, 10);
-                len -= 10;
-            }
-            rb_str_buf_cat(res, nul10, len);
-            break;
-
-          case &#39;X&#39;:            /* back up byte */
-          shrink:
-            plen = RSTRING_LEN(res);
-            if (plen &lt; len)
-                rb_raise(rb_eArgError, &quot;X outside of string&quot;);
-            rb_str_set_len(res, plen - len);
-            break;
-
-          case &#39;@&#39;:            /* null fill to absolute position */
-            len -= RSTRING_LEN(res);
-            if (len &gt; 0) goto grow;
-            len = -len;
-            if (len &gt; 0) goto shrink;
-            break;
-
-          case &#39;%&#39;:
-            rb_raise(rb_eArgError, &quot;%% is not supported&quot;);
-            break;
-
-          case &#39;U&#39;:            /* Unicode character */
-            while (len-- &gt; 0) {
-                SIGNED_VALUE l;
-                char buf[8];
-                int le;
-
-                from = NEXTFROM;
-                from = rb_to_int(from);
-                l = NUM2LONG(from);
-                if (l &lt; 0) {
-                    rb_raise(rb_eRangeError, &quot;pack(U): value out of range&quot;);
-                }
-                le = rb_uv_to_utf8(buf, l);
-                rb_str_buf_cat(res, (char*)buf, le);
-            }
-            break;
-
-          case &#39;u&#39;:            /* uuencoded string */
-          case &#39;m&#39;:            /* base64 encoded string */
-            from = NEXTFROM;
-            StringValue(from);
-            ptr = RSTRING_PTR(from);
-            plen = RSTRING_LEN(from);
-            OBJ_INFECT(res, from);
-
-            if (len == 0 &amp;&amp; type == &#39;m&#39;) {
-                encodes(res, ptr, plen, type, 0);
-                ptr += plen;
-                break;
-            }
-            if (len &lt;= 2)
-                len = 45;
-            else if (len &gt; 63 &amp;&amp; type == &#39;u&#39;)
-                len = 63;
-            else
-                len = len / 3 * 3;
-            while (plen &gt; 0) {
-                long todo;
-
-                if (plen &gt; len)
-                    todo = len;
-                else
-                    todo = plen;
-                encodes(res, ptr, todo, type, 1);
-                plen -= todo;
-                ptr += todo;
-            }
-            break;
-
-          case &#39;M&#39;:            /* quoted-printable encoded string */
-            from = rb_obj_as_string(NEXTFROM);
-            OBJ_INFECT(res, from);
-            if (len &lt;= 1)
-                len = 72;
-            qpencode(res, from, len);
-            break;
-
-          case &#39;P&#39;:            /* pointer to packed byte string */
-            from = THISFROM;
-            if (!NIL_P(from)) {
-                StringValue(from);
-                if (RSTRING_LEN(from) &lt; len) {
-                    rb_raise(rb_eArgError, &quot;too short buffer for P(%ld for %ld)&quot;,
-                             RSTRING_LEN(from), len);
-                }
-            }
-            len = 1;
-            /* FALL THROUGH */
-          case &#39;p&#39;:            /* pointer to string */
-            while (len-- &gt; 0) {
-                char *t;
-                from = NEXTFROM;
-                if (NIL_P(from)) {
-                    t = 0;
-                }
-                else {
-                    t = StringValuePtr(from);
-                    OBJ_INFECT(res, from);
-                    rb_obj_taint(from);
-                }
-                if (!associates) {
-                    associates = rb_ary_new();
-                }
-                rb_ary_push(associates, from);
-                rb_str_buf_cat(res, (char*)&amp;t, sizeof(char*));
-            }
-            break;
-
-          case &#39;w&#39;:            /* BER compressed integer  */
-            while (len-- &gt; 0) {
-                VALUE buf = rb_str_new(0, 0);
-                size_t numbytes;
-                int sign;
-                char *cp;
-
-                from = NEXTFROM;
-                from = rb_to_int(from);
-                numbytes = rb_absint_numwords(from, 7, NULL);
-                if (numbytes == 0)
-                    numbytes = 1;
-                buf = rb_str_new(NULL, numbytes);
-
-                sign = rb_integer_pack(from, RSTRING_PTR(buf), RSTRING_LEN(buf), 1, 1, INTEGER_PACK_BIG_ENDIAN);
-
-                if (sign &lt; 0)
-                    rb_raise(rb_eArgError, &quot;can&#39;t compress negative numbers&quot;);
-                if (sign == 2)
-                    rb_bug(&quot;buffer size problem?&quot;);
-
-                cp = RSTRING_PTR(buf);
-                while (1 &lt; numbytes) {
-                    *cp |= 0x80;
-                    cp++;
-                    numbytes--;
-                }
-
-                rb_str_buf_cat(res, RSTRING_PTR(buf), RSTRING_LEN(buf));
-            }
-            break;
-
-          default: {
-            unknown_directive(&quot;pack&quot;, type, fmt);
-            break;
-          }
-        }
-    }
-
-    if (associates) {
-        str_associate(res, associates);
-    }
-    OBJ_INFECT(res, fmt);
-    switch (enc_info) {
-      case 1:
-        ENCODING_CODERANGE_SET(res, rb_usascii_encindex(), ENC_CODERANGE_7BIT);
-        break;
-      case 2:
-        rb_enc_set_index(res, rb_utf8_encindex());
-        break;
-      default:
-        /* do nothing, keep ASCII-8BIT */
-        break;
-    }
-    return res;
-}</pre>
+                <pre><span class="ruby-comment"># File ruby/pack.rb, line 133</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">pack</span>(<span class="ruby-identifier">fmt</span>, <span class="ruby-value">buffer:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">__builtin_pack_pack</span>(<span class="ruby-identifier">fmt</span>, <span class="ruby-identifier">buffer</span>)
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -6777,6 +6337,9 @@ rb_ary_rindex(int argc, VALUE *argv, VALUE ary)
         if (rb_equal(e, val)) {
             return LONG2NUM(i);
         }
+        if (i &gt; RARRAY_LEN(ary)) {
+            break;
+        }
     }
     return Qnil;
 }</pre>
@@ -7240,7 +6803,7 @@ rb_ary_select_bang(VALUE ary)
                 Source:
                 <a href="javascript:toggleSource('method-i-shelljoin_source')" id="l_method-i-shelljoin_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/shellwords.rb#L228" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/shellwords.rb#L228" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-shelljoin_source" class="dyn-source">
@@ -7632,6 +7195,11 @@ ary.sort                     #=&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;
 ary.sort {|a, b| b &lt;=&gt; a}    #=&gt; [&quot;e&quot;, &quot;d&quot;, &quot;c&quot;, &quot;b&quot;, &quot;a&quot;]
 </code></pre>
 
+<p>To produce the reverse order, the following can also be used (and may be faster):</p>
+
+<pre><code>ary.sort.reverse!             #=&gt; [&quot;e&quot;, &quot;d&quot;, &quot;c&quot;, &quot;b&quot;, &quot;a&quot;]
+</code></pre>
+
 <p>See also <a href="Enumerable.html#method-i-sort_by"><code>Enumerable#sort_by</code></a>.</p>
             </div>
           
@@ -7929,12 +7497,12 @@ rb_ary_sum(int argc, VALUE *argv, VALUE ary)
          * See http://link.springer.com/article/10.1007/s00607-005-0139-x
          */
         double f, c;
+        double x, t;
 
         f = NUM2DBL(v);
         c = 0.0;
         goto has_float_value;
         for (; i &lt; RARRAY_LEN(ary); i++) {
-            double x, t;
             e = RARRAY_AREF(ary, i);
             if (block_given)
                 e = rb_yield(e);
@@ -8185,7 +7753,7 @@ rb_ary_to_ary_m(VALUE ary)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_h">
             
-              <b>ary.to_h            &rarr; hash<br />ary.to_h { block }  &rarr; hash
+              <b>ary.to_h                  &rarr; hash<br />ary.to_h {|item| block }  &rarr; hash
 </b>
             
             <a href="../classes/Array.html#method-i-to_h" name="method-i-to_h" class="permalink">Link</a>
@@ -8259,7 +7827,7 @@ rb_ary_to_h(VALUE ary)
 
           
             <div class="description">
-              <p>Creates a string representation of <code>self</code>.</p>
+              <p>Creates a string representation of <code>self</code>, by calling <a href="Array.html#method-i-inspect"><code>inspect</code></a> on each element.</p>
 
 <pre><code>[ &quot;a&quot;, &quot;b&quot;, &quot;c&quot; ].to_s     #=&gt; &quot;[\&quot;a\&quot;, \&quot;b\&quot;, \&quot;c\&quot;]&quot;
 </code></pre>
@@ -8347,7 +7915,7 @@ rb_ary_transpose(VALUE ary)
         <div class="method">
           <h3 class="title method-title" id="method-i-union">
             
-              <b>ary.union(other_ary1, other_ary2, ...)   &rarr; ary
+              <b>ary.union(other_ary1, other_ary2, ...)   &rarr; new_ary
 </b>
             
             <a href="../classes/Array.html#method-i-union" name="method-i-union" class="permalink">Link</a>
@@ -8390,7 +7958,7 @@ rb_ary_union_multi(int argc, VALUE *argv, VALUE ary)
     VALUE hash, ary_union;
 
     sum = RARRAY_LEN(ary);
-    for (i = 0; i &lt; argc; i++){
+    for (i = 0; i &lt; argc; i++) {
         argv[i] = to_ary(argv[i]);
         sum += RARRAY_LEN(argv[i]);
     }
@@ -8463,9 +8031,11 @@ rb_ary_uniq(VALUE ary)
 {
     VALUE hash, uniq;
 
-    if (RARRAY_LEN(ary) &lt;= 1)
-        return rb_ary_dup(ary);
-    if (rb_block_given_p()) {
+    if (RARRAY_LEN(ary) &lt;= 1) {
+        hash = 0;
+        uniq = rb_ary_dup(ary);
+    }
+    else if (rb_block_given_p()) {
         hash = ary_make_hash_by(ary);
         uniq = rb_hash_values(hash);
     }
@@ -8474,7 +8044,9 @@ rb_ary_uniq(VALUE ary)
         uniq = rb_hash_values(hash);
     }
     RBASIC_SET_CLASS(uniq, rb_obj_class(ary));
-    ary_recycle_hash(hash);
+    if (hash) {
+        ary_recycle_hash(hash);
+    }
 
     return uniq;
 }</pre>

@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="A Range represents an interval—a set of values with a beginning and an end. Ranges may be constructed using the s..e and s...e literals, or with Range::new. Ranges constructed using ..">
   
 
-    <meta name="keywords" content="Range class, json_create, as_json, to_json, new, ==, ===, eql?, hash, each, step, %, bsearch, begin, end, first, last, min, max, size, to_a, entries, to_s, inspect, exclude_end?, member?, include?, cover?">
+    <meta name="keywords" content="Range class, json_create, as_json, to_json, new, ==, ===, eql?, hash, each, step, %, bsearch, begin, end, first, last, min, max, minmax, size, to_a, entries, to_s, inspect, exclude_end?, member?, include?, cover?, count">
 </head>
 
 <body>
@@ -100,7 +100,7 @@ document.addEventListener("turbolinks:load", function() {
   
     <div class="description">
       
-<p>A <code>Range</code> represents an interval—a set of values with a beginning and an end. Ranges may be constructed using the <em>s</em><code>..</code><em>e</em> and <em>s</em><code>...</code><em>e</em> literals, or with <a href="Range.html#method-c-new"><code>Range::new</code></a>. Ranges constructed using <code>..</code> run from the beginning to the end inclusively. Those created using <code>...</code> exclude the end value. When used as an iterator, ranges return each value in the sequence.</p>
+<p>A <a href="Range.html"><code>Range</code></a> represents an interval—a set of values with a beginning and an end. Ranges may be constructed using the <em>s</em><code>..</code><em>e</em> and <em>s</em><code>...</code><em>e</em> literals, or with <a href="Range.html#method-c-new"><code>Range::new</code></a>. Ranges constructed using <code>..</code> run from the beginning to the end inclusively. Those created using <code>...</code> exclude the end value. When used as an iterator, ranges return each value in the sequence.</p>
 
 <pre><code>(-1..-5).to_a      #=&gt; []
 (-5..-1).to_a      #=&gt; [-5, -4, -3, -2, -1]
@@ -108,9 +108,16 @@ document.addEventListener("turbolinks:load", function() {
 (&#39;a&#39;...&#39;e&#39;).to_a   #=&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;]
 </code></pre>
 
-<h2 id="class-Range-label-Endless+Ranges">Endless Ranges</h2>
+<h2 id="class-Range-label-Beginless-2FEndless+Ranges">Beginless/Endless Ranges</h2>
 
-<p>An “endless range” represents a semi-infinite range. Literal notation for an endless range is:</p>
+<p>A “beginless range” and “endless range” represents a semi-infinite range.  Literal notation for a beginless range is:</p>
+
+<pre><code>(..1)
+# or
+(...1)
+</code></pre>
+
+<p>Literal notation for an endless range is:</p>
 
 <pre><code>(1..)
 # or similarly
@@ -123,14 +130,17 @@ document.addEventListener("turbolinks:load", function() {
 Range.new(1, nil) # or Range.new(1, nil, true)
 </code></pre>
 
-<p>Endless ranges are useful, for example, for idiomatic slicing of arrays:</p>
+<p>Beginless/endless ranges are useful, for example, for idiomatic slicing of arrays:</p>
 
-<pre><code>[1, 2, 3, 4, 5][2...]   # =&gt; [3, 4, 5]
+<pre><code>[1, 2, 3, 4, 5][...2]   # =&gt; [1, 2]
+[1, 2, 3, 4, 5][2...]   # =&gt; [3, 4, 5]
 </code></pre>
 
 <p>Some implementation details:</p>
 <ul><li>
-<p><code>end</code> of endless range is <code>nil</code>;</p>
+<p><code>begin</code> of beginless range and <code>end</code> of endless range are <code>nil</code>;</p>
+</li><li>
+<p><code>each</code> of beginless range raises an exception;</p>
 </li><li>
 <p><code>each</code> of endless range enumerates infinite sequence (may be useful in combination with <a href="Enumerable.html#method-i-take_while"><code>Enumerable#take_while</code></a> or similar methods);</p>
 </li><li>
@@ -244,6 +254,11 @@ r.member?(Xs.new(5))       #=&gt; true
         <dt>C</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-count">count</a>,
+              </li>
             
               
               <li>
@@ -366,7 +381,12 @@ r.member?(Xs.new(5))       #=&gt; true
             
               
               <li>
-                <a href="#method-i-min">min</a>
+                <a href="#method-i-min">min</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-minmax">minmax</a>
               </li>
             
           </ul>
@@ -486,7 +506,7 @@ r.member?(Xs.new(5))       #=&gt; true
                 Source:
                 <a href="javascript:toggleSource('method-c-json_create_source')" id="l_method-c-json_create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/ext/json/lib/json/add/range.rb#L10" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/json/lib/json/add/range.rb#L10" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-json_create_source" class="dyn-source">
@@ -558,7 +578,7 @@ range_initialize(int argc, VALUE *argv, VALUE range)
 
           
             <div class="description">
-              <p>Iterates over the range, passing each <code>n</code>th element to the block. If begin and end are numeric, <code>n</code> is added for each iteration. Otherwise <code>step</code> invokes <code>succ</code> to iterate through range elements.</p>
+              <p>Iterates over the range, passing each <code>n</code>th element to the block. If begin and end are numeric, <code>n</code> is added for each iteration. Otherwise <a href="Range.html#method-i-step"><code>step</code></a> invokes succ to iterate through range elements.</p>
 
 <p>If no block is given, an enumerator is returned instead. Especially, the enumerator is an <a href="Enumerator/ArithmeticSequence.html"><code>Enumerator::ArithmeticSequence</code></a> if begin and end of the range are numeric.</p>
 
@@ -670,18 +690,22 @@ range_eq(VALUE range, VALUE obj)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>obj</code> is an element of the range, <code>false</code> otherwise.  Conveniently, <code>===</code> is the comparison operator used by <code>case</code> statements.</p>
+              <p>Returns <code>true</code> if <code>obj</code> is between begin and end of range, <code>false</code> otherwise (same as <a href="Range.html#method-i-cover-3F"><code>cover?</code></a>). Conveniently, <code>===</code> is the comparison operator used by <code>case</code> statements.</p>
 
 <pre><code>case 79
-when 1..50   then   print &quot;low\n&quot;
-when 51..75  then   print &quot;medium\n&quot;
-when 76..100 then   print &quot;high\n&quot;
+when 1..50   then   puts &quot;low&quot;
+when 51..75  then   puts &quot;medium&quot;
+when 76..100 then   puts &quot;high&quot;
 end
-</code></pre>
+# Prints &quot;high&quot;
 
-<p><em>produces:</em></p>
-
-<pre><code>high
+case &quot;2.6.5&quot;
+when ...&quot;2.4&quot; then puts &quot;EOL&quot;
+when &quot;2.4&quot;...&quot;2.5&quot; then puts &quot;maintenance&quot;
+when &quot;2.5&quot;...&quot;2.7&quot; then puts &quot;stable&quot;
+when &quot;2.7&quot;.. then puts &quot;upcoming&quot;
+end
+# Prints &quot;stable&quot;
 </code></pre>
             </div>
           
@@ -703,7 +727,7 @@ end
                 <pre>static VALUE
 range_eqq(VALUE range, VALUE val)
 {
-    VALUE ret = range_include_internal(range, val);
+    VALUE ret = range_include_internal(range, val, 1);
     if (ret != Qundef) return ret;
     return r_cover_p(range, RANGE_BEG(range), RANGE_END(range), val);
 }</pre>
@@ -738,7 +762,7 @@ range_eqq(VALUE range, VALUE val)
                 Source:
                 <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/ext/json/lib/json/add/range.rb#L16" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/json/lib/json/add/range.rb#L16" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-as_json_source" class="dyn-source">
@@ -919,8 +943,8 @@ range_bsearch(VALUE range)
     }
 #if SIZEOF_DOUBLE == 8 &amp;&amp; defined(HAVE_INT64_T)
     else if (RB_TYPE_P(beg, T_FLOAT) || RB_TYPE_P(end, T_FLOAT)) {
-        int64_t low  = double_as_int64(RFLOAT_VALUE(rb_Float(beg)));
-        int64_t high = double_as_int64(NIL_P(end) ? HUGE_VAL : RFLOAT_VALUE(rb_Float(end)));
+        int64_t low  = double_as_int64(NIL_P(beg) ? -HUGE_VAL : RFLOAT_VALUE(rb_Float(beg)));
+        int64_t high = double_as_int64(NIL_P(end) ?  HUGE_VAL : RFLOAT_VALUE(rb_Float(end)));
         int64_t mid, org_high;
         BSEARCH(int64_as_double_to_num);
     }
@@ -941,10 +965,81 @@ range_bsearch(VALUE range)
             diff = rb_funcall(diff, &#39;*&#39;, 1, LONG2FIX(2));
         }
     }
+    else if (NIL_P(beg) &amp;&amp; is_integer_p(end)) {
+        VALUE diff = LONG2FIX(-1);
+        RETURN_ENUMERATOR(range, 0, 0);
+        while (1) {
+            VALUE mid = rb_funcall(end, &#39;+&#39;, 1, diff);
+            BSEARCH_CHECK(mid);
+            if (!smaller) {
+                return bsearch_integer_range(mid, end, 0);
+            }
+            diff = rb_funcall(diff, &#39;*&#39;, 1, LONG2FIX(2));
+        }
+    }
     else {
         rb_raise(rb_eTypeError, &quot;can&#39;t do binary search for %s&quot;, rb_obj_classname(beg));
     }
     return range;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-count">
+            
+              <b>range.count                 &rarr; int<br />range.count(item)           &rarr; int<br />range.count { |obj| block } &rarr; int
+</b>
+            
+            <a href="../classes/Range.html#method-i-count" name="method-i-count" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Identical to <a href="Enumerable.html#method-i-count"><code>Enumerable#count</code></a>, except it returns Infinity for endless ranges.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-count_source')" id="l_method-i-count_source">show</a>
+                
+              </p>
+              <div id="method-i-count_source" class="dyn-source">
+                <pre>static VALUE
+range_count(int argc, VALUE *argv, VALUE range)
+{
+    if (argc != 0) {
+        /* It is odd for instance (1...).count(0) to return Infinity. Just let
+         * it loop. */
+        return rb_call_super(argc, argv);
+    }
+    else if (rb_block_given_p()) {
+        /* Likewise it is odd for instance (1...).count {|x| x == 0 } to return
+         * Infinity. Just let it loop. */
+        return rb_call_super(argc, argv);
+    }
+    else if (NIL_P(RANGE_END(range))) {
+        /* We are confident that the answer is Infinity. */
+        return DBL2NUM(HUGE_VAL);
+    }
+    else if (NIL_P(RANGE_BEG(range))) {
+        /* We are confident that the answer is Infinity. */
+        return DBL2NUM(HUGE_VAL);
+    }
+    else {
+        return rb_call_super(argc, argv);
+    }
 }</pre>
               </div>
             </div>
@@ -966,11 +1061,12 @@ range_bsearch(VALUE range)
 
 <p>This tests <code>begin &lt;= obj &lt;= end</code> when <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> is <code>false</code> and <code>begin &lt;= obj &lt; end</code> when <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> is <code>true</code>.</p>
 
-<p>If called with a <a href="Range.html"><code>Range</code></a> argument, returns <code>true</code> when the given range is covered by the receiver, by comparing the begin and end values. If the argument can be treated as a sequence, this method treats it that way. In the specific case of <code>(a..b).cover?(c...d)</code> with <code>a &lt;= c &amp;&amp; b &lt; d</code>, the end of the sequence must be calculated, which may exhibit poor performance if <code>c</code> is non-numeric. Returns <code>false</code> if the begin value of the range is larger than the end value.</p>
+<p>If called with a <a href="Range.html"><code>Range</code></a> argument, returns <code>true</code> when the given range is covered by the receiver, by comparing the begin and end values. If the argument can be treated as a sequence, this method treats it that way. In the specific case of <code>(a..b).cover?(c...d)</code> with <code>a &lt;= c &amp;&amp; b &lt; d</code>, the end of the sequence must be calculated, which may exhibit poor performance if <code>c</code> is non-numeric. Returns <code>false</code> if the begin value of the range is larger than the end value. Also returns <code>false</code> if one of the internal calls to <code>&lt;=&gt;</code> returns <code>nil</code> (indicating the objects are not comparable).</p>
 
 <pre><code>(&quot;a&quot;..&quot;z&quot;).cover?(&quot;c&quot;)  #=&gt; true
 (&quot;a&quot;..&quot;z&quot;).cover?(&quot;5&quot;)  #=&gt; false
 (&quot;a&quot;..&quot;z&quot;).cover?(&quot;cc&quot;) #=&gt; true
+(&quot;a&quot;..&quot;z&quot;).cover?(1)    #=&gt; false
 (1..5).cover?(2..3)     #=&gt; true
 (1..5).cover?(0..6)     #=&gt; false
 (1..5).cover?(1...6)    #=&gt; true
@@ -1363,6 +1459,9 @@ range_first(int argc, VALUE *argv, VALUE range)
 {
     VALUE n, ary[2];
 
+    if (NIL_P(RANGE_BEG(range))) {
+        rb_raise(rb_eRangeError, &quot;cannot get the first element of beginless range&quot;);
+    }
     if (argc == 0) return RANGE_BEG(range);
 
     rb_scan_args(argc, argv, &quot;1&quot;, &amp;n);
@@ -1390,7 +1489,7 @@ range_first(int argc, VALUE *argv, VALUE range)
             <div class="description">
               <p>Compute a hash-code for this range. Two ranges with equal begin and end points (using <code>eql?</code>), and the same <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> value will generate the same hash-code.</p>
 
-<p>See also Object#hash.</p>
+<p>See also <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
             </div>
           
 
@@ -1439,11 +1538,21 @@ range_hash(VALUE range)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>obj</code> is an element of the range, <code>false</code> otherwise.  If begin and end are numeric, comparison is done according to the magnitude of the values.</p>
+              <p>Returns <code>true</code> if <code>obj</code> is an element of the range, <code>false</code> otherwise.</p>
 
 <pre><code>(&quot;a&quot;..&quot;z&quot;).include?(&quot;g&quot;)   #=&gt; true
 (&quot;a&quot;..&quot;z&quot;).include?(&quot;A&quot;)   #=&gt; false
 (&quot;a&quot;..&quot;z&quot;).include?(&quot;cc&quot;)  #=&gt; false
+</code></pre>
+
+<p>If you need to ensure <code>obj</code> is between <code>begin</code> and <code>end</code>, use <a href="Range.html#method-i-cover-3F"><code>cover?</code></a></p>
+
+<pre><code>(&quot;a&quot;..&quot;z&quot;).cover?(&quot;cc&quot;)  #=&gt; true
+</code></pre>
+
+<p>If begin and end are numeric, <a href="Range.html#method-i-include-3F"><code>include?</code></a> behaves like <a href="Range.html#method-i-cover-3F"><code>cover?</code></a></p>
+
+<pre><code>(1..3).include?(1.5) # =&gt; true
 </code></pre>
             </div>
           
@@ -1470,7 +1579,7 @@ range_hash(VALUE range)
 
           
             <div class="description">
-              <p>Convert this range object to a printable form (using <code>inspect</code> to convert the begin and end objects).</p>
+              <p>Convert this range object to a printable form (using <a href="Range.html#method-i-inspect"><code>inspect</code></a> to convert the begin and end objects).</p>
             </div>
           
 
@@ -1538,10 +1647,19 @@ range_inspect(VALUE range)
                 <pre>static VALUE
 range_last(int argc, VALUE *argv, VALUE range)
 {
+    VALUE b, e;
+
     if (NIL_P(RANGE_END(range))) {
         rb_raise(rb_eRangeError, &quot;cannot get the last element of endless range&quot;);
     }
     if (argc == 0) return RANGE_END(range);
+
+    b = RANGE_BEG(range);
+    e = RANGE_END(range);
+    if (RB_INTEGER_TYPE_P(b) &amp;&amp; RB_INTEGER_TYPE_P(e) &amp;&amp;
+        RB_LIKELY(rb_method_basic_definition_p(rb_cRange, idEach))) {
+        return rb_int_range_last(argc, argv, range);
+    }
     return rb_ary_last(argc, argv, rb_Array(range));
 }</pre>
               </div>
@@ -1594,6 +1712,9 @@ range_max(int argc, VALUE *argv, VALUE range)
     }
 
     if (rb_block_given_p() || (EXCL(range) &amp;&amp; !nm) || argc) {
+        if (NIL_P(RANGE_BEG(range))) {
+            rb_raise(rb_eRangeError, &quot;cannot get the maximum of beginless range with custom comparison method&quot;);
+        }
         return rb_call_super(argc, argv);
     }
     else {
@@ -1634,11 +1755,21 @@ range_max(int argc, VALUE *argv, VALUE range)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>obj</code> is an element of the range, <code>false</code> otherwise.  If begin and end are numeric, comparison is done according to the magnitude of the values.</p>
+              <p>Returns <code>true</code> if <code>obj</code> is an element of the range, <code>false</code> otherwise.</p>
 
 <pre><code>(&quot;a&quot;..&quot;z&quot;).include?(&quot;g&quot;)   #=&gt; true
 (&quot;a&quot;..&quot;z&quot;).include?(&quot;A&quot;)   #=&gt; false
 (&quot;a&quot;..&quot;z&quot;).include?(&quot;cc&quot;)  #=&gt; false
+</code></pre>
+
+<p>If you need to ensure <code>obj</code> is between <code>begin</code> and <code>end</code>, use <a href="Range.html#method-i-cover-3F"><code>cover?</code></a></p>
+
+<pre><code>(&quot;a&quot;..&quot;z&quot;).cover?(&quot;cc&quot;)  #=&gt; true
+</code></pre>
+
+<p>If begin and end are numeric, <a href="Range.html#method-i-include-3F"><code>include?</code></a> behaves like <a href="Range.html#method-i-cover-3F"><code>cover?</code></a></p>
+
+<pre><code>(1..3).include?(1.5) # =&gt; true
 </code></pre>
             </div>
           
@@ -1664,7 +1795,7 @@ range_max(int argc, VALUE *argv, VALUE range)
                 <pre>static VALUE
 range_include(VALUE range, VALUE val)
 {
-    VALUE ret = range_include_internal(range, val);
+    VALUE ret = range_include_internal(range, val, 0);
     if (ret != Qundef) return ret;
     return rb_call_super(1, &amp;val);
 }</pre>
@@ -1710,6 +1841,10 @@ range_include(VALUE range, VALUE val)
                 <pre>static VALUE
 range_min(int argc, VALUE *argv, VALUE range)
 {
+    if (NIL_P(RANGE_BEG(range))) {
+        rb_raise(rb_eRangeError, &quot;cannot get the minimum of beginless range&quot;);
+    }
+
     if (rb_block_given_p()) {
         if (NIL_P(RANGE_END(range))) {
             rb_raise(rb_eRangeError, &quot;cannot get the minimum of endless range with custom comparison method&quot;);
@@ -1729,6 +1864,53 @@ range_min(int argc, VALUE *argv, VALUE range)
             return Qnil;
         return b;
     }
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-minmax">
+            
+              <b>rng.minmax                       &rarr; [obj, obj]<br />rng.minmax {| a,b | block }      &rarr; [obj, obj]
+</b>
+            
+            <a href="../classes/Range.html#method-i-minmax" name="method-i-minmax" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a two element array which contains the minimum and the maximum value in the range.</p>
+
+<p>Can be given an optional block to override the default comparison method <code>a &lt;=&gt; b</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-minmax_source')" id="l_method-i-minmax_source">show</a>
+                
+              </p>
+              <div id="method-i-minmax_source" class="dyn-source">
+                <pre>static VALUE
+range_minmax(VALUE range)
+{
+    if (rb_block_given_p()) {
+        return rb_call_super(0, NULL);
+    }
+    return rb_assoc_new(
+        rb_funcall(range, id_min, 0),
+        rb_funcall(range, id_max, 0)
+    );
 }</pre>
               </div>
             </div>
@@ -1781,6 +1963,9 @@ range_size(VALUE range)
             return DBL2NUM(HUGE_VAL);
         }
     }
+    else if (NIL_P(b)) {
+        return DBL2NUM(HUGE_VAL);
+    }
 
     return Qnil;
 }</pre>
@@ -1800,7 +1985,7 @@ range_size(VALUE range)
 
           
             <div class="description">
-              <p>Iterates over the range, passing each <code>n</code>th element to the block. If begin and end are numeric, <code>n</code> is added for each iteration. Otherwise <code>step</code> invokes <code>succ</code> to iterate through range elements.</p>
+              <p>Iterates over the range, passing each <code>n</code>th element to the block. If begin and end are numeric, <code>n</code> is added for each iteration. Otherwise <a href="Range.html#method-i-step"><code>step</code></a> invokes succ to iterate through range elements.</p>
 
 <p>If no block is given, an enumerator is returned instead. Especially, the enumerator is an <a href="Enumerator/ArithmeticSequence.html"><code>Enumerator::ArithmeticSequence</code></a> if begin and end of the range are numeric.</p>
 
@@ -1852,7 +2037,9 @@ range_step(int argc, VALUE *argv, VALUE range)
     step = (!rb_check_arity(argc, 0, 1) ? INT2FIX(1) : argv[0]);
 
     if (!rb_block_given_p()) {
-        if (rb_obj_is_kind_of(b, rb_cNumeric) &amp;&amp; (NIL_P(e) || rb_obj_is_kind_of(e, rb_cNumeric))) {
+        const VALUE b_num_p = rb_obj_is_kind_of(b, rb_cNumeric);
+        const VALUE e_num_p = rb_obj_is_kind_of(e, rb_cNumeric);
+        if ((b_num_p &amp;&amp; (NIL_P(e) || e_num_p)) || (NIL_P(b) &amp;&amp; e_num_p)) {
             return rb_arith_seq_new(range, ID2SYM(rb_frame_this_func()), argc, argv,
                     range_step_size, b, e, step, EXCL(range));
         }
@@ -2027,7 +2214,7 @@ range_to_a(VALUE range)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_json_source')" id="l_method-i-to_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/ext/json/lib/json/add/range.rb#L26" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/json/lib/json/add/range.rb#L26" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_json_source" class="dyn-source">
@@ -2079,7 +2266,6 @@ range_to_s(VALUE range)
     str = rb_str_dup(str);
     rb_str_cat(str, &quot;...&quot;, EXCL(range) ? 3 : 2);
     rb_str_append(str, str2);
-    OBJ_INFECT(str, range);
 
     return str;
 }</pre>

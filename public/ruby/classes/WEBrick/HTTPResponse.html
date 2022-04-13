@@ -276,7 +276,24 @@ document.addEventListener("turbolinks:load", function() {
               [RW]
             </td>
             <td class='attr-name'>body</td>
-            <td class='attr-desc'><p>Body may be a <a href="../String.html"><code>String</code></a> or IO-like object that responds to read and readpartial.</p></td>
+            <td class='attr-desc'><p>Body may be:</p>
+<ul><li>
+<p>a <a href="../String.html"><code>String</code></a>;</p>
+</li><li>
+<p>an IO-like object that responds to <code>#read</code> and <code>#readpartial</code>;</p>
+</li><li>
+<p>a Proc-like object that responds to <code>#call</code>.</p>
+</li></ul>
+
+<p>In the latter case, either <a href="HTTPResponse.html#method-i-chunked-3D"><code>chunked=</code></a> should be set to <code>true</code>, or <code>header[&#39;content-length&#39;]</code> explicitly provided. Example:</p>
+
+<pre><code>server.mount_proc &#39;/&#39; do |req, res|
+  res.chunked = true
+  # or
+  # res.header[&#39;content-length&#39;] = 10
+  res.body = proc { |out| out.write(Time.now.to_s) }
+end
+</code></pre></td>
           </tr>
         
           <tr valign='top'>
@@ -409,11 +426,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L99" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L112" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 99</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 112</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">config</span>)
   <span class="ruby-ivar">@config</span> = <span class="ruby-identifier">config</span>
   <span class="ruby-ivar">@buffer_size</span> = <span class="ruby-identifier">config</span>[<span class="ruby-value">:OutputBufferSize</span>]
@@ -431,6 +448,7 @@ document.addEventListener("turbolinks:load", function() {
   <span class="ruby-ivar">@chunked</span> = <span class="ruby-keyword">false</span>
   <span class="ruby-ivar">@filename</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-ivar">@sent_size</span> = <span class="ruby-value">0</span>
+  <span class="ruby-ivar">@bodytempfile</span> = <span class="ruby-keyword">nil</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -467,11 +485,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L136" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L150" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-5B-5D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 136</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 150</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]</span>(<span class="ruby-identifier">field</span>)
   <span class="ruby-ivar">@header</span>[<span class="ruby-identifier">field</span>.<span class="ruby-identifier">downcase</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -506,12 +524,13 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-5B-5D-3D_source')" id="l_method-i-5B-5D-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L143" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L157" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-5B-5D-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 143</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 157</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]=</span>(<span class="ruby-identifier">field</span>, <span class="ruby-identifier">value</span>)
+  <span class="ruby-ivar">@chunked</span> = <span class="ruby-identifier">value</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">downcase</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;chunked&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">field</span>.<span class="ruby-identifier">downcase</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;transfer-encoding&#39;</span>
   <span class="ruby-ivar">@header</span>[<span class="ruby-identifier">field</span>.<span class="ruby-identifier">downcase</span>] = <span class="ruby-identifier">value</span>.<span class="ruby-identifier">to_s</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -545,11 +564,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-chunked-3D_source')" id="l_method-i-chunked-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L194" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L209" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-chunked-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 194</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 209</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">chunked=</span>(<span class="ruby-identifier">val</span>)
   <span class="ruby-ivar">@chunked</span> = <span class="ruby-identifier">val</span> <span class="ruby-operator">?</span> <span class="ruby-keyword">true</span> <span class="ruby-operator">:</span> <span class="ruby-keyword">false</span>
 <span class="ruby-keyword">end</span></pre>
@@ -584,11 +603,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-chunked-3F_source')" id="l_method-i-chunked-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L187" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L202" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-chunked-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 187</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 202</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">chunked?</span>
   <span class="ruby-ivar">@chunked</span>
 <span class="ruby-keyword">end</span></pre>
@@ -623,11 +642,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-content_length_source')" id="l_method-i-content_length_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L150" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L165" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-content_length_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 150</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 165</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">content_length</span>
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">len</span> = <span class="ruby-keyword">self</span>[<span class="ruby-string">&#39;content-length&#39;</span>]
     <span class="ruby-keyword">return</span> <span class="ruby-constant">Integer</span>(<span class="ruby-identifier">len</span>)
@@ -664,11 +683,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-content_length-3D_source')" id="l_method-i-content_length-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L159" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L174" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-content_length-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 159</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 174</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">content_length=</span>(<span class="ruby-identifier">len</span>)
   <span class="ruby-keyword">self</span>[<span class="ruby-string">&#39;content-length&#39;</span>] = <span class="ruby-identifier">len</span>.<span class="ruby-identifier">to_s</span>
 <span class="ruby-keyword">end</span></pre>
@@ -703,11 +722,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-content_type_source')" id="l_method-i-content_type_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L166" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L181" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-content_type_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 166</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 181</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">content_type</span>
   <span class="ruby-keyword">self</span>[<span class="ruby-string">&#39;content-type&#39;</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -742,11 +761,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-content_type-3D_source')" id="l_method-i-content_type-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L173" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L188" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-content_type-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 173</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 188</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">content_type=</span>(<span class="ruby-identifier">type</span>)
   <span class="ruby-keyword">self</span>[<span class="ruby-string">&#39;content-type&#39;</span>] = <span class="ruby-identifier">type</span>
 <span class="ruby-keyword">end</span></pre>
@@ -781,11 +800,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-each_source')" id="l_method-i-each_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L180" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L195" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-each_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 180</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 195</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">each</span>
   <span class="ruby-ivar">@header</span>.<span class="ruby-identifier">each</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">field</span>, <span class="ruby-identifier">value</span><span class="ruby-operator">|</span>  <span class="ruby-keyword">yield</span>(<span class="ruby-identifier">field</span>, <span class="ruby-identifier">value</span>) }
 <span class="ruby-keyword">end</span></pre>
@@ -820,11 +839,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-keep_alive-3F_source')" id="l_method-i-keep_alive-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L201" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L216" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-keep_alive-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 201</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 216</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">keep_alive?</span>
   <span class="ruby-ivar">@keep_alive</span>
 <span class="ruby-keyword">end</span></pre>
@@ -859,11 +878,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-set_error_source')" id="l_method-i-set_error_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L344" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L383" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-set_error_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 344</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 383</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set_error</span>(<span class="ruby-identifier">ex</span>, <span class="ruby-identifier">backtrace</span>=<span class="ruby-keyword">false</span>)
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">ex</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">HTTPStatus</span><span class="ruby-operator">::</span><span class="ruby-constant">Status</span>
@@ -924,11 +943,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-set_redirect_source')" id="l_method-i-set_redirect_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L334" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L373" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-set_redirect_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 334</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 373</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set_redirect</span>(<span class="ruby-identifier">status</span>, <span class="ruby-identifier">url</span>)
   <span class="ruby-identifier">url</span> = <span class="ruby-constant">URI</span>(<span class="ruby-identifier">url</span>).<span class="ruby-identifier">to_s</span>
   <span class="ruby-ivar">@body</span> = <span class="ruby-node">&quot;&lt;HTML&gt;&lt;A HREF=\&quot;#{url}\&quot;&gt;#{url}&lt;/A&gt;.&lt;/HTML&gt;\n&quot;</span>
@@ -966,11 +985,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-status-3D_source')" id="l_method-i-status-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L128" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L142" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-status-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 128</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 142</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">status=</span>(<span class="ruby-identifier">status</span>)
   <span class="ruby-ivar">@status</span> = <span class="ruby-identifier">status</span>
   <span class="ruby-ivar">@reason_phrase</span> = <span class="ruby-constant">HTTPStatus</span><span class="ruby-operator">::</span><span class="ruby-identifier">reason_phrase</span>(<span class="ruby-identifier">status</span>)
@@ -1006,13 +1025,13 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-status_line_source')" id="l_method-i-status_line_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/webrick/httpresponse.rb#L121" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/webrick/httpresponse.rb#L135" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-status_line_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 121</span>
+                <pre><span class="ruby-comment"># File ruby/lib/webrick/httpresponse.rb, line 135</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">status_line</span>
-  <span class="ruby-node">&quot;HTTP/#@http_version #@status #@reason_phrase #{CRLF}&quot;</span>
+  <span class="ruby-string">&quot;HTTP/#@http_version #@status #@reason_phrase&quot;</span>.<span class="ruby-identifier">rstrip</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-constant">CRLF</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>

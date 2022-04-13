@@ -264,14 +264,15 @@ document.addEventListener("turbolinks:load", function() {
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>StoreContext.new(store, cert = nil, chain = nil)</b>
+              <b>StoreContext.new(store, cert = nil, untrusted = nil)
+</b>
             
             <a href="../../../classes/OpenSSL/X509/StoreContext.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Sets up a <a href="StoreContext.html"><code>StoreContext</code></a> for a verification of the X.509 certificate <em>cert</em>.</p>
             </div>
           
 
@@ -297,15 +298,24 @@ ossl_x509stctx_initialize(int argc, VALUE *argv, VALUE self)
     X509_STORE *x509st;
     X509 *x509 = NULL;
     STACK_OF(X509) *x509s = NULL;
+    int state;
 
     rb_scan_args(argc, argv, &quot;12&quot;, &amp;store, &amp;cert, &amp;chain);
     GetX509StCtx(self, ctx);
     GetX509Store(store, x509st);
-    if(!NIL_P(cert)) x509 = DupX509CertPtr(cert); /* NEED TO DUP */
-    if(!NIL_P(chain)) x509s = ossl_x509_ary2sk(chain);
-    if(X509_STORE_CTX_init(ctx, x509st, x509, x509s) != 1){
+    if (!NIL_P(cert))
+        x509 = DupX509CertPtr(cert); /* NEED TO DUP */
+    if (!NIL_P(chain)) {
+        x509s = ossl_protect_x509_ary2sk(chain, &amp;state);
+        if (state) {
+            X509_free(x509);
+            rb_jump_tag(state);
+        }
+    }
+    if (X509_STORE_CTX_init(ctx, x509st, x509, x509s) != 1){
+        X509_free(x509);
         sk_X509_pop_free(x509s, X509_free);
-        ossl_raise(eX509StoreError, NULL);
+        ossl_raise(eX509StoreError, &quot;X509_STORE_CTX_init&quot;);
     }
     if (!NIL_P(t = rb_iv_get(store, &quot;@time&quot;)))
         ossl_x509stctx_set_time(self, t);
@@ -407,7 +417,7 @@ ossl_x509stctx_get_chain(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-cleanup_source')" id="l_method-i-cleanup_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/ext/openssl/lib/openssl/x509.rb#L176" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/openssl/lib/openssl/x509.rb#L176" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-cleanup_source" class="dyn-source">

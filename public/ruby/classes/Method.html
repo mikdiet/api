@@ -96,7 +96,7 @@ document.addEventListener("turbolinks:load", function() {
   
     <div class="description">
       
-<p><a href="Method.html"><code>Method</code></a> objects are created by <code>Object#method</code>, and are associated with a particular object (not just with a class). They may be used to invoke the method within the object, and as a block associated with an iterator. They may also be unbound from one object (creating an <code>UnboundMethod</code>) and bound to another.</p>
+<p><a href="Method.html"><code>Method</code></a> objects are created by <a href="Object.html#method-i-method"><code>Object#method</code></a>, and are associated with a particular object (not just with a class).  They may be used to invoke the method within the object, and as a block associated with an iterator.  They may also be unbound from one object (creating an <a href="UnboundMethod.html"><code>UnboundMethod</code></a>) and bound to another.</p>
 
 <pre><code>class Thing
   def square(n)
@@ -401,8 +401,9 @@ p (f &lt;&lt; g).call(2) #=&gt; 16
                 <pre>static VALUE
 rb_method_compose_to_left(VALUE self, VALUE g)
 {
-    VALUE proc = method_to_proc(self);
-    return proc_compose_to_left(proc, g);
+    g = to_callable(g);
+    self = method_to_proc(self);
+    return proc_compose_to_left(self, g);
 }</pre>
               </div>
             </div>
@@ -544,8 +545,9 @@ p (f &gt;&gt; g).call(2) #=&gt; 8
                 <pre>static VALUE
 rb_method_compose_to_right(VALUE self, VALUE g)
 {
-    VALUE proc = method_to_proc(self);
-    return proc_compose_to_right(proc, g);
+    g = to_callable(g);
+    self = method_to_proc(self);
+    return proc_compose_to_right(self, g);
 }</pre>
               </div>
             </div>
@@ -689,11 +691,11 @@ m.call(20)   #=&gt; 32
                 
               </p>
               <div id="method-i-call_source" class="dyn-source">
-                <pre>VALUE
-rb_method_call(int argc, const VALUE *argv, VALUE method)
+                <pre>static VALUE
+rb_method_call_pass_called_kw(int argc, const VALUE *argv, VALUE method)
 {
     VALUE procval = rb_block_given_p() ? rb_block_proc() : Qnil;
-    return rb_method_call_with_block(argc, argv, method, procval);
+    return rb_method_call_with_block_kw(argc, argv, method, procval, RB_PASS_CALLED_KEYWORDS);
 }</pre>
               </div>
             </div>
@@ -751,6 +753,7 @@ method_clone(VALUE self)
     CLONESETUP(clone, self);
     RB_OBJ_WRITE(clone, &amp;data-&gt;recv, orig-&gt;recv);
     RB_OBJ_WRITE(clone, &amp;data-&gt;klass, orig-&gt;klass);
+    RB_OBJ_WRITE(clone, &amp;data-&gt;iclass, orig-&gt;iclass);
     RB_OBJ_WRITE(clone, &amp;data-&gt;me, rb_method_entry_clone(orig-&gt;me));
     return clone;
 }</pre>
@@ -857,7 +860,7 @@ rb_method_curry(int argc, const VALUE *argv, VALUE self)
             <div class="description">
               <p>Returns a hash value corresponding to the method object.</p>
 
-<p>See also Object#hash.</p>
+<p>See also <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
             </div>
           
 
@@ -905,11 +908,26 @@ method_hash(VALUE method)
             <div class="description">
               <p>Returns a human-readable description of the underlying method.</p>
 
-<pre><code>&quot;cat&quot;.method(:count).inspect   #=&gt; &quot;#&lt;Method: String#count&gt;&quot;
-(1..3).method(:map).inspect    #=&gt; &quot;#&lt;Method: Range(Enumerable)#map&gt;&quot;
+<pre><code>&quot;cat&quot;.method(:count).inspect   #=&gt; &quot;#&lt;Method: String#count(*)&gt;&quot;
+(1..3).method(:map).inspect    #=&gt; &quot;#&lt;Method: Range(Enumerable)#map()&gt;&quot;
 </code></pre>
 
 <p>In the latter case, the method description includes the “owner” of the original method (<code>Enumerable</code> module, which is included into <code>Range</code>).</p>
+
+<p><code>inspect</code> also provides, when possible, method argument names (call sequence) and source location.</p>
+
+<pre><code>require &#39;net/http&#39;
+Net::HTTP.method(:get).inspect
+#=&gt; &quot;#&lt;Method: Net::HTTP.get(uri_or_host, path=..., port=...) &lt;skip&gt;/lib/ruby/2.7.0/net/http.rb:457&gt;&quot;
+</code></pre>
+
+<p><code>...</code> in argument definition means argument is optional (has some default value).</p>
+
+<p>For methods defined in C (language core and extensions), location and argument names can&#39;t be extracted, and only generic information is provided in form of <code>*</code> (any number of arguments) or <code>_</code> (some positional argument).</p>
+
+<pre><code>&quot;cat&quot;.method(:count).inspect   #=&gt; &quot;#&lt;Method: String#count(*)&gt;&quot;
+&quot;cat&quot;.method(:+).inspect       #=&gt; &quot;#&lt;Method: String#+(_)&gt;&quot;&quot;
+</code></pre>
             </div>
           
 
@@ -942,10 +960,16 @@ method_inspect(VALUE method)
 
     TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
     str = rb_sprintf(&quot;#&lt;% &quot;PRIsVALUE&quot;: &quot;, rb_obj_class(method));
-    OBJ_INFECT_RAW(str, method);
 
-    mklass = data-&gt;iclass;
-    if (!mklass) mklass = data-&gt;klass;
+    mklass = data-&gt;klass;
+
+    if (RB_TYPE_P(mklass, T_ICLASS)) {
+        /* TODO: I&#39;m not sure why mklass is T_ICLASS.
+         * UnboundMethod#bind() can set it as T_ICLASS at convert_umethod_to_method_components()
+         * but not sure it is needed.
+         */
+        mklass = RBASIC_CLASS(mklass);
+    }
 
     if (data-&gt;me-&gt;def-&gt;type == VM_METHOD_TYPE_ALIAS) {
         defined_class = data-&gt;me-&gt;def-&gt;body.alias.original_me-&gt;owner;
@@ -977,12 +1001,6 @@ method_inspect(VALUE method)
         }
     }
     else {
-        mklass = data-&gt;klass;
-        if (FL_TEST(mklass, FL_SINGLETON)) {
-            do {
-               mklass = RCLASS_SUPER(mklass);
-            } while (RB_TYPE_P(mklass, T_ICLASS));
-        }
         rb_str_buf_append(str, rb_inspect(mklass));
         if (defined_class != mklass) {
             rb_str_catf(str, &quot;(% &quot;PRIsVALUE&quot;)&quot;, defined_class);
@@ -997,6 +1015,100 @@ method_inspect(VALUE method)
     if (data-&gt;me-&gt;def-&gt;type == VM_METHOD_TYPE_NOTIMPLEMENTED) {
         rb_str_buf_cat2(str, &quot; (not-implemented)&quot;);
     }
+
+    // parameter information
+    {
+        VALUE params = rb_method_parameters(method);
+        VALUE pair, name, kind;
+        const VALUE req = ID2SYM(rb_intern(&quot;req&quot;));
+        const VALUE opt = ID2SYM(rb_intern(&quot;opt&quot;));
+        const VALUE keyreq = ID2SYM(rb_intern(&quot;keyreq&quot;));
+        const VALUE key = ID2SYM(rb_intern(&quot;key&quot;));
+        const VALUE rest = ID2SYM(rb_intern(&quot;rest&quot;));
+        const VALUE keyrest = ID2SYM(rb_intern(&quot;keyrest&quot;));
+        const VALUE block = ID2SYM(rb_intern(&quot;block&quot;));
+        const VALUE nokey = ID2SYM(rb_intern(&quot;nokey&quot;));
+        int forwarding = 0;
+
+        rb_str_buf_cat2(str, &quot;(&quot;);
+
+        for (int i = 0; i &lt; RARRAY_LEN(params); i++) {
+            pair = RARRAY_AREF(params, i);
+            kind = RARRAY_AREF(pair, 0);
+            name = RARRAY_AREF(pair, 1);
+            // FIXME: in tests it turns out that kind, name = [:req] produces name to be false. Why?..
+            if (NIL_P(name) || name == Qfalse) {
+                // FIXME: can it be reduced to switch/case?
+                if (kind == req || kind == opt) {
+                    name = rb_str_new2(&quot;_&quot;);
+                }
+                else if (kind == rest || kind == keyrest) {
+                    name = rb_str_new2(&quot;&quot;);
+                }
+                else if (kind == block) {
+                    name = rb_str_new2(&quot;block&quot;);
+                }
+                else if (kind == nokey) {
+                    name = rb_str_new2(&quot;nil&quot;);
+                }
+            }
+
+            if (kind == req) {
+                rb_str_catf(str, &quot;%&quot;PRIsVALUE, name);
+            }
+            else if (kind == opt) {
+                rb_str_catf(str, &quot;%&quot;PRIsVALUE&quot;=...&quot;, name);
+            }
+            else if (kind == keyreq) {
+                rb_str_catf(str, &quot;%&quot;PRIsVALUE&quot;:&quot;, name);
+            }
+            else if (kind == key) {
+                rb_str_catf(str, &quot;%&quot;PRIsVALUE&quot;: ...&quot;, name);
+            }
+            else if (kind == rest) {
+                if (name == ID2SYM(&#39;*&#39;)) {
+                    forwarding = 1;
+                    rb_str_cat_cstr(str, &quot;...&quot;);
+                }
+                else {
+                    rb_str_catf(str, &quot;*%&quot;PRIsVALUE, name);
+                }
+            }
+            else if (kind == keyrest) {
+                rb_str_catf(str, &quot;**%&quot;PRIsVALUE, name);
+            }
+            else if (kind == block) {
+                if (name == ID2SYM(&#39;&amp;&#39;)) {
+                    if (forwarding) {
+                        rb_str_set_len(str, RSTRING_LEN(str) - 2);
+                    }
+                    else {
+                        rb_str_cat_cstr(str, &quot;...&quot;);
+                    }
+                }
+                else {
+                    rb_str_catf(str, &quot;&amp;%&quot;PRIsVALUE, name);
+                }
+            }
+            else if (kind == nokey) {
+                rb_str_buf_cat2(str, &quot;**nil&quot;);
+            }
+
+            if (i &lt; RARRAY_LEN(params) - 1) {
+                rb_str_buf_cat2(str, &quot;, &quot;);
+            }
+        }
+        rb_str_buf_cat2(str, &quot;)&quot;);
+    }
+
+    { // source location
+        VALUE loc = rb_method_location(method);
+        if (!NIL_P(loc)) {
+            rb_str_catf(str, &quot; %&quot;PRIsVALUE&quot;:%&quot;PRIsVALUE,
+                        RARRAY_AREF(loc, 0), RARRAY_AREF(loc, 1));
+        }
+    }
+
     rb_str_buf_cat2(str, &quot;&gt;&quot;);
 
     return str;
@@ -1108,7 +1220,7 @@ method_original_name(VALUE obj)
 
           
             <div class="description">
-              <p>Returns the class or module that defines the method. See also receiver.</p>
+              <p>Returns the class or module that defines the method. See also <a href="Method.html#method-i-receiver"><code>Method#receiver</code></a>.</p>
 
 <pre><code>(1..3).method(:map).owner #=&gt; Enumerable
 </code></pre>
@@ -1321,7 +1433,7 @@ method_super_method(VALUE method)
     TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
     iclass = data-&gt;iclass;
     if (!iclass) return Qnil;
-    if (data-&gt;me-&gt;def-&gt;type == VM_METHOD_TYPE_ALIAS) {
+    if (data-&gt;me-&gt;def-&gt;type == VM_METHOD_TYPE_ALIAS &amp;&amp; data-&gt;me-&gt;defined_class) {
         super_class = RCLASS_SUPER(rb_find_defined_class_by_owner(data-&gt;me-&gt;defined_class,
             data-&gt;me-&gt;def-&gt;body.alias.original_me-&gt;owner));
         mid = data-&gt;me-&gt;def-&gt;body.alias.original_me-&gt;def-&gt;original_id;
@@ -1331,7 +1443,7 @@ method_super_method(VALUE method)
         mid = data-&gt;me-&gt;def-&gt;original_id;
     }
     if (!super_class) return Qnil;
-    me = (rb_method_entry_t *)rb_callable_method_entry_without_refinements(super_class, mid, &amp;iclass);
+    me = (rb_method_entry_t *)rb_callable_method_entry_with_refinements(super_class, mid, &amp;iclass);
     if (!me) return Qnil;
     return mnew_internal(me, me-&gt;owner, iclass, data-&gt;recv, mid, rb_obj_class(method), FALSE, FALSE);
 }</pre>
@@ -1351,7 +1463,7 @@ method_super_method(VALUE method)
 
           
             <div class="description">
-              <p>Returns a <code>Proc</code> object corresponding to this method.</p>
+              <p>Returns a <a href="Proc.html"><code>Proc</code></a> object corresponding to this method.</p>
             </div>
           
 
@@ -1406,11 +1518,26 @@ method_to_proc(VALUE method)
             <div class="description">
               <p>Returns a human-readable description of the underlying method.</p>
 
-<pre><code>&quot;cat&quot;.method(:count).inspect   #=&gt; &quot;#&lt;Method: String#count&gt;&quot;
-(1..3).method(:map).inspect    #=&gt; &quot;#&lt;Method: Range(Enumerable)#map&gt;&quot;
+<pre><code>&quot;cat&quot;.method(:count).inspect   #=&gt; &quot;#&lt;Method: String#count(*)&gt;&quot;
+(1..3).method(:map).inspect    #=&gt; &quot;#&lt;Method: Range(Enumerable)#map()&gt;&quot;
 </code></pre>
 
 <p>In the latter case, the method description includes the “owner” of the original method (<code>Enumerable</code> module, which is included into <code>Range</code>).</p>
+
+<p><code>inspect</code> also provides, when possible, method argument names (call sequence) and source location.</p>
+
+<pre><code>require &#39;net/http&#39;
+Net::HTTP.method(:get).inspect
+#=&gt; &quot;#&lt;Method: Net::HTTP.get(uri_or_host, path=..., port=...) &lt;skip&gt;/lib/ruby/2.7.0/net/http.rb:457&gt;&quot;
+</code></pre>
+
+<p><code>...</code> in argument definition means argument is optional (has some default value).</p>
+
+<p>For methods defined in C (language core and extensions), location and argument names can&#39;t be extracted, and only generic information is provided in form of <code>*</code> (any number of arguments) or <code>_</code> (some positional argument).</p>
+
+<pre><code>&quot;cat&quot;.method(:count).inspect   #=&gt; &quot;#&lt;Method: String#count(*)&gt;&quot;
+&quot;cat&quot;.method(:+).inspect       #=&gt; &quot;#&lt;Method: String#+(_)&gt;&quot;&quot;
+</code></pre>
             </div>
           
 
@@ -1436,7 +1563,7 @@ method_to_proc(VALUE method)
 
           
             <div class="description">
-              <p>Dissociates <em>meth</em> from its current receiver. The resulting <code>UnboundMethod</code> can subsequently be bound to a new object of the same class (see <code>UnboundMethod</code>).</p>
+              <p>Dissociates <em>meth</em> from its current receiver. The resulting <a href="UnboundMethod.html"><code>UnboundMethod</code></a> can subsequently be bound to a new object of the same class (see <a href="UnboundMethod.html"><code>UnboundMethod</code></a>).</p>
             </div>
           
 
@@ -1465,8 +1592,8 @@ method_unbind(VALUE obj)
                                    &amp;method_data_type, data);
     RB_OBJ_WRITE(method, &amp;data-&gt;recv, Qundef);
     RB_OBJ_WRITE(method, &amp;data-&gt;klass, orig-&gt;klass);
+    RB_OBJ_WRITE(method, &amp;data-&gt;iclass, orig-&gt;iclass);
     RB_OBJ_WRITE(method, &amp;data-&gt;me, rb_method_entry_clone(orig-&gt;me));
-    OBJ_INFECT(method, obj);
 
     return method;
 }</pre>

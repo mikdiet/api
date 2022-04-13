@@ -43,8 +43,8 @@ document.addEventListener("turbolinks:load", function() {
 
   
     
-    <meta name="description" content="Module to handle processes.">
-    <meta property="og:description" content="Module to handle processes.">
+    <meta name="description" content="The module contains several groups of functionality for handling OS processes:  Low-level property introspection and management of the current process, like Process.argv0, Process.">
+    <meta property="og:description" content="The module contains several groups of functionality for handling OS processes:  Low-level property introspection and management of the current process, like Process.argv0, Process.">
   
 
     <meta name="keywords" content="Process class, exec, fork, spawn, exit!, exit, abort, last_status, kill, wait, wait2, waitpid, waitpid2, waitall, detach, pid, ppid, getpgrp, setpgrp, getpgid, setpgid, getsid, setsid, getpriority, setpriority, getrlimit, setrlimit, uid, uid=, gid, gid=, euid, euid=, egid, egid=, initgroups, groups, groups=, maxgroups, maxgroups=, daemon, times, clock_gettime, clock_getres, argv0, setproctitle">
@@ -92,7 +92,18 @@ document.addEventListener("turbolinks:load", function() {
   
     <div class="description">
       
-<p><a href="Module.html"><code>Module</code></a> to handle processes.</p>
+<p>The module contains several groups of functionality for handling OS processes:</p>
+<ul><li>
+<p>Low-level property introspection and management of the current process, like <a href="Process.html#method-c-argv0"><code>Process.argv0</code></a>, <a href="Process.html#method-c-pid"><code>Process.pid</code></a>;</p>
+</li><li>
+<p>Low-level introspection of other processes, like <a href="Process.html#method-c-getpgid"><code>Process.getpgid</code></a>, <a href="Process.html#method-c-getpriority"><code>Process.getpriority</code></a>;</p>
+</li><li>
+<p>Management of the current process: <a href="Process.html#method-c-abort"><code>Process.abort</code></a>, <a href="Process.html#method-c-exit"><code>Process.exit</code></a>, <a href="Process.html#method-c-daemon"><code>Process.daemon</code></a>, etc. (for convenience, most of those are also available as global functions and module functions of <a href="Kernel.html"><code>Kernel</code></a>);</p>
+</li><li>
+<p>Creation and management of child processes: <a href="Process.html#method-c-fork"><code>Process.fork</code></a>, <a href="Process.html#method-c-spawn"><code>Process.spawn</code></a>, and related methods;</p>
+</li><li>
+<p>Management of low-level system clock: <a href="Process.html#method-c-times"><code>Process.times</code></a> and <a href="Process.html#method-c-clock_gettime"><code>Process.clock_gettime</code></a>, which could be important for proper benchmarking and other elapsed time measurement tasks.</p>
+</li></ul>
 
     </div>
   
@@ -680,6 +691,18 @@ document.addEventListener("turbolinks:load", function() {
           
         
           <tr valign='top'>
+            <td class="attr-name">CLOCK_TAI</td>
+            <td>=</td>
+            <td class="attr-value">CLOCKID2NUM(CLOCK_TAI)</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"><p>see <a href="Process.html#method-c-clock_gettime"><code>Process.clock_gettime</code></a></p></td>
+            </tr>
+          
+        
+          <tr valign='top'>
             <td class="attr-name">CLOCK_THREAD_CPUTIME_ID</td>
             <td>=</td>
             <td class="attr-value">CLOCKID2NUM(CLOCK_THREAD_CPUTIME_ID)</td>
@@ -1095,15 +1118,14 @@ document.addEventListener("turbolinks:load", function() {
         <div class="method">
           <h3 class="title method-title" id="method-c-abort">
             
-              <b>abort<br />Kernel::abort([msg])<br />Process.abort([msg])
-</b>
+              <b>abort</b>(*args)
             
             <a href="../classes/Process.html#method-c-abort" name="method-c-abort" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Terminate execution immediately, effectively by calling <code>Kernel.exit(false)</code>. If <em>msg</em> is given, it is written to STDERR prior to terminating.</p>
+              
             </div>
           
 
@@ -1121,29 +1143,10 @@ document.addEventListener("turbolinks:load", function() {
                 
               </p>
               <div id="method-c-abort_source" class="dyn-source">
-                <pre>VALUE
-rb_f_abort(int argc, const VALUE *argv)
+                <pre>static VALUE
+f_abort(int c, const VALUE *a, VALUE _)
 {
-    rb_check_arity(argc, 0, 1);
-    if (argc == 0) {
-        rb_execution_context_t *ec = GET_EC();
-        VALUE errinfo = ec-&gt;errinfo;
-        if (!NIL_P(errinfo)) {
-            rb_ec_error_print(ec, errinfo);
-        }
-        rb_exit(EXIT_FAILURE);
-    }
-    else {
-        VALUE args[2];
-
-        args[1] = args[0] = argv[0];
-        StringValue(args[0]);
-        rb_io_puts(1, args, rb_stderr);
-        args[0] = INT2NUM(EXIT_FAILURE);
-        rb_exc_raise(rb_class_new_instance(2, args, rb_eSystemExit));
-    }
-
-    UNREACHABLE_RETURN(Qnil);
+    return rb_f_abort(c, a);
 }</pre>
               </div>
             </div>
@@ -1206,7 +1209,7 @@ proc_argv0(VALUE process)
 
 <p><code>clock_id</code> specifies a kind of clock. See the document of <code>Process.clock_gettime</code> for details.</p>
 
-<p><code>clock_id</code> can be a symbol as <code>Process.clock_gettime</code>. However the result may not be accurate. For example, +Process.clock_getres(:GETTIMEOFDAY_BASED_CLOCK_REALTIME)+ returns 1.0e-06 which means 1 microsecond, but actual resolution can be more coarse.</p>
+<p><code>clock_id</code> can be a symbol as <code>Process.clock_gettime</code>. However the result may not be accurate. For example, <code>Process.clock_getres(:GETTIMEOFDAY_BASED_CLOCK_REALTIME)</code> returns 1.0e-06 which means 1 microsecond, but actual resolution can be more coarse.</p>
 
 <p>If the given <code>clock_id</code> is not supported, Errno::EINVAL is raised.</p>
 
@@ -1216,9 +1219,9 @@ proc_argv0(VALUE process)
 
 <p><code>:hertz</code> can be used to obtain the exact value of the clock ticks per second for times() function and CLOCKS_PER_SEC for clock() function.</p>
 
-<p>+Process.clock_getres(:TIMES_BASED_CLOCK_PROCESS_CPUTIME_ID, :hertz)+ returns the clock ticks per second.</p>
+<p><code>Process.clock_getres(:TIMES_BASED_CLOCK_PROCESS_CPUTIME_ID, :hertz)</code> returns the clock ticks per second.</p>
 
-<p>+Process.clock_getres(:CLOCK_BASED_CLOCK_PROCESS_CPUTIME_ID, :hertz)+ returns CLOCKS_PER_SEC.</p>
+<p><code>Process.clock_getres(:CLOCK_BASED_CLOCK_PROCESS_CPUTIME_ID, :hertz)</code> returns CLOCKS_PER_SEC.</p>
 
 <pre><code>p Process.clock_getres(Process::CLOCK_MONOTONIC)
 #=&gt; 1.0e-09
@@ -1240,8 +1243,8 @@ proc_argv0(VALUE process)
                 
               </p>
               <div id="method-c-clock_getres_source" class="dyn-source">
-                <pre>VALUE
-rb_clock_getres(int argc, VALUE *argv)
+                <pre>static VALUE
+rb_clock_getres(int argc, VALUE *argv, VALUE _)
 {
     struct timetick tt;
     timetick_int_t numerators[2];
@@ -1376,7 +1379,7 @@ rb_clock_getres(int argc, VALUE *argv)
 <p>SUSv3 to 4, Linux 2.5.63, FreeBSD 3.0, NetBSD 2.0, OpenBSD 3.4, macOS 10.12</p>
 </dd><dt><a href="Process.html#CLOCK_PROCESS_CPUTIME_ID"><code>CLOCK_PROCESS_CPUTIME_ID</code></a>
 <dd>
-<p>SUSv3 to 4, Linux 2.5.63, OpenBSD 5.4, macOS 10.12</p>
+<p>SUSv3 to 4, Linux 2.5.63, FreeBSD 9.3, OpenBSD 5.4, macOS 10.12</p>
 </dd><dt><a href="Process.html#CLOCK_THREAD_CPUTIME_ID"><code>CLOCK_THREAD_CPUTIME_ID</code></a>
 <dd>
 <p>SUSv3 to 4, Linux 2.5.63, FreeBSD 7.1, OpenBSD 5.4, macOS 10.12</p>
@@ -1437,6 +1440,9 @@ rb_clock_getres(int argc, VALUE *argv)
 </dd><dt><a href="Process.html#CLOCK_SECOND"><code>CLOCK_SECOND</code></a>
 <dd>
 <p>FreeBSD 8.1</p>
+</dd><dt><a href="Process.html#CLOCK_TAI"><code>CLOCK_TAI</code></a>
+<dd>
+<p>Linux 3.10</p>
 </dd></dl>
 
 <p>Note that SUS stands for Single Unix Specification. SUS contains POSIX and <a href="Process.html#method-c-clock_gettime"><code>clock_gettime</code></a> is defined in the POSIX part. SUS defines <a href="Process.html#CLOCK_REALTIME"><code>CLOCK_REALTIME</code></a> mandatory but <a href="Process.html#CLOCK_MONOTONIC"><code>CLOCK_MONOTONIC</code></a>, <a href="Process.html#CLOCK_PROCESS_CPUTIME_ID"><code>CLOCK_PROCESS_CPUTIME_ID</code></a> and <a href="Process.html#CLOCK_THREAD_CPUTIME_ID"><code>CLOCK_THREAD_CPUTIME_ID</code></a> are optional.</p>
@@ -1523,8 +1529,8 @@ rb_clock_getres(int argc, VALUE *argv)
                 
               </p>
               <div id="method-c-clock_gettime_source" class="dyn-source">
-                <pre>VALUE
-rb_clock_gettime(int argc, VALUE *argv)
+                <pre>static VALUE
+rb_clock_gettime(int argc, VALUE *argv, VALUE _)
 {
     int ret;
 
@@ -1716,13 +1722,13 @@ rb_clock_gettime(int argc, VALUE *argv)
               </p>
               <div id="method-c-daemon_source" class="dyn-source">
                 <pre>static VALUE
-proc_daemon(int argc, VALUE *argv)
+proc_daemon(int argc, VALUE *argv, VALUE _)
 {
     int n, nochdir = FALSE, noclose = FALSE;
 
     switch (rb_check_arity(argc, 0, 2)) {
-      case 2: noclose = RTEST(argv[1]);
-      case 1: nochdir = RTEST(argv[0]);
+      case 2: noclose = TO_BOOL(argv[1], &quot;noclose&quot;);
+      case 1: nochdir = TO_BOOL(argv[0], &quot;nochdir&quot;);
     }
 
     prefork();
@@ -1746,11 +1752,11 @@ proc_daemon(int argc, VALUE *argv)
 
           
             <div class="description">
-              <p>Some operating systems retain the status of terminated child processes until the parent collects that status (normally using some variant of <code>wait()</code>). If the parent never collects this status, the child stays around as a <em>zombie</em> process. <code>Process::detach</code> prevents this by setting up a separate Ruby thread whose sole job is to reap the status of the process <em>pid</em> when it terminates. Use <code>detach</code> only when you do not intend to explicitly wait for the child to terminate.</p>
+              <p>Some operating systems retain the status of terminated child processes until the parent collects that status (normally using some variant of <code>wait()</code>). If the parent never collects this status, the child stays around as a <em>zombie</em> process. <a href="Process.html#method-c-detach"><code>Process::detach</code></a> prevents this by setting up a separate Ruby thread whose sole job is to reap the status of the process <em>pid</em> when it terminates. Use detach only when you do not intend to explicitly wait for the child to terminate.</p>
 
-<p>The waiting thread returns the exit status of the detached process when it terminates, so you can use <code>Thread#join</code> to know the result.  If specified <em>pid</em> is not a valid child process ID, the thread returns <code>nil</code> immediately.</p>
+<p>The waiting thread returns the exit status of the detached process when it terminates, so you can use <a href="Thread.html#method-i-join"><code>Thread#join</code></a> to know the result.  If specified <em>pid</em> is not a valid child process ID, the thread returns <code>nil</code> immediately.</p>
 
-<p>The waiting thread has <code>pid</code> method which returns the pid.</p>
+<p>The waiting thread has pid method which returns the pid.</p>
 
 <p>In this first example, we don&#39;t reap the first child process, so it appears as a zombie in the process status display.</p>
 
@@ -1766,7 +1772,7 @@ system(&quot;ps -ho pid,state -p #{p1}&quot;)
 <pre><code>27389 Z
 </code></pre>
 
-<p>In the next example, <code>Process::detach</code> is used to reap the child automatically.</p>
+<p>In the next example, <a href="Process.html#method-c-detach"><code>Process::detach</code></a> is used to reap the child automatically.</p>
 
 <pre><code>p1 = fork { sleep 0.1 }
 p2 = fork { sleep 0.2 }
@@ -2045,7 +2051,7 @@ proc_seteuid_m(VALUE mod, VALUE euid)
 
 <p>This behavior is modified by the given <code>env</code> and <code>options</code> parameters. See <a href="Process.html#method-c-spawn"><code>::spawn</code></a> for details.</p>
 
-<p>If the command fails to execute (typically <code>Errno::ENOENT</code> when it was not found) a <a href="SystemCallError.html"><code>SystemCallError</code></a> exception is raised.</p>
+<p>If the command fails to execute (typically Errno::ENOENT when it was not found) a <a href="SystemCallError.html"><code>SystemCallError</code></a> exception is raised.</p>
 
 <p>This method modifies process attributes according to given <code>options</code> before <code>exec(2)</code> system call. See <a href="Process.html#method-c-spawn"><code>::spawn</code></a> for more details about the given <code>options</code>.</p>
 
@@ -2078,36 +2084,10 @@ exec &quot;echo&quot;, &quot;*&quot;    # echoes an asterisk
                 
               </p>
               <div id="method-c-exec_source" class="dyn-source">
-                <pre>VALUE
-rb_f_exec(int argc, const VALUE *argv)
+                <pre>static VALUE
+f_exec(int c, const VALUE *a, VALUE _)
 {
-    VALUE execarg_obj, fail_str;
-    struct rb_execarg *eargp;
-#define CHILD_ERRMSG_BUFLEN 80
-    char errmsg[CHILD_ERRMSG_BUFLEN] = { &#39;\0&#39; };
-    int err, state;
-
-    execarg_obj = rb_execarg_new(argc, argv, TRUE, FALSE);
-    eargp = rb_execarg_get(execarg_obj);
-    if (mjit_enabled) mjit_finish(FALSE); /* avoid leaking resources, and do not leave files. XXX: JIT-ed handle can leak after exec error is rescued. */
-    before_exec(); /* stop timer thread before redirects */
-
-    rb_protect(rb_execarg_parent_start1, execarg_obj, &amp;state);
-    if (state) {
-        execarg_parent_end(execarg_obj);
-        after_exec(); /* restart timer thread */
-        rb_jump_tag(state);
-    }
-
-    fail_str = eargp-&gt;use_shell ? eargp-&gt;invoke.sh.shell_script : eargp-&gt;invoke.cmd.command_name;
-
-    err = exec_async_signal_safe(eargp, errmsg, sizeof(errmsg));
-    after_exec(); /* restart timer thread */
-
-    rb_exec_fail(eargp, err, errmsg);
-    RB_GC_GUARD(execarg_obj);
-    rb_syserr_fail_str(err, fail_str);
-    UNREACHABLE_RETURN(Qnil);
+    return rb_f_exec(c, a);
 }</pre>
               </div>
             </div>
@@ -2125,7 +2105,7 @@ rb_f_exec(int argc, const VALUE *argv)
 
           
             <div class="description">
-              <p>Initiates the termination of the Ruby script by raising the <code>SystemExit</code> exception. This exception may be caught. The optional parameter is used to return a status code to the invoking environment. <code>true</code> and <code>FALSE</code> of <em>status</em> means success and failure respectively.  The interpretation of other integer values are system dependent.</p>
+              <p>Initiates the termination of the Ruby script by raising the <a href="SystemExit.html"><code>SystemExit</code></a> exception. This exception may be caught. The optional parameter is used to return a status code to the invoking environment. <code>true</code> and <code>FALSE</code> of <em>status</em> means success and failure respectively.  The interpretation of other integer values are system dependent.</p>
 
 <pre><code>begin
   exit
@@ -2171,20 +2151,10 @@ in finalizer
                 
               </p>
               <div id="method-c-exit_source" class="dyn-source">
-                <pre>VALUE
-rb_f_exit(int argc, const VALUE *argv)
+                <pre>static VALUE
+f_exit(int c, const VALUE *a, VALUE _)
 {
-    int istatus;
-
-    if (rb_check_arity(argc, 0, 1) == 1) {
-        istatus = exit_status_code(argv[0]);
-    }
-    else {
-        istatus = EXIT_SUCCESS;
-    }
-    rb_exit(istatus);
-
-    UNREACHABLE_RETURN(Qnil);
+    return rb_f_exit(c, a);
 }</pre>
               </div>
             </div>
@@ -2254,7 +2224,7 @@ rb_f_exit_bang(int argc, VALUE *argv, VALUE obj)
 
           
             <div class="description">
-              <p>Creates a subprocess. If a block is specified, that block is run in the subprocess, and the subprocess terminates with a status of zero. Otherwise, the <code>fork</code> call returns twice, once in the parent, returning the process ID of the child, and once in the child, returning <em>nil</em>. The child process can exit using <code>Kernel.exit!</code> to avoid running any <code>at_exit</code> functions. The parent process should use <code>Process.wait</code> to collect the termination statuses of its children or use <code>Process.detach</code> to register disinterest in their status; otherwise, the operating system may accumulate zombie processes.</p>
+              <p>Creates a subprocess. If a block is specified, that block is run in the subprocess, and the subprocess terminates with a status of zero. Otherwise, the <code>fork</code> call returns twice, once in the parent, returning the process ID of the child, and once in the child, returning <em>nil</em>. The child process can exit using <a href="Kernel.html#method-i-exit-21"><code>Kernel.exit!</code></a> to avoid running any <code>at_exit</code> functions. The parent process should use <a href="Process.html#method-c-wait"><code>Process.wait</code></a> to collect the termination statuses of its children or use <a href="Process.html#method-c-detach"><code>Process.detach</code></a> to register disinterest in their status; otherwise, the operating system may accumulate zombie processes.</p>
 
 <p>The thread calling fork is the only thread in the created child process. fork doesn&#39;t copy other threads.</p>
 
@@ -2386,7 +2356,7 @@ Process.getpgrp      #=&gt; 25527
               </p>
               <div id="method-c-getpgrp_source" class="dyn-source">
                 <pre>static VALUE
-proc_getpgrp(void)
+proc_getpgrp(VALUE _)
 {
     rb_pid_t pgrp;
 
@@ -2416,7 +2386,7 @@ proc_getpgrp(void)
 
           
             <div class="description">
-              <p>Gets the scheduling priority for specified process, process group, or user. <em>kind</em> indicates the kind of entity to find: one of <code>Process::PRIO_PGRP</code>, <code>Process::PRIO_USER</code>, or <code>Process::PRIO_PROCESS</code>. <em>integer</em> is an id indicating the particular process, process group, or user (an id of 0 means <em>current</em>). Lower priorities are more favorable for scheduling. Not available on all platforms.</p>
+              <p>Gets the scheduling priority for specified process, process group, or user. <em>kind</em> indicates the kind of entity to find: one of <a href="Process.html#PRIO_PGRP"><code>Process::PRIO_PGRP</code></a>, <a href="Process.html#PRIO_USER"><code>Process::PRIO_USER</code></a>, or <a href="Process.html#PRIO_PROCESS"><code>Process::PRIO_PROCESS</code></a>. <em>integer</em> is an id indicating the particular process, process group, or user (an id of 0 means <em>current</em>). Lower priorities are more favorable for scheduling. Not available on all platforms.</p>
 
 <pre><code>Process.getpriority(Process::PRIO_USER, 0)      #=&gt; 19
 Process.getpriority(Process::PRIO_PROCESS, 0)   #=&gt; 19
@@ -2469,9 +2439,9 @@ proc_getpriority(VALUE obj, VALUE which, VALUE who)
             <div class="description">
               <p>Gets the resource limit of the process. <em>cur_limit</em> means current (soft) limit and <em>max_limit</em> means maximum (hard) limit.</p>
 
-<p><em>resource</em> indicates the kind of resource to limit. It is specified as a symbol such as <code>:CORE</code>, a string such as <code>&quot;CORE&quot;</code> or a constant such as <code>Process::RLIMIT_CORE</code>. See <a href="Process.html#method-c-setrlimit"><code>Process.setrlimit</code></a> for details.</p>
+<p><em>resource</em> indicates the kind of resource to limit. It is specified as a symbol such as <code>:CORE</code>, a string such as <code>&quot;CORE&quot;</code> or a constant such as <a href="Process.html#RLIMIT_CORE"><code>Process::RLIMIT_CORE</code></a>. See <a href="Process.html#method-c-setrlimit"><code>Process.setrlimit</code></a> for details.</p>
 
-<p><em>cur_limit</em> and <em>max_limit</em> may be <code>Process::RLIM_INFINITY</code>, <code>Process::RLIM_SAVED_MAX</code> or <code>Process::RLIM_SAVED_CUR</code>. See <a href="Process.html#method-c-setrlimit"><code>Process.setrlimit</code></a> and the system getrlimit(2) manual for details.</p>
+<p><em>cur_limit</em> and <em>max_limit</em> may be <a href="Process.html#RLIM_INFINITY"><code>Process::RLIM_INFINITY</code></a>, <a href="Process.html#RLIM_SAVED_MAX"><code>Process::RLIM_SAVED_MAX</code></a> or <a href="Process.html#RLIM_SAVED_CUR"><code>Process::RLIM_SAVED_CUR</code></a>. See <a href="Process.html#method-c-setrlimit"><code>Process.setrlimit</code></a> and the system getrlimit(2) manual for details.</p>
             </div>
           
 
@@ -2539,7 +2509,7 @@ Process.getsid(Process.pid())   #=&gt; 27422
               </p>
               <div id="method-c-getsid_source" class="dyn-source">
                 <pre>static VALUE
-proc_getsid(int argc, VALUE *argv)
+proc_getsid(int argc, VALUE *argv, VALUE _)
 {
     rb_pid_t sid;
     rb_pid_t pid = 0;
@@ -2670,7 +2640,7 @@ proc_setgid(VALUE obj, VALUE id)
 
           
             <div class="description">
-              <p>Get an <code>Array</code> of the group IDs in the supplemental group access list for this process.</p>
+              <p>Get an <a href="Array.html"><code>Array</code></a> of the group IDs in the supplemental group access list for this process.</p>
 
 <pre><code>Process.groups   #=&gt; [27, 6, 10, 11]
 </code></pre>
@@ -2746,7 +2716,7 @@ proc_getgroups(VALUE obj)
 
           
             <div class="description">
-              <p><a href="Set.html"><code>Set</code></a> the supplemental group access list to the given <code>Array</code> of group IDs.</p>
+              <p><a href="Set.html"><code>Set</code></a> the supplemental group access list to the given <a href="Array.html"><code>Array</code></a> of group IDs.</p>
 
 <pre><code>Process.groups   #=&gt; [0, 1, 2, 3, 4, 6, 10, 11, 20, 26, 27]
 Process.groups = [27, 6, 10, 11]   #=&gt; [27, 6, 10, 11]
@@ -2815,7 +2785,7 @@ proc_setgroups(VALUE obj, VALUE ary)
 
           
             <div class="description">
-              <p>Initializes the supplemental group access list by reading the system group database and using all groups of which the given user is a member. The group with the specified <em>gid</em> is also added to the list. Returns the resulting <code>Array</code> of the gids of all the groups in the supplementary group access list. Not available on all platforms.</p>
+              <p>Initializes the supplemental group access list by reading the system group database and using all groups of which the given user is a member. The group with the specified <em>gid</em> is also added to the list. Returns the resulting <a href="Array.html"><code>Array</code></a> of the gids of all the groups in the supplementary group access list. Not available on all platforms.</p>
 
 <pre><code>Process.groups   #=&gt; [0, 1, 2, 3, 4, 6, 10, 11, 20, 26, 27]
 Process.initgroups( &quot;mgranger&quot;, 30 )   #=&gt; [30, 6, 10, 11]
@@ -2862,7 +2832,7 @@ proc_initgroups(VALUE obj, VALUE uname, VALUE base_grp)
 
           
             <div class="description">
-              <p>Sends the given signal to the specified process id(s) if <em>pid</em> is positive. If <em>pid</em> is zero <em>signal</em> is sent to all processes whose group ID is equal to the group ID of the process. <em>signal</em> may be an integer signal number or a POSIX signal name (either with or without a <code>SIG</code> prefix). If <em>signal</em> is negative (or starts with a minus sign), kills process groups instead of processes. Not all signals are available on all platforms. The keys and values of <code>Signal.list</code> are known signal names and numbers, respectively.</p>
+              <p>Sends the given signal to the specified process id(s) if <em>pid</em> is positive. If <em>pid</em> is zero, <em>signal</em> is sent to all processes whose group ID is equal to the group ID of the process. If <em>pid</em> is negative, results are dependent on the operating system. <em>signal</em> may be an integer signal number or a POSIX signal name (either with or without a <code>SIG</code> prefix). If <em>signal</em> is negative (or starts with a minus sign), kills process groups instead of processes. Not all signals are available on all platforms. The keys and values of <a href="Signal.html#method-c-list"><code>Signal.list</code></a> are known signal names and numbers, respectively.</p>
 
 <pre><code>pid = fork do
    Signal.trap(&quot;HUP&quot;) { puts &quot;Ouch!&quot;; exit }
@@ -2878,9 +2848,9 @@ Process.wait
 <pre><code>Ouch!
 </code></pre>
 
-<p>If <em>signal</em> is an integer but wrong for signal, <code>Errno::EINVAL</code> or <code>RangeError</code> will be raised. Otherwise unless <em>signal</em> is a <code>String</code> or a <code>Symbol</code>, and a known signal name, <code>ArgumentError</code> will be raised.</p>
+<p>If <em>signal</em> is an integer but wrong for signal, Errno::EINVAL or <a href="RangeError.html"><code>RangeError</code></a> will be raised.  Otherwise unless <em>signal</em> is a <a href="String.html"><code>String</code></a> or a <a href="Symbol.html"><code>Symbol</code></a>, and a known signal name, <a href="ArgumentError.html"><code>ArgumentError</code></a> will be raised.</p>
 
-<p>Also, <code>Errno::ESRCH</code> or <code>RangeError</code> for invalid <em>pid</em>, <code>Errno::EPERM</code> when failed because of no privilege, will be raised.  In these cases, signals may have been sent to preceding processes.</p>
+<p>Also, Errno::ESRCH or <a href="RangeError.html"><code>RangeError</code></a> for invalid <em>pid</em>, Errno::EPERM when failed because of no privilege, will be raised.  In these cases, signals may have been sent to preceding processes.</p>
             </div>
           
 
@@ -2898,89 +2868,10 @@ Process.wait
                 
               </p>
               <div id="method-c-kill_source" class="dyn-source">
-                <pre>VALUE
-rb_f_kill(int argc, const VALUE *argv)
+                <pre>static VALUE
+proc_rb_f_kill(int c, const VALUE *v, VALUE _)
 {
-#ifndef HAVE_KILLPG
-#define killpg(pg, sig) kill(-(pg), (sig))
-#endif
-    int sig;
-    int i;
-    VALUE str;
-
-    rb_check_arity(argc, 2, UNLIMITED_ARGUMENTS);
-
-    if (FIXNUM_P(argv[0])) {
-	sig = FIX2INT(argv[0]);
-    }
-    else {
-	str = argv[0];
-	sig = signm2signo(&amp;str, TRUE, FALSE, NULL);
-    }
-
-    if (argc &lt;= 1) return INT2FIX(0);
-
-    if (sig &lt; 0) {
-	sig = -sig;
-	for (i=1; i&lt;argc; i++) {
-	    if (killpg(NUM2PIDT(argv[i]), sig) &lt; 0)
-		rb_sys_fail(0);
-	}
-    }
-    else {
-	const rb_pid_t self = (GET_THREAD() == GET_VM()-&gt;main_thread) ? getpid() : -1;
-	int wakeup = 0;
-
-	for (i=1; i&lt;argc; i++) {
-	    rb_pid_t pid = NUM2PIDT(argv[i]);
-
-	    if ((sig != 0) &amp;&amp; (self != -1) &amp;&amp; (pid == self)) {
-		int t;
-		/*
-		 * When target pid is self, many caller assume signal will be
-		 * delivered immediately and synchronously.
-		 */
-		switch (sig) {
-		  case SIGSEGV:
-#ifdef SIGBUS
-		  case SIGBUS:
-#endif
-#ifdef SIGKILL
-		  case SIGKILL:
-#endif
-#ifdef SIGILL
-		  case SIGILL:
-#endif
-#ifdef SIGFPE
-		  case SIGFPE:
-#endif
-#ifdef SIGSTOP
-		  case SIGSTOP:
-#endif
-		    kill(pid, sig);
-		    break;
-		  default:
-		    t = signal_ignored(sig);
-		    if (t) {
-			if (t &lt; 0 &amp;&amp; kill(pid, sig))
-			    rb_sys_fail(0);
-			break;
-		    }
-		    signal_enque(sig);
-		    wakeup = 1;
-		}
-	    }
-	    else if (kill(pid, sig) &lt; 0) {
-		rb_sys_fail(0);
-	    }
-	}
-	if (wakeup) {
-	    rb_threadptr_check_signal(GET_VM()-&gt;main_thread);
-	}
-    }
-    rb_thread_execute_interrupts(rb_thread_current());
-
-    return INT2FIX(i-1);
+    return rb_f_kill(c, v);
 }</pre>
               </div>
             </div>
@@ -3113,7 +3004,7 @@ proc_setmaxgroups(VALUE obj, VALUE val)
     int ngroups_max = get_sc_ngroups_max();
 
     if (ngroups &lt;= 0)
-        rb_raise(rb_eArgError, &quot;maxgroups %d shold be positive&quot;, ngroups);
+        rb_raise(rb_eArgError, &quot;maxgroups %d should be positive&quot;, ngroups);
 
     if (ngroups &gt; RB_MAX_GROUPS)
         ngroups = RB_MAX_GROUPS;
@@ -3163,9 +3054,9 @@ proc_setmaxgroups(VALUE obj, VALUE val)
               </p>
               <div id="method-c-pid_source" class="dyn-source">
                 <pre>static VALUE
-get_pid(void)
+proc_get_pid(VALUE _)
 {
-    return PIDT2NUM(getpid());
+    return get_pid();
 }</pre>
               </div>
             </div>
@@ -3212,9 +3103,9 @@ Dad is 27417
               </p>
               <div id="method-c-ppid_source" class="dyn-source">
                 <pre>static VALUE
-get_ppid(void)
+proc_get_ppid(VALUE _)
 {
-    return PIDT2NUM(getppid());
+    return get_ppid();
 }</pre>
               </div>
             </div>
@@ -3296,7 +3187,7 @@ proc_setpgid(VALUE obj, VALUE pid, VALUE pgrp)
               </p>
               <div id="method-c-setpgrp_source" class="dyn-source">
                 <pre>static VALUE
-proc_setpgrp(void)
+proc_setpgrp(VALUE _)
 {
   /* check for posix setpgid() first; this matches the posix */
   /* getpgrp() above.  It appears that configure will set SETPGRP_VOID */
@@ -3325,7 +3216,7 @@ proc_setpgrp(void)
 
           
             <div class="description">
-              <p>See <code>Process#getpriority</code>.</p>
+              <p>See <a href="Process.html#method-c-getpriority"><code>Process.getpriority</code></a>.</p>
 
 <pre><code>Process.setpriority(Process::PRIO_USER, 0, 19)      #=&gt; 0
 Process.setpriority(Process::PRIO_PROCESS, 0, 19)   #=&gt; 0
@@ -3428,7 +3319,7 @@ proc_setproctitle(VALUE process, VALUE title)
 
 <p>If <em>max_limit</em> is not given, <em>cur_limit</em> is used.</p>
 
-<p><em>resource</em> indicates the kind of resource to limit. It should be a symbol such as <code>:CORE</code>, a string such as <code>&quot;CORE&quot;</code> or a constant such as <code>Process::RLIMIT_CORE</code>. The available resources are OS dependent. Ruby may support following resources.</p>
+<p><em>resource</em> indicates the kind of resource to limit. It should be a symbol such as <code>:CORE</code>, a string such as <code>&quot;CORE&quot;</code> or a constant such as <a href="Process.html#RLIMIT_CORE"><code>Process::RLIMIT_CORE</code></a>. The available resources are OS dependent. Ruby may support following resources.</p>
 <dl class="rdoc-list label-list"><dt>AS
 <dd>
 <p>total available memory (bytes) (SUSv3, NetBSD, FreeBSD, OpenBSD but 4.4BSD-Lite)</p>
@@ -3479,7 +3370,7 @@ proc_setproctitle(VALUE process, VALUE title)
 <p>stack size (bytes) (SUSv3)</p>
 </dd></dl>
 
-<p><em>cur_limit</em> and <em>max_limit</em> may be <code>:INFINITY</code>, <code>&quot;INFINITY&quot;</code> or <code>Process::RLIM_INFINITY</code>, which means that the resource is not limited. They may be <code>Process::RLIM_SAVED_MAX</code>, <code>Process::RLIM_SAVED_CUR</code> and corresponding symbols and strings too. See system setrlimit(2) manual for details.</p>
+<p><em>cur_limit</em> and <em>max_limit</em> may be <code>:INFINITY</code>, <code>&quot;INFINITY&quot;</code> or <a href="Process.html#RLIM_INFINITY"><code>Process::RLIM_INFINITY</code></a>, which means that the resource is not limited. They may be <a href="Process.html#RLIM_SAVED_MAX"><code>Process::RLIM_SAVED_MAX</code></a>, <a href="Process.html#RLIM_SAVED_CUR"><code>Process::RLIM_SAVED_CUR</code></a> and corresponding symbols and strings too. See system setrlimit(2) manual for details.</p>
 
 <p>The following example raises the soft limit of core size to the hard limit to try to make core dump possible.</p>
 
@@ -3560,7 +3451,7 @@ proc_setrlimit(int argc, VALUE *argv, VALUE obj)
               </p>
               <div id="method-c-setsid_source" class="dyn-source">
                 <pre>static VALUE
-proc_setsid(void)
+proc_setsid(VALUE _)
 {
     rb_pid_t pid;
 
@@ -3595,7 +3486,7 @@ Process.wait pid
 
 <p>This method is similar to <a href="Kernel.html#method-i-system"><code>Kernel#system</code></a> but it doesn&#39;t wait for the command to finish.</p>
 
-<p>The parent process should use <code>Process.wait</code> to collect the termination status of its child or use <code>Process.detach</code> to register disinterest in their status; otherwise, the operating system may accumulate zombie processes.</p>
+<p>The parent process should use <a href="Process.html#method-c-wait"><code>Process.wait</code></a> to collect the termination status of its child or use <a href="Process.html#method-c-detach"><code>Process.detach</code></a> to register disinterest in their status; otherwise, the operating system may accumulate zombie processes.</p>
 
 <p>spawn has bunch of options to specify process attributes:</p>
 
@@ -3646,15 +3537,9 @@ options: hash
     :close_others =&gt; false  : inherit
   current directory:
     :chdir =&gt; str
-
-  The &#39;cmdname, arg1, ...&#39; form does not use the shell. However,
-  on different OSes, different things are provided as built-in
-  commands. An example of this is &#39;echo&#39;, which is a built-in
-  on Windows, but is a normal program on Linux and Mac OS X.
-  This means that `Process.spawn &#39;echo&#39;, &#39;%Path%&#39;` will display
-  the contents of the `%Path%` environment variable on Windows,
-  but `Process.spawn &#39;echo&#39;, &#39;$PATH&#39;` prints the literal &#39;$PATH&#39;.
 </code></pre>
+
+<p>The <code>cmdname, arg1, ...</code> form does not use the shell. However, on different OSes, different things are provided as built-in commands. An example of this is +&#39;echo&#39;+, which is a built-in on Windows, but is a normal program on Linux and Mac OS X. This means that <code>Process.spawn &#39;echo&#39;, &#39;%Path%&#39;</code> will display the contents of the <code>%Path%</code> environment variable on Windows, but <code>Process.spawn &#39;echo&#39;, &#39;$PATH&#39;</code> prints the literal <code>$PATH</code>.</p>
 
 <p>If a hash is given as <code>env</code>, the environment is updated by <code>env</code> before <code>exec(2)</code> in the child process. If a pair in <code>env</code> has nil as the value, the variable is deleted.</p>
 
@@ -3705,9 +3590,9 @@ pid = spawn(command, STDERR=&gt;:out)
 pid = spawn(command, STDERR=&gt;STDOUT)
 </code></pre>
 
-<p>The hash keys specifies a file descriptor in the child process started by <code>spawn</code>. :err, 2 and STDERR specifies the standard error stream (stderr).</p>
+<p>The hash keys specifies a file descriptor in the child process started by spawn. :err, 2 and STDERR specifies the standard error stream (stderr).</p>
 
-<p>The hash values specifies a file descriptor in the parent process which invokes <code>spawn</code>. :out, 1 and STDOUT specifies the standard output stream (stdout).</p>
+<p>The hash values specifies a file descriptor in the parent process which invokes spawn. :out, 1 and STDOUT specifies the standard output stream (stdout).</p>
 
 <p>In the above example, the standard output in the child process is not specified. So it is inherited from the parent process.</p>
 
@@ -3801,7 +3686,7 @@ p log_r.read
 
 <p>The hash keys specify file descriptors in the child process. The hash values specifies file descriptors in the parent process. So the above specifies exchanging stdout and stderr. Internally, <code>spawn</code> uses an extra file descriptor to resolve such cyclic file descriptor mapping.</p>
 
-<p>See <code>Kernel.exec</code> for the standard shell.</p>
+<p>See <a href="Kernel.html#method-i-exec"><code>Kernel.exec</code></a> for the standard shell.</p>
             </div>
           
 
@@ -3820,7 +3705,7 @@ p log_r.read
               </p>
               <div id="method-c-spawn_source" class="dyn-source">
                 <pre>static VALUE
-rb_f_spawn(int argc, VALUE *argv)
+rb_f_spawn(int argc, VALUE *argv, VALUE _)
 {
     rb_pid_t pid;
     char errmsg[CHILD_ERRMSG_BUFLEN] = { &#39;\0&#39; };
@@ -3861,7 +3746,7 @@ rb_f_spawn(int argc, VALUE *argv)
 
           
             <div class="description">
-              <p>Returns a <code>Tms</code> structure (see <code>Process::Tms</code>) that contains user and system CPU times for this process, and also for children processes.</p>
+              <p>Returns a <code>Tms</code> structure (see Process::Tms) that contains user and system CPU times for this process, and also for children processes.</p>
 
 <pre><code>t = Process.times
 [ t.utime, t.stime, t.cutime, t.cstime ]   #=&gt; [0.0, 0.02, 0.00, 0.00]
@@ -4032,7 +3917,7 @@ proc_setuid(VALUE obj, VALUE id)
 
           
             <div class="description">
-              <p>Waits for a child process to exit, returns its process id, and sets <code>$?</code> to a <code>Process::Status</code> object containing information on that process. Which child it waits on depends on the value of <em>pid</em>:</p>
+              <p>Waits for a child process to exit, returns its process id, and sets <code>$?</code> to a <a href="Process/Status.html"><code>Process::Status</code></a> object containing information on that process. Which child it waits on depends on the value of <em>pid</em>:</p>
 <dl class="rdoc-list note-list"><dt>&gt; 0
 <dd>
 <p>Waits for the child whose process ID equals <em>pid</em>.</p>
@@ -4047,7 +3932,7 @@ proc_setuid(VALUE obj, VALUE id)
 <p>Waits for any child whose process group ID equals the absolute value of <em>pid</em>.</p>
 </dd></dl>
 
-<p>The <em>flags</em> argument may be a logical or of the flag values <code>Process::WNOHANG</code> (do not block if no child available) or <code>Process::WUNTRACED</code> (return stopped children that haven&#39;t been reported). Not all flags are available on all platforms, but a flag value of zero will work on all platforms.</p>
+<p>The <em>flags</em> argument may be a logical or of the flag values <a href="Process.html#WNOHANG"><code>Process::WNOHANG</code></a> (do not block if no child available) or <a href="Process.html#WUNTRACED"><code>Process::WUNTRACED</code></a> (return stopped children that haven&#39;t been reported). Not all flags are available on all platforms, but a flag value of zero will work on all platforms.</p>
 
 <p>Calling this method raises a <a href="SystemCallError.html"><code>SystemCallError</code></a> if there are no child processes. Not available on all platforms.</p>
 
@@ -4081,29 +3966,9 @@ Time.now                         #=&gt; 2008-03-08 19:56:19 +0900
               </p>
               <div id="method-c-wait_source" class="dyn-source">
                 <pre>static VALUE
-proc_wait(int argc, VALUE *argv)
+proc_m_wait(int c, VALUE *v, VALUE _)
 {
-    rb_pid_t pid;
-    int flags, status;
-
-    flags = 0;
-    if (rb_check_arity(argc, 0, 2) == 0) {
-        pid = -1;
-    }
-    else {
-        VALUE vflags;
-        pid = NUM2PIDT(argv[0]);
-        if (argc == 2 &amp;&amp; !NIL_P(vflags = argv[1])) {
-            flags = NUM2UINT(vflags);
-        }
-    }
-    if ((pid = rb_waitpid(pid, &amp;status, flags)) &lt; 0)
-        rb_sys_fail(0);
-    if (pid == 0) {
-        rb_last_status_clear();
-        return Qnil;
-    }
-    return PIDT2NUM(pid);
+    return proc_wait(c, v);
 }</pre>
               </div>
             </div>
@@ -4121,7 +3986,7 @@ proc_wait(int argc, VALUE *argv)
 
           
             <div class="description">
-              <p>Waits for a child process to exit (see <a href="Process.html#method-c-waitpid"><code>Process::waitpid</code></a> for exact semantics) and returns an array containing the process id and the exit status (a <code>Process::Status</code> object) of that child. Raises a <a href="SystemCallError.html"><code>SystemCallError</code></a> if there are no child processes.</p>
+              <p>Waits for a child process to exit (see <a href="Process.html#method-c-waitpid"><code>Process::waitpid</code></a> for exact semantics) and returns an array containing the process id and the exit status (a <a href="Process/Status.html"><code>Process::Status</code></a> object) of that child. Raises a <a href="SystemCallError.html"><code>SystemCallError</code></a> if there are no child processes.</p>
 
 <pre><code>Process.fork { exit 99 }   #=&gt; 27437
 pid, status = Process.wait2
@@ -4146,7 +4011,7 @@ status.exitstatus          #=&gt; 99
               </p>
               <div id="method-c-wait2_source" class="dyn-source">
                 <pre>static VALUE
-proc_wait2(int argc, VALUE *argv)
+proc_wait2(int argc, VALUE *argv, VALUE _)
 {
     VALUE pid = proc_wait(argc, argv);
     if (NIL_P(pid)) return Qnil;
@@ -4168,7 +4033,7 @@ proc_wait2(int argc, VALUE *argv)
 
           
             <div class="description">
-              <p>Waits for all children, returning an array of <em>pid</em>/<em>status</em> pairs (where <em>status</em> is a <code>Process::Status</code> object).</p>
+              <p>Waits for all children, returning an array of <em>pid</em>/<em>status</em> pairs (where <em>status</em> is a <a href="Process/Status.html"><code>Process::Status</code></a> object).</p>
 
 <pre><code>fork { sleep 0.2; exit 2 }   #=&gt; 27432
 fork { sleep 0.1; exit 1 }   #=&gt; 27433
@@ -4200,7 +4065,7 @@ p Process.waitall
               </p>
               <div id="method-c-waitall_source" class="dyn-source">
                 <pre>static VALUE
-proc_waitall(void)
+proc_waitall(VALUE _)
 {
     VALUE result;
     rb_pid_t pid;
@@ -4237,7 +4102,7 @@ proc_waitall(void)
 
           
             <div class="description">
-              <p>Waits for a child process to exit, returns its process id, and sets <code>$?</code> to a <code>Process::Status</code> object containing information on that process. Which child it waits on depends on the value of <em>pid</em>:</p>
+              <p>Waits for a child process to exit, returns its process id, and sets <code>$?</code> to a <a href="Process/Status.html"><code>Process::Status</code></a> object containing information on that process. Which child it waits on depends on the value of <em>pid</em>:</p>
 <dl class="rdoc-list note-list"><dt>&gt; 0
 <dd>
 <p>Waits for the child whose process ID equals <em>pid</em>.</p>
@@ -4252,7 +4117,7 @@ proc_waitall(void)
 <p>Waits for any child whose process group ID equals the absolute value of <em>pid</em>.</p>
 </dd></dl>
 
-<p>The <em>flags</em> argument may be a logical or of the flag values <code>Process::WNOHANG</code> (do not block if no child available) or <code>Process::WUNTRACED</code> (return stopped children that haven&#39;t been reported). Not all flags are available on all platforms, but a flag value of zero will work on all platforms.</p>
+<p>The <em>flags</em> argument may be a logical or of the flag values <a href="Process.html#WNOHANG"><code>Process::WNOHANG</code></a> (do not block if no child available) or <a href="Process.html#WUNTRACED"><code>Process::WUNTRACED</code></a> (return stopped children that haven&#39;t been reported). Not all flags are available on all platforms, but a flag value of zero will work on all platforms.</p>
 
 <p>Calling this method raises a <a href="SystemCallError.html"><code>SystemCallError</code></a> if there are no child processes. Not available on all platforms.</p>
 
@@ -4286,29 +4151,9 @@ Time.now                         #=&gt; 2008-03-08 19:56:19 +0900
               </p>
               <div id="method-c-waitpid_source" class="dyn-source">
                 <pre>static VALUE
-proc_wait(int argc, VALUE *argv)
+proc_m_wait(int c, VALUE *v, VALUE _)
 {
-    rb_pid_t pid;
-    int flags, status;
-
-    flags = 0;
-    if (rb_check_arity(argc, 0, 2) == 0) {
-        pid = -1;
-    }
-    else {
-        VALUE vflags;
-        pid = NUM2PIDT(argv[0]);
-        if (argc == 2 &amp;&amp; !NIL_P(vflags = argv[1])) {
-            flags = NUM2UINT(vflags);
-        }
-    }
-    if ((pid = rb_waitpid(pid, &amp;status, flags)) &lt; 0)
-        rb_sys_fail(0);
-    if (pid == 0) {
-        rb_last_status_clear();
-        return Qnil;
-    }
-    return PIDT2NUM(pid);
+    return proc_wait(c, v);
 }</pre>
               </div>
             </div>
@@ -4326,7 +4171,7 @@ proc_wait(int argc, VALUE *argv)
 
           
             <div class="description">
-              <p>Waits for a child process to exit (see <a href="Process.html#method-c-waitpid"><code>Process::waitpid</code></a> for exact semantics) and returns an array containing the process id and the exit status (a <code>Process::Status</code> object) of that child. Raises a <a href="SystemCallError.html"><code>SystemCallError</code></a> if there are no child processes.</p>
+              <p>Waits for a child process to exit (see <a href="Process.html#method-c-waitpid"><code>Process::waitpid</code></a> for exact semantics) and returns an array containing the process id and the exit status (a <a href="Process/Status.html"><code>Process::Status</code></a> object) of that child. Raises a <a href="SystemCallError.html"><code>SystemCallError</code></a> if there are no child processes.</p>
 
 <pre><code>Process.fork { exit 99 }   #=&gt; 27437
 pid, status = Process.wait2
@@ -4351,7 +4196,7 @@ status.exitstatus          #=&gt; 99
               </p>
               <div id="method-c-waitpid2_source" class="dyn-source">
                 <pre>static VALUE
-proc_wait2(int argc, VALUE *argv)
+proc_wait2(int argc, VALUE *argv, VALUE _)
 {
     VALUE pid = proc_wait(argc, argv);
     if (NIL_P(pid)) return Qnil;

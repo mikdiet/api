@@ -289,11 +289,11 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-c-normalize_name_source')" id="l_method-c-normalize_name_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/actionpack/lib/action_dispatch/routing/mapper.rb#L405" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/actionpack/lib/action_dispatch/routing/mapper.rb#L411" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-normalize_name_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/routing/mapper.rb, line 405</span>
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/routing/mapper.rb, line 411</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">normalize_name</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">normalize_path</span>(<span class="ruby-identifier">name</span>)[<span class="ruby-value">1</span><span class="ruby-operator">..</span><span class="ruby-value">-1</span>].<span class="ruby-identifier">tr</span>(<span class="ruby-string">&quot;/&quot;</span>, <span class="ruby-string">&quot;_&quot;</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -312,7 +312,7 @@ document.addEventListener("turbolinks:load", function() {
 
           
             <div class="description">
-              <p>Invokes Journey::Router::Utils.normalize_path and ensure that (:locale) becomes (/:locale) instead of /(:locale). Except for root cases, where the latter is the correct one.</p>
+              <p>Invokes Journey::Router::Utils.normalize_path, then ensures that /(:locale) becomes (/:locale). Except for root cases, where the former is the correct one.</p>
             </div>
           
 
@@ -328,14 +328,25 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-c-normalize_path_source')" id="l_method-c-normalize_path_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/actionpack/lib/action_dispatch/routing/mapper.rb#L399" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/actionpack/lib/action_dispatch/routing/mapper.rb#L394" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-normalize_path_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/routing/mapper.rb, line 399</span>
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/action_dispatch/routing/mapper.rb, line 394</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">normalize_path</span>(<span class="ruby-identifier">path</span>)
   <span class="ruby-identifier">path</span> = <span class="ruby-constant">Journey</span><span class="ruby-operator">::</span><span class="ruby-constant">Router</span><span class="ruby-operator">::</span><span class="ruby-constant">Utils</span>.<span class="ruby-identifier">normalize_path</span>(<span class="ruby-identifier">path</span>)
-  <span class="ruby-identifier">path</span>.<span class="ruby-identifier">gsub!</span>(<span class="ruby-regexp">%r{/(\(+)/?}</span>, <span class="ruby-string">&#39;\1/&#39;</span>) <span class="ruby-keyword">unless</span> <span class="ruby-regexp">%r{^/(\(+[^)]+\)){1,}$}</span>.<span class="ruby-identifier">match?</span>(<span class="ruby-identifier">path</span>)
+
+  <span class="ruby-comment"># the path for a root URL at this point can be something like</span>
+  <span class="ruby-comment"># &quot;/(/:locale)(/:platform)/(:browser)&quot;, and we would want</span>
+  <span class="ruby-comment"># &quot;/(:locale)(/:platform)(/:browser)&quot;</span>
+
+  <span class="ruby-comment"># reverse &quot;/(&quot;, &quot;/((&quot; etc to &quot;(/&quot;, &quot;((/&quot; etc</span>
+  <span class="ruby-identifier">path</span>.<span class="ruby-identifier">gsub!</span>(<span class="ruby-regexp">%r{/(\(+)/?}</span>, <span class="ruby-string">&#39;\1/&#39;</span>)
+  <span class="ruby-comment"># if a path is all optional segments, change the leading &quot;(/&quot; back to</span>
+  <span class="ruby-comment"># &quot;/(&quot; so it evaluates to &quot;/&quot; when interpreted with no options.</span>
+  <span class="ruby-comment"># Unless, however, at least one secondary segment consists of a static</span>
+  <span class="ruby-comment"># part, ex. &quot;(/:locale)(/pages/:page)&quot;</span>
+  <span class="ruby-identifier">path</span>.<span class="ruby-identifier">sub!</span>(<span class="ruby-regexp">%r{^(\(+)/}</span>, <span class="ruby-string">&#39;/\1&#39;</span>) <span class="ruby-keyword">if</span> <span class="ruby-regexp">%r{^(\(+[^)]+\))(\(+/:[^)]+\))*$}</span>.<span class="ruby-identifier">match?</span>(<span class="ruby-identifier">path</span>)
   <span class="ruby-identifier">path</span>
 <span class="ruby-keyword">end</span></pre>
               </div>

@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="A Proc object is an encapsulation of a block of code, which can be stored in a local variable, passed to a method or another Proc, and can be called.">
   
 
-    <meta name="keywords" content="Proc class, new, call, [], ===, yield, to_proc, arity, hash, to_s, lambda?, binding, curry, <<, >>, source_location, parameters, inspect">
+    <meta name="keywords" content="Proc class, new, call, [], ===, yield, to_proc, arity, hash, to_s, lambda?, binding, curry, <<, >>, source_location, parameters, ruby2_keywords, inspect">
 </head>
 
 <body>
@@ -158,9 +158,11 @@ proc3 = make_proc {|x| x**2 }
 
 <p>Procs are coming in two flavors: lambda and non-lambda (regular procs). Differences are:</p>
 <ul><li>
-<p>In lambdas, <code>return</code> means exit from this lambda;</p>
+<p>In lambdas, <code>return</code> and <code>break</code> means exit from this lambda;</p>
 </li><li>
-<p>In regular procs, <code>return</code> means exit from embracing method (and will throw <code>LocalJumpError</code> if invoked outside the method);</p>
+<p>In non-lambda procs, <code>return</code> means exit from embracing method (and will throw <code>LocalJumpError</code> if invoked outside the method);</p>
+</li><li>
+<p>In non-lambda procs, <code>break</code> means exit from the method which the block given for. (and will throw <code>LocalJumpError</code> if invoked after the method returns);</p>
 </li><li>
 <p>In lambdas, arguments are treated in the same way as in methods: strict, with <code>ArgumentError</code> for mismatching argument number, and no additional argument processing;</p>
 </li><li>
@@ -169,7 +171,41 @@ proc3 = make_proc {|x| x**2 }
 
 <p>Examples:</p>
 
-<pre><code>p = proc {|x, y| &quot;x=#{x}, y=#{y}&quot; }
+<pre><code># +return+ in non-lambda proc, +b+, exits +m2+.
+# (The block +{ return }+ is given for +m1+ and embraced by +m2+.)
+$a = []; def m1(&amp;b) b.call; $a &lt;&lt; :m1 end; def m2() m1 { return }; $a &lt;&lt; :m2 end; m2; p $a
+#=&gt; []
+
+# +break+ in non-lambda proc, +b+, exits +m1+.
+# (The block +{ break }+ is given for +m1+ and embraced by +m2+.)
+$a = []; def m1(&amp;b) b.call; $a &lt;&lt; :m1 end; def m2() m1 { break }; $a &lt;&lt; :m2 end; m2; p $a
+#=&gt; [:m2]
+
+# +next+ in non-lambda proc, +b+, exits the block.
+# (The block +{ next }+ is given for +m1+ and embraced by +m2+.)
+$a = []; def m1(&amp;b) b.call; $a &lt;&lt; :m1 end; def m2() m1 { next }; $a &lt;&lt; :m2 end; m2; p $a
+#=&gt; [:m1, :m2]
+
+# Using +proc+ method changes the behavior as follows because
+# The block is given for +proc+ method and embraced by +m2+.
+$a = []; def m1(&amp;b) b.call; $a &lt;&lt; :m1 end; def m2() m1(&amp;proc { return }); $a &lt;&lt; :m2 end; m2; p $a
+#=&gt; []
+$a = []; def m1(&amp;b) b.call; $a &lt;&lt; :m1 end; def m2() m1(&amp;proc { break }); $a &lt;&lt; :m2 end; m2; p $a
+# break from proc-closure (LocalJumpError)
+$a = []; def m1(&amp;b) b.call; $a &lt;&lt; :m1 end; def m2() m1(&amp;proc { next }); $a &lt;&lt; :m2 end; m2; p $a
+#=&gt; [:m1, :m2]
+
+# +return+, +break+ and +next+ in the stubby lambda exits the block.
+# (+lambda+ method behaves same.)
+# (The block is given for stubby lambda syntax and embraced by +m2+.)
+$a = []; def m1(&amp;b) b.call; $a &lt;&lt; :m1 end; def m2() m1(&amp;-&gt; { return }); $a &lt;&lt; :m2 end; m2; p $a
+#=&gt; [:m1, :m2]
+$a = []; def m1(&amp;b) b.call; $a &lt;&lt; :m1 end; def m2() m1(&amp;-&gt; { break }); $a &lt;&lt; :m2 end; m2; p $a
+#=&gt; [:m1, :m2]
+$a = []; def m1(&amp;b) b.call; $a &lt;&lt; :m1 end; def m2() m1(&amp;-&gt; { next }); $a &lt;&lt; :m2 end; m2; p $a
+#=&gt; [:m1, :m2]
+
+p = proc {|x, y| &quot;x=#{x}, y=#{y}&quot; }
 p.call(1, 2)      #=&gt; &quot;x=1, y=2&quot;
 p.call([1, 2])    #=&gt; &quot;x=1, y=2&quot;, array deconstructed
 p.call(1, 2, 8)   #=&gt; &quot;x=1, y=2&quot;, extra argument discarded
@@ -233,24 +269,24 @@ end
 C.new.f(1,2)       #=&gt; ArgumentError
 </code></pre>
 
-<p>The wrapper <em>def2</em> receives <code>body</code> as a non-lambda proc, yet defines a method which has normal semantics.</p>
+<p>The wrapper <code>def2</code> receives <em>body</em> as a non-lambda proc, yet defines a method which has normal semantics.</p>
 
 <h2 id="class-Proc-label-Conversion+of+other+objects+to+procs">Conversion of other objects to procs</h2>
 
 <p>Any object that implements the <code>to_proc</code> method can be converted into a proc by the <code>&amp;</code> operator, and therefore con be consumed by iterators.</p>
 
-<pre><code>class Greater
-  def initialize(greating)
-    @greating = greating
+<pre><code>class Greeter
+  def initialize(greeting)
+    @greeting = greeting
   end
 
   def to_proc
-    proc {|name| &quot;#{@greating}, #{name}!&quot; }
+    proc {|name| &quot;#{@greeting}, #{name}!&quot; }
   end
 end
 
-hi = Greater.new(&quot;Hi&quot;)
-hey = Greater.new(&quot;Hey&quot;)
+hi = Greeter.new(&quot;Hi&quot;)
+hey = Greeter.new(&quot;Hey&quot;)
 [&quot;Bob&quot;, &quot;Jane&quot;].map(&amp;hi)    #=&gt; [&quot;Hi, Bob!&quot;, &quot;Hi, Jane!&quot;]
 [&quot;Bob&quot;, &quot;Jane&quot;].map(&amp;hey)   #=&gt; [&quot;Hey, Bob!&quot;, &quot;Hey, Jane!&quot;]
 </code></pre>
@@ -266,6 +302,77 @@ method(:puts).to_proc.call(1)   # prints 1
 {test: 1}.to_proc.call(:test)       #=&gt; 1
 %i[test many keys].map(&amp;{test: 1})  #=&gt; [1, nil, nil]
 </code></pre>
+
+<h2 id="class-Proc-label-Orphaned+Proc">Orphaned <a href="Proc.html"><code>Proc</code></a></h2>
+
+<p><code>return</code> and <code>break</code> in a block exit a method. If a <a href="Proc.html"><code>Proc</code></a> object is generated from the block and the <a href="Proc.html"><code>Proc</code></a> object survives until the method is returned, <code>return</code> and <code>break</code> cannot work. In such case, <code>return</code> and <code>break</code> raises <a href="LocalJumpError.html"><code>LocalJumpError</code></a>. A <a href="Proc.html"><code>Proc</code></a> object in such situation is called as orphaned <a href="Proc.html"><code>Proc</code></a> object.</p>
+
+<p>Note that the method to exit is different for <code>return</code> and <code>break</code>. There is a situation that orphaned for <code>break</code> but not orphaned for <code>return</code>.</p>
+
+<pre><code>def m1(&amp;b) b.call end; def m2(); m1 { return } end; m2 # ok
+def m1(&amp;b) b.call end; def m2(); m1 { break } end; m2 # ok
+
+def m1(&amp;b) b end; def m2(); m1 { return }.call end; m2 # ok
+def m1(&amp;b) b end; def m2(); m1 { break }.call end; m2 # LocalJumpError
+
+def m1(&amp;b) b end; def m2(); m1 { return } end; m2.call # LocalJumpError
+def m1(&amp;b) b end; def m2(); m1 { break } end; m2.call # LocalJumpError
+</code></pre>
+
+<p>Since <code>return</code> and <code>break</code> exits the block itself in lambdas, lambdas cannot be orphaned.</p>
+
+<h2 id="class-Proc-label-Numbered+parameters">Numbered parameters</h2>
+
+<p>Numbered parameters are implicitly defined block parameters intended to simplify writing short blocks:</p>
+
+<pre><code># Explicit parameter:
+%w[test me please].each { |str| puts str.upcase } # prints TEST, ME, PLEASE
+(1..5).map { |i| i**2 } # =&gt; [1, 4, 9, 16, 25]
+
+# Implicit parameter:
+%w[test me please].each { puts _1.upcase } # prints TEST, ME, PLEASE
+(1..5).map { _1**2 } # =&gt; [1, 4, 9, 16, 25]
+</code></pre>
+
+<p>Parameter names from <code>_1</code> to <code>_9</code> are supported:</p>
+
+<pre><code>[10, 20, 30].zip([40, 50, 60], [70, 80, 90]).map { _1 + _2 + _3 }
+# =&gt; [120, 150, 180]
+</code></pre>
+
+<p>Though, it is advised to resort to them wisely, probably limiting yourself to <code>_1</code> and <code>_2</code>, and to one-line blocks.</p>
+
+<p>Numbered parameters can&#39;t be used together with explicitly named ones:</p>
+
+<pre><code>[10, 20, 30].map { |x| _1**2 }
+# SyntaxError (ordinary parameter is defined)
+</code></pre>
+
+<p>To avoid conflicts, naming local variables or method arguments <code>_1</code>, <code>_2</code> and so on, causes a warning.</p>
+
+<pre><code>_1 = &#39;test&#39;
+# warning: `_1&#39; is reserved as numbered parameter
+</code></pre>
+
+<p>Using implicit numbered parameters affects block&#39;s arity:</p>
+
+<pre><code>p = proc { _1 + _2 }
+l = lambda { _1 + _2 }
+p.parameters     # =&gt; [[:opt, :_1], [:opt, :_2]]
+p.arity          # =&gt; 2
+l.parameters     # =&gt; [[:req, :_1], [:req, :_2]]
+l.arity          # =&gt; 2
+</code></pre>
+
+<p>Blocks with numbered parameters can&#39;t be nested:</p>
+
+<pre><code>%w[test me].each { _1.each_char { p _1 } }
+# SyntaxError (numbered parameter is already used in outer block here)
+# %w[test me].each { _1.each_char { p _1 } }
+#                    ^~
+</code></pre>
+
+<p>Numbered parameters were introduced in Ruby 2.7.</p>
 
     </div>
   
@@ -414,6 +521,18 @@ method(:puts).to_proc.call(1)   # prints 1
           </ul>
         </dd>
       
+        <dt>R</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-ruby2_keywords">ruby2_keywords</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>S</dt>
         <dd>
           <ul>
@@ -489,7 +608,7 @@ method(:puts).to_proc.call(1)   # prints 1
 
           
             <div class="description">
-              <p>Creates a new <code>Proc</code> object, bound to the current context. <code>Proc::new</code> may be called without a block only within a method with an attached block, in which case that block is converted to the <code>Proc</code> object.</p>
+              <p>Creates a new <a href="Proc.html"><code>Proc</code></a> object, bound to the current context. <a href="Proc.html#method-c-new"><code>Proc::new</code></a> may be called without a block only within a method with an attached block, in which case that block is converted to the <a href="Proc.html"><code>Proc</code></a> object.</p>
 
 <pre><code>def proc_from
   Proc.new
@@ -517,9 +636,9 @@ proc.call   #=&gt; &quot;hello&quot;
                 <pre>static VALUE
 rb_proc_s_new(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE block = proc_new(klass, FALSE);
+    VALUE block = proc_new(klass, FALSE, FALSE);
 
-    rb_obj_call_init(block, argc, argv);
+    rb_obj_call_init_kw(block, argc, argv, RB_PASS_CALLED_KEYWORDS);
     return block;
 }</pre>
               </div>
@@ -548,6 +667,8 @@ rb_proc_s_new(int argc, VALUE *argv, VALUE klass)
 g = proc {|x| x + x }
 p (f &lt;&lt; g).call(2) #=&gt; 16
 </code></pre>
+
+<p>See <a href="Proc.html#method-i-3E-3E"><code>Proc#&gt;&gt;</code></a> for detailed explanations.</p>
             </div>
           
 
@@ -568,22 +689,7 @@ p (f &lt;&lt; g).call(2) #=&gt; 16
                 <pre>static VALUE
 proc_compose_to_left(VALUE self, VALUE g)
 {
-    VALUE proc, args, procs[2];
-    rb_proc_t *procp;
-    int is_lambda;
-
-    procs[0] = self;
-    procs[1] = g;
-    args = rb_ary_tmp_new_from_values(0, 2, procs);
-
-    GetProcPtr(self, procp);
-    is_lambda = procp-&gt;is_lambda;
-
-    proc = rb_proc_new(compose, args);
-    GetProcPtr(proc, procp);
-    procp-&gt;is_lambda = is_lambda;
-
-    return proc;
+    return rb_proc_compose_to_left(self, to_callable(g));
 }</pre>
               </div>
             </div>
@@ -611,7 +717,7 @@ a_proc.yield(9, 1, 2, 3)   #=&gt; [9, 18, 27]
 
 <p>Note that <code>prc.()</code> invokes <code>prc.call()</code> with the parameters given.  It&#39;s syntactic sugar to hide “call”.</p>
 
-<p>For procs created using <code>lambda</code> or <code>-&gt;()</code> an error is generated if the wrong number of parameters are passed to the proc. For procs created using <code>Proc.new</code> or <code>Kernel.proc</code>, extra parameters are silently discarded and missing parameters are set to <code>nil</code>.</p>
+<p>For procs created using <a href="Kernel.html#method-i-lambda"><code>lambda</code></a> or <code>-&gt;()</code> an error is generated if the wrong number of parameters are passed to the proc.  For procs created using <a href="Proc.html#method-c-new"><code>Proc.new</code></a> or <a href="Kernel.html#method-i-proc"><code>Kernel.proc</code></a>, extra parameters are silently discarded and missing parameters are set to <code>nil</code>.</p>
 
 <pre><code>a_proc = proc {|a,b| [a,b] }
 a_proc.call(1)   #=&gt; [1, nil]
@@ -646,12 +752,26 @@ a_proc.call(1)   # ArgumentError: wrong number of arguments (given 1, expected 2
 
           
             <div class="description">
-              <p>Returns a proc that is the composition of this proc and the given <em>g</em>. The returned proc takes a variable number of arguments, calls <em>g</em> with them then calls this proc with the result.</p>
+              <p>Returns a proc that is the composition of this proc and the given <em>g</em>. The returned proc takes a variable number of arguments, calls this proc with them then calls <em>g</em> with the result.</p>
 
 <pre><code>f = proc {|x| x * x }
 g = proc {|x| x + x }
 p (f &gt;&gt; g).call(2) #=&gt; 8
 </code></pre>
+
+<p><em>g</em> could be other <a href="Proc.html"><code>Proc</code></a>, or <a href="Method.html"><code>Method</code></a>, or any other object responding to <code>call</code> method:</p>
+
+<pre><code>class Parser
+  def self.call(text)
+     # ...some complicated parsing logic...
+  end
+end
+
+pipeline = File.method(:read) &gt;&gt; Parser &gt;&gt; proc { |data| puts &quot;data size: #{data.count}&quot; }
+pipeline.call(&#39;data.json&#39;)
+</code></pre>
+
+<p>See also <a href="Method.html#method-i-3E-3E"><code>Method#&gt;&gt;</code></a> and <a href="Method.html#method-i-3C-3C"><code>Method#&lt;&lt;</code></a>.</p>
             </div>
           
 
@@ -672,22 +792,7 @@ p (f &gt;&gt; g).call(2) #=&gt; 8
                 <pre>static VALUE
 proc_compose_to_right(VALUE self, VALUE g)
 {
-    VALUE proc, args, procs[2];
-    rb_proc_t *procp;
-    int is_lambda;
-
-    procs[0] = g;
-    procs[1] = self;
-    args = rb_ary_tmp_new_from_values(0, 2, procs);
-
-    GetProcPtr(self, procp);
-    is_lambda = procp-&gt;is_lambda;
-
-    proc = rb_proc_new(compose, args);
-    GetProcPtr(proc, procp);
-    procp-&gt;is_lambda = is_lambda;
-
-    return proc;
+    return rb_proc_compose_to_right(self, to_callable(g));
 }</pre>
               </div>
             </div>
@@ -715,7 +820,7 @@ a_proc.yield(9, 1, 2, 3)   #=&gt; [9, 18, 27]
 
 <p>Note that <code>prc.()</code> invokes <code>prc.call()</code> with the parameters given.  It&#39;s syntactic sugar to hide “call”.</p>
 
-<p>For procs created using <code>lambda</code> or <code>-&gt;()</code> an error is generated if the wrong number of parameters are passed to the proc. For procs created using <code>Proc.new</code> or <code>Kernel.proc</code>, extra parameters are silently discarded and missing parameters are set to <code>nil</code>.</p>
+<p>For procs created using <a href="Kernel.html#method-i-lambda"><code>lambda</code></a> or <code>-&gt;()</code> an error is generated if the wrong number of parameters are passed to the proc.  For procs created using <a href="Proc.html#method-c-new"><code>Proc.new</code></a> or <a href="Kernel.html#method-i-proc"><code>Kernel.proc</code></a>, extra parameters are silently discarded and missing parameters are set to <code>nil</code>.</p>
 
 <pre><code>a_proc = proc {|a,b| [a,b] }
 a_proc.call(1)   #=&gt; [1, nil]
@@ -750,7 +855,7 @@ a_proc.call(1)   # ArgumentError: wrong number of arguments (given 1, expected 2
 
           
             <div class="description">
-              <p>Returns the number of mandatory arguments. If the block is declared to take no arguments, returns 0. If the block is known to take exactly n arguments, returns n. If the block has optional arguments, returns -n-1, where n is the number of mandatory arguments, with the exception for blocks that are not lambdas and have only a finite number of optional arguments; in this latter case, returns n. Keyword arguments will be considered as a single additional argument, that argument being mandatory if any keyword argument is mandatory. A <code>proc</code> with no argument declarations is the same as a block declaring <code>||</code> as its arguments.</p>
+              <p>Returns the number of mandatory arguments. If the block is declared to take no arguments, returns 0. If the block is known to take exactly n arguments, returns n. If the block has optional arguments, returns -n-1, where n is the number of mandatory arguments, with the exception for blocks that are not lambdas and have only a finite number of optional arguments; in this latter case, returns n. Keyword arguments will be considered as a single additional argument, that argument being mandatory if any keyword argument is mandatory. A <a href="Kernel.html#method-i-proc"><code>proc</code></a> with no argument declarations is the same as a block declaring <code>||</code> as its arguments.</p>
 
 <pre><code>proc {}.arity                  #=&gt;  0
 proc { || }.arity              #=&gt;  0
@@ -937,7 +1042,7 @@ a_proc.yield(9, 1, 2, 3)   #=&gt; [9, 18, 27]
 
 <p>Note that <code>prc.()</code> invokes <code>prc.call()</code> with the parameters given.  It&#39;s syntactic sugar to hide “call”.</p>
 
-<p>For procs created using <code>lambda</code> or <code>-&gt;()</code> an error is generated if the wrong number of parameters are passed to the proc. For procs created using <code>Proc.new</code> or <code>Kernel.proc</code>, extra parameters are silently discarded and missing parameters are set to <code>nil</code>.</p>
+<p>For procs created using <a href="Kernel.html#method-i-lambda"><code>lambda</code></a> or <code>-&gt;()</code> an error is generated if the wrong number of parameters are passed to the proc.  For procs created using <a href="Proc.html#method-c-new"><code>Proc.new</code></a> or <a href="Kernel.html#method-i-proc"><code>Kernel.proc</code></a>, extra parameters are silently discarded and missing parameters are set to <code>nil</code>.</p>
 
 <pre><code>a_proc = proc {|a,b| [a,b] }
 a_proc.call(1)   #=&gt; [1, nil]
@@ -1074,7 +1179,7 @@ proc_curry(int argc, const VALUE *argv, VALUE self)
             <div class="description">
               <p>Returns a hash value corresponding to proc body.</p>
 
-<p>See also Object#hash.</p>
+<p>See also <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
             </div>
           
 
@@ -1142,7 +1247,9 @@ proc_hash(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> for a <a href="Proc.html"><code>Proc</code></a> object for which argument handling is rigid. Such procs are typically generated by <code>lambda</code>.</p>
+              <p>Returns <code>true</code> if a <a href="Proc.html"><code>Proc</code></a> object is lambda. <code>false</code> if non-lambda.</p>
+
+<p>The lambda-ness affects argument handling and the behavior of <code>return</code> and <code>break</code>.</p>
 
 <p>A <a href="Proc.html"><code>Proc</code></a> object generated by <code>proc</code> ignores extra arguments.</p>
 
@@ -1320,6 +1427,83 @@ rb_proc_parameters(VALUE self)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-ruby2_keywords">
+            
+              <b>proc.ruby2_keywords &rarr; proc
+</b>
+            
+            <a href="../classes/Proc.html#method-i-ruby2_keywords" name="method-i-ruby2_keywords" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Marks the proc as passing keywords through a normal argument splat. This should only be called on procs that accept an argument splat (<code>*args</code>) but not explicit keywords or a keyword splat.  It marks the proc such that if the proc is called with keyword arguments, the final hash argument is marked with a special flag such that if it is the final element of a normal argument splat to another method call, and that method call does not include explicit keywords or a keyword splat, the final element is interpreted as keywords.  In other words, keywords will be passed through the proc to other methods.</p>
+
+<p>This should only be used for procs that delegate keywords to another method, and only for backwards compatibility with Ruby versions before 2.7.</p>
+
+<p>This method will probably be removed at some point, as it exists only for backwards compatibility. As it does not exist in Ruby versions before 2.7, check that the proc responds to this method before calling it. Also, be aware that if this method is removed, the behavior of the proc will change so that it does not pass through keywords.</p>
+
+<pre><code>module Mod
+  foo = -&gt;(meth, *args, &amp;block) do
+    send(:&quot;do_#{meth}&quot;, *args, &amp;block)
+  end
+  foo.ruby2_keywords if foo.respond_to?(:ruby2_keywords)
+end
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-ruby2_keywords_source')" id="l_method-i-ruby2_keywords_source">show</a>
+                
+              </p>
+              <div id="method-i-ruby2_keywords_source" class="dyn-source">
+                <pre>static VALUE
+proc_ruby2_keywords(VALUE procval)
+{
+    rb_proc_t *proc;
+    GetProcPtr(procval, proc);
+
+    rb_check_frozen(procval);
+
+    if (proc-&gt;is_from_method) {
+            rb_warn(&quot;Skipping set of ruby2_keywords flag for proc (proc created from method)&quot;);
+            return procval;
+    }
+
+    switch (proc-&gt;block.type) {
+      case block_type_iseq:
+        if (proc-&gt;block.as.captured.code.iseq-&gt;body-&gt;param.flags.has_rest &amp;&amp;
+                !proc-&gt;block.as.captured.code.iseq-&gt;body-&gt;param.flags.has_kw &amp;&amp;
+                !proc-&gt;block.as.captured.code.iseq-&gt;body-&gt;param.flags.has_kwrest) {
+            proc-&gt;block.as.captured.code.iseq-&gt;body-&gt;param.flags.ruby2_keywords = 1;
+        }
+        else {
+            rb_warn(&quot;Skipping set of ruby2_keywords flag for proc (proc accepts keywords or proc does not accept argument splat)&quot;);
+        }
+        break;
+      default:
+        rb_warn(&quot;Skipping set of ruby2_keywords flag for proc (proc not defined in Ruby)&quot;);
+        break;
+    }
+
+    return procval;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-source_location">
             
               <b>prc.source_location  &rarr; [String, Integer]
@@ -1369,7 +1553,7 @@ rb_proc_location(VALUE self)
 
           
             <div class="description">
-              <p>Part of the protocol for converting objects to <code>Proc</code> objects. Instances of class <code>Proc</code> simply return themselves.</p>
+              <p>Part of the protocol for converting objects to <a href="Proc.html"><code>Proc</code></a> objects. Instances of class <a href="Proc.html"><code>Proc</code></a> simply return themselves.</p>
             </div>
           
 
@@ -1462,7 +1646,7 @@ a_proc.yield(9, 1, 2, 3)   #=&gt; [9, 18, 27]
 
 <p>Note that <code>prc.()</code> invokes <code>prc.call()</code> with the parameters given.  It&#39;s syntactic sugar to hide “call”.</p>
 
-<p>For procs created using <code>lambda</code> or <code>-&gt;()</code> an error is generated if the wrong number of parameters are passed to the proc. For procs created using <code>Proc.new</code> or <code>Kernel.proc</code>, extra parameters are silently discarded and missing parameters are set to <code>nil</code>.</p>
+<p>For procs created using <a href="Kernel.html#method-i-lambda"><code>lambda</code></a> or <code>-&gt;()</code> an error is generated if the wrong number of parameters are passed to the proc.  For procs created using <a href="Proc.html#method-c-new"><code>Proc.new</code></a> or <a href="Kernel.html#method-i-proc"><code>Kernel.proc</code></a>, extra parameters are silently discarded and missing parameters are set to <code>nil</code>.</p>
 
 <pre><code>a_proc = proc {|a,b| [a,b] }
 a_proc.call(1)   #=&gt; [1, nil]

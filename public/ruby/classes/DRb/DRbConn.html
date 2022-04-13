@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="Class handling the connection between a DRbObject and the server the real object lives on.">
   
 
-    <meta name="keywords" content="DRb::DRbConn class, ">
+    <meta name="keywords" content="DRb::DRbConn class, make_pool, stop_pool">
 </head>
 
 <body>
@@ -117,6 +117,36 @@ document.addEventListener("turbolinks:load", function() {
 
 
   
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>M</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-make_pool">make_pool</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>S</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-stop_pool">stop_pool</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
+  
 
   
 
@@ -136,6 +166,116 @@ document.addEventListener("turbolinks:load", function() {
 
     <!-- Methods -->
     
+      <h2 class="sectiontitle">Class Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-c-make_pool">
+            
+              <b>make_pool</b>()
+            
+            <a href="../../classes/DRb/DRbConn.html#method-c-make_pool" name="method-c-make_pool" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-make_pool_source')" id="l_method-c-make_pool_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1258" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-make_pool_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1258</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">make_pool</span>
+  <span class="ruby-constant">ThreadObject</span>.<span class="ruby-identifier">new</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">queue</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">pool</span> = []
+    <span class="ruby-keyword">while</span> <span class="ruby-keyword">true</span>
+      <span class="ruby-identifier">queue</span>.<span class="ruby-identifier">_execute</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">message</span><span class="ruby-operator">|</span>
+        <span class="ruby-keyword">case</span>(<span class="ruby-identifier">message</span>[<span class="ruby-value">0</span>])
+        <span class="ruby-keyword">when</span> <span class="ruby-value">:take</span> <span class="ruby-keyword">then</span>
+          <span class="ruby-identifier">remote_uri</span> = <span class="ruby-identifier">message</span>[<span class="ruby-value">1</span>]
+          <span class="ruby-identifier">conn</span> = <span class="ruby-keyword">nil</span>
+          <span class="ruby-identifier">new_pool</span> = []
+          <span class="ruby-identifier">pool</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">c</span><span class="ruby-operator">|</span>
+            <span class="ruby-keyword">if</span> <span class="ruby-identifier">conn</span>.<span class="ruby-identifier">nil?</span> <span class="ruby-keyword">and</span> <span class="ruby-identifier">c</span>.<span class="ruby-identifier">uri</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">remote_uri</span>
+              <span class="ruby-identifier">conn</span> = <span class="ruby-identifier">c</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">c</span>.<span class="ruby-identifier">alive?</span>
+            <span class="ruby-keyword">else</span>
+              <span class="ruby-identifier">new_pool</span>.<span class="ruby-identifier">push</span> <span class="ruby-identifier">c</span>
+            <span class="ruby-keyword">end</span>
+          <span class="ruby-keyword">end</span>
+          <span class="ruby-identifier">pool</span> = <span class="ruby-identifier">new_pool</span>
+          <span class="ruby-identifier">conn</span>
+        <span class="ruby-keyword">when</span> <span class="ruby-value">:store</span> <span class="ruby-keyword">then</span>
+          <span class="ruby-identifier">conn</span> = <span class="ruby-identifier">message</span>[<span class="ruby-value">1</span>]
+          <span class="ruby-identifier">pool</span>.<span class="ruby-identifier">unshift</span>(<span class="ruby-identifier">conn</span>)
+          <span class="ruby-identifier">pool</span>.<span class="ruby-identifier">pop</span>.<span class="ruby-identifier">close</span> <span class="ruby-keyword">while</span> <span class="ruby-identifier">pool</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&gt;</span> <span class="ruby-constant">POOL_SIZE</span>
+          <span class="ruby-identifier">conn</span>
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-keyword">nil</span>
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-stop_pool">
+            
+              <b>stop_pool</b>()
+            
+            <a href="../../classes/DRb/DRbConn.html#method-c-stop_pool" name="method-c-stop_pool" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-stop_pool_source')" id="l_method-c-stop_pool_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/drb/drb.rb#L1291" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-stop_pool_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/drb/drb.rb, line 1291</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">stop_pool</span>
+  <span class="ruby-ivar">@pool_proxy</span>&amp;.<span class="ruby-identifier">kill</span>
+  <span class="ruby-ivar">@pool_proxy</span> = <span class="ruby-keyword">nil</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
     
     
   

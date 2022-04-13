@@ -202,7 +202,7 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/cli/update.rb#L6" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/cli/update.rb#L6" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
@@ -246,7 +246,7 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-run_source')" id="l_method-i-run_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/cli/update.rb#L11" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/cli/update.rb#L11" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-run_source" class="dyn-source">
@@ -265,7 +265,7 @@ document.addEventListener("turbolinks:load", function() {
     <span class="ruby-keyword">if</span> <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">feature_flag</span>.<span class="ruby-identifier">update_requires_all_flag?</span>
       <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidOption</span>, <span class="ruby-string">&quot;To update everything, pass the `--all` flag.&quot;</span>
     <span class="ruby-keyword">end</span>
-    <span class="ruby-constant">SharedHelpers</span>.<span class="ruby-identifier">major_deprecation</span> <span class="ruby-value">2</span>, <span class="ruby-string">&quot;Pass --all to `bundle update` to update everything&quot;</span>
+    <span class="ruby-constant">SharedHelpers</span>.<span class="ruby-identifier">major_deprecation</span> <span class="ruby-value">3</span>, <span class="ruby-string">&quot;Pass --all to `bundle update` to update everything&quot;</span>
   <span class="ruby-keyword">elsif</span> <span class="ruby-operator">!</span><span class="ruby-identifier">full_update</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:all</span>]
     <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidOption</span>, <span class="ruby-string">&quot;Cannot specify --all along with specific options.&quot;</span>
   <span class="ruby-keyword">end</span>
@@ -301,24 +301,44 @@ document.addEventListener("turbolinks:load", function() {
   <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">settings</span>.<span class="ruby-identifier">set_command_option_if_given</span> <span class="ruby-value">:jobs</span>, <span class="ruby-identifier">opts</span>[<span class="ruby-string">&quot;jobs&quot;</span>]
 
   <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">definition</span>.<span class="ruby-identifier">validate_runtime!</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">locked_gems</span> = <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">definition</span>.<span class="ruby-identifier">locked_gems</span>
+    <span class="ruby-identifier">previous_locked_info</span> = <span class="ruby-identifier">locked_gems</span>.<span class="ruby-identifier">specs</span>.<span class="ruby-identifier">reduce</span>({}) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">h</span>, <span class="ruby-identifier">s</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">h</span>[<span class="ruby-identifier">s</span>.<span class="ruby-identifier">name</span>] = { <span class="ruby-value">:spec</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">s</span>, <span class="ruby-value">:version</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">s</span>.<span class="ruby-identifier">version</span>, <span class="ruby-value">:source</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">s</span>.<span class="ruby-identifier">source</span>.<span class="ruby-identifier">to_s</span> }
+      <span class="ruby-identifier">h</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+
   <span class="ruby-identifier">installer</span> = <span class="ruby-constant">Installer</span>.<span class="ruby-identifier">install</span> <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">root</span>, <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">definition</span>, <span class="ruby-identifier">opts</span>
   <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">load</span>.<span class="ruby-identifier">cache</span> <span class="ruby-keyword">if</span> <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">app_cache</span>.<span class="ruby-identifier">exist?</span>
 
   <span class="ruby-keyword">if</span> <span class="ruby-constant">CLI</span><span class="ruby-operator">::</span><span class="ruby-constant">Common</span>.<span class="ruby-identifier">clean_after_install?</span>
-    <span class="ruby-identifier">require</span> <span class="ruby-string">&quot;bundler/cli/clean&quot;</span>
+    <span class="ruby-identifier">require_relative</span> <span class="ruby-string">&quot;clean&quot;</span>
     <span class="ruby-constant">Bundler</span><span class="ruby-operator">::</span><span class="ruby-constant">CLI</span><span class="ruby-operator">::</span><span class="ruby-constant">Clean</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">options</span>).<span class="ruby-identifier">run</span>
   <span class="ruby-keyword">end</span>
 
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">locked_gems</span> = <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">definition</span>.<span class="ruby-identifier">locked_gems</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">locked_gems</span>
     <span class="ruby-identifier">gems</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span>
-      <span class="ruby-identifier">locked_version</span> = <span class="ruby-identifier">locked_gems</span>.<span class="ruby-identifier">specs</span>.<span class="ruby-identifier">find</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">s</span><span class="ruby-operator">|</span> <span class="ruby-identifier">s</span>.<span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">name</span> }
-      <span class="ruby-identifier">locked_version</span> <span class="ruby-operator">&amp;&amp;=</span> <span class="ruby-identifier">locked_version</span>.<span class="ruby-identifier">version</span>
-      <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">locked_version</span>
-      <span class="ruby-identifier">new_version</span> = <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">definition</span>.<span class="ruby-identifier">specs</span>[<span class="ruby-identifier">name</span>].<span class="ruby-identifier">first</span>
-      <span class="ruby-identifier">new_version</span> <span class="ruby-operator">&amp;&amp;=</span> <span class="ruby-identifier">new_version</span>.<span class="ruby-identifier">version</span>
-      <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">new_version</span>
-        <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">ui</span>.<span class="ruby-identifier">warn</span> <span class="ruby-node">&quot;Bundler attempted to update #{name} but it was removed from the bundle&quot;</span>
-      <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">new_version</span> <span class="ruby-operator">&lt;</span> <span class="ruby-identifier">locked_version</span>
+      <span class="ruby-identifier">locked_info</span> = <span class="ruby-identifier">previous_locked_info</span>[<span class="ruby-identifier">name</span>]
+      <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">locked_info</span>
+
+      <span class="ruby-identifier">locked_spec</span> = <span class="ruby-identifier">locked_info</span>[<span class="ruby-value">:spec</span>]
+      <span class="ruby-identifier">new_spec</span> = <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">definition</span>.<span class="ruby-identifier">specs</span>[<span class="ruby-identifier">name</span>].<span class="ruby-identifier">first</span>
+      <span class="ruby-keyword">unless</span> <span class="ruby-identifier">new_spec</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">rubygems</span>.<span class="ruby-identifier">platforms</span>.<span class="ruby-identifier">none?</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span> <span class="ruby-identifier">locked_spec</span>.<span class="ruby-identifier">match_platform</span>(<span class="ruby-identifier">p</span>) }
+          <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">ui</span>.<span class="ruby-identifier">warn</span> <span class="ruby-node">&quot;Bundler attempted to update #{name} but it was not considered because it is for a different platform from the current one&quot;</span>
+        <span class="ruby-keyword">end</span>
+
+        <span class="ruby-keyword">next</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">locked_source</span> = <span class="ruby-identifier">locked_info</span>[<span class="ruby-value">:source</span>]
+      <span class="ruby-identifier">new_source</span> = <span class="ruby-identifier">new_spec</span>.<span class="ruby-identifier">source</span>.<span class="ruby-identifier">to_s</span>
+      <span class="ruby-keyword">next</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">locked_source</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">new_source</span>
+
+      <span class="ruby-identifier">new_version</span> = <span class="ruby-identifier">new_spec</span>.<span class="ruby-identifier">version</span>
+      <span class="ruby-identifier">locked_version</span> = <span class="ruby-identifier">locked_info</span>[<span class="ruby-value">:version</span>]
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">new_version</span> <span class="ruby-operator">&lt;</span> <span class="ruby-identifier">locked_version</span>
         <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">ui</span>.<span class="ruby-identifier">warn</span> <span class="ruby-node">&quot;Note: #{name} version regressed from #{locked_version} to #{new_version}&quot;</span>
       <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">new_version</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">locked_version</span>
         <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">ui</span>.<span class="ruby-identifier">warn</span> <span class="ruby-node">&quot;Bundler attempted to update #{name} but its version stayed the same&quot;</span>
@@ -327,7 +347,7 @@ document.addEventListener("turbolinks:load", function() {
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">ui</span>.<span class="ruby-identifier">confirm</span> <span class="ruby-string">&quot;Bundle updated!&quot;</span>
-  <span class="ruby-constant">Bundler</span><span class="ruby-operator">::</span><span class="ruby-constant">CLI</span><span class="ruby-operator">::</span><span class="ruby-constant">Common</span>.<span class="ruby-identifier">output_without_groups_message</span>
+  <span class="ruby-constant">Bundler</span><span class="ruby-operator">::</span><span class="ruby-constant">CLI</span><span class="ruby-operator">::</span><span class="ruby-constant">Common</span>.<span class="ruby-identifier">output_without_groups_message</span>(<span class="ruby-value">:update</span>)
   <span class="ruby-constant">Bundler</span><span class="ruby-operator">::</span><span class="ruby-constant">CLI</span><span class="ruby-operator">::</span><span class="ruby-constant">Common</span>.<span class="ruby-identifier">output_post_install_messages</span> <span class="ruby-identifier">installer</span>.<span class="ruby-identifier">post_install_messages</span>
 <span class="ruby-keyword">end</span></pre>
               </div>

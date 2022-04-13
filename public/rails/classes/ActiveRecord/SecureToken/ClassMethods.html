@@ -152,7 +152,7 @@ document.addEventListener("turbolinks:load", function() {
         <div class="method">
           <h3 class="title method-title" id="method-i-generate_unique_secure_token">
             
-              <b>generate_unique_secure_token</b>()
+              <b>generate_unique_secure_token</b>(length: MINIMUM_TOKEN_LENGTH)
             
             <a href="../../../classes/ActiveRecord/SecureToken/ClassMethods.html#method-i-generate_unique_secure_token" name="method-i-generate_unique_secure_token" class="permalink">Link</a>
           </h3>
@@ -175,13 +175,13 @@ document.addEventListener("turbolinks:load", function() {
                 Source:
                 <a href="javascript:toggleSource('method-i-generate_unique_secure_token_source')" id="l_method-i-generate_unique_secure_token_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activerecord/lib/active_record/secure_token.rb#L35" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activerecord/lib/active_record/secure_token.rb#L43" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-generate_unique_secure_token_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/secure_token.rb, line 35</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">generate_unique_secure_token</span>
-  <span class="ruby-constant">SecureRandom</span>.<span class="ruby-identifier">base58</span>(<span class="ruby-value">24</span>)
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/secure_token.rb, line 43</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">generate_unique_secure_token</span>(<span class="ruby-value">length:</span> <span class="ruby-constant">MINIMUM_TOKEN_LENGTH</span>)
+  <span class="ruby-constant">SecureRandom</span>.<span class="ruby-identifier">base58</span>(<span class="ruby-identifier">length</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -191,7 +191,7 @@ document.addEventListener("turbolinks:load", function() {
         <div class="method">
           <h3 class="title method-title" id="method-i-has_secure_token">
             
-              <b>has_secure_token</b>(attribute = :token)
+              <b>has_secure_token</b>(attribute = :token, length: MINIMUM_TOKEN_LENGTH)
             
             <a href="../../../classes/ActiveRecord/SecureToken/ClassMethods.html#method-i-has_secure_token" name="method-i-has_secure_token" class="permalink">Link</a>
           </h3>
@@ -203,18 +203,18 @@ document.addEventListener("turbolinks:load", function() {
 <pre><code># Schema: User(token:string, auth_token:string)
 class User &lt; ActiveRecord::Base
   has_secure_token
-  has_secure_token :auth_token
+  has_secure_token :auth_token, length: 36
 end
 
 user = User.new
 user.save
 user.token # =&gt; &quot;pX27zsMN2ViQKta1bGfLmVJE&quot;
-user.auth_token # =&gt; &quot;77TMHrHJFvFDwodq8w7Ev2m7&quot;
+user.auth_token # =&gt; &quot;tU9bLuZseefXQ4yQxQo8wjtBvsAfPc78os6R&quot;
 user.regenerate_token # =&gt; true
 user.regenerate_auth_token # =&gt; true
 </code></pre>
 
-<p><code>SecureRandom::base58</code> is used to generate the 24-character unique token, so collisions are highly unlikely.</p>
+<p><code>SecureRandom::base58</code> is used to generate at minimum a 24-character unique token, so collisions are highly unlikely.</p>
 
 <p>Note that it&#39;s still possible to generate a race condition in the database in the same way that <a href="../Validations/ClassMethods.html#method-i-validates_uniqueness_of">validates_uniqueness_of</a> can. You&#39;re encouraged to add a unique index in the database to deal with this even more unlikely scenario.</p>
             </div>
@@ -232,16 +232,20 @@ user.regenerate_auth_token # =&gt; true
                 Source:
                 <a href="javascript:toggleSource('method-i-has_secure_token_source')" id="l_method-i-has_secure_token_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activerecord/lib/active_record/secure_token.rb#L28" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activerecord/lib/active_record/secure_token.rb#L32" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-has_secure_token_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/secure_token.rb, line 28</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">has_secure_token</span>(<span class="ruby-identifier">attribute</span> = <span class="ruby-value">:token</span>)
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/secure_token.rb, line 32</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">has_secure_token</span>(<span class="ruby-identifier">attribute</span> = <span class="ruby-value">:token</span>, <span class="ruby-value">length:</span> <span class="ruby-constant">MINIMUM_TOKEN_LENGTH</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">length</span> <span class="ruby-operator">&lt;</span> <span class="ruby-constant">MINIMUM_TOKEN_LENGTH</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">MinimumLengthError</span>, <span class="ruby-node">&quot;Token requires a minimum length of #{MINIMUM_TOKEN_LENGTH} characters.&quot;</span>
+  <span class="ruby-keyword">end</span>
+
   <span class="ruby-comment"># Load securerandom only when has_secure_token is used.</span>
   <span class="ruby-identifier">require</span> <span class="ruby-string">&quot;active_support/core_ext/securerandom&quot;</span>
-  <span class="ruby-identifier">define_method</span>(<span class="ruby-node">&quot;regenerate_#{attribute}&quot;</span>) { <span class="ruby-identifier">update!</span> <span class="ruby-identifier">attribute</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">generate_unique_secure_token</span> }
-  <span class="ruby-identifier">before_create</span> { <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;#{attribute}=&quot;</span>, <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">generate_unique_secure_token</span>) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;#{attribute}?&quot;</span>) }
+  <span class="ruby-identifier">define_method</span>(<span class="ruby-node">&quot;regenerate_#{attribute}&quot;</span>) { <span class="ruby-identifier">update!</span> <span class="ruby-identifier">attribute</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">generate_unique_secure_token</span>(<span class="ruby-value">length:</span> <span class="ruby-identifier">length</span>) }
+  <span class="ruby-identifier">before_create</span> { <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;#{attribute}=&quot;</span>, <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">generate_unique_secure_token</span>(<span class="ruby-value">length:</span> <span class="ruby-identifier">length</span>)) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">send</span>(<span class="ruby-node">&quot;#{attribute}?&quot;</span>) }
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>

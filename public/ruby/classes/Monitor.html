@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="Use the Monitor class when you want to have a lock object for blocks with mutual exclusion.  require &#39;monitor&#39;  lock = Monitor.new lock.">
   
 
-    <meta name="keywords" content="Monitor class, ">
+    <meta name="keywords" content="Monitor class, new_cond, try_enter, try_mon_enter, mon_try_enter, enter, mon_enter, exit, mon_exit, synchronize, mon_synchronize, mon_locked?, mon_check_owner, mon_owned?, wait_for_cond">
 </head>
 
 <body>
@@ -86,7 +86,9 @@ document.addEventListener("turbolinks:load", function() {
         </h2>
         <ul class="files">
             
-            <li><a href="../files/ruby/lib/monitor_rb.html">ruby/lib/monitor.rb</a></li>
+            <li><a href="../files/ruby/ext/monitor/lib/monitor_rb.html">ruby/ext/monitor/lib/monitor.rb</a></li>
+            
+            <li><a href="../files/ruby/ext/monitor/monitor_c.html">ruby/ext/monitor/monitor.c</a></li>
             
         </ul>
     </div>
@@ -121,21 +123,125 @@ end
 
 
   
-
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>E</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-enter">enter</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-exit">exit</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>M</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-mon_check_owner">mon_check_owner</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_enter">mon_enter</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_exit">mon_exit</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_locked-3F">mon_locked?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_owned-3F">mon_owned?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_synchronize">mon_synchronize</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-mon_try_enter">mon_try_enter</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>N</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-new_cond">new_cond</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>S</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-synchronize">synchronize</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>T</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-try_enter">try_enter</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-try_mon_enter">try_mon_enter</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>W</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-wait_for_cond">wait_for_cond</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
   
-    <!-- Includes -->
-    <div class="sectiontitle">Included Modules</div>
-    <ul>
-      
-        <li>
-          
-            <a href="MonitorMixin.html">
-              MonitorMixin
-            </a>
-          
-        </li>
-      
-    </ul>
+
   
 
 
@@ -155,6 +261,537 @@ end
     <!-- Methods -->
     
     
+      <h2 class="sectiontitle">Instance Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-i-enter">
+            
+              <b>enter</b>()
+            
+            <a href="../classes/Monitor.html#method-i-enter" name="method-i-enter" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="Monitor.html#method-i-mon_enter">mon_enter</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-enter_source')" id="l_method-i-enter_source">show</a>
+                
+              </p>
+              <div id="method-i-enter_source" class="dyn-source">
+                <pre>static VALUE
+monitor_enter(VALUE monitor)
+{
+    struct rb_monitor *mc = monitor_ptr(monitor);
+    if (!mc_owner_p(mc)) {
+        rb_mutex_lock(mc-&gt;mutex);
+        RB_OBJ_WRITE(monitor, &amp;mc-&gt;owner, rb_thread_current());
+        mc-&gt;count = 0;
+    }
+    mc-&gt;count++;
+    return Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-exit">
+            
+              <b>exit</b>()
+            
+            <a href="../classes/Monitor.html#method-i-exit" name="method-i-exit" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="Monitor.html#method-i-mon_exit">mon_exit</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-exit_source')" id="l_method-i-exit_source">show</a>
+                
+              </p>
+              <div id="method-i-exit_source" class="dyn-source">
+                <pre>static VALUE
+monitor_exit(VALUE monitor)
+{
+    monitor_check_owner(monitor);
+
+    struct rb_monitor *mc = monitor_ptr(monitor);
+
+    if (mc-&gt;count &lt;= 0) rb_bug(&quot;monitor_exit: count:%d\n&quot;, (int)mc-&gt;count);
+    mc-&gt;count--;
+
+    if (mc-&gt;count == 0) {
+        RB_OBJ_WRITE(monitor, &amp;mc-&gt;owner, Qnil);
+        rb_mutex_unlock(mc-&gt;mutex);
+    }
+    return Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_check_owner">
+            
+              <b>mon_check_owner</b>()
+            
+            <a href="../classes/Monitor.html#method-i-mon_check_owner" name="method-i-mon_check_owner" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-mon_check_owner_source')" id="l_method-i-mon_check_owner_source">show</a>
+                
+              </p>
+              <div id="method-i-mon_check_owner_source" class="dyn-source">
+                <pre>static VALUE
+monitor_check_owner(VALUE monitor)
+{
+    struct rb_monitor *mc = monitor_ptr(monitor);
+    if (!mc_owner_p(mc)) {
+        rb_raise(rb_eThreadError, &quot;current thread not owner&quot;);
+    }
+    return Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_enter">
+            
+              <b>mon_enter</b>()
+            
+            <a href="../classes/Monitor.html#method-i-mon_enter" name="method-i-mon_enter" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Monitor.html#method-i-enter">enter</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_exit">
+            
+              <b>mon_exit</b>()
+            
+            <a href="../classes/Monitor.html#method-i-mon_exit" name="method-i-mon_exit" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Monitor.html#method-i-exit">exit</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_locked-3F">
+            
+              <b>mon_locked?</b>()
+            
+            <a href="../classes/Monitor.html#method-i-mon_locked-3F" name="method-i-mon_locked-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-mon_locked-3F_source')" id="l_method-i-mon_locked-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-mon_locked-3F_source" class="dyn-source">
+                <pre>static VALUE
+monitor_locked_p(VALUE monitor)
+{
+    struct rb_monitor *mc = monitor_ptr(monitor);
+    return rb_mutex_locked_p(mc-&gt;mutex);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_owned-3F">
+            
+              <b>mon_owned?</b>()
+            
+            <a href="../classes/Monitor.html#method-i-mon_owned-3F" name="method-i-mon_owned-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-mon_owned-3F_source')" id="l_method-i-mon_owned-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-mon_owned-3F_source" class="dyn-source">
+                <pre>static VALUE
+monitor_owned_p(VALUE monitor)
+{
+    struct rb_monitor *mc = monitor_ptr(monitor);
+    return (rb_mutex_locked_p(mc-&gt;mutex) &amp;&amp; mc_owner_p(mc)) ? Qtrue : Qfalse;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_synchronize">
+            
+              <b>mon_synchronize</b>()
+            
+            <a href="../classes/Monitor.html#method-i-mon_synchronize" name="method-i-mon_synchronize" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Monitor.html#method-i-synchronize">synchronize</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-mon_try_enter">
+            
+              <b>mon_try_enter</b>()
+            
+            <a href="../classes/Monitor.html#method-i-mon_try_enter" name="method-i-mon_try_enter" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Monitor.html#method-i-try_enter">try_enter</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-new_cond">
+            
+              <b>new_cond</b>()
+            
+            <a href="../classes/Monitor.html#method-i-new_cond" name="method-i-new_cond" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-new_cond_source')" id="l_method-i-new_cond_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/monitor/lib/monitor.rb#L258" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-new_cond_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 258</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">new_cond</span>
+  <span class="ruby-operator">::</span><span class="ruby-constant">MonitorMixin</span><span class="ruby-operator">::</span><span class="ruby-constant">ConditionVariable</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>)
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-synchronize">
+            
+              <b>synchronize</b>()
+            
+            <a href="../classes/Monitor.html#method-i-synchronize" name="method-i-synchronize" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="Monitor.html#method-i-mon_synchronize">mon_synchronize</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-synchronize_source')" id="l_method-i-synchronize_source">show</a>
+                
+              </p>
+              <div id="method-i-synchronize_source" class="dyn-source">
+                <pre>static VALUE
+monitor_synchronize(VALUE monitor)
+{
+    monitor_enter(monitor);
+    return rb_ensure(monitor_sync_body, monitor, monitor_sync_ensure, monitor);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-try_enter">
+            
+              <b>try_enter</b>()
+            
+            <a href="../classes/Monitor.html#method-i-try_enter" name="method-i-try_enter" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="Monitor.html#method-i-try_mon_enter">try_mon_enter</a>, <a href="Monitor.html#method-i-mon_try_enter">mon_try_enter</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-try_enter_source')" id="l_method-i-try_enter_source">show</a>
+                
+              </p>
+              <div id="method-i-try_enter_source" class="dyn-source">
+                <pre>static VALUE
+monitor_try_enter(VALUE monitor)
+{
+    struct rb_monitor *mc = monitor_ptr(monitor);
+
+    if (!mc_owner_p(mc)) {
+        if (!rb_mutex_trylock(mc-&gt;mutex)) {
+            return Qfalse;
+        }
+        RB_OBJ_WRITE(monitor, &amp;mc-&gt;owner, rb_thread_current());
+        mc-&gt;count = 0;
+    }
+    mc-&gt;count += 1;
+    return Qtrue;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-try_mon_enter">
+            
+              <b>try_mon_enter</b>()
+            
+            <a href="../classes/Monitor.html#method-i-try_mon_enter" name="method-i-try_mon_enter" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>for compatibility</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Monitor.html#method-i-try_enter">try_enter</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-wait_for_cond">
+            
+              <b>wait_for_cond</b>(p1, p2)
+            
+            <a href="../classes/Monitor.html#method-i-wait_for_cond" name="method-i-wait_for_cond" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-wait_for_cond_source')" id="l_method-i-wait_for_cond_source">show</a>
+                
+              </p>
+              <div id="method-i-wait_for_cond_source" class="dyn-source">
+                <pre>static VALUE
+monitor_wait_for_cond(VALUE monitor, VALUE cond, VALUE timeout)
+{
+    VALUE count = monitor_exit_for_cond(monitor);
+    struct wait_for_cond_data data = {
+        monitor,
+        cond,
+        timeout,
+        count,
+    };
+
+    return rb_ensure(monitor_wait_for_cond_body, (VALUE)&amp;data,
+                     monitor_enter_for_cond, (VALUE)&amp;data);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
     
   
 </div>

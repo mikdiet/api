@@ -694,16 +694,22 @@ datetime_s_commercial(int argc, VALUE *argv, VALUE klass)
       case 7:
         val2off(vof, rof);
       case 6:
+        check_numeric(vs, &quot;second&quot;);
         num2int_with_frac(s, positive_inf);
       case 5:
+        check_numeric(vmin, &quot;minute&quot;);
         num2int_with_frac(min, 5);
       case 4:
+        check_numeric(vh, &quot;hour&quot;);
         num2int_with_frac(h, 4);
       case 3:
+        check_numeric(vd, &quot;cwday&quot;);
         num2int_with_frac(d, 3);
       case 2:
+        check_numeric(vw, &quot;cweek&quot;);
         w = NUM2INT(vw);
       case 1:
+        check_numeric(vy, &quot;year&quot;);
         y = vy;
     }
 
@@ -715,9 +721,9 @@ datetime_s_commercial(int argc, VALUE *argv, VALUE klass)
                                 &amp;nth, &amp;ry,
                                 &amp;rw, &amp;rd, &amp;rjd,
                                 &amp;ns))
-            rb_raise(rb_eArgError, &quot;invalid date&quot;);
+            rb_raise(eDateError, &quot;invalid date&quot;);
         if (!c_valid_time_p(h, min, s, &amp;rh, &amp;rmin, &amp;rs))
-            rb_raise(rb_eArgError, &quot;invalid date&quot;);
+            rb_raise(eDateError, &quot;invalid date&quot;);
         canon24oc();
 
         rjd2 = jd_local_to_utc(rjd,
@@ -756,6 +762,8 @@ datetime_s_commercial(int argc, VALUE *argv, VALUE klass)
 <pre><code>DateTime.httpdate(&#39;Sat, 03 Feb 2001 04:05:06 GMT&#39;)
                           #=&gt; #&lt;DateTime: 2001-02-03T04:05:06+00:00 ...&gt;
 </code></pre>
+
+<p>Raise an <a href="ArgumentError.html"><code>ArgumentError</code></a> when the string length is longer than <em>limit</em>. You can stop this check by passing `limit: nil`, but note that it may take a long time to parse.</p>
             </div>
           
 
@@ -776,9 +784,10 @@ datetime_s_commercial(int argc, VALUE *argv, VALUE klass)
                 <pre>static VALUE
 datetime_s_httpdate(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE str, sg;
+    VALUE str, sg, opt;
 
-    rb_scan_args(argc, argv, &quot;02&quot;, &amp;str, &amp;sg);
+    rb_scan_args(argc, argv, &quot;02:&quot;, &amp;str, &amp;sg, &amp;opt);
+    if (!NIL_P(opt)) argc--;
 
     switch (argc) {
       case 0:
@@ -788,7 +797,12 @@ datetime_s_httpdate(int argc, VALUE *argv, VALUE klass)
     }
 
     {
-        VALUE hash = date_s__httpdate(klass, str);
+        int argc2 = 1;
+        VALUE argv2[2];
+        argv2[0] = str;
+        argv2[1] = opt;
+        if (!NIL_P(opt)) argc2++;
+        VALUE hash = date_s__httpdate(argc2, argv2, klass);
         return dt_new_by_frags(klass, hash, sg);
     }
 }</pre>
@@ -800,7 +814,7 @@ datetime_s_httpdate(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-iso8601">
             
-              <b>DateTime.iso8601(string='-4712-01-01T00:00:00+00:00'[, start=Date::ITALY])  &rarr;  datetime
+              <b>DateTime.iso8601(string='-4712-01-01T00:00:00+00:00'[, start=Date::ITALY], limit: 128)  &rarr;  datetime
 </b>
             
             <a href="../classes/DateTime.html#method-c-iso8601" name="method-c-iso8601" class="permalink">Link</a>
@@ -817,6 +831,8 @@ DateTime.iso8601(&#39;20010203T040506+0700&#39;)
 DateTime.iso8601(&#39;2001-W05-6T04:05:06+07:00&#39;)
                           #=&gt; #&lt;DateTime: 2001-02-03T04:05:06+07:00 ...&gt;
 </code></pre>
+
+<p>Raise an <a href="ArgumentError.html"><code>ArgumentError</code></a> when the string length is longer than <em>limit</em>. You can stop this check by passing `limit: nil`, but note that it may take a long time to parse.</p>
             </div>
           
 
@@ -837,9 +853,10 @@ DateTime.iso8601(&#39;2001-W05-6T04:05:06+07:00&#39;)
                 <pre>static VALUE
 datetime_s_iso8601(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE str, sg;
+    VALUE str, sg, opt;
 
-    rb_scan_args(argc, argv, &quot;02&quot;, &amp;str, &amp;sg);
+    rb_scan_args(argc, argv, &quot;02:&quot;, &amp;str, &amp;sg, &amp;opt);
+    if (!NIL_P(opt)) argc--;
 
     switch (argc) {
       case 0:
@@ -849,7 +866,12 @@ datetime_s_iso8601(int argc, VALUE *argv, VALUE klass)
     }
 
     {
-        VALUE hash = date_s__iso8601(klass, str);
+        int argc2 = 1;
+        VALUE argv2[2];
+        argv2[0] = str;
+        argv2[1] = opt;
+        if (!NIL_P(opt)) argc2--;
+        VALUE hash = date_s__iso8601(argc2, argv2, klass);
         return dt_new_by_frags(klass, hash, sg);
     }
 }</pre>
@@ -915,12 +937,16 @@ datetime_s_jd(int argc, VALUE *argv, VALUE klass)
       case 5:
         val2off(vof, rof);
       case 4:
+        check_numeric(vs, &quot;second&quot;);
         num2int_with_frac(s, positive_inf);
       case 3:
+        check_numeric(vmin, &quot;minute&quot;);
         num2int_with_frac(min, 3);
       case 2:
+        check_numeric(vh, &quot;hour&quot;);
         num2int_with_frac(h, 2);
       case 1:
+        check_numeric(vjd, &quot;jd&quot;);
         num2num_with_frac(jd, 1);
     }
 
@@ -929,7 +955,7 @@ datetime_s_jd(int argc, VALUE *argv, VALUE klass)
         int rh, rmin, rs, rjd, rjd2;
 
         if (!c_valid_time_p(h, min, s, &amp;rh, &amp;rmin, &amp;rs))
-            rb_raise(rb_eArgError, &quot;invalid date&quot;);
+            rb_raise(eDateError, &quot;invalid date&quot;);
         canon24oc();
 
         decode_jd(jd, &amp;nth, &amp;rjd);
@@ -956,7 +982,7 @@ datetime_s_jd(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-jisx0301">
             
-              <b>DateTime.jisx0301(string='-4712-01-01T00:00:00+00:00'[, start=Date::ITALY])  &rarr;  datetime
+              <b>DateTime.jisx0301(string='-4712-01-01T00:00:00+00:00'[, start=Date::ITALY], limit: 128)  &rarr;  datetime
 </b>
             
             <a href="../classes/DateTime.html#method-c-jisx0301" name="method-c-jisx0301" class="permalink">Link</a>
@@ -975,6 +1001,8 @@ datetime_s_jd(int argc, VALUE *argv, VALUE klass)
 <pre><code>DateTime.jisx0301(&#39;13.02.03T04:05:06+07:00&#39;)
                           #=&gt; #&lt;DateTime: 2001-02-03T04:05:06+07:00 ...&gt;
 </code></pre>
+
+<p>Raise an <a href="ArgumentError.html"><code>ArgumentError</code></a> when the string length is longer than <em>limit</em>. You can stop this check by passing `limit: nil`, but note that it may take a long time to parse.</p>
             </div>
           
 
@@ -995,9 +1023,10 @@ datetime_s_jd(int argc, VALUE *argv, VALUE klass)
                 <pre>static VALUE
 datetime_s_jisx0301(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE str, sg;
+    VALUE str, sg, opt;
 
-    rb_scan_args(argc, argv, &quot;02&quot;, &amp;str, &amp;sg);
+    rb_scan_args(argc, argv, &quot;02:&quot;, &amp;str, &amp;sg, &amp;opt);
+    if (!NIL_P(opt)) argc--;
 
     switch (argc) {
       case 0:
@@ -1007,7 +1036,12 @@ datetime_s_jisx0301(int argc, VALUE *argv, VALUE klass)
     }
 
     {
-        VALUE hash = date_s__jisx0301(klass, str);
+        int argc2 = 1;
+        VALUE argv2[2];
+        argv2[0] = str;
+        argv2[1] = opt;
+        if (!NIL_P(opt)) argc2++;
+        VALUE hash = date_s__jisx0301(argc2, argv2, klass);
         return dt_new_by_frags(klass, hash, sg);
     }
 }</pre>
@@ -1042,7 +1076,7 @@ datetime_s_jisx0301(int argc, VALUE *argv, VALUE klass)
                 Source:
                 <a href="javascript:toggleSource('method-c-json_create_source')" id="l_method-c-json_create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/ext/json/lib/json/add/date_time.rb#L12" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/json/lib/json/add/date_time.rb#L12" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-json_create_source" class="dyn-source">
@@ -1326,9 +1360,9 @@ datetime_s_nth_kday(int argc, VALUE *argv, VALUE klass)
                               &amp;nth, &amp;ry,
                               &amp;rm, &amp;rn, &amp;rk, &amp;rjd,
                               &amp;ns))
-            rb_raise(rb_eArgError, &quot;invalid date&quot;);
+            rb_raise(eDateError, &quot;invalid date&quot;);
         if (!c_valid_time_p(h, min, s, &amp;rh, &amp;rmin, &amp;rs))
-            rb_raise(rb_eArgError, &quot;invalid date&quot;);
+            rb_raise(eDateError, &quot;invalid date&quot;);
         canon24oc();
 
         rjd2 = jd_local_to_utc(rjd,
@@ -1409,14 +1443,19 @@ datetime_s_ordinal(int argc, VALUE *argv, VALUE klass)
       case 6:
         val2off(vof, rof);
       case 5:
+        check_numeric(vs, &quot;second&quot;);
         num2int_with_frac(s, positive_inf);
       case 4:
+        check_numeric(vmin, &quot;minute&quot;);
         num2int_with_frac(min, 4);
       case 3:
+        check_numeric(vh, &quot;hour&quot;);
         num2int_with_frac(h, 3);
       case 2:
+        check_numeric(vd, &quot;yday&quot;);
         num2int_with_frac(d, 2);
       case 1:
+        check_numeric(vy, &quot;year&quot;);
         y = vy;
     }
 
@@ -1428,9 +1467,9 @@ datetime_s_ordinal(int argc, VALUE *argv, VALUE klass)
                              &amp;nth, &amp;ry,
                              &amp;rd, &amp;rjd,
                              &amp;ns))
-            rb_raise(rb_eArgError, &quot;invalid date&quot;);
+            rb_raise(eDateError, &quot;invalid date&quot;);
         if (!c_valid_time_p(h, min, s, &amp;rh, &amp;rmin, &amp;rs))
-            rb_raise(rb_eArgError, &quot;invalid date&quot;);
+            rb_raise(eDateError, &quot;invalid date&quot;);
         canon24oc();
 
         rjd2 = jd_local_to_utc(rjd,
@@ -1456,7 +1495,7 @@ datetime_s_ordinal(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-parse">
             
-              <b>DateTime.parse(string='-4712-01-01T00:00:00+00:00'[, comp=true[, start=Date::ITALY]])  &rarr;  datetime
+              <b>DateTime.parse(string='-4712-01-01T00:00:00+00:00'[, comp=true[, start=Date::ITALY]], limit: 128)  &rarr;  datetime
 </b>
             
             <a href="../classes/DateTime.html#method-c-parse" name="method-c-parse" class="permalink">Link</a>
@@ -1475,6 +1514,8 @@ DateTime.parse(&#39;20010203T040506+0700&#39;)
 DateTime.parse(&#39;3rd Feb 2001 04:05:06 PM&#39;)
                           #=&gt; #&lt;DateTime: 2001-02-03T16:05:06+00:00 ...&gt;
 </code></pre>
+
+<p>Raise an <a href="ArgumentError.html"><code>ArgumentError</code></a> when the string length is longer than <em>limit</em>. You can stop this check by passing `limit: nil`, but note that it may take a long time to parse.</p>
             </div>
           
 
@@ -1495,9 +1536,10 @@ DateTime.parse(&#39;3rd Feb 2001 04:05:06 PM&#39;)
                 <pre>static VALUE
 datetime_s_parse(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE str, comp, sg;
+    VALUE str, comp, sg, opt;
 
-    rb_scan_args(argc, argv, &quot;03&quot;, &amp;str, &amp;comp, &amp;sg);
+    rb_scan_args(argc, argv, &quot;03:&quot;, &amp;str, &amp;comp, &amp;sg, &amp;opt);
+    if (!NIL_P(opt)) argc--;
 
     switch (argc) {
       case 0:
@@ -1509,11 +1551,13 @@ datetime_s_parse(int argc, VALUE *argv, VALUE klass)
     }
 
     {
-        VALUE argv2[2], hash;
-
+        int argc2 = 2;
+        VALUE argv2[3];
         argv2[0] = str;
         argv2[1] = comp;
-        hash = date_s__parse(2, argv2, klass);
+        argv2[2] = opt;
+        if (!NIL_P(opt)) argc2++;
+        VALUE hash = date_s__parse(argc2, argv2, klass);
         return dt_new_by_frags(klass, hash, sg);
     }
 }</pre>
@@ -1525,7 +1569,7 @@ datetime_s_parse(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-rfc2822">
             
-              <b>DateTime.rfc2822(string='Mon, 1 Jan -4712 00:00:00 +0000'[, start=Date::ITALY])  &rarr;  datetime<br />DateTime.rfc822(string='Mon, 1 Jan -4712 00:00:00 +0000'[, start=Date::ITALY])   &rarr;  datetime
+              <b>DateTime.rfc2822(string='Mon, 1 Jan -4712 00:00:00 +0000'[, start=Date::ITALY], limit: 128)  &rarr;  datetime<br />DateTime.rfc822(string='Mon, 1 Jan -4712 00:00:00 +0000'[, start=Date::ITALY], limit: 128)   &rarr;  datetime
 </b>
             
             <a href="../classes/DateTime.html#method-c-rfc2822" name="method-c-rfc2822" class="permalink">Link</a>
@@ -1538,6 +1582,8 @@ datetime_s_parse(int argc, VALUE *argv, VALUE klass)
 <pre><code>DateTime.rfc2822(&#39;Sat, 3 Feb 2001 04:05:06 +0700&#39;)
                          #=&gt; #&lt;DateTime: 2001-02-03T04:05:06+07:00 ...&gt;
 </code></pre>
+
+<p>Raise an <a href="ArgumentError.html"><code>ArgumentError</code></a> when the string length is longer than <em>limit</em>. You can stop this check by passing `limit: nil`, but note that it may take a long time to parse.</p>
             </div>
           
 
@@ -1558,9 +1604,10 @@ datetime_s_parse(int argc, VALUE *argv, VALUE klass)
                 <pre>static VALUE
 datetime_s_rfc2822(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE str, sg;
+    VALUE str, sg, opt;
 
-    rb_scan_args(argc, argv, &quot;02&quot;, &amp;str, &amp;sg);
+    rb_scan_args(argc, argv, &quot;02:&quot;, &amp;str, &amp;sg, &amp;opt);
+    if (!NIL_P(opt)) argc--;
 
     switch (argc) {
       case 0:
@@ -1570,7 +1617,12 @@ datetime_s_rfc2822(int argc, VALUE *argv, VALUE klass)
     }
 
     {
-        VALUE hash = date_s__rfc2822(klass, str);
+        int argc2 = 1;
+        VALUE argv2[2];
+        argv2[0] = str;
+        argv2[1] = opt;
+        if (!NIL_P(opt)) argc2++;
+        VALUE hash = date_s__rfc2822(argc2, argv2, klass);
         return dt_new_by_frags(klass, hash, sg);
     }
 }</pre>
@@ -1582,7 +1634,7 @@ datetime_s_rfc2822(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-rfc3339">
             
-              <b>DateTime.rfc3339(string='-4712-01-01T00:00:00+00:00'[, start=Date::ITALY])  &rarr;  datetime
+              <b>DateTime.rfc3339(string='-4712-01-01T00:00:00+00:00'[, start=Date::ITALY], limit: 128)  &rarr;  datetime
 </b>
             
             <a href="../classes/DateTime.html#method-c-rfc3339" name="method-c-rfc3339" class="permalink">Link</a>
@@ -1595,6 +1647,8 @@ datetime_s_rfc2822(int argc, VALUE *argv, VALUE klass)
 <pre><code>DateTime.rfc3339(&#39;2001-02-03T04:05:06+07:00&#39;)
                           #=&gt; #&lt;DateTime: 2001-02-03T04:05:06+07:00 ...&gt;
 </code></pre>
+
+<p>Raise an <a href="ArgumentError.html"><code>ArgumentError</code></a> when the string length is longer than <em>limit</em>. You can stop this check by passing `limit: nil`, but note that it may take a long time to parse.</p>
             </div>
           
 
@@ -1615,9 +1669,10 @@ datetime_s_rfc2822(int argc, VALUE *argv, VALUE klass)
                 <pre>static VALUE
 datetime_s_rfc3339(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE str, sg;
+    VALUE str, sg, opt;
 
-    rb_scan_args(argc, argv, &quot;02&quot;, &amp;str, &amp;sg);
+    rb_scan_args(argc, argv, &quot;02:&quot;, &amp;str, &amp;sg, &amp;opt);
+    if (!NIL_P(opt)) argc--;
 
     switch (argc) {
       case 0:
@@ -1627,7 +1682,12 @@ datetime_s_rfc3339(int argc, VALUE *argv, VALUE klass)
     }
 
     {
-        VALUE hash = date_s__rfc3339(klass, str);
+        int argc2 = 1;
+        VALUE argv2[2];
+        argv2[0] = str;
+        argv2[1] = opt;
+        if (!NIL_P(opt)) argc2++;
+        VALUE hash = date_s__rfc3339(argc2, argv2, klass);
         return dt_new_by_frags(klass, hash, sg);
     }
 }</pre>
@@ -1639,7 +1699,7 @@ datetime_s_rfc3339(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-rfc822">
             
-              <b>DateTime.rfc2822(string='Mon, 1 Jan -4712 00:00:00 +0000'[, start=Date::ITALY])  &rarr;  datetime<br />DateTime.rfc822(string='Mon, 1 Jan -4712 00:00:00 +0000'[, start=Date::ITALY])   &rarr;  datetime
+              <b>DateTime.rfc2822(string='Mon, 1 Jan -4712 00:00:00 +0000'[, start=Date::ITALY], limit: 128)  &rarr;  datetime<br />DateTime.rfc822(string='Mon, 1 Jan -4712 00:00:00 +0000'[, start=Date::ITALY], limit: 128)   &rarr;  datetime
 </b>
             
             <a href="../classes/DateTime.html#method-c-rfc822" name="method-c-rfc822" class="permalink">Link</a>
@@ -1652,6 +1712,8 @@ datetime_s_rfc3339(int argc, VALUE *argv, VALUE klass)
 <pre><code>DateTime.rfc2822(&#39;Sat, 3 Feb 2001 04:05:06 +0700&#39;)
                          #=&gt; #&lt;DateTime: 2001-02-03T04:05:06+07:00 ...&gt;
 </code></pre>
+
+<p>Raise an <a href="ArgumentError.html"><code>ArgumentError</code></a> when the string length is longer than <em>limit</em>. You can stop this check by passing `limit: nil`, but note that it may take a long time to parse.</p>
             </div>
           
 
@@ -1672,9 +1734,10 @@ datetime_s_rfc3339(int argc, VALUE *argv, VALUE klass)
                 <pre>static VALUE
 datetime_s_rfc2822(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE str, sg;
+    VALUE str, sg, opt;
 
-    rb_scan_args(argc, argv, &quot;02&quot;, &amp;str, &amp;sg);
+    rb_scan_args(argc, argv, &quot;02:&quot;, &amp;str, &amp;sg, &amp;opt);
+    if (!NIL_P(opt)) argc--;
 
     switch (argc) {
       case 0:
@@ -1684,7 +1747,12 @@ datetime_s_rfc2822(int argc, VALUE *argv, VALUE klass)
     }
 
     {
-        VALUE hash = date_s__rfc2822(klass, str);
+        int argc2 = 1;
+        VALUE argv2[2];
+        argv2[0] = str;
+        argv2[1] = opt;
+        if (!NIL_P(opt)) argc2++;
+        VALUE hash = date_s__rfc2822(argc2, argv2, klass);
         return dt_new_by_frags(klass, hash, sg);
     }
 }</pre>
@@ -1849,9 +1917,9 @@ datetime_s_weeknum(int argc, VALUE *argv, VALUE klass)
                              &amp;nth, &amp;ry,
                              &amp;rw, &amp;rd, &amp;rjd,
                              &amp;ns))
-            rb_raise(rb_eArgError, &quot;invalid date&quot;);
+            rb_raise(eDateError, &quot;invalid date&quot;);
         if (!c_valid_time_p(h, min, s, &amp;rh, &amp;rmin, &amp;rs))
-            rb_raise(rb_eArgError, &quot;invalid date&quot;);
+            rb_raise(eDateError, &quot;invalid date&quot;);
         canon24oc();
 
         rjd2 = jd_local_to_utc(rjd,
@@ -1876,7 +1944,7 @@ datetime_s_weeknum(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-xmlschema">
             
-              <b>DateTime.xmlschema(string='-4712-01-01T00:00:00+00:00'[, start=Date::ITALY])  &rarr;  datetime
+              <b>DateTime.xmlschema(string='-4712-01-01T00:00:00+00:00'[, start=Date::ITALY], limit: 128)  &rarr;  datetime
 </b>
             
             <a href="../classes/DateTime.html#method-c-xmlschema" name="method-c-xmlschema" class="permalink">Link</a>
@@ -1889,6 +1957,8 @@ datetime_s_weeknum(int argc, VALUE *argv, VALUE klass)
 <pre><code>DateTime.xmlschema(&#39;2001-02-03T04:05:06+07:00&#39;)
                           #=&gt; #&lt;DateTime: 2001-02-03T04:05:06+07:00 ...&gt;
 </code></pre>
+
+<p>Raise an <a href="ArgumentError.html"><code>ArgumentError</code></a> when the string length is longer than <em>limit</em>. You can stop this check by passing `limit: nil`, but note that it may take a long time to parse.</p>
             </div>
           
 
@@ -1909,9 +1979,10 @@ datetime_s_weeknum(int argc, VALUE *argv, VALUE klass)
                 <pre>static VALUE
 datetime_s_xmlschema(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE str, sg;
+    VALUE str, sg, opt;
 
-    rb_scan_args(argc, argv, &quot;02&quot;, &amp;str, &amp;sg);
+    rb_scan_args(argc, argv, &quot;02:&quot;, &amp;str, &amp;sg, &amp;opt);
+    if (!NIL_P(opt)) argc--;
 
     switch (argc) {
       case 0:
@@ -1921,7 +1992,12 @@ datetime_s_xmlschema(int argc, VALUE *argv, VALUE klass)
     }
 
     {
-        VALUE hash = date_s__xmlschema(klass, str);
+        int argc2 = 1;
+        VALUE argv2[2];
+        argv2[0] = str;
+        argv2[1] = opt;
+        if (!NIL_P(opt)) argc2++;
+        VALUE hash = date_s__xmlschema(argc2, argv2, klass);
         return dt_new_by_frags(klass, hash, sg);
     }
 }</pre>
@@ -1960,7 +2036,7 @@ datetime_s_xmlschema(int argc, VALUE *argv, VALUE klass)
                 Source:
                 <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/ext/json/lib/json/add/date_time.rb#L28" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/json/lib/json/add/date_time.rb#L28" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-as_json_source" class="dyn-source">
@@ -2817,7 +2893,7 @@ datetime_to_datetime(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_json_source')" id="l_method-i-to_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/ext/json/lib/json/add/date_time.rb#L45" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/json/lib/json/add/date_time.rb#L45" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_json_source" class="dyn-source">

@@ -312,19 +312,10 @@ document.addEventListener("turbolinks:load", function() {
               </p>
               <div id="method-i-5B-5D_source" class="dyn-source">
                 <pre>static VALUE
-wmap_aref(VALUE self, VALUE wmap)
+wmap_aref(VALUE self, VALUE key)
 {
-    st_data_t data;
-    VALUE obj;
-    struct weakmap *w;
-    rb_objspace_t *objspace = &amp;rb_objspace;
-
-    TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
-    if (!st_lookup(w-&gt;wmap2obj, (st_data_t)wmap, &amp;data)) return Qnil;
-    obj = (VALUE)data;
-    if (!is_id_value(objspace, obj)) return Qnil;
-    if (!is_live_object(objspace, obj)) return Qnil;
-    return obj;
+    VALUE obj = wmap_lookup(self, key);
+    return obj != Qundef ? obj : Qnil;
 }</pre>
               </div>
             </div>
@@ -365,10 +356,13 @@ wmap_aset(VALUE self, VALUE wmap, VALUE orig)
     struct weakmap *w;
 
     TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
-    should_be_finalizable(orig);
-    should_be_finalizable(wmap);
-    define_final0(orig, w-&gt;final);
-    define_final0(wmap, w-&gt;final);
+    if (FL_ABLE(orig)) {
+        define_final0(orig, w-&gt;final);
+    }
+    if (FL_ABLE(wmap)) {
+        define_final0(wmap, w-&gt;final);
+    }
+
     st_update(w-&gt;obj2wmap, (st_data_t)orig, wmap_aset_update, wmap);
     st_insert(w-&gt;wmap2obj, (st_data_t)wmap, (st_data_t)orig);
     return nonspecial_obj_id(orig);
@@ -571,7 +565,7 @@ wmap_each_value(VALUE self)
                 <pre>static VALUE
 wmap_has_key(VALUE self, VALUE key)
 {
-    return NIL_P(wmap_aref(self, key)) ? Qfalse : Qtrue;
+    return wmap_lookup(self, key) == Qundef ? Qfalse : Qtrue;
 }</pre>
               </div>
             </div>
@@ -612,11 +606,14 @@ wmap_inspect(VALUE self)
     VALUE str;
     VALUE c = rb_class_name(CLASS_OF(self));
     struct weakmap *w;
+    struct wmap_iter_arg args;
 
     TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
     str = rb_sprintf(&quot;-&lt;%&quot;PRIsVALUE&quot;:%p&quot;, c, (void *)self);
     if (w-&gt;wmap2obj) {
-        st_foreach(w-&gt;wmap2obj, wmap_inspect_i, str);
+        args.objspace = &amp;rb_objspace;
+        args.value = str;
+        st_foreach(w-&gt;wmap2obj, wmap_inspect_i, (st_data_t)&amp;args);
     }
     RSTRING_PTR(str)[0] = &#39;#&#39;;
     rb_str_cat2(str, &quot;&gt;&quot;);

@@ -43,11 +43,11 @@ document.addEventListener("turbolinks:load", function() {
 
   
     
-    <meta name="description" content="A class which allows both internal and external iteration.  An Enumerator can be created by the following methods.  Kernel#to_enum  Kernel#enum_for  Enumerator.">
-    <meta property="og:description" content="A class which allows both internal and external iteration.  An Enumerator can be created by the following methods.  Kernel#to_enum  Kernel#enum_for  Enumerator.">
+    <meta name="description" content="A class which allows both internal and external iteration.  An Enumerator can be created by the following methods.  Object#to_enum  Object#enum_for  Enumerator.">
+    <meta property="og:description" content="A class which allows both internal and external iteration.  An Enumerator can be created by the following methods.  Object#to_enum  Object#enum_for  Enumerator.">
   
 
-    <meta name="keywords" content="Enumerator class, new, each, each_with_index, each_with_object, with_index, with_object, next_values, peek_values, next, peek, feed, rewind, inspect, size, +">
+    <meta name="keywords" content="Enumerator class, new, each, each_with_index, each_with_object, with_index, with_object, next_values, peek_values, next, peek, feed, rewind, inspect, size, +, produce">
 </head>
 
 <body>
@@ -100,9 +100,9 @@ document.addEventListener("turbolinks:load", function() {
 
 <p>An <a href="Enumerator.html"><code>Enumerator</code></a> can be created by the following methods.</p>
 <ul><li>
-<p>Kernel#to_enum</p>
+<p><a href="Object.html#method-i-to_enum"><code>Object#to_enum</code></a></p>
 </li><li>
-<p>Kernel#enum_for</p>
+<p><a href="Object.html#method-i-enum_for"><code>Object#enum_for</code></a></p>
 </li><li>
 <p><a href="Enumerator.html#method-c-new"><code>Enumerator.new</code></a></p>
 </li></ul>
@@ -218,6 +218,11 @@ puts ext_each(o.to_enum) {|*x| puts x; [:b, *x] }
       
         <li>
           <span class="type">CLASS</span>
+          <a href="Enumerator/Producer.html">Enumerator::Producer</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
           <a href="Enumerator/Yielder.html">Enumerator::Yielder</a>
         </li>
       
@@ -321,7 +326,12 @@ puts ext_each(o.to_enum) {|*x| puts x; [:b, *x] }
             
               
               <li>
-                <a href="#method-i-peek_values">peek_values</a>
+                <a href="#method-i-peek_values">peek_values</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-produce">produce</a>
               </li>
             
           </ul>
@@ -418,7 +428,7 @@ puts ext_each(o.to_enum) {|*x| puts x; [:b, *x] }
             <div class="description">
               <p>Creates a new <a href="Enumerator.html"><code>Enumerator</code></a> object, which can be used as an <a href="Enumerable.html"><code>Enumerable</code></a>.</p>
 
-<p>In the first form, iteration is defined by the given block, in which a “yielder” object, given as block parameter, can be used to yield a value by calling the <code>yield</code> method (aliased as +&lt;&lt;+):</p>
+<p>In the first form, iteration is defined by the given block, in which a “yielder” object, given as block parameter, can be used to yield a value by calling the <code>yield</code> method (aliased as <code>&lt;&lt;</code>):</p>
 
 <pre><code>fib = Enumerator.new do |y|
   a = b = 1
@@ -428,19 +438,19 @@ puts ext_each(o.to_enum) {|*x| puts x; [:b, *x] }
   end
 end
 
-p fib.take(10) # =&gt; [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
+fib.take(10) # =&gt; [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
 </code></pre>
 
 <p>The optional parameter can be used to specify how to calculate the size in a lazy fashion (see <a href="Enumerator.html#method-i-size"><code>Enumerator#size</code></a>). It can either be a value or a callable object.</p>
 
-<p>In the second, deprecated, form, a generated <a href="Enumerator.html"><code>Enumerator</code></a> iterates over the given object using the given method with the given arguments passed.</p>
+<p>In the deprecated second form, a generated <a href="Enumerator.html"><code>Enumerator</code></a> iterates over the given object using the given method with the given arguments passed.</p>
 
-<p>Use of this form is discouraged.  Use Kernel#enum_for or Kernel#to_enum instead.</p>
+<p>Use of this form is discouraged.  Use <a href="Object.html#method-i-enum_for"><code>Object#enum_for</code></a> or <a href="Object.html#method-i-to_enum"><code>Object#to_enum</code></a> instead.</p>
 
 <pre><code>e = Enumerator.new(ObjectSpace, :each_object)
     #-&gt; ObjectSpace.enum_for(:each_object)
 
-e.select { |obj| obj.is_a?(Class) }  #=&gt; array of all classes
+e.select { |obj| obj.is_a?(Class) }  # =&gt; array of all classes
 </code></pre>
             </div>
           
@@ -464,6 +474,7 @@ enumerator_initialize(int argc, VALUE *argv, VALUE obj)
 {
     VALUE recv, meth = sym_each;
     VALUE size = Qnil;
+    int kw_splat = 0;
 
     if (rb_block_given_p()) {
         rb_check_arity(argc, 0, 1);
@@ -481,15 +492,89 @@ enumerator_initialize(int argc, VALUE *argv, VALUE obj)
     }
     else {
         rb_check_arity(argc, 1, UNLIMITED_ARGUMENTS);
-        rb_warn(&quot;Enumerator.new without a block is deprecated; use Object#to_enum&quot;);
+        rb_warn_deprecated(&quot;Enumerator.new without a block&quot;, &quot;Object#to_enum&quot;);
         recv = *argv++;
         if (--argc) {
             meth = *argv++;
             --argc;
         }
+        kw_splat = PASS_KW_SPLAT;
     }
 
-    return enumerator_init(obj, recv, meth, argc, argv, 0, size);
+    return enumerator_init(obj, recv, meth, argc, argv, 0, size, kw_splat);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-produce">
+            
+              <b>Enumerator.produce(initial = nil) { |prev| block } &rarr; enumerator
+</b>
+            
+            <a href="../classes/Enumerator.html#method-c-produce" name="method-c-produce" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Creates an infinite enumerator from any block, just called over and over.  The result of the previous iteration is passed to the next one. If <code>initial</code> is provided, it is passed to the first iteration, and becomes the first element of the enumerator; if it is not provided, the first iteration receives <code>nil</code>, and its result becomes the first element of the iterator.</p>
+
+<p>Raising <a href="StopIteration.html"><code>StopIteration</code></a> from the block stops an iteration.</p>
+
+<pre><code>Enumerator.produce(1, &amp;:succ)   # =&gt; enumerator of 1, 2, 3, 4, ....
+
+Enumerator.produce { rand(10) } # =&gt; infinite random number sequence
+
+ancestors = Enumerator.produce(node) { |prev| node = prev.parent or raise StopIteration }
+enclosing_section = ancestors.find { |n| n.type == :section }
+</code></pre>
+
+<p>Using <a href="Enumerator.html#method-c-produce"><code>::produce</code></a> together with <a href="Enumerable.html"><code>Enumerable</code></a> methods like <a href="Enumerable.html#method-i-detect"><code>Enumerable#detect</code></a>, Enumerable#slice, <a href="Enumerable.html#method-i-take_while"><code>Enumerable#take_while</code></a> can provide Enumerator-based alternatives for <code>while</code> and <code>until</code> cycles:</p>
+
+<pre><code># Find next Tuesday
+require &quot;date&quot;
+Enumerator.produce(Date.today, &amp;:succ).detect(&amp;:tuesday?)
+
+# Simple lexer:
+require &quot;strscan&quot;
+scanner = StringScanner.new(&quot;7+38/6&quot;)
+PATTERN = %r{\d+|[-/+*]}
+Enumerator.produce { scanner.scan(PATTERN) }.slice_after { scanner.eos? }.first
+# =&gt; [&quot;7&quot;, &quot;+&quot;, &quot;38&quot;, &quot;/&quot;, &quot;6&quot;]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-produce_source')" id="l_method-c-produce_source">show</a>
+                
+              </p>
+              <div id="method-c-produce_source" class="dyn-source">
+                <pre>static VALUE
+enumerator_s_produce(int argc, VALUE *argv, VALUE klass)
+{
+    VALUE init, producer;
+
+    if (!rb_block_given_p()) rb_raise(rb_eArgError, &quot;no block given&quot;);
+
+    if (rb_scan_args(argc, argv, &quot;01&quot;, &amp;init) == 0) {
+        init = Qundef;
+    }
+
+    producer = producer_init(producer_allocate(rb_cEnumProducer), init, rb_block_proc());
+
+    return rb_enumeratorize_with_size_kw(producer, sym_each, 0, 0, producer_size, RB_NO_KEYWORDS);
 }</pre>
               </div>
             </div>
@@ -1222,7 +1307,7 @@ enumerator_size(VALUE obj)
         argc = (int)RARRAY_LEN(e-&gt;args);
         argv = RARRAY_CONST_PTR(e-&gt;args);
     }
-    size = rb_check_funcall(e-&gt;size, id_call, argc, argv);
+    size = rb_check_funcall_kw(e-&gt;size, id_call, argc, argv, e-&gt;kw_splat);
     if (size != Qundef) return size;
     return e-&gt;size;
 }</pre>

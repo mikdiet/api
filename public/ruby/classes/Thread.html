@@ -108,12 +108,12 @@ document.addEventListener("turbolinks:load", function() {
 
 <p>For example, we can create a new thread separate from the main thread&#39;s execution using <a href="Thread.html#method-c-new"><code>::new</code></a>.</p>
 
-<pre><code>thr = Thread.new { puts &quot;Whats the big deal&quot; }
+<pre><code>thr = Thread.new { puts &quot;What&#39;s the big deal&quot; }
 </code></pre>
 
 <p>Then we are able to pause the execution of the main thread and allow our new thread to finish, using <a href="Thread.html#method-i-join"><code>join</code></a>:</p>
 
-<pre><code>thr.join #=&gt; &quot;Whats the big deal&quot;
+<pre><code>thr.join #=&gt; &quot;What&#39;s the big deal&quot;
 </code></pre>
 
 <p>If we don&#39;t call <code>thr.join</code> before the main thread terminates, then all other threads including <code>thr</code> will be killed.</p>
@@ -121,13 +121,19 @@ document.addEventListener("turbolinks:load", function() {
 <p>Alternatively, you can use an array for handling multiple threads at once, like in the following example:</p>
 
 <pre><code>threads = []
-threads &lt;&lt; Thread.new { puts &quot;Whats the big deal&quot; }
+threads &lt;&lt; Thread.new { puts &quot;What&#39;s the big deal&quot; }
 threads &lt;&lt; Thread.new { 3.times { puts &quot;Threads are fun!&quot; } }
 </code></pre>
 
 <p>After creating a few threads we wait for them all to finish consecutively.</p>
 
 <pre><code>threads.each { |thr| thr.join }
+</code></pre>
+
+<p>To retrieve the last value of a thread, use <a href="Thread.html#method-i-value"><code>value</code></a></p>
+
+<pre><code>thr = Thread.new { sleep 1; &quot;Useful value&quot; }
+thr.value #=&gt; &quot;Useful value&quot;
 </code></pre>
 
 <h3 id="class-Thread-label-Thread+initialization"><a href="Thread.html"><code>Thread</code></a> initialization</h3>
@@ -142,7 +148,7 @@ threads &lt;&lt; Thread.new { 3.times { puts &quot;Threads are fun!&quot; } }
 
 <p>The class method <a href="Thread.html#method-c-kill"><code>::kill</code></a>, is meant to exit a given thread:</p>
 
-<pre><code>thr = Thread.new { ... }
+<pre><code>thr = Thread.new { sleep }
 Thread.kill(thr) # sends exit() to thr
 </code></pre>
 
@@ -202,9 +208,15 @@ thr.status # =&gt; false
 
 <h3 id="class-Thread-label-Exception+handling"><a href="Exception.html"><code>Exception</code></a> handling</h3>
 
-<p>Any thread can raise an exception using the <a href="Thread.html#method-i-raise"><code>raise</code></a> instance method, which operates similarly to <a href="Kernel.html#method-i-raise"><code>Kernel#raise</code></a>.</p>
+<p>When an unhandled exception is raised inside a thread, it will terminate. By default, this exception will not propagate to other threads. The exception is stored and when another thread calls <a href="Thread.html#method-i-value"><code>value</code></a> or <a href="Thread.html#method-i-join"><code>join</code></a>, the exception will be re-raised in that thread.</p>
 
-<p>However, it&#39;s important to note that an exception that occurs in any thread except the main thread depends on <a href="Thread.html#method-i-abort_on_exception"><code>abort_on_exception</code></a>. This option is <code>false</code> by default, meaning that any unhandled exception will cause the thread to terminate silently when waited on by either <a href="Thread.html#method-i-join"><code>join</code></a> or <a href="Thread.html#method-i-value"><code>value</code></a>. You can change this default by either <a href="Thread.html#method-i-abort_on_exception-3D"><code>abort_on_exception=</code></a> <code>true</code> or setting $DEBUG to <code>true</code>.</p>
+<pre><code>t = Thread.new{ raise &#39;something went wrong&#39; }
+t.value #=&gt; RuntimeError: something went wrong
+</code></pre>
+
+<p>An exception can be raised from outside the thread using the <a href="Thread.html#method-i-raise"><code>Thread#raise</code></a> instance method, which takes the same parameters as <a href="Kernel.html#method-i-raise"><code>Kernel#raise</code></a>.</p>
+
+<p>Setting <a href="Thread.html#method-c-abort_on_exception"><code>Thread.abort_on_exception</code></a> = true, <a href="Thread.html#method-i-abort_on_exception"><code>Thread#abort_on_exception</code></a> = true, or $DEBUG = true will cause a subsequent unhandled exception raised in a thread to be automatically re-raised in the main thread.</p>
 
 <p>With the addition of the class method <a href="Thread.html#method-c-handle_interrupt"><code>::handle_interrupt</code></a>, you can now handle exceptions asynchronously with threads.</p>
 
@@ -817,7 +829,7 @@ rb_thread_s_debug_set(VALUE self, VALUE val)
               </p>
               <div id="method-c-abort_on_exception_source" class="dyn-source">
                 <pre>static VALUE
-rb_thread_s_abort_exc(void)
+rb_thread_s_abort_exc(VALUE _)
 {
     return GET_THREAD()-&gt;vm-&gt;thread_abort_on_exception ? Qtrue : Qfalse;
 }</pre>
@@ -933,7 +945,7 @@ thread_s_current(VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-exclusive">
             
-              <b>Thread.exclusive { block }   => obj
+              <b>Thread.exclusive { block }   &rarr; obj
 </b>
             
             <a href="../classes/Thread.html#method-c-exclusive" name="method-c-exclusive" class="permalink">Link</a>
@@ -957,7 +969,7 @@ thread_s_current(VALUE klass)
                 Source:
                 <a href="javascript:toggleSource('method-c-exclusive_source')" id="l_method-c-exclusive_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/prelude.rb#L8" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/prelude.rb#L8" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-exclusive_source" class="dyn-source">
@@ -1002,7 +1014,7 @@ thread_s_current(VALUE klass)
               </p>
               <div id="method-c-exit_source" class="dyn-source">
                 <pre>static VALUE
-rb_thread_exit(void)
+rb_thread_exit(VALUE _)
 {
     rb_thread_t *th = GET_THREAD();
     return rb_thread_kill(th-&gt;self);
@@ -1311,24 +1323,10 @@ Thread.list.each {|t| p t}
                 
               </p>
               <div id="method-c-list_source" class="dyn-source">
-                <pre>VALUE
-rb_thread_list(void)
+                <pre>static VALUE
+thread_list(VALUE _)
 {
-    VALUE ary = rb_ary_new();
-    rb_vm_t *vm = GET_THREAD()-&gt;vm;
-    rb_thread_t *th = 0;
-
-    list_for_each(&amp;vm-&gt;living_threads, th, vmlt_node) {
-        switch (th-&gt;status) {
-          case THREAD_RUNNABLE:
-          case THREAD_STOPPED:
-          case THREAD_STOPPED_FOREVER:
-            rb_ary_push(ary, th-&gt;self);
-          default:
-            break;
-        }
-    }
-    return ary;
+    return rb_thread_list();
 }</pre>
               </div>
             </div>
@@ -1424,7 +1422,7 @@ thread_s_new(int argc, VALUE *argv, VALUE klass)
     if (GET_VM()-&gt;main_thread-&gt;status == THREAD_KILLED)
         rb_raise(rb_eThreadError, &quot;can&#39;t alloc thread&quot;);
 
-    rb_obj_call_init(thread, argc, argv);
+    rb_obj_call_init_kw(thread, argc, argv, RB_PASS_CALLED_KEYWORDS);
     th = rb_thread_ptr(thread);
     if (!threadptr_initialized(th)) {
         rb_raise(rb_eThreadError, &quot;uninitialized thread - check `%&quot;PRIsVALUE&quot;#initialize&#39;&quot;,
@@ -1624,7 +1622,7 @@ Traceback (most recent call last):
               </p>
               <div id="method-c-report_on_exception_source" class="dyn-source">
                 <pre>static VALUE
-rb_thread_s_report_exc(void)
+rb_thread_s_report_exc(VALUE _)
 {
     return GET_THREAD()-&gt;vm-&gt;thread_report_on_exception ? Qtrue : Qfalse;
 }</pre>
@@ -1771,15 +1769,10 @@ a.join
                 
               </p>
               <div id="method-c-stop_source" class="dyn-source">
-                <pre>VALUE
-rb_thread_stop(void)
+                <pre>static VALUE
+thread_stop(VALUE _)
 {
-    if (rb_thread_alone()) {
-        rb_raise(rb_eThreadError,
-                 &quot;stopping only thread\n\tnote: use sleep to stop forever&quot;);
-    }
-    rb_thread_sleep_deadly();
-    return Qnil;
+    return rb_thread_stop();
 }</pre>
               </div>
             </div>
@@ -2190,18 +2183,14 @@ rb_thread_backtrace_locations_m(int argc, VALUE *argv, VALUE thval)
         <div class="method">
           <h3 class="title method-title" id="method-i-exit">
             
-              <b>thr.exit        &rarr; thr or nil</b>
+              <b>thr.exit        &rarr; thr</b>
             
             <a href="../classes/Thread.html#method-i-exit" name="method-i-exit" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Terminates <code>thr</code> and schedules another thread to be run.</p>
-
-<p>If this thread is already marked to be killed, <a href="Thread.html#method-i-exit"><code>exit</code></a> returns the <a href="Thread.html"><code>Thread</code></a>.</p>
-
-<p>If this is the main thread, or the last thread, exits the process.</p>
+              <p>Terminates <code>thr</code> and schedules another thread to be run, returning the terminated <a href="Thread.html"><code>Thread</code></a>.  If this is the main thread, or the last thread, exits the process.</p>
             </div>
           
 
@@ -2227,7 +2216,7 @@ rb_thread_backtrace_locations_m(int argc, VALUE *argv, VALUE thval)
 
           
             <div class="description">
-              <p>Returns a fiber-local for the given key. If the key can&#39;t be found, there are several options: With no other arguments, it will raise a <code>KeyError</code> exception; if <em>default</em> is given, then that will be returned; if the optional code block is specified, then that will be run and its result returned. See <a href="Thread.html#method-i-5B-5D"><code>Thread#[]</code></a> and <a href="Hash.html#method-i-fetch"><code>Hash#fetch</code></a>.</p>
+              <p>Returns a fiber-local for the given key. If the key can&#39;t be found, there are several options: With no other arguments, it will raise a <a href="KeyError.html"><code>KeyError</code></a> exception; if <em>default</em> is given, then that will be returned; if the optional code block is specified, then that will be run and its result returned.  See <a href="Thread.html#method-i-5B-5D"><code>Thread#[]</code></a> and <a href="Hash.html#method-i-fetch"><code>Hash#fetch</code></a>.</p>
             </div>
           
 
@@ -2484,7 +2473,7 @@ rb_thread_key_p(VALUE self, VALUE key)
     if (!id || local_storage == NULL) {
         return Qfalse;
     }
-    else if (st_lookup(local_storage, id, 0)) {
+    else if (st_is_member(local_storage, id)) {
         return Qtrue;
     }
     else {
@@ -2552,18 +2541,14 @@ rb_thread_keys(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-kill">
             
-              <b>thr.kill        &rarr; thr or nil</b>
+              <b>thr.kill        &rarr; thr</b>
             
             <a href="../classes/Thread.html#method-i-kill" name="method-i-kill" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Terminates <code>thr</code> and schedules another thread to be run.</p>
-
-<p>If this thread is already marked to be killed, <a href="Thread.html#method-i-exit"><code>exit</code></a> returns the <a href="Thread.html"><code>Thread</code></a>.</p>
-
-<p>If this is the main thread, or the last thread, exits the process.</p>
+              <p>Terminates <code>thr</code> and schedules another thread to be run, returning the terminated <a href="Thread.html"><code>Thread</code></a>.  If this is the main thread, or the last thread, exits the process.</p>
             </div>
           
 
@@ -3132,7 +3117,8 @@ rb_thread_run(VALUE thread)
                 <pre>static VALUE
 rb_thread_safe_level(VALUE thread)
 {
-    return UINT2NUM(rb_safe_level());
+    rb_warn(&quot;Thread#safe_level will be removed in Ruby 3.0&quot;);
+    return UINT2NUM(GET_VM()-&gt;safe_level_);
 }</pre>
               </div>
             </div>
@@ -3334,18 +3320,14 @@ rb_thread_stop_p(VALUE thread)
         <div class="method">
           <h3 class="title method-title" id="method-i-terminate">
             
-              <b>thr.terminate   &rarr; thr or nil</b>
+              <b>thr.terminate   &rarr; thr</b>
             
             <a href="../classes/Thread.html#method-i-terminate" name="method-i-terminate" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Terminates <code>thr</code> and schedules another thread to be run.</p>
-
-<p>If this thread is already marked to be killed, <a href="Thread.html#method-i-exit"><code>exit</code></a> returns the <a href="Thread.html"><code>Thread</code></a>.</p>
-
-<p>If this is the main thread, or the last thread, exits the process.</p>
+              <p>Terminates <code>thr</code> and schedules another thread to be run, returning the terminated <a href="Thread.html"><code>Thread</code></a>.  If this is the main thread, or the last thread, exits the process.</p>
             </div>
           
 
@@ -3405,7 +3387,10 @@ rb_thread_variable_p(VALUE thread, VALUE key)
 
     if (!id) return Qfalse;
 
-    locals = rb_ivar_get(thread, id_locals);
+    if (LIKELY(!THREAD_LOCAL_STORAGE_INITIALISED_P(thread))) {
+        return Qfalse;
+    }
+    locals = rb_thread_local_storage(thread);
 
     if (rb_hash_lookup(locals, ID2SYM(id)) != Qnil) {
         return Qtrue;
@@ -3472,7 +3457,10 @@ rb_thread_variable_get(VALUE thread, VALUE key)
 {
     VALUE locals;
 
-    locals = rb_ivar_get(thread, id_locals);
+    if (LIKELY(!THREAD_LOCAL_STORAGE_INITIALISED_P(thread))) {
+        return Qnil;
+    }
+    locals = rb_thread_local_storage(thread);
     return rb_hash_aref(locals, rb_to_symbol(key));
 }</pre>
               </div>
@@ -3515,10 +3503,10 @@ rb_thread_variable_set(VALUE thread, VALUE id, VALUE val)
     VALUE locals;
 
     if (OBJ_FROZEN(thread)) {
-        rb_error_frozen(&quot;thread locals&quot;);
+        rb_frozen_error_raise(thread, &quot;can&#39;t modify frozen thread locals&quot;);
     }
 
-    locals = rb_ivar_get(thread, id_locals);
+    locals = rb_thread_local_storage(thread);
     return rb_hash_aset(locals, rb_to_symbol(id), val);
 }</pre>
               </div>
@@ -3571,8 +3559,11 @@ rb_thread_variables(VALUE thread)
     VALUE locals;
     VALUE ary;
 
-    locals = rb_ivar_get(thread, id_locals);
     ary = rb_ary_new();
+    if (LIKELY(!THREAD_LOCAL_STORAGE_INITIALISED_P(thread))) {
+        return ary;
+    }
+    locals = rb_thread_local_storage(thread);
     rb_hash_foreach(locals, keys_i, ary);
 
     return ary;
@@ -3628,12 +3619,11 @@ rb_thread_to_s(VALUE thread)
         rb_str_catf(str, &quot;@%&quot;PRIsVALUE, target_th-&gt;name);
     }
     if ((loc = threadptr_invoke_proc_location(target_th)) != Qnil) {
-        rb_str_catf(str, &quot;@%&quot;PRIsVALUE&quot;:%&quot;PRIsVALUE,
+        rb_str_catf(str, &quot; %&quot;PRIsVALUE&quot;:%&quot;PRIsVALUE,
                     RARRAY_AREF(loc, 0), RARRAY_AREF(loc, 1));
         rb_gc_force_recycle(loc);
     }
     rb_str_catf(str, &quot; %s&gt;&quot;, status);
-    OBJ_INFECT(str, thread);
 
     return str;
 }</pre>

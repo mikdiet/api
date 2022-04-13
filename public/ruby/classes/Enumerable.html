@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="The Enumerable mixin provides collection classes with several traversal and searching methods, and with the ability to sort.">
   
 
-    <meta name="keywords" content="Enumerable class, to_a, entries, to_h, sort, sort_by, grep, grep_v, count, find, detect, find_index, find_all, select, filter, reject, collect, map, flat_map, collect_concat, inject, reduce, partition, group_by, first, all?, any?, one?, none?, min, max, minmax, min_by, max_by, minmax_by, member?, include?, each_with_index, reverse_each, each_entry, each_slice, each_cons, each_with_object, zip, take, take_while, drop, drop_while, cycle, chunk, slice_before, slice_after, slice_when, chunk_while, sum, uniq, chain, lazy, to_set">
+    <meta name="keywords" content="Enumerable class, to_a, entries, to_h, sort, sort_by, grep, grep_v, count, find, detect, find_index, find_all, select, filter, filter_map, reject, collect, map, flat_map, collect_concat, inject, reduce, partition, group_by, tally, first, all?, any?, one?, none?, min, max, minmax, min_by, max_by, minmax_by, member?, include?, each_with_index, reverse_each, each_entry, each_slice, each_cons, each_with_object, zip, take, take_while, drop, drop_while, cycle, chunk, slice_before, slice_after, slice_when, chunk_while, sum, uniq, chain, lazy, to_set">
 </head>
 
 <body>
@@ -94,7 +94,7 @@ document.addEventListener("turbolinks:load", function() {
   
     <div class="description">
       
-<p>The <code>Enumerable</code> mixin provides collection classes with several traversal and searching methods, and with the ability to sort. The class must provide a method <code>each</code>, which yields successive members of the collection. If <code>Enumerable#max</code>, <code>#min</code>, or <code>#sort</code> is used, the objects in the collection must also implement a meaningful <code>&lt;=&gt;</code> operator, as these methods rely on an ordering between members of the collection.</p>
+<p>The <a href="Enumerable.html"><code>Enumerable</code></a> mixin provides collection classes with several traversal and searching methods, and with the ability to sort. The class must provide a method each, which yields successive members of the collection. If <a href="Enumerable.html#method-i-max"><code>Enumerable#max</code></a>, <a href="Enumerable.html#method-i-min"><code>min</code></a>, or <a href="Enumerable.html#method-i-sort"><code>sort</code></a> is used, the objects in the collection must also implement a meaningful <code>&lt;=&gt;</code> operator, as these methods rely on an ordering between members of the collection.</p>
 
     </div>
   
@@ -240,6 +240,11 @@ document.addEventListener("turbolinks:load", function() {
               
               <li>
                 <a href="#method-i-filter">filter</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-filter_map">filter_map</a>,
               </li>
             
               
@@ -480,6 +485,11 @@ document.addEventListener("turbolinks:load", function() {
               
               <li>
                 <a href="#method-i-take_while">take_while</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-tally">tally</a>,
               </li>
             
               
@@ -1163,10 +1173,12 @@ enum_cycle(int argc, VALUE *argv, VALUE obj)
 <pre><code>(1..100).detect  #=&gt; #&lt;Enumerator: 1..100:detect&gt;
 (1..100).find    #=&gt; #&lt;Enumerator: 1..100:find&gt;
 
-(1..10).detect   { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; nil
-(1..10).find     { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; nil
-(1..100).detect  { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; 35
-(1..100).find    { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; 35
+(1..10).detect         { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; nil
+(1..10).find           { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; nil
+(1..10).detect(-&gt; {0}) { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; 0
+(1..10).find(-&gt; {0})   { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; 0
+(1..100).detect        { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; 35
+(1..100).find          { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; 35
 </code></pre>
             </div>
           
@@ -1622,6 +1634,8 @@ Prime.entries 10                  #=&gt; [2, 3, 5, 7]
             <div class="description">
               <p>Returns an array containing all elements of <code>enum</code> for which the given <code>block</code> returns a true value.</p>
 
+<p>The <em>find_all</em> and <em>select</em> methods are aliases. There is no performance benefit to either.</p>
+
 <p>If no block is given, an <a href="Enumerator.html"><code>Enumerator</code></a> is returned instead.</p>
 
 <pre><code>(1..10).find_all { |i|  i % 3 == 0 }   #=&gt; [3, 6, 9]
@@ -1631,7 +1645,7 @@ Prime.entries 10                  #=&gt; [2, 3, 5, 7]
 [:foo, :bar].filter { |x| x == :foo }   #=&gt; [:foo]
 </code></pre>
 
-<p>See also <a href="Enumerable.html#method-i-reject"><code>Enumerable#reject</code></a>.</p>
+<p>See also <a href="Enumerable.html#method-i-reject"><code>Enumerable#reject</code></a>, <a href="Enumerable.html#method-i-grep"><code>Enumerable#grep</code></a>.</p>
             </div>
           
 
@@ -1644,6 +1658,57 @@ Prime.entries 10                  #=&gt; [2, 3, 5, 7]
           
 
           
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-filter_map">
+            
+              <b>enum.filter_map { |obj| block } &rarr; array<br />enum.filter_map                 &rarr; an_enumerator
+</b>
+            
+            <a href="../classes/Enumerable.html#method-i-filter_map" name="method-i-filter_map" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a new array containing the truthy results (everything except <code>false</code> or <code>nil</code>) of running the <code>block</code> for every element in <code>enum</code>.</p>
+
+<p>If no block is given, an <a href="Enumerator.html"><code>Enumerator</code></a> is returned instead.</p>
+
+<pre><code>(1..10).filter_map { |i| i * 2 if i.even? } #=&gt; [4, 8, 12, 16, 20]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-filter_map_source')" id="l_method-i-filter_map_source">show</a>
+                
+              </p>
+              <div id="method-i-filter_map_source" class="dyn-source">
+                <pre>static VALUE
+enum_filter_map(VALUE obj)
+{
+    VALUE ary;
+
+    RETURN_SIZED_ENUMERATOR(obj, 0, 0, enum_size);
+
+    ary = rb_ary_new();
+    rb_block_call(obj, id_each, 0, 0, filter_map_i, ary);
+
+    return ary;
+}</pre>
+              </div>
+            </div>
+            
           </div>
         
         <div class="method">
@@ -1663,10 +1728,12 @@ Prime.entries 10                  #=&gt; [2, 3, 5, 7]
 <pre><code>(1..100).detect  #=&gt; #&lt;Enumerator: 1..100:detect&gt;
 (1..100).find    #=&gt; #&lt;Enumerator: 1..100:find&gt;
 
-(1..10).detect   { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; nil
-(1..10).find     { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; nil
-(1..100).detect  { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; 35
-(1..100).find    { |i| i % 5 == 0 and i % 7 == 0 }   #=&gt; 35
+(1..10).detect         { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; nil
+(1..10).find           { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; nil
+(1..10).detect(-&gt; {0}) { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; 0
+(1..10).find(-&gt; {0})   { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; 0
+(1..100).detect        { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; 35
+(1..100).find          { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }   #=&gt; 35
 </code></pre>
             </div>
           
@@ -1724,6 +1791,8 @@ enum_find(int argc, VALUE *argv, VALUE obj)
             <div class="description">
               <p>Returns an array containing all elements of <code>enum</code> for which the given <code>block</code> returns a true value.</p>
 
+<p>The <em>find_all</em> and <em>select</em> methods are aliases. There is no performance benefit to either.</p>
+
 <p>If no block is given, an <a href="Enumerator.html"><code>Enumerator</code></a> is returned instead.</p>
 
 <pre><code>(1..10).find_all { |i|  i % 3 == 0 }   #=&gt; [3, 6, 9]
@@ -1733,7 +1802,7 @@ enum_find(int argc, VALUE *argv, VALUE obj)
 [:foo, :bar].filter { |x| x == :foo }   #=&gt; [:foo]
 </code></pre>
 
-<p>See also <a href="Enumerable.html#method-i-reject"><code>Enumerable#reject</code></a>.</p>
+<p>See also <a href="Enumerable.html#method-i-reject"><code>Enumerable#reject</code></a>, <a href="Enumerable.html#method-i-grep"><code>Enumerable#grep</code></a>.</p>
             </div>
           
 
@@ -1787,9 +1856,9 @@ enum_find_all(VALUE obj)
 
 <p>If neither block nor argument is given, an enumerator is returned instead.</p>
 
-<pre><code>(1..10).find_index  { |i| i % 5 == 0 and i % 7 == 0 }  #=&gt; nil
-(1..100).find_index { |i| i % 5 == 0 and i % 7 == 0 }  #=&gt; 34
-(1..100).find_index(50)                                #=&gt; 49
+<pre><code>(1..10).find_index  { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }  #=&gt; nil
+(1..100).find_index { |i| i % 5 == 0 &amp;&amp; i % 7 == 0 }  #=&gt; 34
+(1..100).find_index(50)                               #=&gt; 49
 </code></pre>
             </div>
           
@@ -2083,15 +2152,9 @@ enum_grep_v(VALUE obj, VALUE pat)
                 <pre>static VALUE
 enum_group_by(VALUE obj)
 {
-    VALUE hash;
-
     RETURN_SIZED_ENUMERATOR(obj, 0, 0, enum_size);
 
-    hash = rb_hash_new();
-    rb_block_call(obj, id_each, 0, 0, group_by_i, hash);
-    OBJ_INFECT(hash, obj);
-
-    return hash;
+    return enum_hashify(obj, 0, 0, group_by_i);
 }</pre>
               </div>
             </div>
@@ -2110,10 +2173,10 @@ enum_group_by(VALUE obj)
             <div class="description">
               <p>Returns <code>true</code> if any member of <em>enum</em> equals <em>obj</em>. Equality is tested using <code>==</code>.</p>
 
-<pre><code>IO.constants.include? :SEEK_SET          #=&gt; true
-IO.constants.include? :SEEK_NO_FURTHER   #=&gt; false
-IO.constants.member? :SEEK_SET          #=&gt; true
-IO.constants.member? :SEEK_NO_FURTHER   #=&gt; false
+<pre><code>(1..10).include? 5  #=&gt; true
+(1..10).include? 15 #=&gt; false
+(1..10).member? 5   #=&gt; true
+(1..10).member? 15  #=&gt; false
 </code></pre>
             </div>
           
@@ -2241,7 +2304,7 @@ enum_inject(int argc, VALUE *argv, VALUE obj)
 
           
             <div class="description">
-              <p>Returns a lazy enumerator, whose methods map/collect, flat_map/collect_concat, select/find_all, reject, grep, <a href="Enumerable.html#method-i-grep_v"><code>grep_v</code></a>, zip, take, <a href="Enumerable.html#method-i-take_while"><code>take_while</code></a>, drop, and <a href="Enumerable.html#method-i-drop_while"><code>drop_while</code></a> enumerate values only on an as-needed basis.  However, if a block is given to zip, values are enumerated immediately.</p>
+              <p>Returns an <a href="Enumerator/Lazy.html"><code>Enumerator::Lazy</code></a>, which redefines most <a href="Enumerable.html"><code>Enumerable</code></a> methods to postpone enumeration and enumerate values only on an as-needed basis.</p>
 
 <h3 id="method-i-lazy-label-Example">Example</h3>
 
@@ -2284,7 +2347,7 @@ p pythagorean_triples.take_while { |*, z| z &lt; 100 }.force
                 <pre>static VALUE
 enumerable_lazy(VALUE obj)
 {
-    VALUE result = lazy_to_enum_i(obj, sym_each, 0, 0, lazyenum_size);
+    VALUE result = lazy_to_enum_i(obj, sym_each, 0, 0, lazyenum_size, PASS_KW_SPLAT);
     /* Qfalse indicates that the Enumerator::Lazy has no method name */
     rb_ivar_set(result, id_method, Qfalse);
     return result;
@@ -2336,7 +2399,7 @@ enumerable_lazy(VALUE obj)
 
           
             <div class="description">
-              <p>Returns the object in <em>enum</em> with the maximum value. The first form assumes all objects implement <code>Comparable</code>; the second uses the block to return <em>a &lt;=&gt; b</em>.</p>
+              <p>Returns the object in <em>enum</em> with the maximum value. The first form assumes all objects implement <a href="Comparable.html"><code>Comparable</code></a>; the second uses the block to return <em>a &lt;=&gt; b</em>.</p>
 
 <pre><code>a = %w(albatross dog horse)
 a.max                                   #=&gt; &quot;horse&quot;
@@ -2515,10 +2578,10 @@ enum_max_by(int argc, VALUE *argv, VALUE obj)
             <div class="description">
               <p>Returns <code>true</code> if any member of <em>enum</em> equals <em>obj</em>. Equality is tested using <code>==</code>.</p>
 
-<pre><code>IO.constants.include? :SEEK_SET          #=&gt; true
-IO.constants.include? :SEEK_NO_FURTHER   #=&gt; false
-IO.constants.member? :SEEK_SET          #=&gt; true
-IO.constants.member? :SEEK_NO_FURTHER   #=&gt; false
+<pre><code>(1..10).include? 5  #=&gt; true
+(1..10).include? 15 #=&gt; false
+(1..10).member? 5   #=&gt; true
+(1..10).member? 15  #=&gt; false
 </code></pre>
             </div>
           
@@ -2565,7 +2628,7 @@ enum_member(VALUE obj, VALUE val)
 
           
             <div class="description">
-              <p>Returns the object in <em>enum</em> with the minimum value. The first form assumes all objects implement <code>Comparable</code>; the second uses the block to return <em>a &lt;=&gt; b</em>.</p>
+              <p>Returns the object in <em>enum</em> with the minimum value. The first form assumes all objects implement <a href="Comparable.html"><code>Comparable</code></a>; the second uses the block to return <em>a &lt;=&gt; b</em>.</p>
 
 <pre><code>a = %w(albatross dog horse)
 a.min                                   #=&gt; &quot;albatross&quot;
@@ -2699,7 +2762,7 @@ enum_min_by(int argc, VALUE *argv, VALUE obj)
 
           
             <div class="description">
-              <p>Returns a two element array which contains the minimum and the maximum value in the enumerable.  The first form assumes all objects implement <code>Comparable</code>; the second uses the block to return <em>a &lt;=&gt; b</em>.</p>
+              <p>Returns a two element array which contains the minimum and the maximum value in the enumerable.  The first form assumes all objects implement <a href="Comparable.html"><code>Comparable</code></a>; the second uses the block to return <em>a &lt;=&gt; b</em>.</p>
 
 <pre><code>a = %w(albatross dog horse)
 a.minmax                                  #=&gt; [&quot;albatross&quot;, &quot;horse&quot;]
@@ -3157,6 +3220,8 @@ enum_reverse_each(int argc, VALUE *argv, VALUE obj)
             <div class="description">
               <p>Returns an array containing all elements of <code>enum</code> for which the given <code>block</code> returns a true value.</p>
 
+<p>The <em>find_all</em> and <em>select</em> methods are aliases. There is no performance benefit to either.</p>
+
 <p>If no block is given, an <a href="Enumerator.html"><code>Enumerator</code></a> is returned instead.</p>
 
 <pre><code>(1..10).find_all { |i|  i % 3 == 0 }   #=&gt; [3, 6, 9]
@@ -3166,7 +3231,7 @@ enum_reverse_each(int argc, VALUE *argv, VALUE obj)
 [:foo, :bar].filter { |x| x == :foo }   #=&gt; [:foo]
 </code></pre>
 
-<p>See also <a href="Enumerable.html#method-i-reject"><code>Enumerable#reject</code></a>.</p>
+<p>See also <a href="Enumerable.html#method-i-reject"><code>Enumerable#reject</code></a>, <a href="Enumerable.html#method-i-grep"><code>Enumerable#grep</code></a>.</p>
             </div>
           
 
@@ -3615,7 +3680,7 @@ enum_sort(VALUE obj)
               #=&gt; [&quot;fig&quot;, &quot;pear&quot;, &quot;apple&quot;]
 </code></pre>
 
-<p>The current implementation of <code>sort_by</code> generates an array of tuples containing the original collection element and the mapped value. This makes <code>sort_by</code> fairly expensive when the keysets are simple.</p>
+<p>The current implementation of <a href="Enumerable.html#method-i-sort_by"><code>sort_by</code></a> generates an array of tuples containing the original collection element and the mapped value. This makes <a href="Enumerable.html#method-i-sort_by"><code>sort_by</code></a> fairly expensive when the keysets are simple.</p>
 
 <pre><code>require &#39;benchmark&#39;
 
@@ -3634,14 +3699,14 @@ Sort        0.180000   0.000000   0.180000 (  0.175469)
 Sort by     1.980000   0.040000   2.020000 (  2.013586)
 </code></pre>
 
-<p>However, consider the case where comparing the keys is a non-trivial operation. The following code sorts some files on modification time using the basic <code>sort</code> method.</p>
+<p>However, consider the case where comparing the keys is a non-trivial operation. The following code sorts some files on modification time using the basic <a href="Enumerable.html#method-i-sort"><code>sort</code></a> method.</p>
 
 <pre><code>files = Dir[&quot;*&quot;]
 sorted = files.sort { |a, b| File.new(a).mtime &lt;=&gt; File.new(b).mtime }
 sorted   #=&gt; [&quot;mon&quot;, &quot;tues&quot;, &quot;wed&quot;, &quot;thurs&quot;]
 </code></pre>
 
-<p>This sort is inefficient: it generates two new <code>File</code> objects during every comparison. A slightly better technique is to use the <code>Kernel#test</code> method to generate the modification times directly.</p>
+<p>This sort is inefficient: it generates two new <a href="File.html"><code>File</code></a> objects during every comparison. A slightly better technique is to use the <a href="Kernel.html#method-i-test"><code>Kernel#test</code></a> method to generate the modification times directly.</p>
 
 <pre><code>files = Dir[&quot;*&quot;]
 sorted = files.sort { |a, b|
@@ -3650,7 +3715,7 @@ sorted = files.sort { |a, b|
 sorted   #=&gt; [&quot;mon&quot;, &quot;tues&quot;, &quot;wed&quot;, &quot;thurs&quot;]
 </code></pre>
 
-<p>This still generates many unnecessary <code>Time</code> objects. A more efficient technique is to cache the sort keys (modification times in this case) before the sort. Perl users often call this approach a Schwartzian transform, after Randal Schwartz. We construct a temporary array, where each element is an array containing our sort key along with the filename. We sort this array, and then extract the filename from the result.</p>
+<p>This still generates many unnecessary <a href="Time.html"><code>Time</code></a> objects. A more efficient technique is to cache the sort keys (modification times in this case) before the sort. Perl users often call this approach a Schwartzian transform, after Randal Schwartz. We construct a temporary array, where each element is an array containing our sort key along with the filename. We sort this array, and then extract the filename from the result.</p>
 
 <pre><code>sorted = Dir[&quot;*&quot;].collect { |f|
    [test(?M, f), f]
@@ -3658,10 +3723,15 @@ sorted   #=&gt; [&quot;mon&quot;, &quot;tues&quot;, &quot;wed&quot;, &quot;thurs
 sorted   #=&gt; [&quot;mon&quot;, &quot;tues&quot;, &quot;wed&quot;, &quot;thurs&quot;]
 </code></pre>
 
-<p>This is exactly what <code>sort_by</code> does internally.</p>
+<p>This is exactly what <a href="Enumerable.html#method-i-sort_by"><code>sort_by</code></a> does internally.</p>
 
 <pre><code>sorted = Dir[&quot;*&quot;].sort_by { |f| test(?M, f) }
 sorted   #=&gt; [&quot;mon&quot;, &quot;tues&quot;, &quot;wed&quot;, &quot;thurs&quot;]
+</code></pre>
+
+<p>To produce the reverse of a specific order, the following can be used:</p>
+
+<pre><code>ary.sort_by { ... }.reverse!
 </code></pre>
             </div>
           
@@ -3700,7 +3770,6 @@ enum_sort_by(VALUE obj)
     buf = rb_ary_tmp_new(SORT_BY_BUFSIZE*2);
     rb_ary_store(buf, SORT_BY_BUFSIZE*2-1, Qnil);
     memo = MEMO_NEW(0, 0, 0);
-    OBJ_INFECT(memo, obj);
     data = (struct sort_by_data *)&amp;memo-&gt;v1;
     RB_OBJ_WRITE(memo, &amp;data-&gt;ary, ary);
     RB_OBJ_WRITE(memo, &amp;data-&gt;buf, buf);
@@ -3725,7 +3794,6 @@ enum_sort_by(VALUE obj)
     }
     rb_ary_resize(ary, RARRAY_LEN(ary)/2);
     RBASIC_SET_CLASS_RAW(ary, rb_cArray);
-    OBJ_INFECT(ary, memo);
 
     return ary;
 }</pre>
@@ -3756,7 +3824,7 @@ enum_sort_by(VALUE obj)
 <pre><code>{ 1 =&gt; 10, 2 =&gt; 20 }.sum {|k, v| k * v }  #=&gt; 50
 (1..10).sum                               #=&gt; 55
 (1..10).sum {|v| v * 2 }                  #=&gt; 110
-[Object.new].each.sum                     #=&gt; TypeError
+(&#39;a&#39;..&#39;z&#39;).sum                            #=&gt; TypeError
 </code></pre>
 
 <p>This method can be used for non-numeric objects by explicit <em>init</em> argument.</p>
@@ -3765,7 +3833,9 @@ enum_sort_by(VALUE obj)
 &quot;a\nb\nc&quot;.each_line.lazy.map(&amp;:chomp).sum(&quot;&quot;)  #=&gt; &quot;abc&quot;
 </code></pre>
 
-<p><a href="Enumerable.html#method-i-sum"><code>Enumerable#sum</code></a> method may not respect method redefinition of “+” methods such as <a href="Integer.html#method-i-2B"><code>Integer#+</code></a>.</p>
+<p>If the method is applied to an <a href="Integer.html"><code>Integer</code></a> range without a block, the sum is not done by iteration, but instead using Gauss&#39;s summation formula.</p>
+
+<p><a href="Enumerable.html#method-i-sum"><code>Enumerable#sum</code></a> method may not respect method redefinition of “+” methods such as <a href="Integer.html#method-i-2B"><code>Integer#+</code></a>, or “each” methods such as <a href="Range.html#method-i-each"><code>Range#each</code></a>.</p>
             </div>
           
 
@@ -3797,6 +3867,10 @@ enum_sum(int argc, VALUE* argv, VALUE obj)
 
     if ((memo.float_value = RB_FLOAT_TYPE_P(memo.v))) {
         memo.f = RFLOAT_VALUE(memo.v);
+        memo.c = 0.0;
+    }
+    else {
+        memo.f = 0.0;
         memo.c = 0.0;
     }
 
@@ -3944,6 +4018,48 @@ enum_take_while(VALUE obj)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-tally">
+            
+              <b>enum.tally &rarr; a_hash
+</b>
+            
+            <a href="../classes/Enumerable.html#method-i-tally" name="method-i-tally" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Tallies the collection, i.e., counts the occurrences of each element. Returns a hash with the elements of the collection as keys and the corresponding counts as values.</p>
+
+<pre><code>[&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;b&quot;].tally  #=&gt; {&quot;a&quot;=&gt;1, &quot;b&quot;=&gt;2, &quot;c&quot;=&gt;1}
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-tally_source')" id="l_method-i-tally_source">show</a>
+                
+              </p>
+              <div id="method-i-tally_source" class="dyn-source">
+                <pre>static VALUE
+enum_tally(VALUE obj)
+{
+    return enum_hashify(obj, 0, 0, tally_i);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-to_a">
             
               <b>enum.to_a(*args)      &rarr; array</b>
@@ -3987,8 +4103,7 @@ enum_to_a(int argc, VALUE *argv, VALUE obj)
 {
     VALUE ary = rb_ary_new();
 
-    rb_block_call(obj, id_each, argc, argv, collect_all, ary);
-    OBJ_INFECT(ary, obj);
+    rb_block_call_kw(obj, id_each, argc, argv, collect_all, ary, RB_PASS_CALLED_KEYWORDS);
 
     return ary;
 }</pre>
@@ -4039,11 +4154,8 @@ enum_to_a(int argc, VALUE *argv, VALUE obj)
                 <pre>static VALUE
 enum_to_h(int argc, VALUE *argv, VALUE obj)
 {
-    VALUE hash = rb_hash_new();
     rb_block_call_func *iter = rb_block_given_p() ? enum_to_h_ii : enum_to_h_i;
-    rb_block_call(obj, id_each, argc, argv, iter, hash);
-    OBJ_INFECT(hash, obj);
-    return hash;
+    return enum_hashify(obj, argc, argv, iter);
 }</pre>
               </div>
             </div>
@@ -4076,11 +4188,11 @@ enum_to_h(int argc, VALUE *argv, VALUE obj)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_set_source')" id="l_method-i-to_set_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/set.rb#L814" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/set.rb#L812" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_set_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/set.rb, line 814</span>
+                <pre><span class="ruby-comment"># File ruby/lib/set.rb, line 812</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_set</span>(<span class="ruby-identifier">klass</span> = <span class="ruby-constant">Set</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
 <span class="ruby-keyword">end</span></pre>

@@ -43,11 +43,11 @@ document.addEventListener("turbolinks:load", function() {
 
   
     
-    <meta name="description" content="Lazy.">
-    <meta property="og:description" content="Lazy.">
+    <meta name="description" content="Enumerator::Lazy is a special type of Enumerator, that allows constructing chains of operations without evaluating them immediately, and evaluating values on as-needed basis.">
+    <meta property="og:description" content="Enumerator::Lazy is a special type of Enumerator, that allows constructing chains of operations without evaluating them immediately, and evaluating values on as-needed basis.">
   
 
-    <meta name="keywords" content="Enumerator::Lazy class, new, to_enum, enum_for, map, collect, flat_map, collect_concat, select, find_all, filter, reject, grep, grep_v, zip, take, take_while, drop, drop_while, lazy, chunk, slice_before, slice_after, slice_when, chunk_while, uniq, to_a, force">
+    <meta name="keywords" content="Enumerator::Lazy class, new, to_enum, enum_for, eager, map, collect, flat_map, collect_concat, select, find_all, filter, filter_map, reject, grep, grep_v, zip, take, take_while, drop, drop_while, lazy, chunk, slice_before, slice_after, slice_when, chunk_while, uniq, with_index, to_a, _enumerable_map, _enumerable_collect, _enumerable_flat_map, _enumerable_collect_concat, _enumerable_select, _enumerable_find_all, _enumerable_filter, _enumerable_filter_map, _enumerable_reject, _enumerable_grep, _enumerable_grep_v, _enumerable_zip, _enumerable_take, _enumerable_take_while, _enumerable_drop, _enumerable_drop_while, _enumerable_uniq, force">
 </head>
 
 <body>
@@ -96,7 +96,65 @@ document.addEventListener("turbolinks:load", function() {
   
     <div class="description">
       
-<p><a href="Lazy.html"><code>Lazy</code></a></p>
+<p><a href="Lazy.html"><code>Enumerator::Lazy</code></a> is a special type of <a href="../Enumerator.html"><code>Enumerator</code></a>, that allows constructing chains of operations without evaluating them immediately, and evaluating values on as-needed basis. In order to do so it redefines most of <a href="../Enumerable.html"><code>Enumerable</code></a> methods so that they just construct another lazy enumerator.</p>
+
+<p><a href="Lazy.html"><code>Enumerator::Lazy</code></a> can be constructed from any <a href="../Enumerable.html"><code>Enumerable</code></a> with the <a href="../Enumerable.html#method-i-lazy"><code>Enumerable#lazy</code></a> method.</p>
+
+<pre><code>lazy = (1..Float::INFINITY).lazy.select(&amp;:odd?).drop(10).take_while { |i| i &lt; 30 }
+# =&gt; #&lt;Enumerator::Lazy: #&lt;Enumerator::Lazy: #&lt;Enumerator::Lazy: #&lt;Enumerator::Lazy: 1..Infinity&gt;:select&gt;:drop(10)&gt;:take_while&gt;
+</code></pre>
+
+<p>The real enumeration is performed when any non-redefined <a href="../Enumerable.html"><code>Enumerable</code></a> method is called, like <a href="../Enumerable.html#method-i-first"><code>Enumerable#first</code></a> or <a href="../Enumerable.html#method-i-to_a"><code>Enumerable#to_a</code></a> (the latter is aliased as <a href="Lazy.html#method-i-force"><code>force</code></a> for more semantic code):</p>
+
+<pre><code>lazy.first(2)
+#=&gt; [21, 23]
+
+lazy.force
+#=&gt; [21, 23, 25, 27, 29]
+</code></pre>
+
+<p>Note that most <a href="../Enumerable.html"><code>Enumerable</code></a> methods that could be called with or without a block, on <a href="Lazy.html"><code>Enumerator::Lazy</code></a> will always require a block:</p>
+
+<pre><code>[1, 2, 3].map       #=&gt; #&lt;Enumerator: [1, 2, 3]:map&gt;
+[1, 2, 3].lazy.map  # ArgumentError: tried to call lazy map without a block
+</code></pre>
+
+<p>This class allows idiomatic calculations on long or infinite sequences, as well as chaining of calculations without constructing intermediate arrays.</p>
+
+<p>Example for working with a slowly calculated sequence:</p>
+
+<pre><code>require &#39;open-uri&#39;
+
+# This will fetch all URLs before selecting
+# necessary data
+URLS.map { |u| JSON.parse(open(u).read) }
+  .select { |data| data.key?(&#39;stats&#39;) }
+  .first(5)
+
+# This will fetch URLs one-by-one, only till
+# there is enough data to satisfy the condition
+URLS.lazy.map { |u| JSON.parse(open(u).read) }
+  .select { |data| data.key?(&#39;stats&#39;) }
+  .first(5)
+</code></pre>
+
+<p>Ending a chain with “.eager” generates a non-lazy enumerator, which is suitable for returning or passing to another method that expects a normal enumerator.</p>
+
+<pre><code>def active_items
+  groups
+    .lazy
+    .flat_map(&amp;:items)
+    .reject(&amp;:disabled)
+    .eager
+end
+
+# This works lazily; if a checked item is found, it stops
+# iteration and does not look into remaining groups.
+first_checked = active_items.find(&amp;:checked)
+
+# This returns an array of items like a normal enumerator does.
+all_checked = active_items.select(&amp;:checked)
+</code></pre>
 
     </div>
   
@@ -116,6 +174,98 @@ document.addEventListener("turbolinks:load", function() {
     <!-- Method ref -->
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
+      
+        <dt>#</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_collect">_enumerable_collect</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_collect_concat">_enumerable_collect_concat</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_drop">_enumerable_drop</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_drop_while">_enumerable_drop_while</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_filter">_enumerable_filter</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_filter_map">_enumerable_filter_map</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_find_all">_enumerable_find_all</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_flat_map">_enumerable_flat_map</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_grep">_enumerable_grep</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_grep_v">_enumerable_grep_v</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_map">_enumerable_map</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_reject">_enumerable_reject</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_select">_enumerable_select</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_take">_enumerable_take</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_take_while">_enumerable_take_while</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_uniq">_enumerable_uniq</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-_enumerable_zip">_enumerable_zip</a>
+              </li>
+            
+          </ul>
+        </dd>
       
         <dt>C</dt>
         <dd>
@@ -167,6 +317,11 @@ document.addEventListener("turbolinks:load", function() {
             
               
               <li>
+                <a href="#method-i-eager">eager</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-enum_for">enum_for</a>
               </li>
             
@@ -180,6 +335,11 @@ document.addEventListener("turbolinks:load", function() {
               
               <li>
                 <a href="#method-i-filter">filter</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-filter_map">filter_map</a>,
               </li>
             
               
@@ -331,6 +491,18 @@ document.addEventListener("turbolinks:load", function() {
           </ul>
         </dd>
       
+        <dt>W</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-with_index">with_index</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>Z</dt>
         <dd>
           <ul>
@@ -369,7 +541,7 @@ document.addEventListener("turbolinks:load", function() {
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>Lazy.new(obj, size=nil) { |yielder, *values| ... }
+              <b>Lazy.new(obj, size=nil) { |yielder, *values| block }
 </b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -377,25 +549,17 @@ document.addEventListener("turbolinks:load", function() {
 
           
             <div class="description">
-              <p>Creates a new <a href="Lazy.html"><code>Lazy</code></a> enumerator. When the enumerator is actually enumerated (e.g. by calling <a href="Lazy.html#method-i-force"><code>force</code></a>), <code>obj</code> will be enumerated and each value passed to the given block. The block can yield values back using <code>yielder</code>. For example, to create a method <code>filter_map</code> in both lazy and non-lazy fashions:</p>
+              <p>Creates a new <a href="Lazy.html"><code>Lazy</code></a> enumerator. When the enumerator is actually enumerated (e.g. by calling <a href="Lazy.html#method-i-force"><code>force</code></a>), <code>obj</code> will be enumerated and each value passed to the given block. The block can yield values back using <code>yielder</code>. For example, to create a “filter+map” enumerator:</p>
 
-<pre><code>module Enumerable
-  def filter_map(&amp;block)
-    map(&amp;block).compact
+<pre><code>def filter_map(sequence)
+  Lazy.new(sequence) do |yielder, *values|
+    result = yield *values
+    yielder &lt;&lt; result if result
   end
 end
 
-class Enumerator::Lazy
-  def filter_map
-    Lazy.new(self) do |yielder, *values|
-      result = yield *values
-      yielder &lt;&lt; result if result
-    end
-  end
-end
-
-(1..Float::INFINITY).lazy.filter_map{|i| i*i if i.even?}.first(5)
-    # =&gt; [4, 16, 36, 64, 100]
+filter_map(1..Float::INFINITY) {|i| i*i if i.even?}.first(5)
+#=&gt; [4, 16, 36, 64, 100]
 </code></pre>
             </div>
           
@@ -430,7 +594,7 @@ lazy_initialize(int argc, VALUE *argv, VALUE self)
     }
     generator = generator_allocate(rb_cGenerator);
     rb_block_call(generator, id_initialize, 0, 0, lazy_init_block_i, obj);
-    enumerator_init(self, generator, sym_each, 0, 0, 0, size);
+    enumerator_init(self, generator, sym_each, 0, 0, 0, size, 0);
     rb_ivar_set(self, id_receiver, obj);
 
     return self;
@@ -445,6 +609,481 @@ lazy_initialize(int argc, VALUE *argv, VALUE self)
       <h2 class="sectiontitle">Instance Public methods</h2>
       
         <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_collect">
+            
+              <b>_enumerable_collect</b>()
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_collect" name="method-i-_enumerable_collect" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-map"><code>Enumerable#map</code></a>, but chains operation to be lazy-evaluated.</p>
+
+<pre><code>(1..Float::INFINITY).lazy.map {|i| i**2 }
+#=&gt; #&lt;Enumerator::Lazy: #&lt;Enumerator::Lazy: 1..Infinity&gt;:map&gt;
+(1..Float::INFINITY).lazy.map {|i| i**2 }.first(3)
+#=&gt; [1, 4, 9]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-collect">collect</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_collect_concat">
+            
+              <b>_enumerable_collect_concat</b>()
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_collect_concat" name="method-i-_enumerable_collect_concat" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a new lazy enumerator with the concatenated results of running <code>block</code> once for every element in the lazy enumerator.</p>
+
+<pre><code>[&quot;foo&quot;, &quot;bar&quot;].lazy.flat_map {|i| i.each_char.lazy}.force
+#=&gt; [&quot;f&quot;, &quot;o&quot;, &quot;o&quot;, &quot;b&quot;, &quot;a&quot;, &quot;r&quot;]
+</code></pre>
+
+<p>A value <code>x</code> returned by <code>block</code> is decomposed if either of the following conditions is true:</p>
+<ul><li>
+<p><code>x</code> responds to both each and force, which means that <code>x</code> is a lazy enumerator.</p>
+</li><li>
+<p><code>x</code> is an array or responds to to_ary.</p>
+</li></ul>
+
+<p>Otherwise, <code>x</code> is contained as-is in the return value.</p>
+
+<pre><code>[{a:1}, {b:2}].lazy.flat_map {|i| i}.force
+#=&gt; [{:a=&gt;1}, {:b=&gt;2}]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-collect_concat">collect_concat</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_drop">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_drop" name="method-i-_enumerable_drop" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-drop"><code>Enumerable#drop</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-drop">drop</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_drop_while">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_drop_while" name="method-i-_enumerable_drop_while" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-drop_while"><code>Enumerable#drop_while</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-drop_while">drop_while</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_filter">
+            
+              <b>_enumerable_filter</b>()
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_filter" name="method-i-_enumerable_filter" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-select"><code>Enumerable#select</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-filter">filter</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_filter_map">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_filter_map" name="method-i-_enumerable_filter_map" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-filter_map"><code>Enumerable#filter_map</code></a>, but chains operation to be lazy-evaluated.</p>
+
+<pre><code>(1..).lazy.filter_map { |i| i * 2 if i.even? }.first(5)
+#=&gt; [4, 8, 12, 16, 20]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-filter_map">filter_map</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_find_all">
+            
+              <b>_enumerable_find_all</b>()
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_find_all" name="method-i-_enumerable_find_all" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-select"><code>Enumerable#select</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-find_all">find_all</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_flat_map">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_flat_map" name="method-i-_enumerable_flat_map" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a new lazy enumerator with the concatenated results of running <code>block</code> once for every element in the lazy enumerator.</p>
+
+<pre><code>[&quot;foo&quot;, &quot;bar&quot;].lazy.flat_map {|i| i.each_char.lazy}.force
+#=&gt; [&quot;f&quot;, &quot;o&quot;, &quot;o&quot;, &quot;b&quot;, &quot;a&quot;, &quot;r&quot;]
+</code></pre>
+
+<p>A value <code>x</code> returned by <code>block</code> is decomposed if either of the following conditions is true:</p>
+<ul><li>
+<p><code>x</code> responds to both each and force, which means that <code>x</code> is a lazy enumerator.</p>
+</li><li>
+<p><code>x</code> is an array or responds to to_ary.</p>
+</li></ul>
+
+<p>Otherwise, <code>x</code> is contained as-is in the return value.</p>
+
+<pre><code>[{a:1}, {b:2}].lazy.flat_map {|i| i}.force
+#=&gt; [{:a=&gt;1}, {:b=&gt;2}]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-flat_map">flat_map</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_grep">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_grep" name="method-i-_enumerable_grep" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-grep"><code>Enumerable#grep</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-grep">grep</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_grep_v">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_grep_v" name="method-i-_enumerable_grep_v" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-grep_v"><code>Enumerable#grep_v</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-grep_v">grep_v</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_map">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_map" name="method-i-_enumerable_map" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-map"><code>Enumerable#map</code></a>, but chains operation to be lazy-evaluated.</p>
+
+<pre><code>(1..Float::INFINITY).lazy.map {|i| i**2 }
+#=&gt; #&lt;Enumerator::Lazy: #&lt;Enumerator::Lazy: 1..Infinity&gt;:map&gt;
+(1..Float::INFINITY).lazy.map {|i| i**2 }.first(3)
+#=&gt; [1, 4, 9]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-map">map</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_reject">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_reject" name="method-i-_enumerable_reject" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-reject"><code>Enumerable#reject</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-reject">reject</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_select">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_select" name="method-i-_enumerable_select" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-select"><code>Enumerable#select</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-select">select</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_take">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_take" name="method-i-_enumerable_take" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-take"><code>Enumerable#take</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-take">take</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_take_while">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_take_while" name="method-i-_enumerable_take_while" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-take_while"><code>Enumerable#take_while</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-take_while">take_while</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_uniq">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_uniq" name="method-i-_enumerable_uniq" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-uniq"><code>Enumerable#uniq</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-uniq">uniq</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-_enumerable_zip">
+            
+              <b></b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-_enumerable_zip" name="method-i-_enumerable_zip" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-zip"><code>Enumerable#zip</code></a>, but chains operation to be lazy-evaluated. However, if a block is given to zip, values are enumerated immediately.</p>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Lazy.html#method-i-zip">zip</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-chunk">
             
               <b>chunk</b>(*args)
@@ -454,7 +1093,7 @@ lazy_initialize(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-chunk"><code>Enumerable#chunk</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
@@ -496,7 +1135,7 @@ lazy_super(int argc, VALUE *argv, VALUE lazy)
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-chunk_while"><code>Enumerable#chunk_while</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
@@ -514,17 +1153,27 @@ lazy_super(int argc, VALUE *argv, VALUE lazy)
         <div class="method">
           <h3 class="title method-title" id="method-i-collect">
             
-              <b>collect</b>()
+              <b>lazy.collect { |obj| block } &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-collect" name="method-i-collect" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-map"><code>Enumerable#map</code></a>, but chains operation to be lazy-evaluated.</p>
+
+<pre><code>(1..Float::INFINITY).lazy.map {|i| i**2 }
+#=&gt; #&lt;Enumerator::Lazy: #&lt;Enumerator::Lazy: 1..Infinity&gt;:map&gt;
+(1..Float::INFINITY).lazy.map {|i| i**2 }.first(3)
+#=&gt; [1, 4, 9]
+</code></pre>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_collect">_enumerable_collect</a>
+            </div>
           
 
           
@@ -546,20 +1195,20 @@ lazy_super(int argc, VALUE *argv, VALUE lazy)
 
           
             <div class="description">
-              <p>Returns a new lazy enumerator with the concatenated results of running <em>block</em> once for every element in <em>lazy</em>.</p>
+              <p>Returns a new lazy enumerator with the concatenated results of running <code>block</code> once for every element in the lazy enumerator.</p>
 
 <pre><code>[&quot;foo&quot;, &quot;bar&quot;].lazy.flat_map {|i| i.each_char.lazy}.force
 #=&gt; [&quot;f&quot;, &quot;o&quot;, &quot;o&quot;, &quot;b&quot;, &quot;a&quot;, &quot;r&quot;]
 </code></pre>
 
-<p>A value <em>x</em> returned by <em>block</em> is decomposed if either of the following conditions is true:</p>
+<p>A value <code>x</code> returned by <code>block</code> is decomposed if either of the following conditions is true:</p>
+<ul><li>
+<p><code>x</code> responds to both each and force, which means that <code>x</code> is a lazy enumerator.</p>
+</li><li>
+<p><code>x</code> is an array or responds to to_ary.</p>
+</li></ul>
 
-<pre><code>a) &lt;i&gt;x&lt;/i&gt; responds to both each and force, which means that
-   &lt;i&gt;x&lt;/i&gt; is a lazy enumerator.
-b) &lt;i&gt;x&lt;/i&gt; is an array or responds to to_ary.
-</code></pre>
-
-<p>Otherwise, <em>x</em> is contained as-is in the return value.</p>
+<p>Otherwise, <code>x</code> is contained as-is in the return value.</p>
 
 <pre><code>[{a:1}, {b:2}].lazy.flat_map {|i| i}.force
 #=&gt; [{:a=&gt;1}, {:b=&gt;2}]
@@ -567,6 +1216,10 @@ b) &lt;i&gt;x&lt;/i&gt; is an array or responds to to_ary.
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_collect_concat">_enumerable_collect_concat</a>
+            </div>
           
 
           
@@ -581,17 +1234,21 @@ b) &lt;i&gt;x&lt;/i&gt; is an array or responds to to_ary.
         <div class="method">
           <h3 class="title method-title" id="method-i-drop">
             
-              <b>drop</b>(p1)
+              <b>lazy.drop(n)               &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-drop" name="method-i-drop" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-drop"><code>Enumerable#drop</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_drop">_enumerable_drop</a>
+            </div>
           
 
           
@@ -628,17 +1285,21 @@ lazy_drop(VALUE obj, VALUE n)
         <div class="method">
           <h3 class="title method-title" id="method-i-drop_while">
             
-              <b>drop_while</b>()
+              <b>lazy.drop_while { |obj| block }  &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-drop_while" name="method-i-drop_while" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-drop_while"><code>Enumerable#drop_while</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_drop_while">_enumerable_drop_while</a>
+            </div>
           
 
           
@@ -668,20 +1329,60 @@ lazy_drop_while(VALUE obj)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-eager">
+            
+              <b>lzy.eager &rarr; enum
+</b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-eager" name="method-i-eager" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a non-lazy <a href="../Enumerator.html"><code>Enumerator</code></a> converted from the lazy enumerator.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-eager_source')" id="l_method-i-eager_source">show</a>
+                
+              </p>
+              <div id="method-i-eager_source" class="dyn-source">
+                <pre>static VALUE
+lazy_eager(VALUE self)
+{
+    return enumerator_init(enumerator_allocate(rb_cEnumerator),
+                           self, sym_each, 0, 0, lazy_eager_size, Qnil, 0);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-enum_for">
             
-              <b>lzy.enum_for(method = :each, *args)                &rarr; lazy_enum<br />lzy.enum_for(method = :each, *args){|*args| block} &rarr; lazy_enum</b>
+              <b>lzy.enum_for(method = :each, *args)                  &rarr; lazy_enum<br />lzy.enum_for(method = :each, *args) {|*args| block } &rarr; lazy_enum</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-enum_for" name="method-i-enum_for" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Similar to Kernel#to_enum, except it returns a lazy enumerator. This makes it easy to define <a href="../Enumerable.html"><code>Enumerable</code></a> methods that will naturally remain lazy if called from a lazy enumerator.</p>
+              <p>Similar to <a href="../Object.html#method-i-to_enum"><code>Object#to_enum</code></a>, except it returns a lazy enumerator. This makes it easy to define <a href="../Enumerable.html"><code>Enumerable</code></a> methods that will naturally remain lazy if called from a lazy enumerator.</p>
 
-<p>For example, continuing from the example in Kernel#to_enum:</p>
+<p>For example, continuing from the example in <a href="../Object.html#method-i-to_enum"><code>Object#to_enum</code></a>:</p>
 
-<pre><code># See Kernel#to_enum for the definition of repeat
+<pre><code># See Object#to_enum for the definition of repeat
 r = 1..Float::INFINITY
 r.repeat(2).first(5) # =&gt; [1, 1, 2, 2, 3]
 r.repeat(2).class # =&gt; Enumerator
@@ -707,17 +1408,21 @@ r.lazy.repeat(2).map{|n| n ** 2}.first(5) # =&gt; [1, 1, 4, 4, 9]
         <div class="method">
           <h3 class="title method-title" id="method-i-filter">
             
-              <b>filter</b>()
+              <b>lazy.filter   { |obj| block } &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-filter" name="method-i-filter" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-select"><code>Enumerable#select</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_filter">_enumerable_filter</a>
+            </div>
           
 
           
@@ -730,19 +1435,73 @@ r.lazy.repeat(2).map{|n| n ** 2}.first(5) # =&gt; [1, 1, 4, 4, 9]
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-filter_map">
+            
+              <b>lazy.filter_map { |obj| block } &rarr; lazy_enumerator</b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-filter_map" name="method-i-filter_map" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-filter_map"><code>Enumerable#filter_map</code></a>, but chains operation to be lazy-evaluated.</p>
+
+<pre><code>(1..).lazy.filter_map { |i| i * 2 if i.even? }.first(5)
+#=&gt; [4, 8, 12, 16, 20]
+</code></pre>
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_filter_map">_enumerable_filter_map</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-filter_map_source')" id="l_method-i-filter_map_source">show</a>
+                
+              </p>
+              <div id="method-i-filter_map_source" class="dyn-source">
+                <pre>static VALUE
+lazy_filter_map(VALUE obj)
+{
+    if (!rb_block_given_p()) {
+        rb_raise(rb_eArgError, &quot;tried to call lazy filter_map without a block&quot;);
+    }
+
+    return lazy_add_method(obj, 0, 0, Qnil, Qnil, &amp;lazy_filter_map_funcs);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-find_all">
             
-              <b>find_all</b>()
+              <b>lazy.find_all { |obj| block } &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-find_all" name="method-i-find_all" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-select"><code>Enumerable#select</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_find_all">_enumerable_find_all</a>
+            </div>
           
 
           
@@ -764,20 +1523,20 @@ r.lazy.repeat(2).map{|n| n ** 2}.first(5) # =&gt; [1, 1, 4, 4, 9]
 
           
             <div class="description">
-              <p>Returns a new lazy enumerator with the concatenated results of running <em>block</em> once for every element in <em>lazy</em>.</p>
+              <p>Returns a new lazy enumerator with the concatenated results of running <code>block</code> once for every element in the lazy enumerator.</p>
 
 <pre><code>[&quot;foo&quot;, &quot;bar&quot;].lazy.flat_map {|i| i.each_char.lazy}.force
 #=&gt; [&quot;f&quot;, &quot;o&quot;, &quot;o&quot;, &quot;b&quot;, &quot;a&quot;, &quot;r&quot;]
 </code></pre>
 
-<p>A value <em>x</em> returned by <em>block</em> is decomposed if either of the following conditions is true:</p>
+<p>A value <code>x</code> returned by <code>block</code> is decomposed if either of the following conditions is true:</p>
+<ul><li>
+<p><code>x</code> responds to both each and force, which means that <code>x</code> is a lazy enumerator.</p>
+</li><li>
+<p><code>x</code> is an array or responds to to_ary.</p>
+</li></ul>
 
-<pre><code>a) &lt;i&gt;x&lt;/i&gt; responds to both each and force, which means that
-   &lt;i&gt;x&lt;/i&gt; is a lazy enumerator.
-b) &lt;i&gt;x&lt;/i&gt; is an array or responds to to_ary.
-</code></pre>
-
-<p>Otherwise, <em>x</em> is contained as-is in the return value.</p>
+<p>Otherwise, <code>x</code> is contained as-is in the return value.</p>
 
 <pre><code>[{a:1}, {b:2}].lazy.flat_map {|i| i}.force
 #=&gt; [{:a=&gt;1}, {:b=&gt;2}]
@@ -787,7 +1546,7 @@ b) &lt;i&gt;x&lt;/i&gt; is an array or responds to to_ary.
 
           
             <div class="aka">
-              Also aliased as: <a href="Lazy.html#method-i-collect_concat">collect_concat</a>
+              Also aliased as: <a href="Lazy.html#method-i-collect_concat">collect_concat</a>, <a href="Lazy.html#method-i-_enumerable_flat_map">_enumerable_flat_map</a>
             </div>
           
 
@@ -847,17 +1606,21 @@ lazy_flat_map(VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-grep">
             
-              <b>grep</b>(p1)
+              <b>lazy.grep(pattern)                  &rarr; lazy_enumerator<br />lazy.grep(pattern) { |obj| block }  &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-grep" name="method-i-grep" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-grep"><code>Enumerable#grep</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_grep">_enumerable_grep</a>
+            </div>
           
 
           
@@ -887,17 +1650,21 @@ lazy_grep(VALUE obj, VALUE pattern)
         <div class="method">
           <h3 class="title method-title" id="method-i-grep_v">
             
-              <b>grep_v</b>(p1)
+              <b>lazy.grep_v(pattern)                  &rarr; lazy_enumerator<br />lazy.grep_v(pattern) { |obj| block }  &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-grep_v" name="method-i-grep_v" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-grep_v"><code>Enumerable#grep_v</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_grep_v">_enumerable_grep_v</a>
+            </div>
           
 
           
@@ -927,14 +1694,15 @@ lazy_grep_v(VALUE obj, VALUE pattern)
         <div class="method">
           <h3 class="title method-title" id="method-i-lazy">
             
-              <b>lazy</b>()
+              <b>enum.lazy &rarr; lazy_enumerator
+</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-lazy" name="method-i-lazy" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Returns self.</p>
             </div>
           
 
@@ -965,20 +1733,26 @@ lazy_lazy(VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-map">
             
-              <b>map</b>()
+              <b>lazy.map     { |obj| block } &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-map" name="method-i-map" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-map"><code>Enumerable#map</code></a>, but chains operation to be lazy-evaluated.</p>
+
+<pre><code>(1..Float::INFINITY).lazy.map {|i| i**2 }
+#=&gt; #&lt;Enumerator::Lazy: #&lt;Enumerator::Lazy: 1..Infinity&gt;:map&gt;
+(1..Float::INFINITY).lazy.map {|i| i**2 }.first(3)
+#=&gt; [1, 4, 9]
+</code></pre>
             </div>
           
 
           
             <div class="aka">
-              Also aliased as: <a href="Lazy.html#method-i-collect">collect</a>
+              Also aliased as: <a href="Lazy.html#method-i-collect">collect</a>, <a href="Lazy.html#method-i-_enumerable_map">_enumerable_map</a>
             </div>
           
 
@@ -1011,17 +1785,21 @@ lazy_map(VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-reject">
             
-              <b>reject</b>()
+              <b>lazy.reject { |obj| block } &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-reject" name="method-i-reject" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-reject"><code>Enumerable#reject</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_reject">_enumerable_reject</a>
+            </div>
           
 
           
@@ -1053,20 +1831,20 @@ lazy_reject(VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-select">
             
-              <b>select</b>()
+              <b>lazy.select   { |obj| block } &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-select" name="method-i-select" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-select"><code>Enumerable#select</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
           
             <div class="aka">
-              Also aliased as: <a href="Lazy.html#method-i-find_all">find_all</a>, <a href="Lazy.html#method-i-filter">filter</a>
+              Also aliased as: <a href="Lazy.html#method-i-find_all">find_all</a>, <a href="Lazy.html#method-i-filter">filter</a>, <a href="Lazy.html#method-i-_enumerable_select">_enumerable_select</a>
             </div>
           
 
@@ -1106,7 +1884,7 @@ lazy_select(VALUE obj)
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-slice_after"><code>Enumerable#slice_after</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
@@ -1131,7 +1909,7 @@ lazy_select(VALUE obj)
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-slice_before"><code>Enumerable#slice_before</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
@@ -1156,7 +1934,7 @@ lazy_select(VALUE obj)
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-slice_when"><code>Enumerable#slice_when</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
@@ -1174,17 +1952,21 @@ lazy_select(VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-take">
             
-              <b>take</b>(p1)
+              <b>lazy.take(n)               &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-take" name="method-i-take" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-take"><code>Enumerable#take</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_take">_enumerable_take</a>
+            </div>
           
 
           
@@ -1226,17 +2008,21 @@ lazy_take(VALUE obj, VALUE n)
         <div class="method">
           <h3 class="title method-title" id="method-i-take_while">
             
-              <b>take_while</b>()
+              <b>lazy.take_while { |obj| block } &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-take_while" name="method-i-take_while" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-take_while"><code>Enumerable#take_while</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_take_while">_enumerable_take_while</a>
+            </div>
           
 
           
@@ -1308,18 +2094,18 @@ lazy_take_while(VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_enum">
             
-              <b>lzy.to_enum(method = :each, *args)                 &rarr; lazy_enum<br />lzy.to_enum(method = :each, *args) {|*args| block} &rarr; lazy_enum</b>
+              <b>lzy.to_enum(method = :each, *args)                   &rarr; lazy_enum<br />lzy.to_enum(method = :each, *args) {|*args| block }  &rarr; lazy_enum</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-to_enum" name="method-i-to_enum" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Similar to Kernel#to_enum, except it returns a lazy enumerator. This makes it easy to define <a href="../Enumerable.html"><code>Enumerable</code></a> methods that will naturally remain lazy if called from a lazy enumerator.</p>
+              <p>Similar to <a href="../Object.html#method-i-to_enum"><code>Object#to_enum</code></a>, except it returns a lazy enumerator. This makes it easy to define <a href="../Enumerable.html"><code>Enumerable</code></a> methods that will naturally remain lazy if called from a lazy enumerator.</p>
 
-<p>For example, continuing from the example in Kernel#to_enum:</p>
+<p>For example, continuing from the example in <a href="../Object.html#method-i-to_enum"><code>Object#to_enum</code></a>:</p>
 
-<pre><code># See Kernel#to_enum for the definition of repeat
+<pre><code># See Object#to_enum for the definition of repeat
 r = 1..Float::INFINITY
 r.repeat(2).first(5) # =&gt; [1, 1, 2, 2, 3]
 r.repeat(2).class # =&gt; Enumerator
@@ -1352,13 +2138,16 @@ r.lazy.repeat(2).map{|n| n ** 2}.first(5) # =&gt; [1, 1, 4, 4, 9]
                 <pre>static VALUE
 lazy_to_enum(int argc, VALUE *argv, VALUE self)
 {
-    VALUE lazy, meth = sym_each;
+    VALUE lazy, meth = sym_each, super_meth;
 
     if (argc &gt; 0) {
         --argc;
         meth = *argv++;
     }
-    lazy = lazy_to_enum_i(self, meth, argc, argv, 0);
+    if (RTEST((super_meth = rb_hash_aref(lazy_use_super_method, meth)))) {
+        meth = super_meth;
+    }
+    lazy = lazy_to_enum_i(self, meth, argc, argv, 0, PASS_KW_SPLAT);
     if (rb_block_given_p()) {
         enumerator_ptr(lazy)-&gt;size = rb_block_proc();
     }
@@ -1372,17 +2161,21 @@ lazy_to_enum(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-uniq">
             
-              <b>uniq</b>()
+              <b>lazy.uniq                  &rarr; lazy_enumerator<br />lazy.uniq { |item| block } &rarr; lazy_enumerator</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-uniq" name="method-i-uniq" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-uniq"><code>Enumerable#uniq</code></a>, but chains operation to be lazy-evaluated.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_uniq">_enumerable_uniq</a>
+            </div>
           
 
           
@@ -1410,19 +2203,76 @@ lazy_uniq(VALUE obj)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-with_index">
+            
+              <b>lazy.with_index(offset = 0) {|(*args), idx| block }<br />lazy.with_index(offset = 0)
+</b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-with_index" name="method-i-with_index" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>If a block is given, iterates the given block for each element with an index, which starts from <code>offset</code>, and returns a lazy enumerator that yields the same values (without the index).</p>
+
+<p>If a block is not given, returns a new lazy enumerator that includes the index, starting from <code>offset</code>.</p>
+<dl class="rdoc-list note-list"><dt><code>offset</code>
+<dd>
+<p>the starting index to use</p>
+</dd></dl>
+
+<p>See <a href="../Enumerator.html#method-i-with_index"><code>Enumerator#with_index</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-with_index_source')" id="l_method-i-with_index_source">show</a>
+                
+              </p>
+              <div id="method-i-with_index_source" class="dyn-source">
+                <pre>static VALUE
+lazy_with_index(int argc, VALUE *argv, VALUE obj)
+{
+    VALUE memo;
+
+    rb_scan_args(argc, argv, &quot;01&quot;, &amp;memo);
+    if (NIL_P(memo))
+        memo = LONG2NUM(0);
+
+    return lazy_add_method(obj, 0, 0, memo, rb_ary_new_from_values(1, &amp;memo), &amp;lazy_with_index_funcs);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-zip">
             
-              <b>zip</b>(*args)
+              <b>lazy.zip(arg, ...)                  &rarr; lazy_enumerator<br />lazy.zip(arg, ...) { |arr| block }  &rarr; nil</b>
             
             <a href="../../classes/Enumerator/Lazy.html#method-i-zip" name="method-i-zip" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Like <a href="../Enumerable.html#method-i-zip"><code>Enumerable#zip</code></a>, but chains operation to be lazy-evaluated. However, if a block is given to zip, values are enumerated immediately.</p>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Lazy.html#method-i-_enumerable_zip">_enumerable_zip</a>
+            </div>
           
 
           

@@ -71,10 +71,10 @@ document.addEventListener("turbolinks:load", function() {
             <li>
                 ruby/doc/syntax/methods.rdoc
                 
-                    <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/doc/syntax/methods.rdoc" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/doc/syntax/methods.rdoc" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2021-05-09 18:16:11 +0300</li>
+            <li>Last modified: 2022-04-14 01:18:03 +0300</li>
         </ul>
     </div>
 
@@ -98,14 +98,14 @@ end
 
 <h2 id="label-Method+Names"><a href="../../../../classes/Method.html"><code>Method</code></a> Names</h2>
 
-<p><a href="../../../../classes/Method.html"><code>Method</code></a> names may be one of the operators or must start a letter or a character with the eight bit set. It may contain letters, numbers, an <code>_</code> (underscore or low line) or a character with the eight bit set. The convention is to use underscores to separate words in a multiword method name:</p>
+<p><a href="../../../../classes/Method.html"><code>Method</code></a> names may be one of the operators or must start a letter or a character with the eighth bit set. It may contain letters, numbers, an <code>_</code> (underscore or low line) or a character with the eighth bit set. The convention is to use underscores to separate words in a multiword method name:</p>
 
 <pre><code>def method_name
   puts &quot;use underscores to separate words&quot;
 end
 </code></pre>
 
-<p>Ruby programs must be written in a US-ASCII-compatible character set such as UTF-8, ISO-8859-1 etc. In such character sets if the eight bit is set it indicates an extended character. Ruby allows method names and other identifiers to contain such characters. Ruby programs cannot contain some characters like ASCII NUL (<code>\x00</code>).</p>
+<p>Ruby programs must be written in a US-ASCII-compatible character set such as UTF-8, ISO-8859-1 etc. In such character sets if the eighth bit is set it indicates an extended character. Ruby allows method names and other identifiers to contain such characters. Ruby programs cannot contain some characters like ASCII NUL (<code>\x00</code>).</p>
 
 <p>The following are examples of valid Ruby methods:</p>
 
@@ -126,7 +126,7 @@ end
 
 <p>Methods that end with a question mark by convention return boolean, but they may not always return just <code>true</code> or <code>false</code>.  Often, they will return an object to indicate a true value (or “truthy” value).</p>
 
-<p>Methods that end with an equals sign indicate an assignment method.  For assignment methods, the return value is ignored and the arguments are returned instead.</p>
+<p>Methods that end with an equals sign indicate an assignment method.</p>
 
 <p>These are method names for the various Ruby operators.  Each of these operators accepts only one argument.  Following the operator is the typical use or name of the operator.  Creating an alternate meaning for the operator may lead to confusion as the user expects plus to add things, minus to subtract things, etc.  Additionally, you cannot alter the precedence of the operators.</p>
 <dl class="rdoc-list note-list"><dt><code>+</code>   
@@ -191,7 +191,7 @@ end
 <p>greater-than or equal</p>
 </dd></dl>
 
-<p>To define unary methods minus, plus, tilde and not (<code>!</code>) follow the operator with an <code>@</code> as in <code>+@</code> or <code>!@</code>:</p>
+<p>To define unary methods minus and plus, follow the operator with an <code>@</code> as in <code>+@</code>:</p>
 
 <pre><code>class C
   def -@
@@ -203,6 +203,10 @@ obj = C.new
 
 -obj # prints &quot;you inverted this object&quot;
 </code></pre>
+
+<p>The <code>@</code> is needed to differentiate unary minus and plus operators from binary minus and plus operators.</p>
+
+<p>You can also follow tilde and not (<code>!</code>) unary methods with <code>@</code>, but it is not required as there are no binary tilde and not operators.</p>
 
 <p>Unary methods accept zero arguments.</p>
 
@@ -372,6 +376,24 @@ end
 end
 </code></pre>
 
+<p>Default argument values can refer to arguments that have already been evaluated as local variables, and argument values are always evaluated left to right. So this is allowed:</p>
+
+<pre><code>def add_values(a = 1, b = a)
+  a + b
+end
+add_values
+# =&gt; 2
+</code></pre>
+
+<p>But this will raise a <code>NameError</code> (unless there is a method named <code>b</code> defined):</p>
+
+<pre><code>def add_values(a = b, b = 1)
+  a + b
+end
+add_values
+# NameError (undefined local variable or method `b&#39; for main:Object)
+</code></pre>
+
 <h3 id="label-Array+Decomposition"><a href="../../../../classes/Array.html"><code>Array</code></a> Decomposition</h3>
 
 <p>You can decompose (unpack or extract values from) an <a href="../../../../classes/Array.html"><code>Array</code></a> using extra parentheses in the arguments:</p>
@@ -502,9 +524,100 @@ gather_arguments first: 1, second: 2, third: 3
 # prints 1 then {:second=&gt;2, :third=&gt;3}
 </code></pre>
 
-<p>When calling a method with keyword arguments the arguments may appear in any order.  If an unknown keyword argument is sent by the caller an <a href="../../../../classes/ArgumentError.html"><code>ArgumentError</code></a> is raised.</p>
+<p>When calling a method with keyword arguments the arguments may appear in any order.  If an unknown keyword argument is sent by the caller, and the method does not accept arbitrary keyword arguments, an <a href="../../../../classes/ArgumentError.html"><code>ArgumentError</code></a> is raised.</p>
+
+<p>To require a specific keyword argument, do not include a default value for the keyword argument:</p>
+
+<pre><code>def add_values(first:, second:)
+  first + second
+end
+add_values
+# ArgumentError (missing keywords: first, second)
+add_values(first: 1, second: 2)
+# =&gt; 3
+</code></pre>
 
 <p>When mixing keyword arguments and positional arguments, all positional arguments must appear before any keyword arguments.</p>
+
+<p>Also, note that <code>**</code> can be used to ignore keyword arguments:</p>
+
+<pre><code>def ignore_keywords(**)
+end
+</code></pre>
+
+<p>To mark a method as accepting keywords, but not actually accepting keywords, you can use the <code>**nil</code>:</p>
+
+<pre><code>def no_keywords(**nil)
+end
+</code></pre>
+
+<p>Calling such a method with keywords or a non-empty keyword splat will result in an <a href="../../../../classes/ArgumentError.html"><code>ArgumentError</code></a>. This syntax is supported so that keywords can be added to the method later without affected backwards compatibility.</p>
+
+<h3 id="label-Keyword+and+Positional+Argument+Separation">Keyword and Positional Argument Separation</h3>
+
+<p>Between Ruby 2.0 and 2.6, keyword and positional arguments were not separated, and a keyword argument could be used as a positional argument and vice-versa.  In Ruby 3.0, keyword and positional arguments will be separated if the method definition includes keyword arguments. In Ruby 3.0, if the method definition does not include keyword arguments, keyword arguments provided when calling the method will continue to be treated as a final positional hash argument.</p>
+
+<p>Currently, the keyword and positional arguments are not separated, but cases where behavior will change in Ruby 3.0 will result in a warning being emitted.</p>
+
+<p>There are a few different types of keyword argument separation issues.</p>
+
+<h4 id="label-Conversion+of+Hash+to+Keywords">Conversion of <a href="../../../../classes/Hash.html"><code>Hash</code></a> to Keywords</h4>
+
+<p>If a method is called with the hash, the hash could be treated as keywords:</p>
+
+<pre><code>def my_method(**keywords)
+  keywords
+end
+my_method({a: 1}) # {:a =&gt; 1}
+</code></pre>
+
+<p>This occurs even if the hash could be an optional positional argument or an element of a rest argument:</p>
+
+<pre><code>def my_method(hash=nil, **keywords)
+  [hash, keywords]
+end
+my_method({a: 1}) # [nil, {:a =&gt; 1}]
+
+def my_method(*args, **keywords)
+  [args, keywords]
+end
+my_method({a: 1}) # [[], {:a =&gt; 1}]
+</code></pre>
+
+<p>However, if the hash is needed for a mandatory positional argument, it would not be treated as keywords:</p>
+
+<pre><code>def my_method(hash, **keywords)
+  [hash, keywords]
+end
+my_method({a: 1}) # [{:a =&gt; 1}, {}]
+</code></pre>
+
+<h4 id="label-Conversion+of+Keywords+to+Positional+Arguments">Conversion of Keywords to Positional Arguments</h4>
+
+<p>If a method is called with keywords, but it is missing one mandatory positional argument, the keywords are converted to a hash and the hash used as the mandatory positional argument:</p>
+
+<pre><code>def my_method(hash, **keywords)
+  [hash, keywords]
+end
+my_method(a: 1) # [{:a =&gt; 1}, {}]
+</code></pre>
+
+<p>This is also true for empty keyword splats:</p>
+
+<pre><code>kw = {}
+my_method(**kw) # [{}, {}]
+</code></pre>
+
+<h4 id="label-Splitting+of+Positional+Hashes+or+Keywords">Splitting of Positional Hashes or Keywords</h4>
+
+<p>If a method definition accepts specific keywords and not arbitrary keywords, keywords or a positional hash may be split if the hash includes both <a href="../../../../classes/Symbol.html"><code>Symbol</code></a> keys and non-Symbol keys and the keywords or positional hash are not needed as a mandatory positional argument.  In this case, the non-Symbol keys are separated into a positional argument hash, and the <a href="../../../../classes/Symbol.html"><code>Symbol</code></a> keys are used as the keyword arguments:</p>
+
+<pre><code>def my_method(hash=3, a: 4)
+  [hash, a]
+end
+my_method(a: 1, &#39;a&#39; =&gt; 2)   # [{&quot;a&quot;=&gt;2}, 1]
+my_method({a: 1, &#39;a&#39; =&gt; 2}) # [{&quot;a&quot;=&gt;2}, 1]
+</code></pre>
 
 <h2 id="label-Block+Argument">Block Argument</h2>
 
@@ -529,10 +642,6 @@ end
 end
 </code></pre>
 
-<p>There is also a performance benefit to using yield over a calling a block parameter.  When a block argument is assigned to a variable a <a href="../../../../classes/Proc.html"><code>Proc</code></a> object is created which holds the block.  When using yield this <a href="../../../../classes/Proc.html"><code>Proc</code></a> object is not created.</p>
-
-<p>If you only need to use the block sometimes you can use <a href="../../../../classes/Proc.html#method-c-new"><code>Proc.new</code></a> to create a proc from the block that was passed to your method.  See <a href="../../../../classes/Proc.html#method-c-new"><code>Proc.new</code></a> for further details.</p>
-
 <h2 id="label-Exception+Handling"><a href="../../../../classes/Exception.html"><code>Exception</code></a> Handling</h2>
 
 <p>Methods have an implied exception handling block so you do not need to use <code>begin</code> or <code>end</code> to handle exceptions.  This:</p>
@@ -552,6 +661,28 @@ end
   # code that may raise an exception
 rescue
   # handle exception
+end
+</code></pre>
+
+<p>Similarly, if you wish to always run code even if an exception is raised, you can use <code>ensure</code> without <code>begin</code> and <code>end</code>:</p>
+
+<pre><code>def my_method
+  # code that may raise an exception
+ensure
+  # code that runs even if previous code raised an exception
+end
+</code></pre>
+
+<p>You can also combine <code>rescue</code> with <code>ensure</code> and/or <code>else</code>, without <code>begin</code> and <code>end</code>:</p>
+
+<pre><code>def my_method
+  # code that may raise an exception
+rescue
+  # handle exception
+else
+  # only run if no exception raised above
+ensure
+  # code that runs even if previous code raised an exception
 end
 </code></pre>
 

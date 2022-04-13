@@ -88,6 +88,8 @@ document.addEventListener("turbolinks:load", function() {
             
             <li><a href="../files/ruby/lib/irb/cmd/help_rb.html">ruby/lib/irb/cmd/help.rb</a></li>
             
+            <li><a href="../files/ruby/lib/irb/cmd/info_rb.html">ruby/lib/irb/cmd/info.rb</a></li>
+            
             <li><a href="../files/ruby/lib/irb/cmd/load_rb.html">ruby/lib/irb/cmd/load.rb</a></li>
             
             <li><a href="../files/ruby/lib/irb/cmd/nop_rb.html">ruby/lib/irb/cmd/nop.rb</a></li>
@@ -96,9 +98,13 @@ document.addEventListener("turbolinks:load", function() {
             
             <li><a href="../files/ruby/lib/irb/cmd/subirb_rb.html">ruby/lib/irb/cmd/subirb.rb</a></li>
             
+            <li><a href="../files/ruby/lib/irb/color_rb.html">ruby/lib/irb/color.rb</a></li>
+            
             <li><a href="../files/ruby/lib/irb/completion_rb.html">ruby/lib/irb/completion.rb</a></li>
             
             <li><a href="../files/ruby/lib/irb/context_rb.html">ruby/lib/irb/context.rb</a></li>
+            
+            <li><a href="../files/ruby/lib/irb/easter-egg_rb.html">ruby/lib/irb/easter-egg.rb</a></li>
             
             <li><a href="../files/ruby/lib/irb/ext/change-ws_rb.html">ruby/lib/irb/ext/change-ws.rb</a></li>
             
@@ -142,10 +148,6 @@ document.addEventListener("turbolinks:load", function() {
             
             <li><a href="../files/ruby/lib/irb/output-method_rb.html">ruby/lib/irb/output-method.rb</a></li>
             
-            <li><a href="../files/ruby/lib/irb/ruby-lex_rb.html">ruby/lib/irb/ruby-lex.rb</a></li>
-            
-            <li><a href="../files/ruby/lib/irb/slex_rb.html">ruby/lib/irb/slex.rb</a></li>
-            
             <li><a href="../files/ruby/lib/irb/src_encoding_rb.html">ruby/lib/irb/src_encoding.rb</a></li>
             
             <li><a href="../files/ruby/lib/irb/version_rb.html">ruby/lib/irb/version.rb</a></li>
@@ -185,7 +187,7 @@ irb(main):006:1&gt; end
 #=&gt; nil
 </code></pre>
 
-<p>The <a href="Readline.html"><code>Readline</code></a> extension module can be used with irb. Use of <a href="Readline.html"><code>Readline</code></a> is default if it&#39;s installed.</p>
+<p>The singleline editor module or multiline editor module can be used with irb. Use of multiline editor is default if it&#39;s installed.</p>
 
 <h2 id="module-IRB-label-Command+line+options">Command line options</h2>
 
@@ -200,21 +202,24 @@ irb(main):006:1&gt; end
   -W[level=2]       Same as `ruby -W`
   --inspect         Use `inspect&#39; for output (default except for bc mode)
   --noinspect       Don&#39;t use inspect for output
-  --readline        Use Readline extension module
-  --noreadline      Don&#39;t use Readline extension module
+  --multiline       Use multiline editor module
+  --nomultiline     Don&#39;t use multiline editor module
+  --singleline      Use singleline editor module
+  --nosingleline    Don&#39;t use singleline editor module
+  --colorize        Use colorization
+  --nocolorize      Don&#39;t use colorization
   --prompt prompt-mode
   --prompt-mode prompt-mode
                     Switch prompt mode. Pre-defined prompt modes are
                     `default&#39;, `simple&#39;, `xmp&#39; and `inf-ruby&#39;
   --inf-ruby-mode   Use prompt appropriate for inf-ruby-mode on emacs.
-                    Suppresses --readline.
+                    Suppresses --multiline and --singleline.
   --simple-prompt   Simple prompt mode
   --noprompt        No prompt mode
   --tracer          Display trace for each execution of commands.
   --back-trace-limit n
                     Display backtrace top n and tail n. The default
                     value is 16.
-  --irb_debug n     Set internal debug level to n (not for popular use)
   -v, --version     Print the version of irb
 </code></pre>
 
@@ -240,20 +245,21 @@ IRB.conf[:INSPECT_MODE]=nil
 IRB.conf[:IRB_RC] = nil
 IRB.conf[:BACK_TRACE_LIMIT]=16
 IRB.conf[:USE_LOADER] = false
-IRB.conf[:USE_READLINE] = nil
+IRB.conf[:USE_MULTILINE] = nil
+IRB.conf[:USE_SINGLELINE] = nil
+IRB.conf[:USE_COLORIZE] = true
 IRB.conf[:USE_TRACER] = false
 IRB.conf[:IGNORE_SIGINT] = true
 IRB.conf[:IGNORE_EOF] = false
 IRB.conf[:PROMPT_MODE] = :DEFAULT
 IRB.conf[:PROMPT] = {...}
-IRB.conf[:DEBUG_LEVEL]=0
 </code></pre>
 
 <h3 id="module-IRB-label-Auto+indentation">Auto indentation</h3>
 
-<p>To enable auto-indent mode in irb, add the following to your <code>.irbrc</code>:</p>
+<p>To disable auto-indent mode in irb, add the following to your <code>.irbrc</code>:</p>
 
-<pre><code>IRB.conf[:AUTO_INDENT] = true
+<pre><code>IRB.conf[:AUTO_INDENT] = false
 </code></pre>
 
 <h3 id="module-IRB-label-Autocompletion">Autocompletion</h3>
@@ -263,18 +269,23 @@ IRB.conf[:DEBUG_LEVEL]=0
 <pre><code>require &#39;irb/completion&#39;
 </code></pre>
 
-<h3 id="module-IRB-label-History">History</h3>
+<h3 id="module-IRB-label-History"><a href="IRB/History.html"><code>History</code></a></h3>
 
-<p>By default, irb disables history and will not store any commands you used.</p>
+<p>By default, irb will store the last 1000 commands you used in <code>IRB.conf[:HISTORY_FILE]</code> (<code>~/.irb_history</code> by default).</p>
 
-<p>If you want to enable history, add the following to your <code>.irbrc</code>:</p>
+<p>If you want to disable history, add the following to your <code>.irbrc</code>:</p>
 
-<pre><code>IRB.conf[:SAVE_HISTORY] = 1000
+<pre><code>IRB.conf[:SAVE_HISTORY] = nil
 </code></pre>
 
-<p>This will now store the last 1000 commands in <code>~/.irb_history</code>.</p>
-
 <p>See <a href="IRB/Context.html#method-i-save_history-3D"><code>IRB::Context#save_history=</code></a> for more information.</p>
+
+<p>The history of <em>results</em> of commands evaluated is not stored by default, but can be turned on to be stored with this <code>.irbrc</code> setting:</p>
+
+<pre><code>IRB.conf[:EVAL_HISTORY] = &lt;number&gt;
+</code></pre>
+
+<p>See <a href="IRB/Context.html#method-i-eval_history-3D"><code>IRB::Context#eval_history=</code></a> and <a href="IRB/History.html"><code>History</code></a> class. The history of command results is not permanently saved in any file.</p>
 
 <h2 id="module-IRB-label-Customizing+the+IRB+Prompt">Customizing the IRB Prompt</h2>
 
@@ -286,7 +297,7 @@ IRB.conf[:DEBUG_LEVEL]=0
 <p>This example can be used in your <code>.irbrc</code></p>
 
 <pre><code>IRB.conf[:PROMPT][:MY_PROMPT] = { # name of prompt mode
-  :AUTO_INDENT =&gt; true,           # enables auto-indent mode
+  :AUTO_INDENT =&gt; false,          # disables auto-indent mode
   :PROMPT_I =&gt;  &quot;&gt;&gt; &quot;,            # simple prompt
   :PROMPT_S =&gt; nil,               # prompt for continuated strings
   :PROMPT_C =&gt; nil,               # prompt for continuated statement
@@ -317,6 +328,7 @@ IRB.conf[:PROMPT_MODE] = :MY_PROMPT
 
 <pre><code>IRB.conf[:PROMPT_MODE][:DEFAULT] = {
   :PROMPT_I =&gt; &quot;%N(%m):%03n:%i&gt; &quot;,
+  :PROMPT_N =&gt; &quot;%N(%m):%03n:%i&gt; &quot;,
   :PROMPT_S =&gt; &quot;%N(%m):%03n:%i%l &quot;,
   :PROMPT_C =&gt; &quot;%N(%m):%03n:%i* &quot;,
   :RETURN =&gt; &quot;%s\n&quot; # used to printf
@@ -409,7 +421,7 @@ kill    # Kills the session with the given number
 
 <p>On the other hand, each conf in IRB is used to individually configure <a href="IRB.html#method-c-irb"><code>IRB.irb</code></a>.</p>
 
-<p>If a proc is set for <a href="IRB.html#method-c-conf"><code>IRB.conf[:IRB_RC]</code></a>, its will be invoked after execution of that proc with the context of the current session as its argument. Each session can be configured using this mechanism.</p>
+<p>If a proc is set for <code>IRB.conf[:IRB_RC]</code>, its will be invoked after execution of that proc with the context of the current session as its argument. Each session can be configured using this mechanism.</p>
 
 <h3 id="module-IRB-label-Session+variables">Session variables</h3>
 
@@ -419,7 +431,7 @@ kill    # Kills the session with the given number
 <p>The value command executed, as a local variable</p>
 </dd><dt><code>__</code>
 <dd>
-<p>The history of evaluated commands</p>
+<p>The history of evaluated commands. Available only if <code>IRB.conf[:EVAL_HISTORY]</code> is not <code>nil</code> (which is the default). See also <a href="IRB/Context.html#method-i-eval_history-3D"><code>IRB::Context#eval_history=</code></a> and <a href="IRB/History.html"><code>IRB::History</code></a>.</p>
 </dd><dt><code>__[line_no]</code>
 <dd>
 <p>Returns the evaluation value at the given line number, <code>line_no</code>. If <code>line_no</code> is a negative, the return value <code>line_no</code> many lines before the most recent return value.</p>
@@ -455,7 +467,7 @@ irb(main):004:0&gt; jobs
 # check if Foo#foo is available
 irb(main):005:0&gt; Foo.instance_methods #=&gt; [:foo, ...]
 
-# change the active sesssion
+# change the active session
 irb(main):006:0&gt; fg 2
 # define Foo#bar in the context of Foo
 irb.2(Foo):005:0&gt; def bar
@@ -487,6 +499,30 @@ irb(main):009:0&gt; jobs
 irb(main):010:0&gt; exit
 </code></pre>
 
+<pre><code>save-history.rb -
+    $Release Version: 0.9.6$
+    $Revision$
+    by Keiju ISHITSUKA(keiju@ruby-lang.org)
+</code></pre>
+
+<p>–</p>
+
+<pre><code>frame.rb -
+    $Release Version: 0.9$
+    $Revision$
+    by Keiju ISHITSUKA(Nihon Rational Software Co.,Ltd)
+</code></pre>
+
+<p>–</p>
+
+<pre><code>output-method.rb - output methods used by irb
+    $Release Version: 0.9.6$
+    $Revision$
+    by Keiju ISHITSUKA(keiju@ruby-lang.org)
+</code></pre>
+
+<p>–</p>
+
 <p>DO NOT WRITE ANY MAGIC COMMENT HERE.</p>
 
     </div>
@@ -504,6 +540,11 @@ irb(main):010:0&gt; exit
     <!-- Namespace -->
     <div class="sectiontitle">Namespace</div>
     <ul>
+      
+        <li>
+          <span class="type">MODULE</span>
+          <a href="IRB/Color.html">IRB::Color</a>
+        </li>
       
         <li>
           <span class="type">MODULE</span>
@@ -542,6 +583,26 @@ irb(main):010:0&gt; exit
       
         <li>
           <span class="type">CLASS</span>
+          <a href="IRB/CantChangeBinding.html">IRB::CantChangeBinding</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/CantReturnToNormalMode.html">IRB::CantReturnToNormalMode</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/CantShiftToMultiIrbMode.html">IRB::CantShiftToMultiIrbMode</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/Canvas.html">IRB::Canvas</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
           <a href="IRB/Context.html">IRB::Context</a>
         </li>
       
@@ -553,6 +614,21 @@ irb(main):010:0&gt; exit
         <li>
           <span class="type">CLASS</span>
           <a href="IRB/Frame.html">IRB::Frame</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/History.html">IRB::History</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/IllegalParameter.html">IRB::IllegalParameter</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/IllegalRCGenerator.html">IRB::IllegalRCGenerator</a>
         </li>
       
         <li>
@@ -572,6 +648,16 @@ irb(main):010:0&gt; exit
       
         <li>
           <span class="type">CLASS</span>
+          <a href="IRB/IrbAlreadyDead.html">IRB::IrbAlreadyDead</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/IrbSwitchedToCurrentThread.html">IRB::IrbSwitchedToCurrentThread</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
           <a href="IRB/JobManager.html">IRB::JobManager</a>
         </li>
       
@@ -587,6 +673,16 @@ irb(main):010:0&gt; exit
       
         <li>
           <span class="type">CLASS</span>
+          <a href="IRB/NoSuchJob.html">IRB::NoSuchJob</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/NotImplementedError.html">IRB::NotImplementedError</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
           <a href="IRB/OutputMethod.html">IRB::OutputMethod</a>
         </li>
       
@@ -597,7 +693,12 @@ irb(main):010:0&gt; exit
       
         <li>
           <span class="type">CLASS</span>
-          <a href="IRB/SLex.html">IRB::SLex</a>
+          <a href="IRB/ReidlineInputMethod.html">IRB::ReidlineInputMethod</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/RubyModel.html">IRB::RubyModel</a>
         </li>
       
         <li>
@@ -608,6 +709,21 @@ irb(main):010:0&gt; exit
         <li>
           <span class="type">CLASS</span>
           <a href="IRB/StdioOutputMethod.html">IRB::StdioOutputMethod</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/UndefinedPromptMode.html">IRB::UndefinedPromptMode</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/UnrecognizedSwitch.html">IRB::UnrecognizedSwitch</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="IRB/Vec.html">IRB::Vec</a>
         </li>
       
         <li>
@@ -754,6 +870,24 @@ irb(main):010:0&gt; exit
     
 
     
+      <!-- Section constants -->
+      <h2 class="sectiontitle">Constants</h2>
+      <table border='0' cellpadding='5'>
+        
+          <tr valign='top'>
+            <td class="attr-name">TracerLoadError</td>
+            <td>=</td>
+            <td class="attr-value">true</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+      </table>
+    
 
 
     
@@ -794,11 +928,11 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-CurrentContext_source')" id="l_method-c-CurrentContext_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb.rb#L367" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb.rb#L384" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-CurrentContext_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 367</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 384</span>
 <span class="ruby-keyword">def</span> <span class="ruby-constant">IRB</span>.<span class="ruby-constant">CurrentContext</span>
   <span class="ruby-constant">IRB</span>.<span class="ruby-identifier ruby-title">conf</span>[<span class="ruby-value">:MAIN_CONTEXT</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -833,7 +967,7 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-JobManager_source')" id="l_method-c-JobManager_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb/ext/multi-irb.rb#L176" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb/ext/multi-irb.rb#L176" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-JobManager_source" class="dyn-source">
@@ -876,11 +1010,11 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-conf_source')" id="l_method-c-conf_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb.rb#L350" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb.rb#L367" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-conf_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 350</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 367</span>
 <span class="ruby-keyword">def</span> <span class="ruby-constant">IRB</span>.<span class="ruby-identifier ruby-title">conf</span>
   <span class="ruby-ivar">@CONF</span>
 <span class="ruby-keyword">end</span></pre>
@@ -915,7 +1049,7 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-default_src_encoding_source')" id="l_method-c-default_src_encoding_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb/src_encoding.rb#L4" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb/src_encoding.rb#L4" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_src_encoding_source" class="dyn-source">
@@ -954,11 +1088,11 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-initialize_tracer_source')" id="l_method-c-initialize_tracer_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb/ext/tracer.rb#L17" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb/ext/tracer.rb#L30" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-initialize_tracer_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb/ext/tracer.rb, line 17</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb/ext/tracer.rb, line 30</span>
 <span class="ruby-keyword">def</span> <span class="ruby-constant">IRB</span>.<span class="ruby-identifier ruby-title">initialize_tracer</span>
   <span class="ruby-constant">Tracer</span>.<span class="ruby-identifier">verbose</span> = <span class="ruby-keyword">false</span>
   <span class="ruby-constant">Tracer</span>.<span class="ruby-identifier">add_filter</span> {
@@ -1000,7 +1134,7 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-irb_source')" id="l_method-c-irb_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb/ext/multi-irb.rb#L189" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb/ext/multi-irb.rb#L189" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-irb_source" class="dyn-source">
@@ -1081,11 +1215,11 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-irb_abort_source')" id="l_method-c-irb_abort_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb.rb#L399" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb.rb#L416" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-irb_abort_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 399</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 416</span>
 <span class="ruby-keyword">def</span> <span class="ruby-constant">IRB</span>.<span class="ruby-identifier ruby-title">irb_abort</span>(<span class="ruby-identifier">irb</span>, <span class="ruby-identifier">exception</span> = <span class="ruby-constant">Abort</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-keyword">defined?</span> <span class="ruby-constant">Thread</span>
     <span class="ruby-identifier">irb</span>.<span class="ruby-identifier">context</span>.<span class="ruby-identifier">thread</span>.<span class="ruby-identifier">raise</span> <span class="ruby-identifier">exception</span>, <span class="ruby-string">&quot;abort then interrupt!&quot;</span>
@@ -1108,7 +1242,7 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
 
           
             <div class="description">
-              <p>Calls each event hook of <a href="IRB.html#method-c-conf"><code>IRB.conf[:AT_EXIT]</code></a> when the current session quits.</p>
+              <p>Calls each event hook of <code>IRB.conf[:TA_EXIT]</code> when the current session quits.</p>
             </div>
           
 
@@ -1124,11 +1258,11 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-irb_at_exit_source')" id="l_method-c-irb_at_exit_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb.rb#L387" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb.rb#L404" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-irb_at_exit_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 387</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 404</span>
 <span class="ruby-keyword">def</span> <span class="ruby-constant">IRB</span>.<span class="ruby-identifier ruby-title">irb_at_exit</span>
   <span class="ruby-ivar">@CONF</span>[<span class="ruby-value">:AT_EXIT</span>].<span class="ruby-identifier">each</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">hook</span><span class="ruby-operator">|</span> <span class="ruby-identifier">hook</span>.<span class="ruby-identifier">call</span>}
 <span class="ruby-keyword">end</span></pre>
@@ -1163,11 +1297,11 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-irb_exit_source')" id="l_method-c-irb_exit_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb.rb#L392" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb.rb#L409" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-irb_exit_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 392</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 409</span>
 <span class="ruby-keyword">def</span> <span class="ruby-constant">IRB</span>.<span class="ruby-identifier ruby-title">irb_exit</span>(<span class="ruby-identifier">irb</span>, <span class="ruby-identifier">ret</span>)
   <span class="ruby-identifier">throw</span> <span class="ruby-value">:IRB_EXIT</span>, <span class="ruby-identifier">ret</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1202,7 +1336,7 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-print_usage_source')" id="l_method-c-print_usage_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb/help.rb#L17" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb/help.rb#L17" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-print_usage_source" class="dyn-source">
@@ -1257,11 +1391,11 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-start_source')" id="l_method-c-start_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb.rb#L372" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb.rb#L389" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-start_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 372</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 389</span>
 <span class="ruby-keyword">def</span> <span class="ruby-constant">IRB</span>.<span class="ruby-identifier ruby-title">start</span>(<span class="ruby-identifier">ap_path</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-constant">STDOUT</span>.<span class="ruby-identifier">sync</span> = <span class="ruby-keyword">true</span>
   <span class="ruby-identifier">$0</span> = <span class="ruby-constant">File</span><span class="ruby-operator">::</span><span class="ruby-identifier">basename</span>(<span class="ruby-identifier">ap_path</span>, <span class="ruby-string">&quot;.rb&quot;</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">ap_path</span>
@@ -1306,11 +1440,11 @@ foo(main):002:0&gt; IRB.conf[:MAIN_CONTEXT].irb_name #=&gt; &quot;foo&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-version_source')" id="l_method-c-version_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/irb.rb#L356" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/irb.rb#L373" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-version_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 356</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 373</span>
 <span class="ruby-keyword">def</span> <span class="ruby-constant">IRB</span>.<span class="ruby-identifier ruby-title">version</span>
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">v</span> = <span class="ruby-ivar">@CONF</span>[<span class="ruby-value">:VERSION</span>] <span class="ruby-keyword">then</span> <span class="ruby-keyword">return</span> <span class="ruby-identifier">v</span> <span class="ruby-keyword">end</span>
 

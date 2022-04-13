@@ -71,10 +71,10 @@ document.addEventListener("turbolinks:load", function() {
             <li>
                 rails/actioncable/app/assets/javascripts/action_cable.js
                 
-                    <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/actioncable/app/assets/javascripts/action_cable.js" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/actioncable/app/assets/javascripts/action_cable.js" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2021-05-09 18:15:58 +0300</li>
+            <li>Last modified: 2022-04-14 01:17:56 +0300</li>
         </ul>
     </div>
 
@@ -224,7 +224,7 @@ var ConnectionMonitor = function() {
     if (document.visibilityState === &quot;visible&quot;) {
       setTimeout(function() {
         if (_this2.connectionIsStale() || !_this2.connection.isOpen()) {
-          logger.log(&quot;ConnectionMonitor reopening stale connection on visibilitychange. visbilityState = &quot; + document.visibilityState);
+          logger.log(&quot;ConnectionMonitor reopening stale connection on visibilitychange. visibilityState = &quot; + document.visibilityState);
           _this2.connection.reopen();
         }
       }, 200);
@@ -380,6 +380,7 @@ Connection.prototype.events = {
       return this.monitor.recordPing();
 
      case message_types.confirmation:
+      this.subscriptions.confirmSubscription(identifier);
       return this.subscriptions.notify(identifier, &quot;connected&quot;);
 
      case message_types.rejection:
@@ -449,10 +450,52 @@ var Subscription = function() {
   };
   return Subscription;
 }();
+var SubscriptionGuarantor = function() {
+  function SubscriptionGuarantor(subscriptions) {
+    classCallCheck(this, SubscriptionGuarantor);
+    this.subscriptions = subscriptions;
+    this.pendingSubscriptions = [];
+  }
+  SubscriptionGuarantor.prototype.guarantee = function guarantee(subscription) {
+    if (this.pendingSubscriptions.indexOf(subscription) == -1) {
+      logger.log(&quot;SubscriptionGuarantor guaranteeing &quot; + subscription.identifier);
+      this.pendingSubscriptions.push(subscription);
+    } else {
+      logger.log(&quot;SubscriptionGuarantor already guaranteeing &quot; + subscription.identifier);
+    }
+    this.startGuaranteeing();
+  };
+  SubscriptionGuarantor.prototype.forget = function forget(subscription) {
+    logger.log(&quot;SubscriptionGuarantor forgetting &quot; + subscription.identifier);
+    this.pendingSubscriptions = this.pendingSubscriptions.filter(function(s) {
+      return s !== subscription;
+    });
+  };
+  SubscriptionGuarantor.prototype.startGuaranteeing = function startGuaranteeing() {
+    this.stopGuaranteeing();
+    this.retrySubscribing();
+  };
+  SubscriptionGuarantor.prototype.stopGuaranteeing = function stopGuaranteeing() {
+    clearTimeout(this.retryTimeout);
+  };
+  SubscriptionGuarantor.prototype.retrySubscribing = function retrySubscribing() {
+    var _this = this;
+    this.retryTimeout = setTimeout(function() {
+      if (_this.subscriptions &amp;&amp; typeof _this.subscriptions.subscribe === &quot;function&quot;) {
+        _this.pendingSubscriptions.map(function(subscription) {
+          logger.log(&quot;SubscriptionGuarantor resubscribing &quot; + subscription.identifier);
+          _this.subscriptions.subscribe(subscription);
+        });
+      }
+    }, 500);
+  };
+  return SubscriptionGuarantor;
+}();
 var Subscriptions = function() {
   function Subscriptions(consumer) {
     classCallCheck(this, Subscriptions);
     this.consumer = consumer;
+    this.guarantor = new SubscriptionGuarantor(this);
     this.subscriptions = [];
   }
   Subscriptions.prototype.create = function create(channelName, mixin) {
@@ -467,7 +510,7 @@ var Subscriptions = function() {
     this.subscriptions.push(subscription);
     this.consumer.ensureActiveConnection();
     this.notify(subscription, &quot;initialized&quot;);
-    this.sendCommand(subscription, &quot;subscribe&quot;);
+    this.subscribe(subscription);
     return subscription;
   };
   Subscriptions.prototype.remove = function remove(subscription) {
@@ -486,6 +529,7 @@ var Subscriptions = function() {
     });
   };
   Subscriptions.prototype.forget = function forget(subscription) {
+    this.guarantor.forget(subscription);
     this.subscriptions = this.subscriptions.filter(function(s) {
       return s !== subscription;
     });
@@ -499,7 +543,7 @@ var Subscriptions = function() {
   Subscriptions.prototype.reload = function reload() {
     var _this2 = this;
     return this.subscriptions.map(function(subscription) {
-      return _this2.sendCommand(subscription, &quot;subscribe&quot;);
+      return _this2.subscribe(subscription);
     });
   };
   Subscriptions.prototype.notifyAll = function notifyAll(callbackName) {
@@ -523,6 +567,18 @@ var Subscriptions = function() {
     }
     return subscriptions.map(function(subscription) {
       return typeof subscription[callbackName] === &quot;function&quot; ? subscription[callbackName].apply(subscription, args) : undefined;
+    });
+  };
+  Subscriptions.prototype.subscribe = function subscribe(subscription) {
+    if (this.sendCommand(subscription, &quot;subscribe&quot;)) {
+      this.guarantor.guarantee(subscription);
+    }
+  };
+  Subscriptions.prototype.confirmSubscription = function confirmSubscription(identifier) {
+    var _this4 = this;
+    logger.log(&quot;Subscription confirmed &quot; + identifier);
+    this.findAll(identifier).map(function(subscription) {
+      return _this4.guarantor.forget(subscription);
     });
   };
   Subscriptions.prototype.sendCommand = function sendCommand(subscription, command) {
@@ -595,6 +651,7 @@ exports.Consumer = Consumer;
 exports.INTERNAL = INTERNAL;
 exports.Subscription = Subscription;
 exports.Subscriptions = Subscriptions;
+exports.SubscriptionGuarantor = SubscriptionGuarantor;
 exports.adapters = adapters;
 exports.createWebSocketURL = createWebSocketURL;
 exports.logger = logger;

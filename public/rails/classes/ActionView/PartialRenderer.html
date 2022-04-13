@@ -396,53 +396,6 @@ Name: &lt;%= user.name %&gt;
     
 
     
-      <!-- Section constants -->
-      <h2 class="sectiontitle">Constants</h2>
-      <table border='0' cellpadding='5'>
-        
-          <tr valign='top'>
-            <td class="attr-name">IDENTIFIER_ERROR_MESSAGE</td>
-            <td>=</td>
-            <td class="attr-value">&quot;The partial name (%s) is not a valid Ruby identifier; &quot; \
-&quot;make sure your partial name starts with underscore.&quot;</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
-            </tr>
-          
-        
-          <tr valign='top'>
-            <td class="attr-name">OPTION_AS_ERROR_MESSAGE</td>
-            <td>=</td>
-            <td class="attr-value">&quot;The value (%s) of the option `as` is not a valid Ruby identifier; &quot; \
-&quot;make sure it starts with lowercase letter, &quot; \
-&quot;and is followed by any combination of letters, numbers and underscores.&quot;</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
-            </tr>
-          
-        
-          <tr valign='top'>
-            <td class="attr-name">PREFIXED_PARTIAL_NAMES</td>
-            <td>=</td>
-            <td class="attr-value">Concurrent::Map.new do |h, k|
-h[k] = Concurrent::Map.new
-end</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
-            </tr>
-          
-        
-      </table>
-    
 
 
     
@@ -455,7 +408,7 @@ end</td>
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>new</b>(*)
+              <b>new</b>(lookup_context, options)
             
             <a href="../../classes/ActionView/PartialRenderer.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </h3>
@@ -478,14 +431,16 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/actionview/lib/action_view/renderer/partial_renderer.rb#L289" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/actionview/lib/action_view/renderer/partial_renderer.rb#L257" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionview/lib/action_view/renderer/partial_renderer.rb, line 289</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-operator">*</span>)
-  <span class="ruby-keyword">super</span>
-  <span class="ruby-ivar">@context_prefix</span> = <span class="ruby-ivar">@lookup_context</span>.<span class="ruby-identifier">prefixes</span>.<span class="ruby-identifier">first</span>
+                <pre><span class="ruby-comment"># File rails/actionview/lib/action_view/renderer/partial_renderer.rb, line 257</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">lookup_context</span>, <span class="ruby-identifier">options</span>)
+  <span class="ruby-keyword">super</span>(<span class="ruby-identifier">lookup_context</span>)
+  <span class="ruby-ivar">@options</span> = <span class="ruby-identifier">options</span>
+  <span class="ruby-ivar">@locals</span>  = <span class="ruby-ivar">@options</span>[<span class="ruby-value">:locals</span>] <span class="ruby-operator">||</span> {}
+  <span class="ruby-ivar">@details</span> = <span class="ruby-identifier">extract_details</span>(<span class="ruby-ivar">@options</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -499,7 +454,7 @@ end</td>
         <div class="method">
           <h3 class="title method-title" id="method-i-render">
             
-              <b>render</b>(context, options, block)
+              <b>render</b>(partial, context, block)
             
             <a href="../../classes/ActionView/PartialRenderer.html#method-i-render" name="method-i-render" class="permalink">Link</a>
           </h3>
@@ -522,36 +477,19 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-render_source')" id="l_method-i-render_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/actionview/lib/action_view/renderer/partial_renderer.rb#L294" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/actionview/lib/action_view/renderer/partial_renderer.rb#L264" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-render_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionview/lib/action_view/renderer/partial_renderer.rb, line 294</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">render</span>(<span class="ruby-identifier">context</span>, <span class="ruby-identifier">options</span>, <span class="ruby-identifier">block</span>)
-  <span class="ruby-identifier">as</span> = <span class="ruby-identifier">as_variable</span>(<span class="ruby-identifier">options</span>)
-  <span class="ruby-identifier">setup</span>(<span class="ruby-identifier">context</span>, <span class="ruby-identifier">options</span>, <span class="ruby-identifier">as</span>, <span class="ruby-identifier">block</span>)
+                <pre><span class="ruby-comment"># File rails/actionview/lib/action_view/renderer/partial_renderer.rb, line 264</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">render</span>(<span class="ruby-identifier">partial</span>, <span class="ruby-identifier">context</span>, <span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">template</span> = <span class="ruby-identifier">find_template</span>(<span class="ruby-identifier">partial</span>, <span class="ruby-identifier">template_keys</span>(<span class="ruby-identifier">partial</span>))
 
-  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@path</span>
-    <span class="ruby-keyword">if</span> <span class="ruby-ivar">@has_object</span> <span class="ruby-operator">||</span> <span class="ruby-ivar">@collection</span>
-      <span class="ruby-ivar">@variable</span>, <span class="ruby-ivar">@variable_counter</span>, <span class="ruby-ivar">@variable_iteration</span> = <span class="ruby-identifier">retrieve_variable</span>(<span class="ruby-ivar">@path</span>, <span class="ruby-identifier">as</span>)
-      <span class="ruby-ivar">@template_keys</span> = <span class="ruby-identifier">retrieve_template_keys</span>(<span class="ruby-ivar">@variable</span>)
-    <span class="ruby-keyword">else</span>
-      <span class="ruby-ivar">@template_keys</span> = <span class="ruby-ivar">@locals</span>.<span class="ruby-identifier">keys</span>
-    <span class="ruby-keyword">end</span>
-    <span class="ruby-identifier">template</span> = <span class="ruby-identifier">find_partial</span>(<span class="ruby-ivar">@path</span>, <span class="ruby-ivar">@template_keys</span>)
-    <span class="ruby-ivar">@variable</span> <span class="ruby-operator">||=</span> <span class="ruby-identifier">template</span>.<span class="ruby-identifier">variable</span>
-  <span class="ruby-keyword">else</span>
-    <span class="ruby-keyword">if</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:cached</span>]
-      <span class="ruby-identifier">raise</span> <span class="ruby-constant">NotImplementedError</span>, <span class="ruby-string">&quot;render caching requires a template. Please specify a partial when rendering&quot;</span>
-    <span class="ruby-keyword">end</span>
-    <span class="ruby-identifier">template</span> = <span class="ruby-keyword">nil</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">block</span> <span class="ruby-operator">&amp;&amp;</span> (<span class="ruby-identifier">layout</span> = <span class="ruby-ivar">@options</span>[<span class="ruby-value">:layout</span>])
+    <span class="ruby-identifier">layout</span> = <span class="ruby-identifier">find_template</span>(<span class="ruby-identifier">layout</span>.<span class="ruby-identifier">to_s</span>, <span class="ruby-identifier">template_keys</span>(<span class="ruby-identifier">partial</span>))
   <span class="ruby-keyword">end</span>
 
-  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@collection</span>
-    <span class="ruby-identifier">render_collection</span>(<span class="ruby-identifier">context</span>, <span class="ruby-identifier">template</span>)
-  <span class="ruby-keyword">else</span>
-    <span class="ruby-identifier">render_partial</span>(<span class="ruby-identifier">context</span>, <span class="ruby-identifier">template</span>)
-  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">render_partial_template</span>(<span class="ruby-identifier">context</span>, <span class="ruby-ivar">@locals</span>, <span class="ruby-identifier">template</span>, <span class="ruby-identifier">layout</span>, <span class="ruby-identifier">block</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>

@@ -82,6 +82,8 @@ document.addEventListener("turbolinks:load", function() {
             
             <li><a href="../../files/ruby/ast_c.html">ruby/ast.c</a></li>
             
+            <li><a href="../../files/ruby/ast_rb.html">ruby/ast.rb</a></li>
+            
             <li><a href="../../files/ruby/lib/pp_rb.html">ruby/lib/pp.rb</a></li>
             
         </ul>
@@ -93,6 +95,12 @@ document.addEventListener("turbolinks:load", function() {
     <div class="description">
       
 <p><a href="AbstractSyntaxTree.html"><code>AbstractSyntaxTree</code></a> provides methods to parse Ruby code into abstract syntax trees. The nodes in the tree are instances of <a href="AbstractSyntaxTree/Node.html"><code>RubyVM::AbstractSyntaxTree::Node</code></a>.</p>
+
+<p>This class is MRI specific as it exposes implementation details of the MRI abstract syntax tree.</p>
+
+<p>This class is experimental and its API is not stable, therefore it might change without notice. As examples, the order of children nodes is not guaranteed, the number of children nodes might change, there is no way to access children nodes by name, etc.</p>
+
+<p>If you are looking for a stable API or an API working under multiple Ruby implementations, consider using the <em>parser</em> gem or <a href="../Ripper.html"><code>Ripper</code></a>. If you would like to make <a href="AbstractSyntaxTree.html"><code>RubyVM::AbstractSyntaxTree</code></a> stable, please join the discussion at <a href="https://bugs.ruby-lang.org/issues/14844">bugs.ruby-lang.org/issues/14844</a>.</p>
 
     </div>
   
@@ -187,17 +195,17 @@ document.addEventListener("turbolinks:load", function() {
 
           
             <div class="description">
-              <p>Returns AST nodes of the given proc or method.</p>
+              <p>Returns AST nodes of the given <em>proc</em> or <em>method</em>.</p>
 
 <pre><code>RubyVM::AbstractSyntaxTree.of(proc {1 + 2})
-# =&gt; #&lt;RubyVM::AbstractSyntaxTree::Node(NODE_SCOPE(0) 1:35, 1:42): &gt;
+# =&gt; #&lt;RubyVM::AbstractSyntaxTree::Node:SCOPE@1:35-1:42&gt;
 
 def hello
   puts &quot;hello, world&quot;
 end
 
 RubyVM::AbstractSyntaxTree.of(method(:hello))
-# =&gt; #&lt;RubyVM::AbstractSyntaxTree::Node(NODE_SCOPE(0) 1:0, 3:3): &gt;
+# =&gt; #&lt;RubyVM::AbstractSyntaxTree::Node:SCOPE@1:0-3:3&gt;
 </code></pre>
             </div>
           
@@ -214,42 +222,14 @@ RubyVM::AbstractSyntaxTree.of(method(:hello))
                 Source:
                 <a href="javascript:toggleSource('method-c-of_source')" id="l_method-c-of_source">show</a>
                 
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ast.rb#L68" target="_blank" class="github_url">on GitHub</a>
+                
               </p>
               <div id="method-c-of_source" class="dyn-source">
-                <pre>static VALUE
-rb_ast_s_of(VALUE module, VALUE body)
-{
-    VALUE path, node, lines;
-    int node_id;
-    const rb_iseq_t *iseq = NULL;
-
-    if (rb_obj_is_proc(body)) {
-        iseq = vm_proc_iseq(body);
-
-        if (!rb_obj_is_iseq((VALUE)iseq)) {
-            iseq = NULL;
-        }
-    }
-    else {
-        iseq = rb_method_iseq(body);
-    }
-
-    if (!iseq) return Qnil;
-
-    path = rb_iseq_path(iseq);
-    node_id = iseq-&gt;body-&gt;location.node_id;
-    if (!NIL_P(lines = script_lines(path))) {
-        node = rb_ast_parse_array(lines);
-    }
-    else if (RSTRING_LEN(path) == 2 &amp;&amp; memcmp(RSTRING_PTR(path), &quot;-e&quot;, 2) == 0) {
-        node = rb_ast_parse_str(rb_e_script);
-    }
-    else {
-        node = rb_ast_parse_file(path);
-    }
-
-    return node_find(node, node_id);
-}</pre>
+                <pre><span class="ruby-comment"># File ruby/ast.rb, line 68</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">of</span> <span class="ruby-identifier">body</span>
+  <span class="ruby-identifier">__builtin_ast_s_of</span> <span class="ruby-identifier">body</span>
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -266,12 +246,12 @@ rb_ast_s_of(VALUE module, VALUE body)
 
           
             <div class="description">
-              <p>Parses the given string into an abstract syntax tree, returning the root node of that tree.</p>
+              <p>Parses the given <em>string</em> into an abstract syntax tree, returning the root node of that tree.</p>
 
-<p><a href="../SyntaxError.html"><code>SyntaxError</code></a> is raised if the given string is invalid syntax.</p>
+<p><a href="../SyntaxError.html"><code>SyntaxError</code></a> is raised if the given <em>string</em> is invalid syntax.</p>
 
 <pre><code>RubyVM::AbstractSyntaxTree.parse(&quot;x = 1 + 2&quot;)
-# =&gt; #&lt;RubyVM::AbstractSyntaxTree::Node(NODE_SCOPE(0) 1:0, 1:9): &gt;
+# =&gt; #&lt;RubyVM::AbstractSyntaxTree::Node:SCOPE@1:0-1:9&gt;
 </code></pre>
             </div>
           
@@ -288,13 +268,14 @@ rb_ast_s_of(VALUE module, VALUE body)
                 Source:
                 <a href="javascript:toggleSource('method-c-parse_source')" id="l_method-c-parse_source">show</a>
                 
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ast.rb#L34" target="_blank" class="github_url">on GitHub</a>
+                
               </p>
               <div id="method-c-parse_source" class="dyn-source">
-                <pre>static VALUE
-rb_ast_s_parse(VALUE module, VALUE str)
-{
-    return rb_ast_parse_str(str);
-}</pre>
+                <pre><span class="ruby-comment"># File ruby/ast.rb, line 34</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">parse</span> <span class="ruby-identifier">string</span>
+  <span class="ruby-identifier">__builtin_ast_s_parse</span> <span class="ruby-identifier">string</span>
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -311,12 +292,12 @@ rb_ast_s_parse(VALUE module, VALUE str)
 
           
             <div class="description">
-              <p>Reads the file from <code>pathname</code>, then parses it like <a href="AbstractSyntaxTree.html#method-c-parse"><code>::parse</code></a>, returning the root node of the abstract syntax tree.</p>
+              <p>Reads the file from <em>pathname</em>, then parses it like <a href="AbstractSyntaxTree.html#method-c-parse"><code>::parse</code></a>, returning the root node of the abstract syntax tree.</p>
 
-<p><a href="../SyntaxError.html"><code>SyntaxError</code></a> is raised if <code>pathname</code>&#39;s contents are not valid Ruby syntax.</p>
+<p><a href="../SyntaxError.html"><code>SyntaxError</code></a> is raised if <em>pathname</em>&#39;s contents are not valid Ruby syntax.</p>
 
 <pre><code>RubyVM::AbstractSyntaxTree.parse_file(&quot;my-app/app.rb&quot;)
-# =&gt; #&lt;RubyVM::AbstractSyntaxTree::Node(NODE_SCOPE(0) 1:0, 31:3): &gt;
+# =&gt; #&lt;RubyVM::AbstractSyntaxTree::Node:SCOPE@1:0-31:3&gt;
 </code></pre>
             </div>
           
@@ -333,13 +314,14 @@ rb_ast_s_parse(VALUE module, VALUE str)
                 Source:
                 <a href="javascript:toggleSource('method-c-parse_file_source')" id="l_method-c-parse_file_source">show</a>
                 
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ast.rb#L49" target="_blank" class="github_url">on GitHub</a>
+                
               </p>
               <div id="method-c-parse_file_source" class="dyn-source">
-                <pre>static VALUE
-rb_ast_s_parse_file(VALUE module, VALUE path)
-{
-    return rb_ast_parse_file(path);
-}</pre>
+                <pre><span class="ruby-comment"># File ruby/ast.rb, line 49</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">parse_file</span> <span class="ruby-identifier">pathname</span>
+  <span class="ruby-identifier">__builtin_ast_s_parse_file</span> <span class="ruby-identifier">pathname</span>
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             

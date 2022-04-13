@@ -108,7 +108,7 @@ document.addEventListener("turbolinks:load", function() {
 
 <h2 id="module-ActiveRecord::AutosaveAssociation-label-Callbacks"><a href="Callbacks.html"><code>Callbacks</code></a></h2>
 
-<p>Association with autosave option defines several callbacks on your model (before_save, after_create, after_update). Please note that callbacks are executed in the order they were defined in model. You should avoid modifying the association content, before autosave callbacks are executed. Placing your callbacks after associations is usually a good practice.</p>
+<p>Association with autosave option defines several callbacks on your model (around_save, before_save, after_create, after_update). Please note that callbacks are executed in the order they were defined in model. You should avoid modifying the association content before autosave callbacks are executed. Placing your callbacks after associations is usually a good practice.</p>
 
 <h3 id="module-ActiveRecord::AutosaveAssociation-label-One-to-one+Example">One-to-one Example</h3>
 
@@ -169,8 +169,9 @@ post.comments.build(body: &#39;hello world&#39;)
 post.save # =&gt; saves both post and comment
 
 post = Post.create(title: &#39;ruby rocks&#39;)
-post.comments.create(body: &#39;hello world&#39;)
-post.save # =&gt; saves both post and comment
+comment = post.comments.create(body: &#39;hello world&#39;)
+comment.body = &#39;hi everyone&#39;
+post.save # =&gt; saves post, but not comment
 </code></pre>
 
 <p>When <code>:autosave</code> is true all children are saved, no matter whether they are new records or not:</p>
@@ -180,11 +181,10 @@ post.save # =&gt; saves both post and comment
 end
 
 post = Post.create(title: &#39;ruby rocks&#39;)
-post.comments.create(body: &#39;hello world&#39;)
-post.comments[0].body = &#39;hi everyone&#39;
+comment = post.comments.create(body: &#39;hello world&#39;)
+comment.body = &#39;hi everyone&#39;
 post.comments.build(body: &quot;good morning.&quot;)
-post.title += &quot;!&quot;
-post.save # =&gt; saves both post and comments.
+post.save # =&gt; saves post and both comments.
 </code></pre>
 
 <p>Destroying one of the associated models as part of the parent&#39;s save action is as simple as marking it for destruction:</p>
@@ -208,6 +208,10 @@ post.reload.comments.length # =&gt; 1
 
 <pre><code>Comment.find_by(id: id).nil? # =&gt; true
 </code></pre>
+
+<h3 id="module-ActiveRecord::AutosaveAssociation-label-Caveats">Caveats</h3>
+
+<p>Note that autosave will only trigger for already-persisted association records if the records themselves have been changed. This is to protect against <code>SystemStackError</code> caused by circular association validations. The one exception is if a custom validation context is used, in which case the validations will always fire on the associated records.</p>
 
     </div>
   
@@ -336,11 +340,11 @@ post.reload.comments.length # =&gt; 1
                 Source:
                 <a href="javascript:toggleSource('method-i-changed_for_autosave-3F_source')" id="l_method-i-changed_for_autosave-3F_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activerecord/lib/active_record/autosave_association.rb#L264" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activerecord/lib/active_record/autosave_association.rb#L286" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-changed_for_autosave-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 264</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 286</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">changed_for_autosave?</span>
   <span class="ruby-identifier">new_record?</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">has_changes_to_save?</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">marked_for_destruction?</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">nested_records_changed_for_autosave?</span>
 <span class="ruby-keyword">end</span></pre>
@@ -377,11 +381,11 @@ post.reload.comments.length # =&gt; 1
                 Source:
                 <a href="javascript:toggleSource('method-i-destroyed_by_association_source')" id="l_method-i-destroyed_by_association_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activerecord/lib/active_record/autosave_association.rb#L258" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activerecord/lib/active_record/autosave_association.rb#L280" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-destroyed_by_association_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 258</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 280</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">destroyed_by_association</span>
   <span class="ruby-ivar">@destroyed_by_association</span>
 <span class="ruby-keyword">end</span></pre>
@@ -416,11 +420,11 @@ post.reload.comments.length # =&gt; 1
                 Source:
                 <a href="javascript:toggleSource('method-i-destroyed_by_association-3D_source')" id="l_method-i-destroyed_by_association-3D_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activerecord/lib/active_record/autosave_association.rb#L251" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activerecord/lib/active_record/autosave_association.rb#L273" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-destroyed_by_association-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 251</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 273</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">destroyed_by_association=</span>(<span class="ruby-identifier">reflection</span>)
   <span class="ruby-ivar">@destroyed_by_association</span> = <span class="ruby-identifier">reflection</span>
 <span class="ruby-keyword">end</span></pre>
@@ -457,11 +461,11 @@ post.reload.comments.length # =&gt; 1
                 Source:
                 <a href="javascript:toggleSource('method-i-mark_for_destruction_source')" id="l_method-i-mark_for_destruction_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activerecord/lib/active_record/autosave_association.rb#L238" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activerecord/lib/active_record/autosave_association.rb#L260" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mark_for_destruction_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 238</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 260</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mark_for_destruction</span>
   <span class="ruby-ivar">@marked_for_destruction</span> = <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
@@ -498,11 +502,11 @@ post.reload.comments.length # =&gt; 1
                 Source:
                 <a href="javascript:toggleSource('method-i-marked_for_destruction-3F_source')" id="l_method-i-marked_for_destruction-3F_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activerecord/lib/active_record/autosave_association.rb#L245" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activerecord/lib/active_record/autosave_association.rb#L267" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-marked_for_destruction-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 245</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 267</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">marked_for_destruction?</span>
   <span class="ruby-ivar">@marked_for_destruction</span>
 <span class="ruby-keyword">end</span></pre>
@@ -537,11 +541,11 @@ post.reload.comments.length # =&gt; 1
                 Source:
                 <a href="javascript:toggleSource('method-i-reload_source')" id="l_method-i-reload_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/activerecord/lib/active_record/autosave_association.rb#L227" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/activerecord/lib/active_record/autosave_association.rb#L249" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-reload_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 227</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/autosave_association.rb, line 249</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">reload</span>(<span class="ruby-identifier">options</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-ivar">@marked_for_destruction</span> = <span class="ruby-keyword">false</span>
   <span class="ruby-ivar">@destroyed_by_association</span> = <span class="ruby-keyword">nil</span>

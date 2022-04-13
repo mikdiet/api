@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="A Hash is a dictionary-like collection of unique keys and their values.">
   
 
-    <meta name="keywords" content="Hash class, [], try_convert, new, rehash, to_hash, to_h, to_a, inspect, to_proc, ==, [], hash, eql?, fetch, []=, store, default, default=, default_proc, default_proc=, key, size, length, empty?, each_value, each_key, each_pair, each, transform_keys, transform_keys!, transform_values, transform_values!, keys, values, values_at, fetch_values, shift, delete, delete_if, keep_if, select, select!, filter, filter!, reject, reject!, slice, clear, invert, update, replace, merge!, merge, assoc, rassoc, flatten, compact, compact!, include?, member?, has_key?, has_value?, key?, value?, compare_by_identity, compare_by_identity?, any?, dig, <=, <, >=, >, to_s">
+    <meta name="keywords" content="Hash class, [], try_convert, new, initialize_copy, rehash, to_hash, to_h, to_a, inspect, to_proc, ==, [], hash, eql?, fetch, []=, store, default, default=, default_proc, default_proc=, key, size, length, empty?, each_value, each_key, each_pair, each, transform_keys, transform_keys!, transform_values, transform_values!, keys, values, values_at, fetch_values, shift, delete, delete_if, keep_if, select, select!, filter, filter!, reject, reject!, slice, clear, invert, update, replace, merge!, merge, assoc, rassoc, flatten, compact, compact!, include?, member?, has_key?, has_value?, key?, value?, compare_by_identity, compare_by_identity?, any?, dig, <=, <, >=, >, deconstruct_keys, ruby2_keywords_hash?, ruby2_keywords_hash, to_s">
 </head>
 
 <body>
@@ -203,7 +203,7 @@ reviews[book2] = &#39;Nice and compact!&#39;
 reviews.length #=&gt; 1
 </code></pre>
 
-<p>See also Object#hash and <a href="Object.html#method-i-eql-3F"><code>Object#eql?</code></a></p>
+<p>See also <a href="Object.html#method-i-hash"><code>Object#hash</code></a> and <a href="Object.html#method-i-eql-3F"><code>Object#eql?</code></a></p>
 
     </div>
   
@@ -255,12 +255,12 @@ reviews.length #=&gt; 1
             
               
               <li>
-                <a href="#method-i-5B-5D">[]</a>,
+                <a href="#method-c-5B-5D">[]</a>,
               </li>
             
               
               <li>
-                <a href="#method-c-5B-5D">[]</a>,
+                <a href="#method-i-5B-5D">[]</a>,
               </li>
             
               
@@ -323,6 +323,11 @@ reviews.length #=&gt; 1
         <dt>D</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-deconstruct_keys">deconstruct_keys</a>,
+              </li>
             
               
               <li>
@@ -464,6 +469,11 @@ reviews.length #=&gt; 1
             
               
               <li>
+                <a href="#method-i-initialize_copy">initialize_copy</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-inspect">inspect</a>,
               </li>
             
@@ -574,7 +584,17 @@ reviews.length #=&gt; 1
             
               
               <li>
-                <a href="#method-i-replace">replace</a>
+                <a href="#method-i-replace">replace</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-ruby2_keywords_hash">ruby2_keywords_hash</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-ruby2_keywords_hash-3F">ruby2_keywords_hash?</a>
               </li>
             
           </ul>
@@ -812,17 +832,8 @@ rb_hash_s_create(int argc, VALUE *argv, VALUE klass)
                 VALUE key, val = Qnil;
 
                 if (NIL_P(v)) {
-#if 0 /* refix in the next release */
                     rb_raise(rb_eArgError, &quot;wrong element type %s at %ld (expected array)&quot;,
                              rb_builtin_class_name(e), i);
-
-#else
-                    rb_warn(&quot;wrong element type %s at %ld (expected array)&quot;,
-                            rb_builtin_class_name(e), i);
-                    rb_warn(&quot;ignoring wrong elements is deprecated, remove them explicitly&quot;);
-                    rb_warn(&quot;this causes ArgumentError in the next release&quot;);
-                    continue;
-#endif
                 }
                 switch (RARRAY_LEN(v)) {
                   default:
@@ -917,6 +928,103 @@ rb_hash_initialize(int argc, VALUE *argv, VALUE hash)
     }
 
     return hash;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-ruby2_keywords_hash">
+            
+              <b>Hash.ruby2_keywords_hash(hash) &rarr; hash
+</b>
+            
+            <a href="../classes/Hash.html#method-c-ruby2_keywords_hash" name="method-c-ruby2_keywords_hash" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Duplicates a given hash and adds a ruby2_keywords flag. This method is not for casual use; debugging, researching, and some truly necessary cases like deserialization of arguments.</p>
+
+<pre><code>h = {k: 1}
+h = Hash.ruby2_keywords_hash(h)
+def foo(k: 42)
+  k
+end
+foo(*[h]) #=&gt; 1 with neither a warning or an error
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-ruby2_keywords_hash_source')" id="l_method-c-ruby2_keywords_hash_source">show</a>
+                
+              </p>
+              <div id="method-c-ruby2_keywords_hash_source" class="dyn-source">
+                <pre>static VALUE
+rb_hash_s_ruby2_keywords_hash(VALUE dummy, VALUE hash)
+{
+    Check_Type(hash, T_HASH);
+    hash = rb_hash_dup(hash);
+    RHASH(hash)-&gt;basic.flags |= RHASH_PASS_AS_KEYWORDS;
+    return hash;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-ruby2_keywords_hash-3F">
+            
+              <b>Hash.ruby2_keywords_hash?(hash) &rarr; true or false
+</b>
+            
+            <a href="../classes/Hash.html#method-c-ruby2_keywords_hash-3F" name="method-c-ruby2_keywords_hash-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Checks if a given hash is flagged by Module#ruby2_keywords (or <a href="Proc.html#method-i-ruby2_keywords"><code>Proc#ruby2_keywords</code></a>). This method is not for casual use; debugging, researching, and some truly necessary cases like serialization of arguments.</p>
+
+<pre><code>ruby2_keywords def foo(*args)
+  Hash.ruby2_keywords_hash?(args.last)
+end
+foo(k: 1)   #=&gt; true
+foo({k: 1}) #=&gt; false
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-ruby2_keywords_hash-3F_source')" id="l_method-c-ruby2_keywords_hash-3F_source">show</a>
+                
+              </p>
+              <div id="method-c-ruby2_keywords_hash-3F_source" class="dyn-source">
+                <pre>static VALUE
+rb_hash_s_ruby2_keywords_hash_p(VALUE dummy, VALUE hash)
+{
+    Check_Type(hash, T_HASH);
+    return (RHASH(hash)-&gt;basic.flags &amp; RHASH_PASS_AS_KEYWORDS) ? Qtrue : Qfalse;
 }</pre>
               </div>
             </div>
@@ -1077,7 +1185,7 @@ rb_hash_le(VALUE hash, VALUE other)
 
           
             <div class="description">
-              <p>Equality—Two hashes are equal if they each contain the same number of keys and if each key-value pair is equal to (according to <code>Object#==</code>) the corresponding elements in the other hash.</p>
+              <p>Equality—Two hashes are equal if they each contain the same number of keys and if each key-value pair is equal to (according to Object#==) the corresponding elements in the other hash.</p>
 
 <pre><code>h1 = { &quot;a&quot; =&gt; 1, &quot;c&quot; =&gt; 2 }
 h2 = { 7 =&gt; 35, &quot;c&quot; =&gt; 2, &quot;a&quot; =&gt; 1 }
@@ -1228,7 +1336,7 @@ rb_hash_ge(VALUE hash, VALUE other)
 
           
             <div class="description">
-              <p>Element Reference—Retrieves the <em>value</em> object corresponding to the <em>key</em> object. If not found, returns the default value (see <code>Hash::new</code> for details).</p>
+              <p>Element Reference—Retrieves the <em>value</em> object corresponding to the <em>key</em> object. If not found, returns the default value (see <a href="Hash.html#method-c-new"><code>Hash::new</code></a> for details).</p>
 
 <pre><code>h = { &quot;a&quot; =&gt; 100, &quot;b&quot; =&gt; 200 }
 h[&quot;a&quot;]   #=&gt; 100
@@ -1256,14 +1364,12 @@ rb_hash_aref(VALUE hash, VALUE key)
 {
     st_data_t val;
 
-    if (RHASH_AR_TABLE_P(hash) &amp;&amp; ar_lookup(hash, key, &amp;val)) {
+    if (hash_stlike_lookup(hash, key, &amp;val)) {
         return (VALUE)val;
     }
-    else if (RHASH_ST_TABLE_P(hash) &amp;&amp; st_lookup(RHASH_ST_TABLE(hash), key, &amp;val)) {
-        return (VALUE)val;
+    else {
+        return rb_hash_default_value(hash, key);
     }
-    hash_verify(hash);
-    return rb_hash_default_value(hash, key);
 }</pre>
               </div>
             </div>
@@ -1419,7 +1525,7 @@ rb_hash_any_p(int argc, VALUE *argv, VALUE hash)
 
           
             <div class="description">
-              <p>Searches through the hash comparing <em>obj</em> with the key using <code>==</code>. Returns the key-value pair (two elements array) or <code>nil</code> if no match is found.  See <code>Array#assoc</code>.</p>
+              <p>Searches through the hash comparing <em>obj</em> with the key using <code>==</code>. Returns the key-value pair (two elements array) or <code>nil</code> if no match is found.  See <a href="Array.html#method-i-assoc"><code>Array#assoc</code></a>.</p>
 
 <pre><code>h = {&quot;colors&quot;  =&gt; [&quot;red&quot;, &quot;blue&quot;, &quot;green&quot;],
      &quot;letters&quot; =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot; ]}
@@ -1713,7 +1819,7 @@ rb_hash_compare_by_id(VALUE hash)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>hsh</em> will compare its keys by their identity.  Also see <code>Hash#compare_by_identity</code>.</p>
+              <p>Returns <code>true</code> if <em>hsh</em> will compare its keys by their identity.  Also see <a href="Hash.html#method-i-compare_by_identity"><code>Hash#compare_by_identity</code></a>.</p>
             </div>
           
 
@@ -1747,6 +1853,44 @@ rb_hash_compare_by_id_p(VALUE hash)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-deconstruct_keys">
+            
+              <b>deconstruct_keys</b>(p1)
+            
+            <a href="../classes/Hash.html#method-i-deconstruct_keys" name="method-i-deconstruct_keys" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-deconstruct_keys_source')" id="l_method-i-deconstruct_keys_source">show</a>
+                
+              </p>
+              <div id="method-i-deconstruct_keys_source" class="dyn-source">
+                <pre>static VALUE
+rb_hash_deconstruct_keys(VALUE hash, VALUE keys)
+{
+    return hash;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-default">
             
               <b>hsh.default(key=nil)   &rarr; obj
@@ -1757,7 +1901,7 @@ rb_hash_compare_by_id_p(VALUE hash)
 
           
             <div class="description">
-              <p>Returns the default value, the value that would be returned by <em>hsh</em>[<em>key</em>] if <em>key</em> did not exist in <em>hsh</em>. See also <code>Hash::new</code> and <code>Hash#default=</code>.</p>
+              <p>Returns the default value, the value that would be returned by <em>hsh</em>[<em>key</em>] if <em>key</em> did not exist in <em>hsh</em>. See also <a href="Hash.html#method-c-new"><code>Hash::new</code></a> and <a href="Hash.html#method-i-default-3D"><code>Hash#default=</code></a>.</p>
 
 <pre><code>h = Hash.new                            #=&gt; {}
 h.default                               #=&gt; nil
@@ -1795,7 +1939,7 @@ rb_hash_default(int argc, VALUE *argv, VALUE hash)
 
     rb_check_arity(argc, 0, 1);
     ifnone = RHASH_IFNONE(hash);
-    if (FL_TEST(hash, HASH_PROC_DEFAULT)) {
+    if (FL_TEST(hash, RHASH_PROC_DEFAULT)) {
         if (argc == 0) return Qnil;
         args[0] = hash;
         args[1] = argv[0];
@@ -1819,7 +1963,7 @@ rb_hash_default(int argc, VALUE *argv, VALUE hash)
 
           
             <div class="description">
-              <p>Sets the default value, the value returned for a key that does not exist in the hash. It is not possible to set the default to a <code>Proc</code> that will be executed on each key lookup.</p>
+              <p>Sets the default value, the value returned for a key that does not exist in the hash. It is not possible to set the default to a <a href="Proc.html"><code>Proc</code></a> that will be executed on each key lookup.</p>
 
 <pre><code>h = { &quot;a&quot; =&gt; 100, &quot;b&quot; =&gt; 200 }
 h.default = &quot;Go fish&quot;
@@ -1872,7 +2016,7 @@ rb_hash_set_default(VALUE hash, VALUE ifnone)
 
           
             <div class="description">
-              <p>If <code>Hash::new</code> was invoked with a block, return that block, otherwise return <code>nil</code>.</p>
+              <p>If <a href="Hash.html#method-c-new"><code>Hash::new</code></a> was invoked with a block, return that block, otherwise return <code>nil</code>.</p>
 
 <pre><code>h = Hash.new {|h,k| h[k] = k*k }   #=&gt; {}
 p = h.default_proc                 #=&gt; #&lt;Proc:0x401b3d08@-:1&gt;
@@ -1900,7 +2044,7 @@ a                                  #=&gt; [nil, nil, 4]
                 <pre>static VALUE
 rb_hash_default_proc(VALUE hash)
 {
-    if (FL_TEST(hash, HASH_PROC_DEFAULT)) {
+    if (FL_TEST(hash, RHASH_PROC_DEFAULT)) {
         return RHASH_IFNONE(hash);
     }
     return Qnil;
@@ -2429,7 +2573,7 @@ rb_hash_eql(VALUE hash1, VALUE hash2)
 
           
             <div class="description">
-              <p>Returns a value from the hash for the given key. If the key can&#39;t be found, there are several options: With no other arguments, it will raise a <code>KeyError</code> exception; if <em>default</em> is given, then that will be returned; if the optional code block is specified, then that will be run and its result returned.</p>
+              <p>Returns a value from the hash for the given key. If the key can&#39;t be found, there are several options: With no other arguments, it will raise a <a href="KeyError.html"><code>KeyError</code></a> exception; if <em>default</em> is given, then that will be returned; if the optional code block is specified, then that will be run and its result returned.</p>
 
 <pre><code>h = { &quot;a&quot; =&gt; 100, &quot;b&quot; =&gt; 200 }
 h.fetch(&quot;a&quot;)                            #=&gt; 100
@@ -2479,23 +2623,26 @@ rb_hash_fetch_m(int argc, VALUE *argv, VALUE hash)
     if (block_given &amp;&amp; argc == 2) {
         rb_warn(&quot;block supersedes default value argument&quot;);
     }
-    if (RHASH_AR_TABLE_P(hash) &amp;&amp; ar_lookup(hash, key, &amp;val)) {
+
+    if (hash_stlike_lookup(hash, key, &amp;val)) {
         return (VALUE)val;
     }
-    else if (RHASH_ST_TABLE_P(hash) &amp;&amp; st_lookup(RHASH_ST_TABLE(hash), key, &amp;val)) {
-        return (VALUE)val;
-    }
-    if (block_given) return rb_yield(key);
-    if (argc == 1) {
-        VALUE desc = rb_protect(rb_inspect, key, 0);
-        if (NIL_P(desc)) {
-            desc = rb_any_to_s(key);
+    else {
+        if (block_given) {
+            return rb_yield(key);
         }
-        desc = rb_str_ellipsize(desc, 65);
-        rb_key_err_raise(rb_sprintf(&quot;key not found: %&quot;PRIsVALUE, desc), hash, key);
+        else if (argc == 1) {
+            VALUE desc = rb_protect(rb_inspect, key, 0);
+            if (NIL_P(desc)) {
+                desc = rb_any_to_s(key);
+            }
+            desc = rb_str_ellipsize(desc, 65);
+            rb_key_err_raise(rb_sprintf(&quot;key not found: %&quot;PRIsVALUE, desc), hash, key);
+        }
+        else {
+            return argv[1];
+        }
     }
-    hash_verify(hash);
-    return argv[1];
 }</pre>
               </div>
             </div>
@@ -2513,7 +2660,7 @@ rb_hash_fetch_m(int argc, VALUE *argv, VALUE hash)
 
           
             <div class="description">
-              <p>Returns an array containing the values associated with the given keys but also raises <code>KeyError</code> when one of keys can&#39;t be found. Also see <code>Hash#values_at</code> and <code>Hash#fetch</code>.</p>
+              <p>Returns an array containing the values associated with the given keys but also raises <a href="KeyError.html"><code>KeyError</code></a> when one of keys can&#39;t be found. Also see <a href="Hash.html#method-i-values_at"><code>Hash#values_at</code></a> and <a href="Hash.html#method-i-fetch"><code>Hash#fetch</code></a>.</p>
 
 <pre><code>h = { &quot;cat&quot; =&gt; &quot;feline&quot;, &quot;dog&quot; =&gt; &quot;canine&quot;, &quot;cow&quot; =&gt; &quot;bovine&quot; }
 
@@ -2703,7 +2850,7 @@ h.has_key?(&quot;a&quot;)   #=&gt; true
 h.has_key?(&quot;z&quot;)   #=&gt; false
 </code></pre>
 
-<p>Note that <code>include?</code> and <code>member?</code> do not test member equality using <code>==</code> as do other Enumerables.</p>
+<p>Note that <a href="Hash.html#method-i-include-3F"><code>include?</code></a> and <a href="Hash.html#method-i-member-3F"><code>member?</code></a> do not test member equality using <code>==</code> as do other Enumerables.</p>
 
 <p>See also <a href="Enumerable.html#method-i-include-3F"><code>Enumerable#include?</code></a></p>
             </div>
@@ -2785,7 +2932,7 @@ rb_hash_has_value(VALUE hash, VALUE val)
             <div class="description">
               <p>Compute a hash-code for this hash. Two hashes with the same content will have the same hash code (and will compare using <code>eql?</code>).</p>
 
-<p>See also Object#hash.</p>
+<p>See also <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
             </div>
           
 
@@ -2837,7 +2984,7 @@ h.has_key?(&quot;a&quot;)   #=&gt; true
 h.has_key?(&quot;z&quot;)   #=&gt; false
 </code></pre>
 
-<p>Note that <code>include?</code> and <code>member?</code> do not test member equality using <code>==</code> as do other Enumerables.</p>
+<p>Note that <a href="Hash.html#method-i-include-3F"><code>include?</code></a> and <a href="Hash.html#method-i-member-3F"><code>member?</code></a> do not test member equality using <code>==</code> as do other Enumerables.</p>
 
 <p>See also <a href="Enumerable.html#method-i-include-3F"><code>Enumerable#include?</code></a></p>
             </div>
@@ -2864,13 +3011,90 @@ h.has_key?(&quot;z&quot;)   #=&gt; false
                 <pre>MJIT_FUNC_EXPORTED VALUE
 rb_hash_has_key(VALUE hash, VALUE key)
 {
-    if (RHASH_AR_TABLE_P(hash) &amp;&amp; ar_lookup(hash, key, 0)) {
+    if (hash_stlike_lookup(hash, key, NULL)) {
         return Qtrue;
     }
-    else if (RHASH_ST_TABLE_P(hash) &amp;&amp; st_lookup(RHASH_ST_TABLE(hash), key, 0)) {
-        return Qtrue;
+    else {
+        return Qfalse;
     }
-    return Qfalse;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-initialize_copy">
+            
+              <b></b>
+            
+            <a href="../classes/Hash.html#method-i-initialize_copy" name="method-i-initialize_copy" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Replaces the contents of <em>hsh</em> with the contents of <em>other_hash</em>.</p>
+
+<pre><code>h = { &quot;a&quot; =&gt; 100, &quot;b&quot; =&gt; 200 }
+h.replace({ &quot;c&quot; =&gt; 300, &quot;d&quot; =&gt; 400 })   #=&gt; {&quot;c&quot;=&gt;300, &quot;d&quot;=&gt;400}
+</code></pre>
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="Hash.html#method-i-replace">replace</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-initialize_copy_source')" id="l_method-i-initialize_copy_source">show</a>
+                
+              </p>
+              <div id="method-i-initialize_copy_source" class="dyn-source">
+                <pre>static VALUE
+rb_hash_replace(VALUE hash, VALUE hash2)
+{
+    rb_hash_modify_check(hash);
+    if (hash == hash2) return hash;
+    if (RHASH_ITER_LEV(hash) &gt; 0) {
+        rb_raise(rb_eRuntimeError, &quot;can&#39;t replace hash during iteration&quot;);
+    }
+    hash2 = to_hash(hash2);
+
+    COPY_DEFAULT(hash, hash2);
+
+    if (RHASH_AR_TABLE_P(hash)) {
+        if (RHASH_AR_TABLE_P(hash2)) {
+            ar_clear(hash);
+        }
+        else {
+            ar_free_and_clear_table(hash);
+            RHASH_ST_TABLE_SET(hash, st_init_table_with_size(RHASH_TYPE(hash2), RHASH_SIZE(hash2)));
+        }
+    }
+    else {
+        if (RHASH_AR_TABLE_P(hash2)) {
+            st_free_table(RHASH_ST_TABLE(hash));
+            RHASH_ST_CLEAR(hash);
+        }
+        else {
+            st_clear(RHASH_ST_TABLE(hash));
+            RHASH_TBL_RAW(hash)-&gt;type = RHASH_ST_TABLE(hash2)-&gt;type;
+        }
+    }
+    rb_hash_foreach(hash2, rb_hash_rehash_i, (VALUE)hash);
+
+    rb_gc_writebarrier_remember(hash);
+
+    return hash;
 }</pre>
               </div>
             </div>
@@ -3105,7 +3329,7 @@ h.has_key?(&quot;a&quot;)   #=&gt; true
 h.has_key?(&quot;z&quot;)   #=&gt; false
 </code></pre>
 
-<p>Note that <code>include?</code> and <code>member?</code> do not test member equality using <code>==</code> as do other Enumerables.</p>
+<p>Note that <a href="Hash.html#method-i-include-3F"><code>include?</code></a> and <a href="Hash.html#method-i-member-3F"><code>member?</code></a> do not test member equality using <code>==</code> as do other Enumerables.</p>
 
 <p>See also <a href="Enumerable.html#method-i-include-3F"><code>Enumerable#include?</code></a></p>
             </div>
@@ -3133,7 +3357,7 @@ h.has_key?(&quot;z&quot;)   #=&gt; false
 
           
             <div class="description">
-              <p>Returns a new array populated with the keys from this hash. See also <code>Hash#values</code>.</p>
+              <p>Returns a new array populated with the keys from this hash. See also <a href="Hash.html#method-i-values"><code>Hash#values</code></a>.</p>
 
 <pre><code>h = { &quot;a&quot; =&gt; 100, &quot;b&quot; =&gt; 200, &quot;c&quot; =&gt; 300, &quot;d&quot; =&gt; 400 }
 h.keys   #=&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;]
@@ -3238,7 +3462,7 @@ h.has_key?(&quot;a&quot;)   #=&gt; true
 h.has_key?(&quot;z&quot;)   #=&gt; false
 </code></pre>
 
-<p>Note that <code>include?</code> and <code>member?</code> do not test member equality using <code>==</code> as do other Enumerables.</p>
+<p>Note that <a href="Hash.html#method-i-include-3F"><code>include?</code></a> and <a href="Hash.html#method-i-member-3F"><code>member?</code></a> do not test member equality using <code>==</code> as do other Enumerables.</p>
 
 <p>See also <a href="Enumerable.html#method-i-include-3F"><code>Enumerable#include?</code></a></p>
             </div>
@@ -3375,7 +3599,7 @@ h1                 #=&gt; {&quot;a&quot;=&gt;100, &quot;b&quot;=&gt;200, &quot;c
 
           
             <div class="description">
-              <p>Searches through the hash comparing <em>obj</em> with the value using <code>==</code>. Returns the first key-value pair (two-element array) that matches. See also <code>Array#rassoc</code>.</p>
+              <p>Searches through the hash comparing <em>obj</em> with the value using <code>==</code>. Returns the first key-value pair (two-element array) that matches. See also <a href="Array.html#method-i-rassoc"><code>Array#rassoc</code></a>.</p>
 
 <pre><code>a = {1=&gt; &quot;one&quot;, 2 =&gt; &quot;two&quot;, 3 =&gt; &quot;three&quot;, &quot;ii&quot; =&gt; &quot;two&quot;}
 a.rassoc(&quot;two&quot;)    #=&gt; [2, &quot;two&quot;]
@@ -3424,7 +3648,7 @@ rb_hash_rassoc(VALUE hash, VALUE obj)
 
           
             <div class="description">
-              <p>Rebuilds the hash based on the current hash values for each key. If values of key objects have changed since they were inserted, this method will reindex <em>hsh</em>. If <code>Hash#rehash</code> is called while an iterator is traversing the hash, a <code>RuntimeError</code> will be raised in the iterator.</p>
+              <p>Rebuilds the hash based on the current hash values for each key. If values of key objects have changed since they were inserted, this method will reindex <em>hsh</em>. If <a href="Hash.html#method-i-rehash"><code>Hash#rehash</code></a> is called while an iterator is traversing the hash, a <a href="RuntimeError.html"><code>RuntimeError</code></a> will be raised in the iterator.</p>
 
 <pre><code>a = [ &quot;a&quot;, &quot;b&quot; ]
 c = [ &quot;c&quot;, &quot;d&quot; ]
@@ -3558,7 +3782,7 @@ rb_hash_reject(VALUE hash)
 
           
             <div class="description">
-              <p>Equivalent to <code>Hash#delete_if</code>, but returns <code>nil</code> if no changes were made.</p>
+              <p>Equivalent to <a href="Hash.html#method-i-delete_if"><code>Hash#delete_if</code></a>, but returns <code>nil</code> if no changes were made.</p>
             </div>
           
 
@@ -3597,8 +3821,7 @@ rb_hash_reject_bang(VALUE hash)
         <div class="method">
           <h3 class="title method-title" id="method-i-replace">
             
-              <b>hsh.replace(other_hash) &rarr; hsh
-</b>
+              <b>hsh.replace(other_hash) &rarr; hsh</b>
             
             <a href="../classes/Hash.html#method-i-replace" name="method-i-replace" class="permalink">Link</a>
           </h3>
@@ -3616,48 +3839,12 @@ h.replace({ &quot;c&quot; =&gt; 300, &quot;d&quot; =&gt; 400 })   #=&gt; {&quot;
           
 
           
+            <div class="aka">
+              Alias for: <a href="Hash.html#method-i-initialize_copy">initialize_copy</a>
+            </div>
+          
 
           
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-replace_source')" id="l_method-i-replace_source">show</a>
-                
-              </p>
-              <div id="method-i-replace_source" class="dyn-source">
-                <pre>static VALUE
-rb_hash_replace(VALUE hash, VALUE hash2)
-{
-    rb_hash_modify_check(hash);
-    if (hash == hash2) return hash;
-    hash2 = to_hash(hash2);
-
-    COPY_DEFAULT(hash, hash2);
-
-    rb_hash_clear(hash);
-
-    if (RHASH_AR_TABLE_P(hash)) {
-        if (RHASH_AR_TABLE_P(hash2)) {
-            ar_copy(hash, hash2);
-        }
-        else {
-            goto st_to_st;
-        }
-    }
-    else {
-        if (RHASH_AR_TABLE_P(hash2)) ar_force_convert_table(hash2, __FILE__, __LINE__);
-      st_to_st:
-        RHASH_TBL_RAW(hash)-&gt;type = RHASH_ST_TABLE(hash2)-&gt;type;
-        rb_hash_foreach(hash2, replace_i, hash);
-    }
-
-    return hash;
-}</pre>
-              </div>
-            </div>
-            
           </div>
         
         <div class="method">
@@ -4041,7 +4228,6 @@ rb_hash_to_a(VALUE hash)
 
     ary = rb_ary_new_capa(RHASH_SIZE(hash));
     rb_hash_foreach(hash, to_a_i, ary);
-    OBJ_INFECT(ary, hash);
 
     return ary;
 }</pre>
@@ -4089,7 +4275,7 @@ rb_hash_to_h(VALUE hash)
     }
     if (rb_obj_class(hash) != rb_cHash) {
         const VALUE flags = RBASIC(hash)-&gt;flags;
-        hash = hash_dup(hash, rb_cHash, flags &amp; HASH_PROC_DEFAULT);
+        hash = hash_dup(hash, rb_cHash, flags &amp; RHASH_PROC_DEFAULT);
     }
     return hash;
 }</pre>
@@ -4373,9 +4559,11 @@ rb_hash_transform_values(VALUE hash)
     VALUE result;
 
     RETURN_SIZED_ENUMERATOR(hash, 0, 0, hash_enum_size);
-    result = rb_hash_new_with_size(RHASH_SIZE(hash));
+    result = hash_copy(hash_alloc(rb_cHash), hash);
+    SET_DEFAULT(result, Qnil);
+
     if (!RHASH_EMPTY_P(hash)) {
-        rb_hash_foreach(hash, transform_values_i, result);
+        rb_hash_stlike_foreach_with_replace(result, transform_values_foreach_func, transform_values_foreach_replace, result);
     }
 
     return result;
@@ -4428,8 +4616,11 @@ rb_hash_transform_values_bang(VALUE hash)
 {
     RETURN_SIZED_ENUMERATOR(hash, 0, 0, hash_enum_size);
     rb_hash_modify_check(hash);
-    if (!RHASH_TABLE_EMPTY_P(hash))
-        rb_hash_foreach(hash, transform_values_i, hash);
+
+    if (!RHASH_TABLE_EMPTY_P(hash)) {
+        rb_hash_stlike_foreach_with_replace(hash, transform_values_foreach_func, transform_values_foreach_replace, hash);
+    }
+
     return hash;
 }</pre>
               </div>
@@ -4561,7 +4752,7 @@ h.value?(999)   #=&gt; false
 
           
             <div class="description">
-              <p>Returns a new array populated with the values from <em>hsh</em>. See also <code>Hash#keys</code>.</p>
+              <p>Returns a new array populated with the values from <em>hsh</em>. See also <a href="Hash.html#method-i-keys"><code>Hash#keys</code></a>.</p>
 
 <pre><code>h = { &quot;a&quot; =&gt; 100, &quot;b&quot; =&gt; 200, &quot;c&quot; =&gt; 300 }
 h.values   #=&gt; [100, 200, 300]
@@ -4630,7 +4821,7 @@ rb_hash_values(VALUE hash)
 
           
             <div class="description">
-              <p>Return an array containing the values associated with the given keys. Also see <code>Hash.select</code>.</p>
+              <p>Return an array containing the values associated with the given keys. Also see <a href="Hash.html#method-i-select"><code>Hash.select</code></a>.</p>
 
 <pre><code>h = { &quot;cat&quot; =&gt; &quot;feline&quot;, &quot;dog&quot; =&gt; &quot;canine&quot;, &quot;cow&quot; =&gt; &quot;bovine&quot; }
 h.values_at(&quot;cow&quot;, &quot;cat&quot;)  #=&gt; [&quot;bovine&quot;, &quot;feline&quot;]

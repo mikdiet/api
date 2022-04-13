@@ -378,8 +378,6 @@ auto_install
 auto_config_jobs
 cache_all
 cache_all_platforms
-cache_command_is_package
-console_command
 default_install_uses_path
 deployment
 deployment_means_frozen
@@ -390,28 +388,24 @@ disable_multisource
 disable_platform_warnings
 disable_shared_gems
 disable_version_check
-error_on_stderr
 force_ruby_platform
 forget_cli_options
 frozen
 gem.coc
 gem.mit
-global_path_appends_ruby_scope
 global_gem_cache
 ignore_messages
 init_gems_rb
-list_command
-lockfile_uses_separate_rubygems_sources
-major_deprecations
 no_install
 no_prune
 only_update_to_newer_versions
 path_relative_to_cwd
 path.system
 plugins
-prefer_gems_rb
+prefer_patch
 print_only_version_number
 setup_makes_kernel_gem_public
+silence_deprecations
 silence_root_warning
 skip_default_git_sources
 specific_platform
@@ -419,32 +413,7 @@ suppress_install_using_messages
 unlock_source_unlocks_spec
 update_requires_all_flag
 use_gem_version_promoter_for_major_updates
-viz_command
 ].freeze</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
-            </tr>
-          
-        
-          <tr valign='top'>
-            <td class="attr-name">CONFIG_REGEX</td>
-            <td>=</td>
-            <td class="attr-value">%r{ # rubocop:disable Style/RegexpLiteral
-^
-(BUNDLE_.+):\s # the key
-(?: !\s)? # optional exclamation mark found with ruby 1.9.3
-([&#39;&quot;]?) # optional opening quote
-(.* # contents of the value
-(?: # optionally, up until the next key
-(\n(?!BUNDLE).+)*
-)
-)
-\2 # matching closing quote
-$
-}xo</td>
           </tr>
           
             <tr valign='top'>
@@ -457,7 +426,9 @@ $
             <td class="attr-name">DEFAULT_CONFIG</td>
             <td>=</td>
             <td class="attr-value">{
+:silence_deprecations =&gt; false,
 :disable_version_check =&gt; true,
+:prefer_patch =&gt; false,
 :redirect =&gt; 5,
 :retry =&gt; 3,
 :timeout =&gt; 10,
@@ -479,7 +450,7 @@ $
 (https?.*?) # URI
 (\.#{Regexp.union(PER_URI_OPTIONS)})? # optional suffix key
 \z
-/ix</td>
+/ix.freeze</td>
           </tr>
           
             <tr valign='top'>
@@ -523,10 +494,10 @@ fallback_timeout
           <tr valign='top'>
             <td class="attr-name">Path</td>
             <td>=</td>
-            <td class="attr-value">Struct.new(:explicit_path, :append_ruby_scope, :system_path, :default_install_uses_path) do
+            <td class="attr-value">Struct.new(:explicit_path, :system_path, :default_install_uses_path) do
 def path
 path = base_path
-path = File.join(path, Bundler.ruby_scope) if append_ruby_scope &amp;&amp; !use_system_gems?
+path = File.join(path, Bundler.ruby_scope) unless use_system_gems?
 path
 end
 
@@ -614,11 +585,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L84" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L77" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 84</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 77</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">root</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-ivar">@root</span>            = <span class="ruby-identifier">root</span>
   <span class="ruby-ivar">@local_config</span>    = <span class="ruby-identifier">load_config</span>(<span class="ruby-identifier">local_config_file</span>)
@@ -660,11 +631,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L91" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L84" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-5B-5D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 91</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 84</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">key</span> = <span class="ruby-identifier">key_for</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">value</span> = <span class="ruby-ivar">@temporary</span>.<span class="ruby-identifier">fetch</span>(<span class="ruby-identifier">key</span>) <span class="ruby-keyword">do</span>
@@ -708,11 +679,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-all_source')" id="l_method-i-all_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L153" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L134" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-all_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 153</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 134</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">all</span>
   <span class="ruby-identifier">env_keys</span> = <span class="ruby-constant">ENV</span>.<span class="ruby-identifier">keys</span>.<span class="ruby-identifier">grep</span>(<span class="ruby-regexp">/\ABUNDLE_.+/</span>)
 
@@ -753,11 +724,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-allow_sudo-3F_source')" id="l_method-i-allow_sudo-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L283" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L267" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-allow_sudo-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 283</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 267</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">allow_sudo?</span>
   <span class="ruby-identifier">key</span> = <span class="ruby-identifier">key_for</span>(<span class="ruby-value">:path</span>)
   <span class="ruby-identifier">path_configured</span> = <span class="ruby-ivar">@temporary</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-identifier">key</span>) <span class="ruby-operator">||</span> <span class="ruby-ivar">@local_config</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-identifier">key</span>)
@@ -794,11 +765,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-app_cache_path_source')" id="l_method-i-app_cache_path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L293" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L277" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-app_cache_path_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 293</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 277</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">app_cache_path</span>
   <span class="ruby-ivar">@app_cache_path</span> <span class="ruby-operator">||=</span> <span class="ruby-keyword">self</span>[<span class="ruby-value">:cache_path</span>] <span class="ruby-operator">||</span> <span class="ruby-string">&quot;vendor/cache&quot;</span>
 <span class="ruby-keyword">end</span></pre>
@@ -833,11 +804,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-credentials_for_source')" id="l_method-i-credentials_for_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L176" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L161" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-credentials_for_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 176</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 161</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">credentials_for</span>(<span class="ruby-identifier">uri</span>)
   <span class="ruby-keyword">self</span>[<span class="ruby-identifier">uri</span>.<span class="ruby-identifier">to_s</span>] <span class="ruby-operator">||</span> <span class="ruby-keyword">self</span>[<span class="ruby-identifier">uri</span>.<span class="ruby-identifier">host</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -872,11 +843,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-gem_mirrors_source')" id="l_method-i-gem_mirrors_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L180" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L165" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-gem_mirrors_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 180</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 165</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">gem_mirrors</span>
   <span class="ruby-identifier">all</span>.<span class="ruby-identifier">inject</span>(<span class="ruby-constant">Mirrors</span>.<span class="ruby-identifier">new</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">mirrors</span>, <span class="ruby-identifier">k</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">mirrors</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">k</span>, <span class="ruby-keyword">self</span>[<span class="ruby-identifier">k</span>]) <span class="ruby-keyword">if</span> <span class="ruby-identifier">k</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-string">&quot;mirror.&quot;</span>)
@@ -914,11 +885,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-ignore_config-3F_source')" id="l_method-i-ignore_config-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L289" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L273" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ignore_config-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 289</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 273</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ignore_config?</span>
   <span class="ruby-constant">ENV</span>[<span class="ruby-string">&quot;BUNDLE_IGNORE_CONFIG&quot;</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -953,11 +924,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-key_for_source')" id="l_method-i-key_for_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L306" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L290" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-key_for_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 306</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 290</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">key_for</span>(<span class="ruby-identifier">key</span>)
   <span class="ruby-identifier">key</span> = <span class="ruby-constant">Settings</span>.<span class="ruby-identifier">normalize_uri</span>(<span class="ruby-identifier">key</span>).<span class="ruby-identifier">to_s</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">key</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-regexp">/https?:/</span> <span class="ruby-operator">=~</span> <span class="ruby-identifier">key</span>
   <span class="ruby-identifier">key</span> = <span class="ruby-identifier">key</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-string">&quot;.&quot;</span>, <span class="ruby-string">&quot;__&quot;</span>).<span class="ruby-identifier">upcase</span>
@@ -994,11 +965,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-local_overrides_source')" id="l_method-i-local_overrides_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L163" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L144" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-local_overrides_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 163</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 144</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">local_overrides</span>
   <span class="ruby-identifier">repos</span> = {}
   <span class="ruby-identifier">all</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">k</span><span class="ruby-operator">|</span>
@@ -1037,11 +1008,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-locations_source')" id="l_method-i-locations_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L187" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L172" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-locations_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 187</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 172</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">locations</span>(<span class="ruby-identifier">key</span>)
   <span class="ruby-identifier">key</span> = <span class="ruby-identifier">key_for</span>(<span class="ruby-identifier">key</span>)
   <span class="ruby-identifier">locations</span> = {}
@@ -1083,13 +1054,17 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-mirror_for_source')" id="l_method-i-mirror_for_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L171" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L152" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mirror_for_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 171</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 152</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mirror_for</span>(<span class="ruby-identifier">uri</span>)
-  <span class="ruby-identifier">uri</span> = <span class="ruby-constant">URI</span>(<span class="ruby-identifier">uri</span>.<span class="ruby-identifier">to_s</span>) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">uri</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">URI</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">uri</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>)
+    <span class="ruby-identifier">require_relative</span> <span class="ruby-string">&quot;vendored_uri&quot;</span>
+    <span class="ruby-identifier">uri</span> = <span class="ruby-constant">Bundler</span><span class="ruby-operator">::</span><span class="ruby-constant">URI</span>(<span class="ruby-identifier">uri</span>)
+  <span class="ruby-keyword">end</span>
+
   <span class="ruby-identifier">gem_mirrors</span>.<span class="ruby-identifier">for</span>(<span class="ruby-identifier">uri</span>.<span class="ruby-identifier">to_s</span>).<span class="ruby-identifier">uri</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -1107,7 +1082,7 @@ end</td>
 
           
             <div class="description">
-              <p>for legacy reasons, in <a href="../Bundler.html"><code>Bundler</code></a> 1, the ruby scope isnt appended when the setting comes from <a href="../ENV.html"><code>ENV</code></a> or the global config, nor do we respect :disable_shared_gems</p>
+              <p>for legacy reasons, in <a href="../Bundler.html"><code>Bundler</code></a> 2, we do not respect :disable_shared_gems</p>
             </div>
           
 
@@ -1123,20 +1098,20 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-path_source')" id="l_method-i-path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L225" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L209" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-path_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 225</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 209</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">path</span>
   <span class="ruby-identifier">key</span>  = <span class="ruby-identifier">key_for</span>(<span class="ruby-value">:path</span>)
   <span class="ruby-identifier">path</span> = <span class="ruby-constant">ENV</span>[<span class="ruby-identifier">key</span>] <span class="ruby-operator">||</span> <span class="ruby-ivar">@global_config</span>[<span class="ruby-identifier">key</span>]
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">path</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-ivar">@temporary</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-identifier">key</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-ivar">@local_config</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-identifier">key</span>)
-    <span class="ruby-keyword">return</span> <span class="ruby-constant">Path</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">path</span>, <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">feature_flag</span>.<span class="ruby-identifier">global_path_appends_ruby_scope?</span>, <span class="ruby-keyword">false</span>, <span class="ruby-keyword">false</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-constant">Path</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">path</span>, <span class="ruby-keyword">false</span>, <span class="ruby-keyword">false</span>)
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-identifier">system_path</span> = <span class="ruby-keyword">self</span>[<span class="ruby-string">&quot;path.system&quot;</span>] <span class="ruby-operator">||</span> (<span class="ruby-keyword">self</span>[<span class="ruby-value">:disable_shared_gems</span>] <span class="ruby-operator">==</span> <span class="ruby-keyword">false</span>)
-  <span class="ruby-constant">Path</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>[<span class="ruby-value">:path</span>], <span class="ruby-keyword">true</span>, <span class="ruby-identifier">system_path</span>, <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">feature_flag</span>.<span class="ruby-identifier">default_install_uses_path?</span>)
+  <span class="ruby-constant">Path</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>[<span class="ruby-value">:path</span>], <span class="ruby-identifier">system_path</span>, <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">feature_flag</span>.<span class="ruby-identifier">default_install_uses_path?</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1169,11 +1144,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-pretty_values_for_source')" id="l_method-i-pretty_values_for_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L198" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L183" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-pretty_values_for_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 198</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 183</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">pretty_values_for</span>(<span class="ruby-identifier">exposed_key</span>)
   <span class="ruby-identifier">key</span> = <span class="ruby-identifier">key_for</span>(<span class="ruby-identifier">exposed_key</span>)
 
@@ -1229,28 +1204,16 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-set_command_option_source')" id="l_method-i-set_command_option_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L104" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L97" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-set_command_option_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 104</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 97</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set_command_option</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-constant">Bundler</span>.<span class="ruby-identifier">feature_flag</span>.<span class="ruby-identifier">forget_cli_options?</span>
     <span class="ruby-identifier">temporary</span>(<span class="ruby-identifier">key</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">value</span>)
     <span class="ruby-identifier">value</span>
   <span class="ruby-keyword">else</span>
-    <span class="ruby-identifier">command</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">nil?</span>
-      <span class="ruby-node">&quot;bundle config --delete #{key}&quot;</span>
-    <span class="ruby-keyword">else</span>
-      <span class="ruby-node">&quot;bundle config #{key} #{Array(value).join(&quot;:&quot;)}&quot;</span>
-    <span class="ruby-keyword">end</span>
-
-    <span class="ruby-constant">Bundler</span><span class="ruby-operator">::</span><span class="ruby-constant">SharedHelpers</span>.<span class="ruby-identifier">major_deprecation</span> <span class="ruby-value">2</span>,\
-      <span class="ruby-string">&quot;flags passed to commands &quot;</span> \
-      <span class="ruby-string">&quot;will no longer be automatically remembered. Instead please set flags &quot;</span> \
-      <span class="ruby-string">&quot;you want remembered between commands using `bundle config &quot;</span> \
-      <span class="ruby-node">&quot;&lt;setting name&gt; &lt;setting value&gt;`, i.e. `#{command}`&quot;</span>
-
     <span class="ruby-identifier">set_local</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>)
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1285,11 +1248,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-set_command_option_if_given_source')" id="l_method-i-set_command_option_if_given_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L125" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L106" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-set_command_option_if_given_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 125</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 106</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set_command_option_if_given</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">nil?</span>
   <span class="ruby-identifier">set_command_option</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>)
@@ -1325,11 +1288,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-set_global_source')" id="l_method-i-set_global_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L149" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L130" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-set_global_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 149</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 130</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set_global</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>)
   <span class="ruby-identifier">set_key</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>, <span class="ruby-ivar">@global_config</span>, <span class="ruby-identifier">global_config_file</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1364,11 +1327,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-set_local_source')" id="l_method-i-set_local_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L130" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L111" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-set_local_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 130</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 111</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set_local</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>)
   <span class="ruby-identifier">local_config_file</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">raise</span>(<span class="ruby-constant">GemfileNotFound</span>, <span class="ruby-string">&quot;Could not locate Gemfile&quot;</span>)
 
@@ -1405,11 +1368,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-temporary_source')" id="l_method-i-temporary_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L136" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L117" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-temporary_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 136</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 117</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">temporary</span>(<span class="ruby-identifier">update</span>)
   <span class="ruby-identifier">existing</span> = <span class="ruby-constant">Hash</span>[<span class="ruby-identifier">update</span>.<span class="ruby-identifier">map</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">k</span>, <span class="ruby-identifier">_</span><span class="ruby-operator">|</span> [<span class="ruby-identifier">k</span>, <span class="ruby-ivar">@temporary</span>[<span class="ruby-identifier">key_for</span>(<span class="ruby-identifier">k</span>)]] }]
   <span class="ruby-identifier">update</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">k</span>, <span class="ruby-identifier">v</span><span class="ruby-operator">|</span>
@@ -1453,11 +1416,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-validate-21_source')" id="l_method-i-validate-21_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/lib/bundler/settings.rb#L297" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/lib/bundler/settings.rb#L281" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-validate-21_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 297</span>
+                <pre><span class="ruby-comment"># File ruby/lib/bundler/settings.rb, line 281</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">validate!</span>
   <span class="ruby-identifier">all</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">raw_key</span><span class="ruby-operator">|</span>
     [<span class="ruby-ivar">@local_config</span>, <span class="ruby-constant">ENV</span>, <span class="ruby-ivar">@global_config</span>].<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">settings</span><span class="ruby-operator">|</span>

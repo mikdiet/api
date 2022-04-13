@@ -47,7 +47,7 @@ document.addEventListener("turbolinks:load", function() {
     <meta property="og:description" content="A Struct is a convenient way to bundle a number of attributes together, using accessor methods, without having to write an explicit class.">
   
 
-    <meta name="keywords" content="Struct class, json_create, as_json, to_json, new, ==, eql?, hash, inspect, to_a, to_h, values, size, length, each, each_pair, [], []=, select, filter, values_at, members, dig, to_s">
+    <meta name="keywords" content="Struct class, json_create, as_json, to_json, new, ==, eql?, hash, inspect, to_a, to_h, values, size, length, each, each_pair, [], []=, select, filter, values_at, members, dig, deconstruct, deconstruct_keys, to_s">
 </head>
 
 <body>
@@ -179,6 +179,16 @@ dave.greeting #=&gt; &quot;Hello Dave!&quot;
         <dt>D</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-deconstruct">deconstruct</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-deconstruct_keys">deconstruct_keys</a>,
+              </li>
             
               
               <li>
@@ -524,7 +534,7 @@ dave.greeting #=&gt; &quot;Hello Dave!&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-json_create_source')" id="l_method-c-json_create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/ext/json/lib/json/add/struct.rb#L10" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/json/lib/json/add/struct.rb#L10" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-json_create_source" class="dyn-source">
@@ -645,6 +655,9 @@ rb_struct_s_def(int argc, VALUE *argv, VALUE klass)
     tbl = RHASH_TBL(rest);
     for (i=0; i&lt;argc; i++) {
         VALUE mem = rb_to_symbol(argv[i]);
+        if (rb_is_attrset_sym(mem)) {
+            rb_raise(rb_eArgError, &quot;invalid struct member: %&quot;PRIsVALUE, mem);
+        }
         if (st_insert(tbl, mem, Qtrue)) {
             rb_raise(rb_eArgError, &quot;duplicate member: %&quot;PRIsVALUE, mem);
         }
@@ -858,7 +871,7 @@ rb_struct_aset(VALUE s, VALUE idx, VALUE val)
                 Source:
                 <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/ext/json/lib/json/add/struct.rb#L16" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/json/lib/json/add/struct.rb#L16" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-as_json_source" class="dyn-source">
@@ -871,6 +884,98 @@ rb_struct_aset(VALUE s, VALUE idx, VALUE val)
     <span class="ruby-string">&#39;v&#39;</span>            <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">values</span>,
   }
 <span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-deconstruct">
+            
+              <b></b>
+            
+            <a href="../classes/Struct.html#method-i-deconstruct" name="method-i-deconstruct" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the values for this struct as an <a href="Array.html"><code>Array</code></a>.</p>
+
+<pre><code>Customer = Struct.new(:name, :address, :zip)
+joe = Customer.new(&quot;Joe Smith&quot;, &quot;123 Maple, Anytown NC&quot;, 12345)
+joe.to_a[1]   #=&gt; &quot;123 Maple, Anytown NC&quot;
+</code></pre>
+            </div>
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Struct.html#method-i-to_a">to_a</a>
+            </div>
+          
+
+          
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-deconstruct_keys">
+            
+              <b>deconstruct_keys</b>(p1)
+            
+            <a href="../classes/Struct.html#method-i-deconstruct_keys" name="method-i-deconstruct_keys" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-deconstruct_keys_source')" id="l_method-i-deconstruct_keys_source">show</a>
+                
+              </p>
+              <div id="method-i-deconstruct_keys_source" class="dyn-source">
+                <pre>static VALUE
+rb_struct_deconstruct_keys(VALUE s, VALUE keys)
+{
+    VALUE h;
+    long i;
+
+    if (NIL_P(keys)) {
+        return rb_struct_to_h(s);
+    }
+    if (UNLIKELY(!RB_TYPE_P(keys, T_ARRAY))) {
+        rb_raise(rb_eTypeError,
+                 &quot;wrong argument type %&quot;PRIsVALUE&quot; (expected Array or nil)&quot;,
+                 rb_obj_class(keys));
+
+    }
+    if (RSTRUCT_LEN(s) &lt; RARRAY_LEN(keys)) {
+        return rb_hash_new_with_size(0);
+    }
+    h = rb_hash_new_with_size(RARRAY_LEN(keys));
+    for (i=0; i&lt;RARRAY_LEN(keys); i++) {
+        VALUE key = RARRAY_AREF(keys, i);
+        int i = rb_struct_pos(s, &amp;key);
+        if (i &lt; 0) {
+            return h;
+        }
+        rb_hash_aset(h, key, RSTRUCT_GET(s, i));
+    }
+    return h;
+}</pre>
               </div>
             </div>
             
@@ -1145,7 +1250,7 @@ l.select {|v| v.even? }   #=&gt; [22, 44, 66]
             <div class="description">
               <p>Returns a hash value based on this struct&#39;s contents.</p>
 
-<p>See also Object#hash.</p>
+<p>See also <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
             </div>
           
 
@@ -1177,7 +1282,7 @@ rb_struct_hash(VALUE s)
         h = rb_hash_uint(h, NUM2LONG(n));
     }
     h = rb_hash_end(h);
-    return INT2FIX(h);
+    return ST2FIX(h);
 }</pre>
               </div>
             </div>
@@ -1429,7 +1534,7 @@ joe.to_a[1]   #=&gt; &quot;123 Maple, Anytown NC&quot;
 
           
             <div class="aka">
-              Also aliased as: <a href="Struct.html#method-i-values">values</a>
+              Also aliased as: <a href="Struct.html#method-i-values">values</a>, <a href="Struct.html#method-i-deconstruct">deconstruct</a>
             </div>
           
 
@@ -1541,7 +1646,7 @@ rb_struct_to_h(VALUE s)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_json_source')" id="l_method-i-to_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/4b170e7654bf3d0e3d3fcfa05176afad60592826/ext/json/lib/json/add/struct.rb#L27" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/46274982bb14fa0ba0a8d22c80be8d7154385b96/ext/json/lib/json/add/struct.rb#L27" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_json_source" class="dyn-source">
