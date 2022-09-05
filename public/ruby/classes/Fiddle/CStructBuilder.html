@@ -154,7 +154,7 @@
 
 <p><a href="Importer.html#method-i-struct"><code>Fiddle::Importer#struct</code></a> and <a href="Importer.html#method-i-union"><code>Fiddle::Importer#union</code></a> wrap this functionality in an easy-to-use manner.</p>
 
-<p>Example:</p>
+<p>Examples:</p>
 
 <pre><code>require &#39;fiddle/struct&#39;
 require &#39;fiddle/cparser&#39;
@@ -165,7 +165,23 @@ types, members = parse_struct_signature([&#39;int i&#39;,&#39;char c&#39;])
 
 MyStruct = Fiddle::CStructBuilder.create(Fiddle::CUnion, types, members)
 
-obj = MyStruct.allocate
+MyStruct.malloc(Fiddle::RUBY_FREE) do |obj|
+  ...
+end
+
+obj = MyStruct.malloc(Fiddle::RUBY_FREE)
+begin
+  ...
+ensure
+  obj.call_free
+end
+
+obj = MyStruct.malloc
+begin
+  ...
+ensure
+  Fiddle.free obj.to_ptr
+end
 </code></pre>
             </div>
           
@@ -182,36 +198,65 @@ obj = MyStruct.allocate
                 Source:
                 <a href="javascript:toggleSource('method-c-create_source')" id="l_method-c-create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/fiddle/lib/fiddle/struct.rb#L51" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/fiddle/lib/fiddle/struct.rb#L215" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-create_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/struct.rb, line 51</span>
-    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">create</span>(<span class="ruby-identifier">klass</span>, <span class="ruby-identifier">types</span>, <span class="ruby-identifier">members</span>)
-      <span class="ruby-identifier">new_class</span> = <span class="ruby-constant">Class</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">klass</span>){
-        <span class="ruby-identifier">define_method</span>(<span class="ruby-value">:initialize</span>){<span class="ruby-operator">|</span><span class="ruby-identifier">addr</span><span class="ruby-operator">|</span>
-          <span class="ruby-ivar">@entity</span> = <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">entity_class</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">addr</span>, <span class="ruby-identifier">types</span>)
-          <span class="ruby-ivar">@entity</span>.<span class="ruby-identifier">assign_names</span>(<span class="ruby-identifier">members</span>)
-        }
-        <span class="ruby-identifier">define_method</span>(<span class="ruby-value">:to_ptr</span>){ <span class="ruby-ivar">@entity</span> }
-        <span class="ruby-identifier">define_method</span>(<span class="ruby-value">:to_i</span>){ <span class="ruby-ivar">@entity</span>.<span class="ruby-identifier">to_i</span> }
-        <span class="ruby-identifier">members</span>.<span class="ruby-identifier">each</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span>
-          <span class="ruby-identifier">define_method</span>(<span class="ruby-identifier">name</span>){ <span class="ruby-ivar">@entity</span>[<span class="ruby-identifier">name</span>] }
-          <span class="ruby-identifier">define_method</span>(<span class="ruby-identifier">name</span> <span class="ruby-operator">+</span> <span class="ruby-string">&quot;=&quot;</span>){<span class="ruby-operator">|</span><span class="ruby-identifier">val</span><span class="ruby-operator">|</span> <span class="ruby-ivar">@entity</span>[<span class="ruby-identifier">name</span>] = <span class="ruby-identifier">val</span> }
-        }
-      }
-      <span class="ruby-identifier">size</span> = <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">entity_class</span>.<span class="ruby-identifier">size</span>(<span class="ruby-identifier">types</span>)
-      <span class="ruby-identifier">new_class</span>.<span class="ruby-identifier">module_eval</span>(<span class="ruby-identifier">&lt;&lt;-EOS</span>, <span class="ruby-keyword">__FILE__</span>, <span class="ruby-keyword">__LINE__</span><span class="ruby-value">+1</span>)
-<span class="ruby-value">        def new_class.size()
-          #{size}
-        end
-        def new_class.malloc()
-          addr = Fiddle.malloc(#{size})
-          new(addr)
-        end
-</span><span class="ruby-identifier">      EOS</span>
-      <span class="ruby-keyword">return</span> <span class="ruby-identifier">new_class</span>
-    <span class="ruby-keyword">end</span></pre>
+                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/struct.rb, line 215</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">create</span>(<span class="ruby-identifier">klass</span>, <span class="ruby-identifier">types</span>, <span class="ruby-identifier">members</span>)
+  <span class="ruby-identifier">new_class</span> = <span class="ruby-constant">Class</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">klass</span>){
+    <span class="ruby-identifier">define_method</span>(<span class="ruby-value">:initialize</span>){<span class="ruby-operator">|</span><span class="ruby-identifier">addr</span>, <span class="ruby-identifier">func</span> = <span class="ruby-keyword">nil</span><span class="ruby-operator">|</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">addr</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">entity_class</span>)
+        <span class="ruby-ivar">@entity</span> = <span class="ruby-identifier">addr</span>
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-ivar">@entity</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">entity_class</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">addr</span>, <span class="ruby-identifier">types</span>, <span class="ruby-identifier">func</span>)
+      <span class="ruby-keyword">end</span>
+      <span class="ruby-ivar">@entity</span>.<span class="ruby-identifier">assign_names</span>(<span class="ruby-identifier">members</span>)
+    }
+    <span class="ruby-identifier">define_method</span>(<span class="ruby-value">:[]</span>) { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span> <span class="ruby-ivar">@entity</span>.<span class="ruby-identifier">send</span>(<span class="ruby-value">:[]</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>) }
+    <span class="ruby-identifier">define_method</span>(<span class="ruby-value">:[]=</span>) { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span> <span class="ruby-ivar">@entity</span>.<span class="ruby-identifier">send</span>(<span class="ruby-value">:[]=</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">args</span>) }
+    <span class="ruby-identifier">define_method</span>(<span class="ruby-value">:to_ptr</span>){ <span class="ruby-ivar">@entity</span> }
+    <span class="ruby-identifier">define_method</span>(<span class="ruby-value">:to_i</span>){ <span class="ruby-ivar">@entity</span>.<span class="ruby-identifier">to_i</span> }
+    <span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-value">:types</span>) { <span class="ruby-identifier">types</span> }
+    <span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-value">:members</span>) { <span class="ruby-identifier">members</span> }
+
+    <span class="ruby-comment"># Return the offset of a struct member given its name.</span>
+    <span class="ruby-comment"># For example:</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-comment">#     MyStruct = struct [</span>
+    <span class="ruby-comment">#       &quot;int64_t i&quot;,</span>
+    <span class="ruby-comment">#       &quot;char c&quot;,</span>
+    <span class="ruby-comment">#     ]</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-comment">#     MyStruct.offsetof(&quot;i&quot;) # =&gt; 0</span>
+    <span class="ruby-comment">#     MyStruct.offsetof(&quot;c&quot;) # =&gt; 8</span>
+    <span class="ruby-comment">#</span>
+    <span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-value">:offsetof</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">offsetof</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">members</span>, <span class="ruby-identifier">types</span>)
+    }
+    <span class="ruby-identifier">members</span>.<span class="ruby-identifier">each</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">name</span> = <span class="ruby-identifier">name</span>[<span class="ruby-value">0</span>] <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Array</span>) <span class="ruby-comment"># name is a nested struct</span>
+      <span class="ruby-keyword">next</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">method_defined?</span>(<span class="ruby-identifier">name</span>)
+      <span class="ruby-identifier">define_method</span>(<span class="ruby-identifier">name</span>){ <span class="ruby-ivar">@entity</span>[<span class="ruby-identifier">name</span>] }
+      <span class="ruby-identifier">define_method</span>(<span class="ruby-identifier">name</span> <span class="ruby-operator">+</span> <span class="ruby-string">&quot;=&quot;</span>){<span class="ruby-operator">|</span><span class="ruby-identifier">val</span><span class="ruby-operator">|</span> <span class="ruby-ivar">@entity</span>[<span class="ruby-identifier">name</span>] = <span class="ruby-identifier">val</span> }
+    }
+    <span class="ruby-identifier">entity_class</span> = <span class="ruby-identifier">klass</span>.<span class="ruby-identifier">entity_class</span>
+    <span class="ruby-identifier">alignment</span> = <span class="ruby-identifier">entity_class</span>.<span class="ruby-identifier">alignment</span>(<span class="ruby-identifier">types</span>)
+    <span class="ruby-identifier">size</span> = <span class="ruby-identifier">entity_class</span>.<span class="ruby-identifier">size</span>(<span class="ruby-identifier">types</span>)
+    <span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-value">:alignment</span>) { <span class="ruby-identifier">alignment</span> }
+    <span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-value">:size</span>) { <span class="ruby-identifier">size</span> }
+    <span class="ruby-identifier">define_singleton_method</span>(<span class="ruby-value">:malloc</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">func</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span><span class="ruby-operator">|</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">block</span>
+        <span class="ruby-identifier">entity_class</span>.<span class="ruby-identifier">malloc</span>(<span class="ruby-identifier">types</span>, <span class="ruby-identifier">func</span>, <span class="ruby-identifier">size</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">entity</span><span class="ruby-operator">|</span>
+          <span class="ruby-identifier">block</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">new</span>(<span class="ruby-identifier">entity</span>))
+        <span class="ruby-keyword">end</span>
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-identifier">new</span>(<span class="ruby-identifier">entity_class</span>.<span class="ruby-identifier">malloc</span>(<span class="ruby-identifier">types</span>, <span class="ruby-identifier">func</span>, <span class="ruby-identifier">size</span>))
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+  }
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">new_class</span>
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             

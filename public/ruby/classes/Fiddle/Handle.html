@@ -30,7 +30,7 @@
     <meta property="og:description" content="The Fiddle::Handle is the manner to access the dynamic library  Example  Setup  libc_so = &quot;/lib64/libc.so.6&quot; =&gt; &quot;/lib64/libc.so.6&quot; @handle = Fiddle::Handle.">
   
 
-    <meta name="keywords" content="Fiddle::Handle class, sym, [], new, to_i, close, sym, [], disable_close, enable_close, close_enabled?">
+    <meta name="keywords" content="Fiddle::Handle class, sym, [], new, to_i, to_ptr, close, sym, [], file_name, disable_close, enable_close, close_enabled?">
 </head>
 
 <body>
@@ -140,12 +140,12 @@
             
               
               <li>
-                <a href="#method-c-5B-5D">[]</a>,
+                <a href="#method-i-5B-5D">[]</a>,
               </li>
             
               
               <li>
-                <a href="#method-i-5B-5D">[]</a>
+                <a href="#method-c-5B-5D">[]</a>
               </li>
             
           </ul>
@@ -192,6 +192,18 @@
           </ul>
         </dd>
       
+        <dt>F</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-file_name">file_name</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>N</dt>
         <dd>
           <ul>
@@ -227,7 +239,12 @@
             
               
               <li>
-                <a href="#method-i-to_i">to_i</a>
+                <a href="#method-i-to_i">to_i</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-to_ptr">to_ptr</a>
               </li>
             
           </ul>
@@ -469,12 +486,12 @@ rb_fiddle_handle_initialize(int argc, VALUE argv[], VALUE self)
         ptr = dlopen(clib, cflag);
 #if defined(HAVE_DLERROR)
     if( !ptr &amp;&amp; (err = dlerror()) ){
-        rb_raise(rb_eFiddleError, &quot;%s&quot;, err);
+        rb_raise(rb_eFiddleDLError, &quot;%s&quot;, err);
     }
 #else
     if( !ptr ){
         err = dlerror();
-        rb_raise(rb_eFiddleError, &quot;%s&quot;, err);
+        rb_raise(rb_eFiddleDLError, &quot;%s&quot;, err);
     }
 #endif
     TypedData_Get_Struct(self, struct dl_handle, &amp;fiddle_handle_data_type, fiddle_handle);
@@ -608,14 +625,14 @@ rb_fiddle_handle_close(VALUE self)
         /* Check dlclose for successful return value */
         if(ret) {
 #if defined(HAVE_DLERROR)
-            rb_raise(rb_eFiddleError, &quot;%s&quot;, dlerror());
+            rb_raise(rb_eFiddleDLError, &quot;%s&quot;, dlerror());
 #else
-            rb_raise(rb_eFiddleError, &quot;could not close handle&quot;);
+            rb_raise(rb_eFiddleDLError, &quot;could not close handle&quot;);
 #endif
         }
         return INT2NUM(ret);
     }
-    rb_raise(rb_eFiddleError, &quot;dlclose() called too many times&quot;);
+    rb_raise(rb_eFiddleDLError, &quot;dlclose() called too many times&quot;);
 
     UNREACHABLE;
 }</pre>
@@ -757,6 +774,76 @@ rb_fiddle_handle_enable_close(VALUE self)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-file_name">
+            
+              <b>file_name
+</b>
+            
+            <a href="../../classes/Fiddle/Handle.html#method-i-file_name" name="method-i-file_name" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the file name of this handle.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-file_name_source')" id="l_method-i-file_name_source">show</a>
+                
+              </p>
+              <div id="method-i-file_name_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiddle_handle_file_name(VALUE self)
+{
+    struct dl_handle *fiddle_handle;
+
+    TypedData_Get_Struct(self, struct dl_handle, &amp;fiddle_handle_data_type, fiddle_handle);
+
+#if defined(HAVE_DLINFO) &amp;&amp; defined(HAVE_CONST_RTLD_DI_LINKMAP)
+    {
+        struct link_map *lm = NULL;
+        int res = dlinfo(fiddle_handle-&gt;ptr, RTLD_DI_LINKMAP, &amp;lm);
+        if (res == 0 &amp;&amp; lm != NULL) {
+            return rb_str_new_cstr(lm-&gt;l_name);
+        }
+        else {
+#if defined(HAVE_DLERROR)
+            rb_raise(rb_eFiddleDLError, &quot;could not get handle file name: %s&quot;, dlerror());
+#else
+            rb_raise(rb_eFiddleDLError, &quot;could not get handle file name&quot;);
+#endif
+        }
+    }
+#elif defined(HAVE_GETMODULEFILENAME)
+    {
+        char filename[MAX_PATH];
+        DWORD res = GetModuleFileName(fiddle_handle-&gt;ptr, filename, MAX_PATH);
+        if (res == 0) {
+            rb_raise(rb_eFiddleDLError, &quot;could not get handle file name: %s&quot;, dlerror());
+        }
+        return rb_str_new_cstr(filename);
+    }
+#else
+    (void)fiddle_handle;
+    return Qnil;
+#endif
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-sym">
             
               <b>sym(name)</b>
@@ -795,7 +882,7 @@ rb_fiddle_handle_sym(VALUE self, VALUE sym)
 
     TypedData_Get_Struct(self, struct dl_handle, &amp;fiddle_handle_data_type, fiddle_handle);
     if( ! fiddle_handle-&gt;open ){
-        rb_raise(rb_eFiddleError, &quot;closed handle&quot;);
+        rb_raise(rb_eFiddleDLError, &quot;closed handle&quot;);
     }
 
     return fiddle_handle_sym(fiddle_handle-&gt;ptr, sym);
@@ -840,7 +927,49 @@ rb_fiddle_handle_to_i(VALUE self)
     struct dl_handle *fiddle_handle;
 
     TypedData_Get_Struct(self, struct dl_handle, &amp;fiddle_handle_data_type, fiddle_handle);
-    return PTR2NUM(fiddle_handle);
+    return PTR2NUM(fiddle_handle-&gt;ptr);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-to_ptr">
+            
+              <b>to_ptr
+</b>
+            
+            <a href="../../classes/Fiddle/Handle.html#method-i-to_ptr" name="method-i-to_ptr" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the <a href="Pointer.html"><code>Fiddle::Pointer</code></a> of this handle.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_ptr_source')" id="l_method-i-to_ptr_source">show</a>
+                
+              </p>
+              <div id="method-i-to_ptr_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiddle_handle_to_ptr(VALUE self)
+{
+    struct dl_handle *fiddle_handle;
+
+    TypedData_Get_Struct(self, struct dl_handle, &amp;fiddle_handle_data_type, fiddle_handle);
+    return rb_fiddle_ptr_new_wrap(fiddle_handle-&gt;ptr, 0, 0, self, 0);
 }</pre>
               </div>
             </div>

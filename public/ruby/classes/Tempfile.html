@@ -102,7 +102,7 @@ file.unlink    # deletes the temp file
 
 <h3 id="class-Tempfile-label-Explicit+close">Explicit close</h3>
 
-<p>When a <a href="Tempfile.html"><code>Tempfile</code></a> object is garbage collected, or when the Ruby interpreter exits, its associated temporary file is automatically deleted. This means that’s it’s unnecessary to explicitly delete a <a href="Tempfile.html"><code>Tempfile</code></a> after use, though it’s good practice to do so: not explicitly deleting unused Tempfiles can potentially leave behind large amounts of tempfiles on the filesystem until they’re garbage collected. The existence of these temp files can make it harder to determine a new <a href="Tempfile.html"><code>Tempfile</code></a> filename.</p>
+<p>When a <a href="Tempfile.html"><code>Tempfile</code></a> object is garbage collected, or when the Ruby interpreter exits, its associated temporary file is automatically deleted. This means that it’s unnecessary to explicitly delete a <a href="Tempfile.html"><code>Tempfile</code></a> after use, though it’s a good practice to do so: not explicitly deleting unused Tempfiles can potentially leave behind a large number of temp files on the filesystem until they’re garbage collected. The existence of these temp files can make it harder to determine a new <a href="Tempfile.html"><code>Tempfile</code></a> filename.</p>
 
 <p>Therefore, one should always call <a href="Tempfile.html#method-i-unlink"><code>unlink</code></a> or close in an ensure block, like this:</p>
 
@@ -112,6 +112,13 @@ begin
 ensure
    file.close
    file.unlink   # deletes the temp file
+end
+</code></pre>
+
+<p><a href="Tempfile.html#method-c-create"><code>Tempfile.create</code></a> { … } exists for this purpose and is more convenient to use. Note that <a href="Tempfile.html#method-c-create"><code>Tempfile.create</code></a> returns a <a href="File.html"><code>File</code></a> instance instead of a <a href="Tempfile.html"><code>Tempfile</code></a>, which also avoids the overhead and complications of delegation.</p>
+
+<pre><code>Tempfile.open(&#39;foo&#39;) do |file|
+   # ...do something with file...
 end
 </code></pre>
 
@@ -292,13 +299,13 @@ end
 
           
             <div class="description">
-              <p>Creates a temporary file as usual <a href="File.html"><code>File</code></a> object (not <a href="Tempfile.html"><code>Tempfile</code></a>). It doesn’t use finalizer and delegation.</p>
+              <p>Creates a temporary file as a usual <a href="File.html"><code>File</code></a> object (not a <a href="Tempfile.html"><code>Tempfile</code></a>). It does not use finalizer and delegation, which makes it more efficient and reliable.</p>
 
-<p>If no block is given, this is similar to <a href="Tempfile.html#method-c-new"><code>Tempfile.new</code></a> except creating <a href="File.html"><code>File</code></a> instead of <a href="Tempfile.html"><code>Tempfile</code></a>. The created file is not removed automatically. You should use <a href="File.html#method-c-unlink"><code>File.unlink</code></a> to remove it.</p>
+<p>If no block is given, this is similar to <a href="Tempfile.html#method-c-new"><code>Tempfile.new</code></a> except creating <a href="File.html"><code>File</code></a> instead of <a href="Tempfile.html"><code>Tempfile</code></a>. In that case, the created file is not removed automatically. You should use <a href="File.html#method-c-unlink"><code>File.unlink</code></a> to remove it.</p>
 
-<p>If a block is given, then a <a href="File.html"><code>File</code></a> object will be constructed, and the block is invoked with the object as the argument. The <a href="File.html"><code>File</code></a> object will be automatically closed and the temporary file is removed after the block terminates. The call returns the value of the block.</p>
+<p>If a block is given, then a <a href="File.html"><code>File</code></a> object will be constructed, and the block is invoked with the object as the argument. The <a href="File.html"><code>File</code></a> object will be automatically closed and the temporary file is removed after the block terminates, releasing all resources that the block created. The call returns the value of the block.</p>
 
-<p>In any case, all arguments (<code>basename</code>, <code>tmpdir</code>, <code>mode</code>, and <code>**options</code>) will be treated as <a href="Tempfile.html#method-c-new"><code>Tempfile.new</code></a>.</p>
+<p>In any case, all arguments (<code>basename</code>, <code>tmpdir</code>, <code>mode</code>, and <code>**options</code>) will be treated the same as for <a href="Tempfile.html#method-c-new"><code>Tempfile.new</code></a>.</p>
 
 <pre><code>Tempfile.create(&#39;foo&#39;, &#39;/home/temp&#39;) do |f|
    # ... do something with f ...
@@ -319,11 +326,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-c-create_source')" id="l_method-c-create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/tempfile.rb#L323" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tempfile.rb#L349" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-create_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 323</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 349</span>
 <span class="ruby-keyword">def</span> <span class="ruby-constant">Tempfile</span>.<span class="ruby-identifier ruby-title">create</span>(<span class="ruby-identifier">basename</span>=<span class="ruby-string">&quot;&quot;</span>, <span class="ruby-identifier">tmpdir</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-value">mode:</span> <span class="ruby-value">0</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">tmpfile</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-constant">Dir</span><span class="ruby-operator">::</span><span class="ruby-constant">Tmpname</span>.<span class="ruby-identifier">create</span>(<span class="ruby-identifier">basename</span>, <span class="ruby-identifier">tmpdir</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">tmpname</span>, <span class="ruby-identifier">n</span>, <span class="ruby-identifier">opts</span><span class="ruby-operator">|</span>
@@ -369,6 +376,8 @@ end
             <div class="description">
               <p>Creates a temporary file with permissions 0600 (= only readable and writable by the owner) and opens it with mode “w+”.</p>
 
+<p>It is recommended to use <a href="Tempfile.html#method-c-create"><code>Tempfile.create</code></a> { … } instead when possible, because that method avoids the cost of delegation and does not rely on a finalizer to close and unlink the file, which is unreliable.</p>
+
 <p>The <code>basename</code> parameter is used to determine the name of the temporary file. You can either pass a <a href="String.html"><code>String</code></a> or an <a href="Array.html"><code>Array</code></a> with 2 <a href="String.html"><code>String</code></a> elements. In the former form, the temporary file’s base name will begin with the given string. In the latter form, the temporary file’s base name will begin with the array’s first element, and end with the second element. For example:</p>
 
 <pre><code>file = Tempfile.new(&#39;hello&#39;)
@@ -413,11 +422,11 @@ Tempfile.new(&#39;hello&#39;, encoding: &#39;ascii-8bit&#39;)
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/tempfile.rb#L122" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tempfile.rb#L134" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 122</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 134</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">basename</span>=<span class="ruby-string">&quot;&quot;</span>, <span class="ruby-identifier">tmpdir</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-value">mode:</span> <span class="ruby-value">0</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">warn</span> <span class="ruby-string">&quot;Tempfile.new doesn&#39;t call the given block.&quot;</span>, <span class="ruby-value">uplevel:</span> <span class="ruby-value">1</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">block_given?</span>
 
@@ -449,9 +458,15 @@ Tempfile.new(&#39;hello&#39;, encoding: &#39;ascii-8bit&#39;)
             <div class="description">
               <p>Creates a new <a href="Tempfile.html"><code>Tempfile</code></a>.</p>
 
+<p>This method is not recommended and exists mostly for backward compatibility. Please use <a href="Tempfile.html#method-c-create"><code>Tempfile.create</code></a> instead, which avoids the cost of delegation, does not rely on a finalizer, and also unlinks the file when given a block.</p>
+
+<p><a href="Tempfile.html#method-c-open"><code>Tempfile.open</code></a> is still appropriate if you need the <a href="Tempfile.html"><code>Tempfile</code></a> to be unlinked by a finalizer and you cannot explicitly know where in the program the <a href="Tempfile.html"><code>Tempfile</code></a> can be unlinked safely.</p>
+
 <p>If no block is given, this is a synonym for <a href="Tempfile.html#method-c-new"><code>Tempfile.new</code></a>.</p>
 
-<p>If a block is given, then a <a href="Tempfile.html"><code>Tempfile</code></a> object will be constructed, and the block is run with said object as argument. The <a href="Tempfile.html"><code>Tempfile</code></a> object will be automatically closed after the block terminates. The call returns the value of the block.</p>
+<p>If a block is given, then a <a href="Tempfile.html"><code>Tempfile</code></a> object will be constructed, and the block is run with the <a href="Tempfile.html"><code>Tempfile</code></a> object as argument. The <a href="Tempfile.html"><code>Tempfile</code></a> object will be automatically closed after the block terminates. However, the file will <strong>not</strong> be unlinked and needs to be manually unlinked with <a href="Tempfile.html#method-i-close-21"><code>Tempfile#close!</code></a> or <a href="Tempfile.html#method-i-unlink"><code>Tempfile#unlink</code></a>. The finalizer will try to unlink but should not be relied upon as it can keep the file on the disk much longer than intended. For instance, on CRuby, finalizers can be delayed due to conservative stack scanning and references left in unused memory.</p>
+
+<p>The call returns the value of the block.</p>
 
 <p>In any case, all arguments (<code>*args</code>) will be passed to <a href="Tempfile.html#method-c-new"><code>Tempfile.new</code></a>.</p>
 
@@ -482,11 +497,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-c-open_source')" id="l_method-c-open_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/tempfile.rb#L286" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tempfile.rb#L312" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-open_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 286</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 312</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">open</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kw</span>)
   <span class="ruby-identifier">tempfile</span> = <span class="ruby-identifier">new</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">kw</span>)
 
@@ -537,11 +552,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-close_source')" id="l_method-i-close_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/tempfile.rb#L156" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tempfile.rb#L168" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-close_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 156</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 168</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">close</span>(<span class="ruby-identifier">unlink_now</span>=<span class="ruby-keyword">false</span>)
   <span class="ruby-identifier">_close</span>
   <span class="ruby-identifier">unlink</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">unlink_now</span>
@@ -577,11 +592,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-close-21_source')" id="l_method-i-close-21_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/tempfile.rb#L163" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tempfile.rb#L175" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-close-21_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 163</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 175</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">close!</span>
   <span class="ruby-identifier">close</span>(<span class="ruby-keyword">true</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -666,11 +681,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-open_source')" id="l_method-i-open_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/tempfile.rb#L138" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tempfile.rb#L150" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-open_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 138</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 150</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">open</span>
   <span class="ruby-identifier">_close</span>
   <span class="ruby-identifier">mode</span> = <span class="ruby-ivar">@mode</span> <span class="ruby-operator">&amp;</span> <span class="ruby-operator">~</span>(<span class="ruby-constant">File</span><span class="ruby-operator">::</span><span class="ruby-constant">CREAT</span><span class="ruby-operator">|</span><span class="ruby-constant">File</span><span class="ruby-operator">::</span><span class="ruby-constant">EXCL</span>)
@@ -708,11 +723,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-path_source')" id="l_method-i-path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/tempfile.rb#L216" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tempfile.rb#L228" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-path_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 216</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 228</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">path</span>
   <span class="ruby-ivar">@unlinked</span> <span class="ruby-operator">?</span> <span class="ruby-keyword">nil</span> <span class="ruby-operator">:</span> <span class="ruby-ivar">@tmpfile</span>.<span class="ruby-identifier">path</span>
 <span class="ruby-keyword">end</span></pre>
@@ -751,11 +766,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-size_source')" id="l_method-i-size_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/tempfile.rb#L222" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tempfile.rb#L234" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-size_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 222</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 234</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">size</span>
   <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-ivar">@tmpfile</span>.<span class="ruby-identifier">closed?</span>
     <span class="ruby-ivar">@tmpfile</span>.<span class="ruby-identifier">size</span> <span class="ruby-comment"># File#size calls rb_io_flush_raw()</span>
@@ -824,11 +839,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-unlink_source')" id="l_method-i-unlink_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/tempfile.rb#L200" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tempfile.rb#L212" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-unlink_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 200</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tempfile.rb, line 212</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">unlink</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@unlinked</span>
   <span class="ruby-keyword">begin</span>

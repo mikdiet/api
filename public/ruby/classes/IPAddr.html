@@ -30,7 +30,7 @@
     <meta property="og:description" content="IPAddr provides a set of methods to manipulate an IP address.  Both IPv4 and IPv6 are supported.  Example  require &#39;ipaddr&#39;  ipaddr1 = IPAddr.">
   
 
-    <meta name="keywords" content="IPAddr class, new_ntoh, ntop, &, |, >>, <<, ~, ==, mask, include?, ===, to_i, to_s, to_string, hton, ipv4?, ipv6?, loopback?, private?, link_local?, ipv4_mapped?, ipv4_compat?, ipv4_mapped, ipv4_compat, native, reverse, ip6_arpa, ip6_int, succ, <=>, eql?, hash, to_range, prefix, prefix=, inspect, set, mask!, new">
+    <meta name="keywords" content="IPAddr class, new_ntoh, ntop, &, |, >>, <<, ~, ==, mask, include?, ===, to_i, to_s, to_string, hton, ipv4?, ipv6?, loopback?, private?, link_local?, ipv4_mapped?, ipv4_compat?, ipv4_mapped, ipv4_compat, native, reverse, ip6_arpa, ip6_int, succ, <=>, eql?, hash, to_range, prefix, prefix=, inspect, netmask, zone_id, zone_id=, set, mask!, new">
 </head>
 
 <body>
@@ -315,6 +315,11 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
             
               
               <li>
+                <a href="#method-i-netmask">netmask</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-c-new">new</a>,
               </li>
             
@@ -404,6 +409,23 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
               
               <li>
                 <a href="#method-i-to_string">to_string</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>Z</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-zone_id">zone_id</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-zone_id-3D">zone_id=</a>
               </li>
             
           </ul>
@@ -556,6 +578,18 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
             </tr>
           
         
+          <tr valign='top'>
+            <td class="attr-name">VERSION</td>
+            <td>=</td>
+            <td class="attr-value">&quot;1.2.4&quot;</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
       </table>
     
 
@@ -613,12 +647,13 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L557" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L585" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 557</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 585</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">addr</span> = <span class="ruby-string">&#39;::&#39;</span>, <span class="ruby-identifier">family</span> = <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_UNSPEC</span>)
+  <span class="ruby-ivar">@mask_addr</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">addr</span>.<span class="ruby-identifier">kind_of?</span>(<span class="ruby-constant">String</span>)
     <span class="ruby-keyword">case</span> <span class="ruby-identifier">family</span>
     <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>, <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
@@ -631,9 +666,14 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
       <span class="ruby-identifier">raise</span> <span class="ruby-constant">AddressFamilyError</span>, <span class="ruby-node">&quot;unsupported address family: #{family}&quot;</span>
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span>
-  <span class="ruby-identifier">prefix</span>, <span class="ruby-identifier">prefixlen</span> = <span class="ruby-identifier">addr</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>)
+  <span class="ruby-identifier">prefix</span>, <span class="ruby-identifier">prefixlen</span> = <span class="ruby-identifier">addr</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39;/&#39;</span>, <span class="ruby-value">2</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">prefix</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp">/\A\[(.*)\]\z/i</span>
     <span class="ruby-identifier">prefix</span> = <span class="ruby-node">$1</span>
+    <span class="ruby-identifier">family</span> = <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">prefix</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp">/\A(.*)(%\w+)\z/</span>
+    <span class="ruby-identifier">prefix</span> = <span class="ruby-node">$1</span>
+    <span class="ruby-identifier">zone_id</span> = <span class="ruby-node">$2</span>
     <span class="ruby-identifier">family</span> = <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
   <span class="ruby-keyword">end</span>
   <span class="ruby-comment"># It seems AI_NUMERICHOST doesn&#39;t do the job.</span>
@@ -650,6 +690,7 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
     <span class="ruby-ivar">@addr</span> = <span class="ruby-identifier">in6_addr</span>(<span class="ruby-identifier">prefix</span>)
     <span class="ruby-ivar">@family</span> = <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
   <span class="ruby-keyword">end</span>
+  <span class="ruby-ivar">@zone_id</span> = <span class="ruby-identifier">zone_id</span>
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">family</span> <span class="ruby-operator">!=</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_UNSPEC</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-ivar">@family</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">family</span>
     <span class="ruby-identifier">raise</span> <span class="ruby-constant">AddressFamilyError</span>, <span class="ruby-string">&quot;address family mismatch&quot;</span>
   <span class="ruby-keyword">end</span>
@@ -658,8 +699,6 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
   <span class="ruby-keyword">else</span>
     <span class="ruby-ivar">@mask_addr</span> = (<span class="ruby-ivar">@family</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>) <span class="ruby-operator">?</span> <span class="ruby-constant">IN4MASK</span> <span class="ruby-operator">:</span> <span class="ruby-constant">IN6MASK</span>
   <span class="ruby-keyword">end</span>
-<span class="ruby-keyword">rescue</span> <span class="ruby-constant">InvalidAddressError</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">e</span>
-  <span class="ruby-identifier">raise</span> <span class="ruby-identifier">e</span>.<span class="ruby-identifier">class</span>, <span class="ruby-node">&quot;#{e.message}: #{addr}&quot;</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -692,11 +731,11 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-c-new_ntoh_source')" id="l_method-c-new_ntoh_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L106" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L107" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_ntoh_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 106</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 107</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">new_ntoh</span>(<span class="ruby-identifier">addr</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">new</span>(<span class="ruby-identifier">ntop</span>(<span class="ruby-identifier">addr</span>))
 <span class="ruby-keyword">end</span></pre>
@@ -731,21 +770,20 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-c-ntop_source')" id="l_method-c-ntop_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L112" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L113" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-ntop_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 112</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 113</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">ntop</span>(<span class="ruby-identifier">addr</span>)
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">addr</span>.<span class="ruby-identifier">size</span>
   <span class="ruby-keyword">when</span> <span class="ruby-value">4</span>
-    <span class="ruby-identifier">s</span> = <span class="ruby-identifier">addr</span>.<span class="ruby-identifier">unpack</span>(<span class="ruby-string">&#39;C4&#39;</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;.&#39;</span>)
+    <span class="ruby-identifier">addr</span>.<span class="ruby-identifier">unpack</span>(<span class="ruby-string">&#39;C4&#39;</span>).<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39;.&#39;</span>)
   <span class="ruby-keyword">when</span> <span class="ruby-value">16</span>
-    <span class="ruby-identifier">s</span> = <span class="ruby-constant">IN6FORMAT</span> <span class="ruby-operator">%</span> <span class="ruby-identifier">addr</span>.<span class="ruby-identifier">unpack</span>(<span class="ruby-string">&#39;n8&#39;</span>)
+    <span class="ruby-constant">IN6FORMAT</span> <span class="ruby-operator">%</span> <span class="ruby-identifier">addr</span>.<span class="ruby-identifier">unpack</span>(<span class="ruby-string">&#39;n8&#39;</span>)
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">raise</span> <span class="ruby-constant">AddressFamilyError</span>, <span class="ruby-string">&quot;unsupported address family&quot;</span>
   <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">return</span> <span class="ruby-identifier">s</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -782,7 +820,7 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-i-26_source')" id="l_method-i-26_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L125" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L125" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-26_source" class="dyn-source">
@@ -821,7 +859,7 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-i-3C-3C_source')" id="l_method-i-3C-3C_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L140" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L140" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3C-3C_source" class="dyn-source">
@@ -860,11 +898,11 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-i-3C-3D-3E_source')" id="l_method-i-3C-3D-3E_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L391" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L382" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3C-3D-3E_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 391</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 382</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">&lt;=&gt;</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-identifier">other</span> = <span class="ruby-identifier">coerce_other</span>(<span class="ruby-identifier">other</span>)
 <span class="ruby-keyword">rescue</span>
@@ -903,7 +941,7 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-i-3D-3D_source')" id="l_method-i-3D-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L150" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L150" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3D-3D_source" class="dyn-source">
@@ -971,7 +1009,7 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-i-3E-3E_source')" id="l_method-i-3E-3E_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L135" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L135" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3E-3E_source" class="dyn-source">
@@ -1010,11 +1048,11 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-i-eql-3F_source')" id="l_method-i-eql-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L401" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L392" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-eql-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 401</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 392</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">eql?</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">class</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">hash</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">hash</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-keyword">self</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">other</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1049,13 +1087,13 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-i-hash_source')" id="l_method-i-hash_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L406" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L397" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-hash_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 406</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 397</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">hash</span>
-  <span class="ruby-keyword">return</span> ([<span class="ruby-ivar">@addr</span>, <span class="ruby-ivar">@mask_addr</span>].<span class="ruby-identifier">hash</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-value">1</span>) <span class="ruby-operator">|</span> (<span class="ruby-identifier">ipv4?</span> <span class="ruby-operator">?</span> <span class="ruby-value">0</span> <span class="ruby-operator">:</span> <span class="ruby-value">1</span>)
+  <span class="ruby-keyword">return</span> ([<span class="ruby-ivar">@addr</span>, <span class="ruby-ivar">@mask_addr</span>, <span class="ruby-ivar">@zone_id</span>].<span class="ruby-identifier">hash</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-value">1</span>) <span class="ruby-operator">|</span> (<span class="ruby-identifier">ipv4?</span> <span class="ruby-operator">?</span> <span class="ruby-value">0</span> <span class="ruby-operator">:</span> <span class="ruby-value">1</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1088,11 +1126,11 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
                 Source:
                 <a href="javascript:toggleSource('method-i-hton_source')" id="l_method-i-hton_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L239" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L228" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-hton_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 239</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 228</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">hton</span>
   <span class="ruby-keyword">case</span> <span class="ruby-ivar">@family</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
@@ -1128,8 +1166,11 @@ p ipaddr3                   #=&gt; #&lt;IPAddr: IPv4:192.168.2.0/255.255.255.0&g
 net1 = IPAddr.new(&quot;192.168.2.0/24&quot;)
 net2 = IPAddr.new(&quot;192.168.2.100&quot;)
 net3 = IPAddr.new(&quot;192.168.3.0&quot;)
+net4 = IPAddr.new(&quot;192.168.2.0/16&quot;)
 p net1.include?(net2)     #=&gt; true
 p net1.include?(net3)     #=&gt; false
+p net1.include?(net4)     #=&gt; false
+p net4.include?(net1)     #=&gt; true
 </code></pre>
             </div>
           
@@ -1150,37 +1191,17 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-include-3F_source')" id="l_method-i-include-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L173" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L176" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-include-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 173</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 176</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">include?</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-identifier">other</span> = <span class="ruby-identifier">coerce_other</span>(<span class="ruby-identifier">other</span>)
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">ipv4_mapped?</span>
-    <span class="ruby-keyword">if</span> (<span class="ruby-ivar">@mask_addr</span> <span class="ruby-operator">&gt;&gt;</span> <span class="ruby-value">32</span>) <span class="ruby-operator">!=</span> <span class="ruby-value">0xffffffffffffffffffffffff</span>
-      <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span>
-    <span class="ruby-keyword">end</span>
-    <span class="ruby-identifier">mask_addr</span> = (<span class="ruby-ivar">@mask_addr</span> <span class="ruby-operator">&amp;</span> <span class="ruby-constant">IN4MASK</span>)
-    <span class="ruby-identifier">addr</span> = (<span class="ruby-ivar">@addr</span> <span class="ruby-operator">&amp;</span> <span class="ruby-constant">IN4MASK</span>)
-    <span class="ruby-identifier">family</span> = <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
-  <span class="ruby-keyword">else</span>
-    <span class="ruby-identifier">mask_addr</span> = <span class="ruby-ivar">@mask_addr</span>
-    <span class="ruby-identifier">addr</span> = <span class="ruby-ivar">@addr</span>
-    <span class="ruby-identifier">family</span> = <span class="ruby-ivar">@family</span>
-  <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">ipv4_mapped?</span>
-    <span class="ruby-identifier">other_addr</span> = (<span class="ruby-identifier">other</span>.<span class="ruby-identifier">to_i</span> <span class="ruby-operator">&amp;</span> <span class="ruby-constant">IN4MASK</span>)
-    <span class="ruby-identifier">other_family</span> = <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
-  <span class="ruby-keyword">else</span>
-    <span class="ruby-identifier">other_addr</span> = <span class="ruby-identifier">other</span>.<span class="ruby-identifier">to_i</span>
-    <span class="ruby-identifier">other_family</span> = <span class="ruby-identifier">other</span>.<span class="ruby-identifier">family</span>
-  <span class="ruby-keyword">end</span>
-
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">family</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">other_family</span>
-    <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span>
-  <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">return</span> ((<span class="ruby-identifier">addr</span> <span class="ruby-operator">&amp;</span> <span class="ruby-identifier">mask_addr</span>) <span class="ruby-operator">==</span> (<span class="ruby-identifier">other_addr</span> <span class="ruby-operator">&amp;</span> <span class="ruby-identifier">mask_addr</span>))
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">family</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">family</span>
+  <span class="ruby-identifier">range</span> = <span class="ruby-identifier">to_range</span>
+  <span class="ruby-identifier">other</span> = <span class="ruby-identifier">other</span>.<span class="ruby-identifier">to_range</span>
+  <span class="ruby-identifier">range</span>.<span class="ruby-identifier">begin</span> <span class="ruby-operator">&lt;=</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">begin</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">range</span>.<span class="ruby-identifier">end</span> <span class="ruby-operator">&gt;=</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1213,22 +1234,23 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L457" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L448" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-inspect_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 457</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 448</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">inspect</span>
   <span class="ruby-keyword">case</span> <span class="ruby-ivar">@family</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
     <span class="ruby-identifier">af</span> = <span class="ruby-string">&quot;IPv4&quot;</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
     <span class="ruby-identifier">af</span> = <span class="ruby-string">&quot;IPv6&quot;</span>
+    <span class="ruby-identifier">zone_id</span> = <span class="ruby-ivar">@zone_id</span>.<span class="ruby-identifier">to_s</span>
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">raise</span> <span class="ruby-constant">AddressFamilyError</span>, <span class="ruby-string">&quot;unsupported address family&quot;</span>
   <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">return</span> <span class="ruby-identifier">sprintf</span>(<span class="ruby-string">&quot;#&lt;%s: %s:%s/%s&gt;&quot;</span>, <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">name</span>,
-                 <span class="ruby-identifier">af</span>, <span class="ruby-identifier">_to_string</span>(<span class="ruby-ivar">@addr</span>), <span class="ruby-identifier">_to_string</span>(<span class="ruby-ivar">@mask_addr</span>))
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">sprintf</span>(<span class="ruby-string">&quot;#&lt;%s: %s:%s%s/%s&gt;&quot;</span>, <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">name</span>,
+                 <span class="ruby-identifier">af</span>, <span class="ruby-identifier">_to_string</span>(<span class="ruby-ivar">@addr</span>), <span class="ruby-identifier">zone_id</span>, <span class="ruby-identifier">_to_string</span>(<span class="ruby-ivar">@mask_addr</span>))
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1261,14 +1283,14 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-ip6_arpa_source')" id="l_method-i-ip6_arpa_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L370" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L361" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ip6_arpa_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 370</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 361</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ip6_arpa</span>
   <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">ipv6?</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-string">&quot;not an IPv6 address&quot;</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-node">&quot;not an IPv6 address: #{@addr}&quot;</span>
   <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">_reverse</span> <span class="ruby-operator">+</span> <span class="ruby-string">&quot;.ip6.arpa&quot;</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1303,14 +1325,14 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-ip6_int_source')" id="l_method-i-ip6_int_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L378" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L369" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ip6_int_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 378</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 369</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ip6_int</span>
   <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">ipv6?</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-string">&quot;not an IPv6 address&quot;</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-node">&quot;not an IPv6 address: #{@addr}&quot;</span>
   <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">_reverse</span> <span class="ruby-operator">+</span> <span class="ruby-string">&quot;.ip6.int&quot;</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1345,11 +1367,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-ipv4-3F_source')" id="l_method-i-ipv4-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L253" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L242" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ipv4-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 253</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 242</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ipv4?</span>
   <span class="ruby-keyword">return</span> <span class="ruby-ivar">@family</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1384,15 +1406,15 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-ipv4_compat_source')" id="l_method-i-ipv4_compat_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L338" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L329" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ipv4_compat_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 338</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 329</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ipv4_compat</span>
   <span class="ruby-identifier">warn</span> <span class="ruby-node">&quot;IPAddr\##{__callee__} is obsolete&quot;</span>, <span class="ruby-value">uplevel:</span> <span class="ruby-value">1</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">$VERBOSE</span>
   <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">ipv4?</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-string">&quot;not an IPv4 address&quot;</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-node">&quot;not an IPv4 address: #{@addr}&quot;</span>
   <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">clone</span>.<span class="ruby-identifier">set</span>(<span class="ruby-ivar">@addr</span>, <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1427,11 +1449,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-ipv4_compat-3F_source')" id="l_method-i-ipv4_compat-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L312" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L301" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ipv4_compat-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 312</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 301</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ipv4_compat?</span>
   <span class="ruby-identifier">warn</span> <span class="ruby-node">&quot;IPAddr\##{__callee__} is obsolete&quot;</span>, <span class="ruby-value">uplevel:</span> <span class="ruby-value">1</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">$VERBOSE</span>
   <span class="ruby-identifier">_ipv4_compat?</span>
@@ -1467,16 +1489,18 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-ipv4_mapped_source')" id="l_method-i-ipv4_mapped_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L329" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L318" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ipv4_mapped_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 329</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 318</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ipv4_mapped</span>
   <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">ipv4?</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-string">&quot;not an IPv4 address&quot;</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-node">&quot;not an IPv4 address: #{@addr}&quot;</span>
   <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">clone</span>.<span class="ruby-identifier">set</span>(<span class="ruby-ivar">@addr</span> <span class="ruby-operator">|</span> <span class="ruby-value">0xffff00000000</span>, <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>)
+  <span class="ruby-identifier">clone</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">clone</span>.<span class="ruby-identifier">set</span>(<span class="ruby-ivar">@addr</span> <span class="ruby-operator">|</span> <span class="ruby-value">0xffff00000000</span>, <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>)
+  <span class="ruby-identifier">clone</span>.<span class="ruby-identifier">instance_variable_set</span>(<span class="ruby-value">:@mask_addr</span>, <span class="ruby-ivar">@mask_addr</span> <span class="ruby-operator">|</span> <span class="ruby-value">0xffffffffffffffffffffffff00000000</span>)
+  <span class="ruby-identifier">clone</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1509,11 +1533,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-ipv4_mapped-3F_source')" id="l_method-i-ipv4_mapped-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L307" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L296" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ipv4_mapped-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 307</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 296</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ipv4_mapped?</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">ipv6?</span> <span class="ruby-operator">&amp;&amp;</span> (<span class="ruby-ivar">@addr</span> <span class="ruby-operator">&gt;&gt;</span> <span class="ruby-value">32</span>) <span class="ruby-operator">==</span> <span class="ruby-value">0xffff</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1548,11 +1572,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-ipv6-3F_source')" id="l_method-i-ipv6-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L258" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L247" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ipv6-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 258</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 247</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ipv6?</span>
   <span class="ruby-keyword">return</span> <span class="ruby-ivar">@family</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1587,11 +1611,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-link_local-3F_source')" id="l_method-i-link_local-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L295" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L284" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-link_local-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 295</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 284</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">link_local?</span>
   <span class="ruby-keyword">case</span> <span class="ruby-ivar">@family</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
@@ -1633,11 +1657,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-loopback-3F_source')" id="l_method-i-loopback-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L263" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L252" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-loopback-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 263</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 252</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">loopback?</span>
   <span class="ruby-keyword">case</span> <span class="ruby-ivar">@family</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
@@ -1679,7 +1703,7 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-mask_source')" id="l_method-i-mask_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L160" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L160" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mask_source" class="dyn-source">
@@ -1718,16 +1742,55 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-native_source')" id="l_method-i-native_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L349" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L340" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-native_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 349</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 340</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">native</span>
   <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">ipv4_mapped?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">_ipv4_compat?</span>
     <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>
   <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">clone</span>.<span class="ruby-identifier">set</span>(<span class="ruby-ivar">@addr</span> <span class="ruby-operator">&amp;</span> <span class="ruby-constant">IN4MASK</span>, <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>)
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-netmask">
+            
+              <b>netmask</b>()
+            
+            <a href="../classes/IPAddr.html#method-i-netmask" name="method-i-netmask" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the netmask in string format e.g. 255.255.0.0</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-netmask_source')" id="l_method-i-netmask_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L463" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-netmask_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 463</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">netmask</span>
+  <span class="ruby-identifier">_to_string</span>(<span class="ruby-ivar">@mask_addr</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1760,11 +1823,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-prefix_source')" id="l_method-i-prefix_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L427" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L418" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-prefix_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 427</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 418</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">prefix</span>
   <span class="ruby-keyword">case</span> <span class="ruby-ivar">@family</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
@@ -1813,17 +1876,17 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-prefix-3D_source')" id="l_method-i-prefix-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L446" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L437" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-prefix-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 446</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 437</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">prefix=</span>(<span class="ruby-identifier">prefix</span>)
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">prefix</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Integer</span>
     <span class="ruby-identifier">mask!</span>(<span class="ruby-identifier">prefix</span>)
   <span class="ruby-keyword">else</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-string">&quot;prefix must be an integer&quot;</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-node">&quot;prefix must be an integer: #{@addr}&quot;</span>
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -1857,11 +1920,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-private-3F_source')" id="l_method-i-private-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L278" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L267" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-private-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 278</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 267</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">private?</span>
   <span class="ruby-keyword">case</span> <span class="ruby-ivar">@family</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
@@ -1905,11 +1968,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-reverse_source')" id="l_method-i-reverse_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L358" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L349" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-reverse_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 358</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 349</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">reverse</span>
   <span class="ruby-keyword">case</span> <span class="ruby-ivar">@family</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
@@ -1951,11 +2014,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-succ_source')" id="l_method-i-succ_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L386" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L377" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-succ_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 386</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 377</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">succ</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">clone</span>.<span class="ruby-identifier">set</span>(<span class="ruby-ivar">@addr</span> <span class="ruby-operator">+</span> <span class="ruby-value">1</span>, <span class="ruby-ivar">@family</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1990,11 +2053,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-to_i_source')" id="l_method-i-to_i_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L203" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L186" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_i_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 203</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 186</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_i</span>
   <span class="ruby-keyword">return</span> <span class="ruby-ivar">@addr</span>
 <span class="ruby-keyword">end</span></pre>
@@ -2029,11 +2092,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-to_range_source')" id="l_method-i-to_range_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L411" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L402" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_range_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 411</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 402</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_range</span>
   <span class="ruby-identifier">begin_addr</span> = (<span class="ruby-ivar">@addr</span> <span class="ruby-operator">&amp;</span> <span class="ruby-ivar">@mask_addr</span>)
 
@@ -2046,7 +2109,7 @@ p net1.include?(net3)     #=&gt; false
     <span class="ruby-identifier">raise</span> <span class="ruby-constant">AddressFamilyError</span>, <span class="ruby-string">&quot;unsupported address family&quot;</span>
   <span class="ruby-keyword">end</span>
 
-  <span class="ruby-keyword">return</span> <span class="ruby-identifier">clone</span>.<span class="ruby-identifier">set</span>(<span class="ruby-identifier">begin_addr</span>, <span class="ruby-ivar">@family</span>)<span class="ruby-operator">..</span><span class="ruby-identifier">clone</span>.<span class="ruby-identifier">set</span>(<span class="ruby-identifier">end_addr</span>, <span class="ruby-ivar">@family</span>)
+  <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">begin_addr</span>, <span class="ruby-ivar">@family</span>)<span class="ruby-operator">..</span><span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">end_addr</span>, <span class="ruby-ivar">@family</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -2079,11 +2142,11 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-to_s_source')" id="l_method-i-to_s_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L208" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L191" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_s_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 208</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 191</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_s</span>
   <span class="ruby-identifier">str</span> = <span class="ruby-identifier">to_string</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">str</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">ipv4?</span>
@@ -2138,13 +2201,110 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-to_string_source')" id="l_method-i-to_string_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L234" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L217" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_string_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 234</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 217</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_string</span>
-  <span class="ruby-keyword">return</span> <span class="ruby-identifier">_to_string</span>(<span class="ruby-ivar">@addr</span>)
+  <span class="ruby-identifier">str</span> = <span class="ruby-identifier">_to_string</span>(<span class="ruby-ivar">@addr</span>)
+
+  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@family</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
+    <span class="ruby-identifier">str</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">zone_id</span>.<span class="ruby-identifier">to_s</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">str</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-zone_id">
+            
+              <b>zone_id</b>()
+            
+            <a href="../classes/IPAddr.html#method-i-zone_id" name="method-i-zone_id" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the IPv6 zone identifier, if present. Raises <a href="IPAddr/InvalidAddressError.html"><code>InvalidAddressError</code></a> if not an IPv6 address.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-zone_id_source')" id="l_method-i-zone_id_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L469" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-zone_id_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 469</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">zone_id</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@family</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
+    <span class="ruby-ivar">@zone_id</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-string">&quot;not an IPv6 address&quot;</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-zone_id-3D">
+            
+              <b>zone_id=</b>(zid)
+            
+            <a href="../classes/IPAddr.html#method-i-zone_id-3D" name="method-i-zone_id-3D" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the IPv6 zone identifier, if present. Raises <a href="IPAddr/InvalidAddressError.html"><code>InvalidAddressError</code></a> if not an IPv6 address.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-zone_id-3D_source')" id="l_method-i-zone_id-3D_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L479" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-zone_id-3D_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 479</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">zone_id=</span>(<span class="ruby-identifier">zid</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@family</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
+    <span class="ruby-keyword">case</span> <span class="ruby-identifier">zid</span>
+    <span class="ruby-keyword">when</span> <span class="ruby-keyword">nil</span>, <span class="ruby-regexp">/\A%(\w+)\z/</span>
+      <span class="ruby-ivar">@zone_id</span> = <span class="ruby-identifier">zid</span>
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-string">&quot;invalid zone identifier for address&quot;</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-string">&quot;not an IPv6 address&quot;</span>
+  <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -2177,7 +2337,7 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-7C_source')" id="l_method-i-7C_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L130" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L130" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-7C_source" class="dyn-source">
@@ -2216,7 +2376,7 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-~_source')" id="l_method-i-~_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L145" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L145" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-~_source" class="dyn-source">
@@ -2258,25 +2418,28 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-mask-21_source')" id="l_method-i-mask-21_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L496" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L521" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mask-21_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 496</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 521</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mask!</span>(<span class="ruby-identifier">mask</span>)
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">mask</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">String</span>
-    <span class="ruby-keyword">if</span> <span class="ruby-identifier">mask</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp">/\A\d+\z/</span>
+    <span class="ruby-keyword">case</span> <span class="ruby-identifier">mask</span>
+    <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\A(0|[1-9]+\d*)\z/</span>
       <span class="ruby-identifier">prefixlen</span> = <span class="ruby-identifier">mask</span>.<span class="ruby-identifier">to_i</span>
+    <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\A\d+\z/</span>
+      <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-string">&quot;leading zeros in prefix&quot;</span>
     <span class="ruby-keyword">else</span>
       <span class="ruby-identifier">m</span> = <span class="ruby-constant">IPAddr</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">mask</span>)
       <span class="ruby-keyword">if</span> <span class="ruby-identifier">m</span>.<span class="ruby-identifier">family</span> <span class="ruby-operator">!=</span> <span class="ruby-ivar">@family</span>
-        <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-string">&quot;address family is not same&quot;</span>
+        <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-node">&quot;address family is not same: #{@addr}&quot;</span>
       <span class="ruby-keyword">end</span>
       <span class="ruby-ivar">@mask_addr</span> = <span class="ruby-identifier">m</span>.<span class="ruby-identifier">to_i</span>
       <span class="ruby-identifier">n</span> = <span class="ruby-ivar">@mask_addr</span> <span class="ruby-operator">^</span> <span class="ruby-identifier">m</span>.<span class="ruby-identifier">instance_variable_get</span>(<span class="ruby-value">:@mask_addr</span>)
       <span class="ruby-keyword">unless</span> ((<span class="ruby-identifier">n</span> <span class="ruby-operator">+</span> <span class="ruby-value">1</span>) <span class="ruby-operator">&amp;</span> <span class="ruby-identifier">n</span>).<span class="ruby-identifier">zero?</span>
-        <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-node">&quot;invalid mask #{mask}&quot;</span>
+        <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-node">&quot;invalid mask #{mask}: #{@addr}&quot;</span>
       <span class="ruby-keyword">end</span>
       <span class="ruby-ivar">@addr</span> <span class="ruby-operator">&amp;=</span> <span class="ruby-ivar">@mask_addr</span>
       <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>
@@ -2287,13 +2450,13 @@ p net1.include?(net3)     #=&gt; false
   <span class="ruby-keyword">case</span> <span class="ruby-ivar">@family</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
     <span class="ruby-keyword">if</span> <span class="ruby-identifier">prefixlen</span> <span class="ruby-operator">&lt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">prefixlen</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">32</span>
-      <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-string">&quot;invalid length&quot;</span>
+      <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-node">&quot;invalid length: #{@addr}&quot;</span>
     <span class="ruby-keyword">end</span>
     <span class="ruby-identifier">masklen</span> = <span class="ruby-value">32</span> <span class="ruby-operator">-</span> <span class="ruby-identifier">prefixlen</span>
     <span class="ruby-ivar">@mask_addr</span> = ((<span class="ruby-constant">IN4MASK</span> <span class="ruby-operator">&gt;&gt;</span> <span class="ruby-identifier">masklen</span>) <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">masklen</span>)
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
     <span class="ruby-keyword">if</span> <span class="ruby-identifier">prefixlen</span> <span class="ruby-operator">&lt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">prefixlen</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">128</span>
-      <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-string">&quot;invalid length&quot;</span>
+      <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidPrefixError</span>, <span class="ruby-node">&quot;invalid length: #{@addr}&quot;</span>
     <span class="ruby-keyword">end</span>
     <span class="ruby-identifier">masklen</span> = <span class="ruby-value">128</span> <span class="ruby-operator">-</span> <span class="ruby-identifier">prefixlen</span>
     <span class="ruby-ivar">@mask_addr</span> = ((<span class="ruby-constant">IN6MASK</span> <span class="ruby-operator">&gt;&gt;</span> <span class="ruby-identifier">masklen</span>) <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">masklen</span>)
@@ -2334,20 +2497,20 @@ p net1.include?(net3)     #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-set_source')" id="l_method-i-set_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ipaddr.rb#L475" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ipaddr.rb#L497" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-set_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 475</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ipaddr.rb, line 497</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set</span>(<span class="ruby-identifier">addr</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">family</span>)
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">family</span>[<span class="ruby-value">0</span>] <span class="ruby-operator">?</span> <span class="ruby-identifier">family</span>[<span class="ruby-value">0</span>] <span class="ruby-operator">:</span> <span class="ruby-ivar">@family</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
     <span class="ruby-keyword">if</span> <span class="ruby-identifier">addr</span> <span class="ruby-operator">&lt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">addr</span> <span class="ruby-operator">&gt;</span> <span class="ruby-constant">IN4MASK</span>
-      <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-string">&quot;invalid address&quot;</span>
+      <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-node">&quot;invalid address: #{@addr}&quot;</span>
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">when</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET6</span>
     <span class="ruby-keyword">if</span> <span class="ruby-identifier">addr</span> <span class="ruby-operator">&lt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">addr</span> <span class="ruby-operator">&gt;</span> <span class="ruby-constant">IN6MASK</span>
-      <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-string">&quot;invalid address&quot;</span>
+      <span class="ruby-identifier">raise</span> <span class="ruby-constant">InvalidAddressError</span>, <span class="ruby-node">&quot;invalid address: #{@addr}&quot;</span>
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">raise</span> <span class="ruby-constant">AddressFamilyError</span>, <span class="ruby-string">&quot;unsupported address family&quot;</span>
@@ -2355,6 +2518,9 @@ p net1.include?(net3)     #=&gt; false
   <span class="ruby-ivar">@addr</span> = <span class="ruby-identifier">addr</span>
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">family</span>[<span class="ruby-value">0</span>]
     <span class="ruby-ivar">@family</span> = <span class="ruby-identifier">family</span>[<span class="ruby-value">0</span>]
+    <span class="ruby-keyword">if</span> <span class="ruby-ivar">@family</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">AF_INET</span>
+      <span class="ruby-ivar">@mask_addr</span> <span class="ruby-operator">&amp;=</span> <span class="ruby-constant">IN4MASK</span>
+    <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span>
 <span class="ruby-keyword">end</span></pre>

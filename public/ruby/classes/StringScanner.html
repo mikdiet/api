@@ -150,7 +150,7 @@ p s.scan(/\w+/)      # -&gt; nil
 
 <h3 id="class-StringScanner-label-Finding+Where+we+Are">Finding Where we Are</h3>
 <ul><li>
-<p><a href="StringScanner.html#method-i-beginning_of_line-3F"><code>beginning_of_line?</code></a> (bol?)</p>
+<p><a href="StringScanner.html#method-i-beginning_of_line-3F"><code>beginning_of_line?</code></a> (<code>#bol?</code>)</p>
 </li><li>
 <p><a href="StringScanner.html#method-i-eos-3F"><code>eos?</code></a></p>
 </li><li>
@@ -170,15 +170,15 @@ p s.scan(/\w+/)      # -&gt; nil
 <p><a href="StringScanner.html#method-i-pos-3D"><code>pos=</code></a></p>
 </li></ul>
 
-<h3 id="class-StringScanner-label-Match+Data">Match <a href="Data.html"><code>Data</code></a></h3>
+<h3 id="class-StringScanner-label-Match+Data">Match Data</h3>
 <ul><li>
 <p><a href="StringScanner.html#method-i-matched"><code>matched</code></a></p>
 </li><li>
 <p><a href="StringScanner.html#method-i-matched-3F"><code>matched?</code></a></p>
 </li><li>
 <p><a href="StringScanner.html#method-i-matched_size"><code>matched_size</code></a></p>
-</li><li><dl class="rdoc-list label-list"><dt>
-<dd></dd></dl>
+</li><li>
+<p><code>#[]</code></p>
 </li><li>
 <p><a href="StringScanner.html#method-i-pre_match"><code>pre_match</code></a></p>
 </li><li>
@@ -187,7 +187,7 @@ p s.scan(/\w+/)      # -&gt; nil
 
 <h3 id="class-StringScanner-label-Miscellaneous">Miscellaneous</h3>
 <ul><li>
-<p>&lt;&lt;</p>
+<p><code>&lt;&lt;</code></p>
 </li><li>
 <p><a href="StringScanner.html#method-i-concat"><code>concat</code></a></p>
 </li><li>
@@ -806,7 +806,7 @@ strscan_aref(VALUE self, VALUE idx)
             idx = rb_sym2str(idx);
             /* fall through */
         case T_STRING:
-            if (!p-&gt;regex) return Qnil;
+            if (!RTEST(p-&gt;regex)) return Qnil;
             RSTRING_GETMEM(idx, name, i);
             i = name_to_backref_number(&amp;(p-&gt;regs), p-&gt;regex, name, name + i, rb_enc_get(idx));
             break;
@@ -839,7 +839,7 @@ strscan_aref(VALUE self, VALUE idx)
 
           
             <div class="description">
-              <p>Returns <code>true</code> iff the scan pointer is at the beginning of the line.</p>
+              <p>Returns <code>true</code> if and only if the scan pointer is at the beginning of the line.</p>
 
 <pre><code>s = StringScanner.new(&quot;test\ntest\n&quot;)
 s.bol?           # =&gt; true
@@ -986,13 +986,10 @@ s.charpos           # -&gt; 4
 strscan_get_charpos(VALUE self)
 {
     struct strscanner *p;
-    VALUE substr;
 
     GET_SCANNER(self, p);
 
-    substr = rb_funcall(p-&gt;str, id_byteslice, 2, INT2FIX(0), INT2NUM(p-&gt;curr));
-
-    return rb_str_length(substr);
+    return LONG2NUM(rb_enc_strlen(S_PBEG(p), CURPTR(p), rb_enc_get(p-&gt;str)));
 }</pre>
               </div>
             </div>
@@ -1382,10 +1379,9 @@ s.get_byte         # =&gt; &quot;a&quot;
 s.get_byte         # =&gt; &quot;b&quot;
 s.get_byte         # =&gt; nil
 
-$KCODE = &#39;EUC&#39;
-s = StringScanner.new(&quot;\244\242&quot;)
-s.get_byte         # =&gt; &quot;\244&quot;
-s.get_byte         # =&gt; &quot;\242&quot;
+s = StringScanner.new(&quot;\244\242&quot;.force_encoding(&quot;euc-jp&quot;))
+s.get_byte         # =&gt; &quot;\xA4&quot;
+s.get_byte         # =&gt; &quot;\xA2&quot;
 s.get_byte         # =&gt; nil
 </code></pre>
             </div>
@@ -1484,9 +1480,8 @@ s.getch           # =&gt; &quot;a&quot;
 s.getch           # =&gt; &quot;b&quot;
 s.getch           # =&gt; nil
 
-$KCODE = &#39;EUC&#39;
-s = StringScanner.new(&quot;\244\242&quot;)
-s.getch           # =&gt; &quot;\244\242&quot;   # Japanese hira-kana &quot;A&quot; in EUC-JP
+s = StringScanner.new(&quot;\244\242&quot;.force_encoding(&quot;euc-jp&quot;))
+s.getch           # =&gt; &quot;\x{A4A2}&quot;   # Japanese hira-kana &quot;A&quot; in EUC-JP
 s.getch           # =&gt; nil
 </code></pre>
             </div>
@@ -1710,7 +1705,7 @@ strscan_matched(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> iff the last match was successful.</p>
+              <p>Returns <code>true</code> if and only if the last match was successful.</p>
 
 <pre><code>s = StringScanner.new(&#39;test string&#39;)
 s.match?(/\w+/)     # =&gt; 4
@@ -1758,7 +1753,7 @@ strscan_matched_p(VALUE self)
 
           
             <div class="description">
-              <p>Returns the size of the most recent match (see <a href="StringScanner.html#method-i-matched"><code>matched</code></a>), or <code>nil</code> if there was no recent match.</p>
+              <p>Returns the size of the most recent match in bytes, or <code>nil</code> if there was no recent match.  This is different than <code>matched.size</code>, which will return the size in characters.</p>
 
 <pre><code>s = StringScanner.new(&#39;test string&#39;)
 s.check /\w+/           # -&gt; &quot;test&quot;
@@ -1790,7 +1785,7 @@ strscan_matched_size(VALUE self)
 
     GET_SCANNER(self, p);
     if (! MATCHED_P(p)) return Qnil;
-    return INT2NUM(p-&gt;regs.end[0] - p-&gt;regs.beg[0]);
+    return LONG2NUM(p-&gt;regs.end[0] - p-&gt;regs.beg[0]);
 }</pre>
               </div>
             </div>
@@ -2059,7 +2054,7 @@ strscan_set_pos(VALUE self, VALUE v)
     if (i &lt; 0) rb_raise(rb_eRangeError, &quot;index out of range&quot;);
     if (i &gt; S_LEN(p)) rb_raise(rb_eRangeError, &quot;index out of range&quot;);
     p-&gt;curr = i;
-    return INT2NUM(i);
+    return LONG2NUM(i);
 }</pre>
               </div>
             </div>
@@ -2265,7 +2260,7 @@ strscan_rest(VALUE self)
 
           
             <div class="description">
-              <p>Returns true iff there is more data in the string.  See <a href="StringScanner.html#method-i-eos-3F"><code>eos?</code></a>. This method is obsolete; use <a href="StringScanner.html#method-i-eos-3F"><code>eos?</code></a> instead.</p>
+              <p>Returns true if and only if there is more data in the string.  See <a href="StringScanner.html#method-i-eos-3F"><code>eos?</code></a>. This method is obsolete; use <a href="StringScanner.html#method-i-eos-3F"><code>eos?</code></a> instead.</p>
 
 <pre><code>s = StringScanner.new(&#39;test string&#39;)
 s.eos?              # These two

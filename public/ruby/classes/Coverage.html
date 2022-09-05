@@ -26,11 +26,11 @@
 
   
     
-    <meta name="description" content="Coverage provides coverage measurement feature for Ruby. This feature is experimental, so these APIs may be changed in future.  Usage  require “coverage”  do Coverage.">
-    <meta property="og:description" content="Coverage provides coverage measurement feature for Ruby. This feature is experimental, so these APIs may be changed in future.  Usage  require “coverage”  do Coverage.">
+    <meta name="description" content="Coverage provides coverage measurement feature for Ruby. This feature is experimental, so these APIs may be changed in future.">
+    <meta property="og:description" content="Coverage provides coverage measurement feature for Ruby. This feature is experimental, so these APIs may be changed in future.">
   
 
-    <meta name="keywords" content="Coverage class, start, result, peek_result, running?">
+    <meta name="keywords" content="Coverage class, setup, start, resume, suspend, result, peek_result, state, running?, line_stub">
 </head>
 
 <body>
@@ -67,6 +67,8 @@
             
             <li><a href="../files/ruby/ext/coverage/coverage_c.html">ruby/ext/coverage/coverage.c</a></li>
             
+            <li><a href="../files/ruby/ext/coverage/lib/coverage_rb.html">ruby/ext/coverage/lib/coverage.rb</a></li>
+            
         </ul>
     </div>
 
@@ -76,6 +78,8 @@
     <div class="description">
       
 <p><a href="Coverage.html"><code>Coverage</code></a> provides coverage measurement feature for Ruby. This feature is experimental, so these APIs may be changed in future.</p>
+
+<p>Caveat: Currently, only process-global coverage measurement is supported. You cannot measure per-thread covearge.</p>
 
 <h1 id="module-Coverage-label-Usage">Usage</h1>
 <ol><li>
@@ -88,7 +92,7 @@
 <p><a href="Coverage.html#method-c-result"><code>Coverage.result</code></a> will return a hash that contains filename as key and coverage array as value. A coverage array gives, for each line, the number of line execution by the interpreter. A <code>nil</code> value means coverage is disabled for this line (lines like <code>else</code> and <code>end</code>).</p>
 </li></ol>
 
-<h1 id="module-Coverage-label-Example">Example</h1>
+<h1 id="module-Coverage-label-Examples">Examples</h1>
 
 <pre><code>[foo.rb]
 s = 0
@@ -109,6 +113,111 @@ require &quot;foo.rb&quot;
 p Coverage.result  #=&gt; {&quot;foo.rb&quot;=&gt;[1, 1, 10, nil, nil, 1, 1, nil, 0, nil]}
 </code></pre>
 
+<h2 id="module-Coverage-label-Lines+Coverage">Lines <a href="Coverage.html"><code>Coverage</code></a></h2>
+
+<p>If a coverage mode is not explicitly specified when starting coverage, lines coverage is what will run. It reports the number of line executions for each line.</p>
+
+<pre><code>require &quot;coverage&quot;
+Coverage.start(lines: true)
+require &quot;foo.rb&quot;
+p Coverage.result #=&gt; {&quot;foo.rb&quot;=&gt;{:lines=&gt;[1, 1, 10, nil, nil, 1, 1, nil, 0, nil]}}
+</code></pre>
+
+<p>The value of the lines coverage result is an array containing how many times each line was executed. Order in this array is important. For example, the first item in this array, at index 0, reports how many times line 1 of this file was executed while coverage was run (which, in this example, is one time).</p>
+
+<p>A <code>nil</code> value means coverage is disabled for this line (lines like <code>else</code> and <code>end</code>).</p>
+
+<h2 id="module-Coverage-label-Oneshot+Lines+Coverage">Oneshot Lines <a href="Coverage.html"><code>Coverage</code></a></h2>
+
+<p>Oneshot lines coverage tracks and reports on the executed lines while coverage is running. It will not report how many times a line was executed, only that it was executed.</p>
+
+<pre><code>require &quot;coverage&quot;
+Coverage.start(oneshot_lines: true)
+require &quot;foo.rb&quot;
+p Coverage.result #=&gt; {&quot;foo.rb&quot;=&gt;{:oneshot_lines=&gt;[1, 2, 3, 6, 7]}}
+</code></pre>
+
+<p>The value of the oneshot lines coverage result is an array containing the line numbers that were executed.</p>
+
+<h2 id="module-Coverage-label-Branches+Coverage">Branches <a href="Coverage.html"><code>Coverage</code></a></h2>
+
+<p>Branches coverage reports how many times each branch within each conditional was executed.</p>
+
+<pre><code>require &quot;coverage&quot;
+Coverage.start(branches: true)
+require &quot;foo.rb&quot;
+p Coverage.result #=&gt; {&quot;foo.rb&quot;=&gt;{:branches=&gt;{[:if, 0, 6, 0, 10, 3]=&gt;{[:then, 1, 7, 2, 7, 7]=&gt;1, [:else, 2, 9, 2, 9, 7]=&gt;0}}}}
+</code></pre>
+
+<p>Each entry within the branches hash is a conditional, the value of which is another hash where each entry is a branch in that conditional. The values are the number of times the method was executed, and the keys are identifying information about the branch.</p>
+
+<p>The information that makes up each key identifying branches or conditionals is the following, from left to right:</p>
+<ol><li>
+<p>A label for the type of branch or conditional.</p>
+</li><li>
+<p>A unique identifier.</p>
+</li><li>
+<p>The starting line number it appears on in the file.</p>
+</li><li>
+<p>The starting column number it appears on in the file.</p>
+</li><li>
+<p>The ending line number it appears on in the file.</p>
+</li><li>
+<p>The ending column number it appears on in the file.</p>
+</li></ol>
+
+<h2 id="module-Coverage-label-Methods+Coverage">Methods <a href="Coverage.html"><code>Coverage</code></a></h2>
+
+<p>Methods coverage reports how many times each method was executed.</p>
+
+<pre><code>[foo_method.rb]
+class Greeter
+  def greet
+    &quot;welcome!&quot;
+  end
+end
+
+def hello
+  &quot;Hi&quot;
+end
+
+hello()
+Greeter.new.greet()
+[EOF]
+
+require &quot;coverage&quot;
+Coverage.start(methods: true)
+require &quot;foo_method.rb&quot;
+p Coverage.result #=&gt; {&quot;foo_method.rb&quot;=&gt;{:methods=&gt;{[Object, :hello, 7, 0, 9, 3]=&gt;1, [Greeter, :greet, 2, 2, 4, 5]=&gt;1}}}
+</code></pre>
+
+<p>Each entry within the methods hash represents a method. The values in this hash are the number of times the method was executed, and the keys are identifying information about the method.</p>
+
+<p>The information that makes up each key identifying a method is the following, from left to right:</p>
+<ol><li>
+<p>The class.</p>
+</li><li>
+<p>The method name.</p>
+</li><li>
+<p>The starting line number the method appears on in the file.</p>
+</li><li>
+<p>The starting column number the method appears on in the file.</p>
+</li><li>
+<p>The ending line number the method appears on in the file.</p>
+</li><li>
+<p>The ending column number the method appears on in the file.</p>
+</li></ol>
+
+<h2 id="module-Coverage-label-All+Coverage+Modes">All <a href="Coverage.html"><code>Coverage</code></a> Modes</h2>
+
+<p>You can also run all modes of coverage simultaneously with this shortcut. Note that running all coverage modes does not run both lines and oneshot lines. Those modes cannot be run simultaneously. Lines coverage is run in this case, because you can still use it to determine whether or not a line was executed.</p>
+
+<pre><code>require &quot;coverage&quot;
+Coverage.start(:all)
+require &quot;foo.rb&quot;
+p Coverage.result #=&gt; {&quot;foo.rb&quot;=&gt;{:lines=&gt;[1, 1, 10, nil, nil, 1, 1, nil, 0, nil], :branches=&gt;{[:if, 0, 6, 0, 10, 3]=&gt;{[:then, 1, 7, 2, 7, 7]=&gt;1, [:else, 2, 9, 2, 9, 7]=&gt;0}}, :methods=&gt;{}}}
+</code></pre>
+
     </div>
   
 
@@ -127,6 +236,18 @@ p Coverage.result  #=&gt; {&quot;foo.rb&quot;=&gt;[1, 1, 10, nil, nil, 1, 1, nil
     <!-- Method ref -->
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
+      
+        <dt>L</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-line_stub">line_stub</a>
+              </li>
+            
+          </ul>
+        </dd>
       
         <dt>P</dt>
         <dd>
@@ -151,6 +272,11 @@ p Coverage.result  #=&gt; {&quot;foo.rb&quot;=&gt;[1, 1, 10, nil, nil, 1, 1, nil
             
               
               <li>
+                <a href="#method-c-resume">resume</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-c-running-3F">running?</a>
               </li>
             
@@ -163,7 +289,22 @@ p Coverage.result  #=&gt; {&quot;foo.rb&quot;=&gt;[1, 1, 10, nil, nil, 1, 1, nil
             
               
               <li>
-                <a href="#method-c-start">start</a>
+                <a href="#method-c-setup">setup</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-start">start</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-state">state</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-suspend">suspend</a>
               </li>
             
           </ul>
@@ -192,6 +333,52 @@ p Coverage.result  #=&gt; {&quot;foo.rb&quot;=&gt;[1, 1, 10, nil, nil, 1, 1, nil
     
       <h2 class="sectiontitle">Class Public methods</h2>
       
+        <div class="method">
+          <h3 class="title method-title" id="method-c-line_stub">
+            
+              <b>line_stub</b>(file)
+            
+            <a href="../classes/Coverage.html#method-c-line_stub" name="method-c-line_stub" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-line_stub_source')" id="l_method-c-line_stub_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/coverage/lib/coverage.rb#L4" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-line_stub_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/ext/coverage/lib/coverage.rb, line 4</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">line_stub</span>(<span class="ruby-identifier">file</span>)
+  <span class="ruby-identifier">lines</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">foreach</span>(<span class="ruby-identifier">file</span>).<span class="ruby-identifier">map</span> { <span class="ruby-keyword">nil</span> }
+  <span class="ruby-identifier">iseqs</span> = [<span class="ruby-constant">RubyVM</span><span class="ruby-operator">::</span><span class="ruby-constant">InstructionSequence</span>.<span class="ruby-identifier">compile_file</span>(<span class="ruby-identifier">file</span>)]
+  <span class="ruby-keyword">until</span> <span class="ruby-identifier">iseqs</span>.<span class="ruby-identifier">empty?</span>
+    <span class="ruby-identifier">iseq</span> = <span class="ruby-identifier">iseqs</span>.<span class="ruby-identifier">pop</span>
+    <span class="ruby-identifier">iseq</span>.<span class="ruby-identifier">trace_points</span>.<span class="ruby-identifier">each</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">n</span>, <span class="ruby-identifier">type</span><span class="ruby-operator">|</span> <span class="ruby-identifier">lines</span>[<span class="ruby-identifier">n</span> <span class="ruby-operator">-</span> <span class="ruby-value">1</span>] = <span class="ruby-value">0</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">type</span> <span class="ruby-operator">==</span> <span class="ruby-value">:line</span> }
+    <span class="ruby-identifier">iseq</span>.<span class="ruby-identifier">each_child</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">child</span><span class="ruby-operator">|</span> <span class="ruby-identifier">iseqs</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">child</span> }
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">lines</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
         <div class="method">
           <h3 class="title method-title" id="method-c-peek_result">
             
@@ -235,7 +422,8 @@ rb_coverage_peek_result(VALUE klass)
     if (!RTEST(coverages)) {
         rb_raise(rb_eRuntimeError, &quot;coverage measurement is not enabled&quot;);
     }
-    st_foreach(RHASH_TBL(coverages), coverage_peek_result_i, ncoverages);
+    OBJ_WB_UNPROTECT(coverages);
+    st_foreach(RHASH_TBL_RAW(coverages), coverage_peek_result_i, ncoverages);
 
     if (current_mode &amp; COVERAGE_TARGET_METHODS) {
         rb_objspace_each_objects(method_coverage_i, &amp;ncoverages);
@@ -285,6 +473,10 @@ rb_coverage_result(int argc, VALUE *argv, VALUE klass)
     VALUE opt;
     int stop = 1, clear = 1;
 
+    if (current_state == IDLE) {
+        rb_raise(rb_eRuntimeError, &quot;coverage measurement is not enabled&quot;);
+    }
+
     rb_scan_args(argc, argv, &quot;01&quot;, &amp;opt);
 
     if (argc == 1) {
@@ -303,10 +495,63 @@ rb_coverage_result(int argc, VALUE *argv, VALUE klass)
         if (!NIL_P(me2counter)) rb_hash_foreach(me2counter, clear_me2counter_i, Qnil);
     }
     if (stop) {
+        if (current_state == RUNNING) {
+            rb_coverage_suspend(klass);
+        }
         rb_reset_coverages();
         me2counter = Qnil;
+        current_state = IDLE;
     }
     return ncoverages;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-resume">
+            
+              <b>Coverage.resume  => nil
+</b>
+            
+            <a href="../classes/Coverage.html#method-c-resume" name="method-c-resume" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Start/resume the coverage measurement.</p>
+
+<p>Caveat: Currently, only process-global coverage measurement is supported. You cannot measure per-thread covearge. If your process has multiple thread, using <a href="Coverage.html#method-c-resume"><code>Coverage.resume</code></a>/suspend to capture code coverage executed from only a limited code block, may yield misleading results.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-resume_source')" id="l_method-c-resume_source">show</a>
+                
+              </p>
+              <div id="method-c-resume_source" class="dyn-source">
+                <pre>VALUE
+rb_coverage_resume(VALUE klass)
+{
+    if (current_state == IDLE) {
+        rb_raise(rb_eRuntimeError, &quot;coverage measurement is not set up yet&quot;);
+    }
+    if (current_state == RUNNING) {
+        rb_raise(rb_eRuntimeError, &quot;coverage measurement is already running&quot;);
+    }
+    rb_resume_coverages();
+    current_state = RUNNING;
+    return Qnil;
 }</pre>
               </div>
             </div>
@@ -345,8 +590,7 @@ rb_coverage_result(int argc, VALUE *argv, VALUE klass)
                 <pre>static VALUE
 rb_coverage_running(VALUE klass)
 {
-    VALUE coverages = rb_get_coverages();
-    return RTEST(coverages) ? Qtrue : Qfalse;
+    return current_state == RUNNING ? Qtrue : Qfalse;
 }</pre>
               </div>
             </div>
@@ -354,17 +598,21 @@ rb_coverage_running(VALUE klass)
           </div>
         
         <div class="method">
-          <h3 class="title method-title" id="method-c-start">
+          <h3 class="title method-title" id="method-c-setup">
             
-              <b>Coverage.start  => nil
+              <b>Coverage.setup                                              => nil<br />Coverage.setup(:all)                                        => nil<br />Coverage.setup(lines: bool, branches: bool, methods: bool)  => nil<br />Coverage.setup(oneshot_lines: true)                         => nil
 </b>
             
-            <a href="../classes/Coverage.html#method-c-start" name="method-c-start" class="permalink">Link</a>
+            <a href="../classes/Coverage.html#method-c-setup" name="method-c-setup" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Enables coverage measurement.</p>
+              <p><a href="Set.html"><code>Set</code></a> up the coverage measurement.</p>
+
+<p>Note that this method does not start the measurement itself. Use <a href="Coverage.html#method-c-resume"><code>Coverage.resume</code></a> to start the measurement.</p>
+
+<p>You may want to use <a href="Coverage.html#method-c-start"><code>Coverage.start</code></a> to setup and then start the measurement.</p>
             </div>
           
 
@@ -378,15 +626,19 @@ rb_coverage_running(VALUE klass)
               
               <p class="source-link">
                 Source:
-                <a href="javascript:toggleSource('method-c-start_source')" id="l_method-c-start_source">show</a>
+                <a href="javascript:toggleSource('method-c-setup_source')" id="l_method-c-setup_source">show</a>
                 
               </p>
-              <div id="method-c-start_source" class="dyn-source">
+              <div id="method-c-setup_source" class="dyn-source">
                 <pre>static VALUE
-rb_coverage_start(int argc, VALUE *argv, VALUE klass)
+rb_coverage_setup(int argc, VALUE *argv, VALUE klass)
 {
     VALUE coverages, opt;
     int mode;
+
+    if (current_state != IDLE) {
+        rb_raise(rb_eRuntimeError, &quot;coverage measurement is already setup&quot;);
+    }
 
     rb_scan_args(argc, argv, &quot;01&quot;, &amp;opt);
 
@@ -428,10 +680,142 @@ rb_coverage_start(int argc, VALUE *argv, VALUE klass)
         current_mode = mode;
         if (mode == 0) mode = COVERAGE_TARGET_LINES;
         rb_set_coverages(coverages, mode, me2counter);
+        current_state = SUSPENDED;
     }
     else if (current_mode != mode) {
         rb_raise(rb_eRuntimeError, &quot;cannot change the measuring target during coverage measurement&quot;);
     }
+
+
+    return Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-start">
+            
+              <b>Coverage.start                                              => nil<br />Coverage.start(:all)                                        => nil<br />Coverage.start(lines: bool, branches: bool, methods: bool)  => nil<br />Coverage.start(oneshot_lines: true)                         => nil
+</b>
+            
+            <a href="../classes/Coverage.html#method-c-start" name="method-c-start" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Enables the coverage measurement. See the documentation of <a href="Coverage.html"><code>Coverage</code></a> class in detail. This is equivalent to <a href="Coverage.html#method-c-setup"><code>Coverage.setup</code></a> and <a href="Coverage.html#method-c-resume"><code>Coverage.resume</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-start_source')" id="l_method-c-start_source">show</a>
+                
+              </p>
+              <div id="method-c-start_source" class="dyn-source">
+                <pre>static VALUE
+rb_coverage_start(int argc, VALUE *argv, VALUE klass)
+{
+    rb_coverage_setup(argc, argv, klass);
+    rb_coverage_resume(klass);
+    return Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-state">
+            
+              <b>Coverage.state  => :idle, :suspended, :running
+</b>
+            
+            <a href="../classes/Coverage.html#method-c-state" name="method-c-state" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the state of the coverage measurement.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-state_source')" id="l_method-c-state_source">show</a>
+                
+              </p>
+              <div id="method-c-state_source" class="dyn-source">
+                <pre>static VALUE
+rb_coverage_state(VALUE klass)
+{
+    switch (current_state) {
+        case IDLE: return ID2SYM(rb_intern(&quot;idle&quot;));
+        case SUSPENDED: return ID2SYM(rb_intern(&quot;suspended&quot;));
+        case RUNNING: return ID2SYM(rb_intern(&quot;running&quot;));
+    }
+    return Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-suspend">
+            
+              <b>Coverage.suspend  => nil
+</b>
+            
+            <a href="../classes/Coverage.html#method-c-suspend" name="method-c-suspend" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Suspend the coverage measurement. You can use <a href="Coverage.html#method-c-resume"><code>Coverage.resume</code></a> to restart the measurement.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-suspend_source')" id="l_method-c-suspend_source">show</a>
+                
+              </p>
+              <div id="method-c-suspend_source" class="dyn-source">
+                <pre>VALUE
+rb_coverage_suspend(VALUE klass)
+{
+    if (current_state != RUNNING) {
+        rb_raise(rb_eRuntimeError, &quot;coverage measurement is not running&quot;);
+    }
+    rb_suspend_coverages();
+    current_state = SUSPENDED;
     return Qnil;
 }</pre>
               </div>

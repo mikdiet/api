@@ -30,7 +30,7 @@
     <meta property="og:description" content="Description  A representation of a C function  Examples  ‘strcpy’  @libc = Fiddle.dlopen &quot;/lib/libc.so.6&quot;    #=&gt; #&lt;Fiddle::Handle:0x00000001d7a8d8&gt; f = Fiddle::Function.">
   
 
-    <meta name="keywords" content="Fiddle::Function class, call, new, to_i">
+    <meta name="keywords" content="Fiddle::Function class, call, new, need_gvl?, to_i, to_proc">
 </head>
 
 <body>
@@ -153,6 +153,11 @@ f.abi == Fiddle::Function::DEFAULT
             
               
               <li>
+                <a href="#method-i-need_gvl-3F">need_gvl?</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-c-new">new</a>
               </li>
             
@@ -165,7 +170,12 @@ f.abi == Fiddle::Function::DEFAULT
             
               
               <li>
-                <a href="#method-i-to_i">to_i</a>
+                <a href="#method-i-to_i">to_i</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-to_proc">to_proc</a>
               </li>
             
           </ul>
@@ -261,7 +271,7 @@ f.abi == Fiddle::Function::DEFAULT
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>new(ptr, args, ret_type, abi = DEFAULT)
+              <b>new(ptr,<br />args,<br />ret_type,<br />abi = DEFAULT,<br />name: nil,<br />need_gvl: false)
 </b>
             
             <a href="../../classes/Fiddle/Function.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -278,6 +288,10 @@ f.abi == Fiddle::Function::DEFAULT
 <p><code>ret_type</code> is the return type of the function</p>
 </li><li>
 <p><code>abi</code> is the ABI of the function</p>
+</li><li>
+<p><code>name</code> is the name of the function</p>
+</li><li>
+<p><code>need_gvl</code> is whether GVL is needed to call the function</p>
 </li></ul>
             </div>
           
@@ -300,58 +314,69 @@ f.abi == Fiddle::Function::DEFAULT
 initialize(int argc, VALUE argv[], VALUE self)
 {
     ffi_cif * cif;
-    ffi_type **arg_types, *rtype;
-    ffi_status result;
-    VALUE ptr, args, ret_type, abi, kwds, ary;
-    int i, len;
-    int nabi;
+    VALUE ptr, arg_types, ret_type, abi, kwargs;
+    VALUE name = Qnil;
+    VALUE need_gvl = Qfalse;
+    int c_ret_type;
+    bool is_variadic = false;
+    ffi_abi c_ffi_abi;
     void *cfunc;
 
-    rb_scan_args(argc, argv, &quot;31:&quot;, &amp;ptr, &amp;args, &amp;ret_type, &amp;abi, &amp;kwds);
+    rb_scan_args(argc, argv, &quot;31:&quot;, &amp;ptr, &amp;arg_types, &amp;ret_type, &amp;abi, &amp;kwargs);
     rb_iv_set(self, &quot;@closure&quot;, ptr);
+
+    if (!NIL_P(kwargs)) {
+        enum {
+            kw_name,
+            kw_need_gvl,
+            kw_max_,
+        };
+        static ID kw[kw_max_];
+        VALUE args[kw_max_];
+        if (!kw[0]) {
+            kw[kw_name] = rb_intern_const(&quot;name&quot;);
+            kw[kw_need_gvl] = rb_intern_const(&quot;need_gvl&quot;);
+        }
+        rb_get_kwargs(kwargs, kw, 0, kw_max_, args);
+        if (args[kw_name] != Qundef) {
+            name = args[kw_name];
+        }
+        if (args[kw_need_gvl] != Qundef) {
+            need_gvl = args[kw_need_gvl];
+        }
+    }
+    rb_iv_set(self, &quot;@name&quot;, name);
+    rb_iv_set(self, &quot;@need_gvl&quot;, need_gvl);
 
     ptr = rb_Integer(ptr);
     cfunc = NUM2PTR(ptr);
     PTR2NUM(cfunc);
-    nabi = NIL_P(abi) ? FFI_DEFAULT_ABI : NUM2INT(abi);
-    abi = INT2FIX(nabi);
-    i = NUM2INT(ret_type);
-    rtype = INT2FFI_TYPE(i);
-    ret_type = INT2FIX(i);
+    c_ffi_abi = NIL_P(abi) ? FFI_DEFAULT_ABI : NUM2INT(abi);
+    abi = INT2FIX(c_ffi_abi);
+    ret_type = rb_fiddle_type_ensure(ret_type);
+    c_ret_type = NUM2INT(ret_type);
+    (void)INT2FFI_TYPE(c_ret_type); /* raise */
+    ret_type = INT2FIX(c_ret_type);
 
-    Check_Type(args, T_ARRAY);
-    len = RARRAY_LENINT(args);
-    Check_Max_Args(&quot;args&quot;, len);
-    ary = rb_ary_subseq(args, 0, len);
-    for (i = 0; i &lt; RARRAY_LEN(args); i++) {
-        VALUE a = RARRAY_AREF(args, i);
-        int type = NUM2INT(a);
-        (void)INT2FFI_TYPE(type); /* raise */
-        if (INT2FIX(type) != a) rb_ary_store(ary, i, INT2FIX(type));
+    arg_types = normalize_argument_types(&quot;argument types&quot;,
+                                         arg_types,
+                                         &amp;is_variadic);
+#ifndef HAVE_FFI_PREP_CIF_VAR
+    if (is_variadic) {
+        rb_raise(rb_eNotImpError,
+                 &quot;ffi_prep_cif_var() is required in libffi &quot;
+                 &quot;for variadic arguments&quot;);
     }
-    OBJ_FREEZE(ary);
+#endif
 
     rb_iv_set(self, &quot;@ptr&quot;, ptr);
-    rb_iv_set(self, &quot;@args&quot;, args);
+    rb_iv_set(self, &quot;@argument_types&quot;, arg_types);
     rb_iv_set(self, &quot;@return_type&quot;, ret_type);
     rb_iv_set(self, &quot;@abi&quot;, abi);
-
-    if (!NIL_P(kwds)) rb_hash_foreach(kwds, parse_keyword_arg_i, self);
+    rb_iv_set(self, &quot;@is_variadic&quot;, is_variadic ? Qtrue : Qfalse);
 
     TypedData_Get_Struct(self, ffi_cif, &amp;function_data_type, cif);
-
-    arg_types = xcalloc(len + 1, sizeof(ffi_type *));
-
-    for (i = 0; i &lt; RARRAY_LEN(args); i++) {
-        int type = NUM2INT(RARRAY_AREF(args, i));
-        arg_types[i] = INT2FFI_TYPE(type);
-    }
-    arg_types[len] = NULL;
-
-    result = ffi_prep_cif(cif, nabi, len, rtype, arg_types);
-
-    if (result)
-        rb_raise(rb_eRuntimeError, &quot;error creating CIF %d&quot;, result);
+    cif-&gt;arg_types = NULL;
 
     return self;
 }</pre>
@@ -376,6 +401,8 @@ initialize(int argc, VALUE argv[], VALUE self)
             <div class="description">
               <p>Calls the constructed <a href="Function.html"><code>Function</code></a>, with <code>args</code>. Caller must ensure the underlying function is called in a thread-safe manner if running in a multi-threaded process.</p>
 
+<p>Note that it is not thread-safe to use this method to directly or indirectly call many Ruby C-extension APIs unless you don’t pass +need_gvl: true+ to Fiddle::Function#new.</p>
+
 <p>For an example see <a href="Function.html"><code>Fiddle::Function</code></a></p>
             </div>
           
@@ -399,57 +426,226 @@ function_call(int argc, VALUE argv[], VALUE self)
 {
     struct nogvl_ffi_call_args args = { 0 };
     fiddle_generic *generic_args;
-    VALUE cfunc, types, cPointer;
+    VALUE cfunc;
+    VALUE abi;
+    VALUE arg_types;
+    VALUE cPointer;
+    VALUE is_variadic;
+    VALUE need_gvl;
+    int n_arg_types;
+    int n_fixed_args = 0;
+    int n_call_args = 0;
     int i;
+    int i_call;
+    VALUE converted_args = Qnil;
     VALUE alloc_buffer = 0;
 
     cfunc    = rb_iv_get(self, &quot;@ptr&quot;);
-    types    = rb_iv_get(self, &quot;@args&quot;);
+    abi      = rb_iv_get(self, &quot;@abi&quot;);
+    arg_types = rb_iv_get(self, &quot;@argument_types&quot;);
     cPointer = rb_const_get(mFiddle, rb_intern(&quot;Pointer&quot;));
+    is_variadic = rb_iv_get(self, &quot;@is_variadic&quot;);
+    need_gvl = rb_iv_get(self, &quot;@need_gvl&quot;);
 
-    Check_Max_Args(&quot;number of arguments&quot;, argc);
-    if (argc != (i = RARRAY_LENINT(types))) {
-        rb_error_arity(argc, i, i);
+    n_arg_types = RARRAY_LENINT(arg_types);
+    n_fixed_args = n_arg_types;
+    if (RTEST(is_variadic)) {
+        if (argc &lt; n_arg_types) {
+            rb_error_arity(argc, n_arg_types, UNLIMITED_ARGUMENTS);
+        }
+        if (((argc - n_arg_types) % 2) != 0) {
+            rb_raise(rb_eArgError,
+                     &quot;variadic arguments must be type and value pairs: &quot;
+                     &quot;%&quot;PRIsVALUE,
+                     rb_ary_new_from_values(argc, argv));
+        }
+        n_call_args = n_arg_types + ((argc - n_arg_types) / 2);
     }
+    else {
+        if (argc != n_arg_types) {
+            rb_error_arity(argc, n_arg_types, n_arg_types);
+        }
+        n_call_args = n_arg_types;
+    }
+    Check_Max_Args(&quot;the number of arguments&quot;, n_call_args);
 
     TypedData_Get_Struct(self, ffi_cif, &amp;function_data_type, args.cif);
 
+    if (is_variadic &amp;&amp; args.cif-&gt;arg_types) {
+        xfree(args.cif-&gt;arg_types);
+        args.cif-&gt;arg_types = NULL;
+    }
+
+    if (!args.cif-&gt;arg_types) {
+        VALUE fixed_arg_types = arg_types;
+        VALUE return_type;
+        int c_return_type;
+        ffi_type *ffi_return_type;
+        ffi_type **ffi_arg_types;
+        ffi_status result;
+
+        arg_types = rb_ary_dup(fixed_arg_types);
+        for (i = n_fixed_args; i &lt; argc; i += 2) {
+          VALUE arg_type = argv[i];
+          int c_arg_type;
+          arg_type = rb_fiddle_type_ensure(arg_type);
+          c_arg_type = NUM2INT(arg_type);
+          (void)INT2FFI_TYPE(c_arg_type); /* raise */
+          rb_ary_push(arg_types, INT2FIX(c_arg_type));
+        }
+
+        return_type = rb_iv_get(self, &quot;@return_type&quot;);
+        c_return_type = FIX2INT(return_type);
+        ffi_return_type = INT2FFI_TYPE(c_return_type);
+
+        ffi_arg_types = xcalloc(n_call_args + 1, sizeof(ffi_type *));
+        for (i_call = 0; i_call &lt; n_call_args; i_call++) {
+            VALUE arg_type;
+            int c_arg_type;
+            arg_type = RARRAY_AREF(arg_types, i_call);
+            c_arg_type = FIX2INT(arg_type);
+            ffi_arg_types[i_call] = INT2FFI_TYPE(c_arg_type);
+        }
+        ffi_arg_types[i_call] = NULL;
+
+        if (is_variadic) {
+#ifdef HAVE_FFI_PREP_CIF_VAR
+            result = ffi_prep_cif_var(args.cif,
+                                      FIX2INT(abi),
+                                      n_fixed_args,
+                                      n_call_args,
+                                      ffi_return_type,
+                                      ffi_arg_types);
+#else
+            /* This code is never used because ffi_prep_cif_var()
+             * availability check is done in #initialize. */
+            result = FFI_BAD_TYPEDEF;
+#endif
+        }
+        else {
+            result = ffi_prep_cif(args.cif,
+                                  FIX2INT(abi),
+                                  n_call_args,
+                                  ffi_return_type,
+                                  ffi_arg_types);
+        }
+        if (result != FFI_OK) {
+            xfree(ffi_arg_types);
+            args.cif-&gt;arg_types = NULL;
+            rb_raise(rb_eRuntimeError, &quot;error creating CIF %d&quot;, result);
+        }
+    }
+
     generic_args = ALLOCV(alloc_buffer,
-        (size_t)(argc + 1) * sizeof(void *) + (size_t)argc * sizeof(fiddle_generic));
+                          sizeof(fiddle_generic) * n_call_args +
+                          sizeof(void *) * (n_call_args + 1));
     args.values = (void **)((char *)generic_args +
-                            (size_t)argc * sizeof(fiddle_generic));
+                            sizeof(fiddle_generic) * n_call_args);
 
-    for (i = 0; i &lt; argc; i++) {
-        VALUE type = RARRAY_AREF(types, i);
-        VALUE src = argv[i];
-        int argtype = FIX2INT(type);
+    for (i = 0, i_call = 0;
+         i &lt; argc &amp;&amp; i_call &lt; n_call_args;
+         i++, i_call++) {
+        VALUE arg_type;
+        int c_arg_type;
+        VALUE original_src;
+        VALUE src;
+        arg_type = RARRAY_AREF(arg_types, i_call);
+        c_arg_type = FIX2INT(arg_type);
+        if (i &gt;= n_fixed_args) {
+            i++;
+        }
+        src = argv[i];
 
-        if (argtype == TYPE_VOIDP) {
-            if(NIL_P(src)) {
+        if (c_arg_type == TYPE_VOIDP) {
+            if (NIL_P(src)) {
                 src = INT2FIX(0);
-            } else if(cPointer != CLASS_OF(src)) {
+            }
+            else if (cPointer != CLASS_OF(src)) {
                 src = rb_funcall(cPointer, rb_intern(&quot;[]&quot;), 1, src);
+                if (NIL_P(converted_args)) {
+                    converted_args = rb_ary_new();
+                }
+                rb_ary_push(converted_args, src);
             }
             src = rb_Integer(src);
         }
 
-        VALUE2GENERIC(argtype, src, &amp;generic_args[i]);
-        args.values[i] = (void *)&amp;generic_args[i];
+        original_src = src;
+        VALUE2GENERIC(c_arg_type, src, &amp;generic_args[i_call]);
+        if (src != original_src) {
+            if (NIL_P(converted_args)) {
+                converted_args = rb_ary_new();
+            }
+            rb_ary_push(converted_args, src);
+        }
+        args.values[i_call] = (void *)&amp;generic_args[i_call];
     }
-    args.values[argc] = NULL;
+    args.values[i_call] = NULL;
     args.fn = (void(*)(void))NUM2PTR(cfunc);
 
-    (void)rb_thread_call_without_gvl(nogvl_ffi_call, &amp;args, 0, 0);
+    if (RTEST(need_gvl)) {
+        ffi_call(args.cif, args.fn, &amp;(args.retval), args.values);
+    }
+    else {
+        (void)rb_thread_call_without_gvl(nogvl_ffi_call, &amp;args, 0, 0);
+    }
 
-    rb_funcall(mFiddle, rb_intern(&quot;last_error=&quot;), 1, INT2NUM(errno));
+    {
+        int errno_keep = errno;
 #if defined(_WIN32)
-    rb_funcall(mFiddle, rb_intern(&quot;win32_last_error=&quot;), 1, INT2NUM(errno));
+        DWORD error = WSAGetLastError();
+        int socket_error = WSAGetLastError();
+        rb_funcall(mFiddle, rb_intern(&quot;win32_last_error=&quot;), 1,
+                   ULONG2NUM(error));
+        rb_funcall(mFiddle, rb_intern(&quot;win32_last_socket_error=&quot;), 1,
+                   INT2NUM(socket_error));
 #endif
+        rb_funcall(mFiddle, rb_intern(&quot;last_error=&quot;), 1, INT2NUM(errno_keep));
+    }
 
     ALLOCV_END(alloc_buffer);
 
     return GENERIC2VALUE(rb_iv_get(self, &quot;@return_type&quot;), args.retval);
 }</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-need_gvl-3F">
+            
+              <b>need_gvl?</b>()
+            
+            <a href="../../classes/Fiddle/Function.html#method-i-need_gvl-3F" name="method-i-need_gvl-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Whether GVL is needed to call this function</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-need_gvl-3F_source')" id="l_method-i-need_gvl-3F_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/fiddle/lib/fiddle/function.rb#L14" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-need_gvl-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/function.rb, line 14</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">need_gvl?</span>
+  <span class="ruby-ivar">@need_gvl</span>
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -481,13 +677,53 @@ function_call(int argc, VALUE argv[], VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_i_source')" id="l_method-i-to_i_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/fiddle/lib/fiddle/function.rb#L14" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/fiddle/lib/fiddle/function.rb#L19" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_i_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/function.rb, line 14</span>
+                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/function.rb, line 19</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_i</span>
   <span class="ruby-identifier">ptr</span>.<span class="ruby-identifier">to_i</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-to_proc">
+            
+              <b>to_proc</b>()
+            
+            <a href="../../classes/Fiddle/Function.html#method-i-to_proc" name="method-i-to_proc" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Turn this function in to a proc</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_proc_source')" id="l_method-i-to_proc_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/fiddle/lib/fiddle/function.rb#L24" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-to_proc_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/function.rb, line 24</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_proc</span>
+  <span class="ruby-identifier">this</span> = <span class="ruby-keyword">self</span>
+  <span class="ruby-identifier">lambda</span> { <span class="ruby-operator">|</span><span class="ruby-operator">*</span><span class="ruby-identifier">args</span><span class="ruby-operator">|</span> <span class="ruby-identifier">this</span>.<span class="ruby-identifier">call</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>) }
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>

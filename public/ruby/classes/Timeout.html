@@ -156,6 +156,24 @@ status = Timeout::timeout(5) {
     
 
     
+      <!-- Section constants -->
+      <h2 class="sectiontitle">Constants</h2>
+      <table border='0' cellpadding='5'>
+        
+          <tr valign='top'>
+            <td class="attr-name">VERSION</td>
+            <td>=</td>
+            <td class="attr-value">&quot;0.2.0&quot;.freeze</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+      </table>
+    
 
 
     
@@ -191,6 +209,8 @@ status = Timeout::timeout(5) {
 
 <p>The exception thrown to terminate the given block cannot be rescued inside the block unless <code>klass</code> is given explicitly. However, the block can use ensure to prevent the handling of the exception.  For that reason, this method cannot be relied on to enforce timeouts for untrusted blocks.</p>
 
+<p>If a scheduler is defined, it will be used to handle the timeout by invoking Scheduler#timeout_after.</p>
+
 <p>Note that this is both a method of module <a href="Timeout.html"><code>Timeout</code></a>, so you can <code>include Timeout</code> into your classes so they have a timeout method, as well as a module method, so you can call it directly as <a href="Timeout.html#method-c-timeout"><code>Timeout.timeout()</code></a>.</p>
             </div>
           
@@ -207,14 +227,20 @@ status = Timeout::timeout(5) {
                 Source:
                 <a href="javascript:toggleSource('method-c-timeout_source')" id="l_method-c-timeout_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/timeout.rb#L77" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/timeout.rb#L83" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-timeout_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/timeout.rb, line 77</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">timeout</span>(<span class="ruby-identifier">sec</span>, <span class="ruby-identifier">klass</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">message</span> = <span class="ruby-keyword">nil</span>)   <span class="ruby-comment">#:yield: +sec+</span>
+                <pre><span class="ruby-comment"># File ruby/lib/timeout.rb, line 83</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">timeout</span>(<span class="ruby-identifier">sec</span>, <span class="ruby-identifier">klass</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">message</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)   <span class="ruby-comment">#:yield: +sec+</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">yield</span>(<span class="ruby-identifier">sec</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">sec</span> <span class="ruby-operator">==</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">sec</span>.<span class="ruby-identifier">zero?</span>
+
   <span class="ruby-identifier">message</span> <span class="ruby-operator">||=</span> <span class="ruby-string">&quot;execution expired&quot;</span>.<span class="ruby-identifier">freeze</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-constant">Fiber</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:current_scheduler</span>) <span class="ruby-operator">&amp;&amp;</span> (<span class="ruby-identifier">scheduler</span> = <span class="ruby-constant">Fiber</span>.<span class="ruby-identifier">current_scheduler</span>)&amp;.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:timeout_after</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-identifier">scheduler</span>.<span class="ruby-identifier">timeout_after</span>(<span class="ruby-identifier">sec</span>, <span class="ruby-identifier">klass</span> <span class="ruby-operator">||</span> <span class="ruby-constant">Error</span>, <span class="ruby-identifier">message</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-keyword">end</span>
+
   <span class="ruby-identifier">from</span> = <span class="ruby-node">&quot;from #{caller_locations(1, 1)[0]}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">$DEBUG</span>
   <span class="ruby-identifier">e</span> = <span class="ruby-constant">Error</span>
   <span class="ruby-identifier">bl</span> = <span class="ruby-identifier">proc</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">exception</span><span class="ruby-operator">|</span>
@@ -242,6 +268,7 @@ status = Timeout::timeout(5) {
     <span class="ruby-keyword">begin</span>
       <span class="ruby-identifier">bl</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">klass</span>)
     <span class="ruby-keyword">rescue</span> <span class="ruby-identifier">klass</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">e</span>
+      <span class="ruby-identifier">message</span> = <span class="ruby-identifier">e</span>.<span class="ruby-identifier">message</span>
       <span class="ruby-identifier">bt</span> = <span class="ruby-identifier">e</span>.<span class="ruby-identifier">backtrace</span>
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">else</span>

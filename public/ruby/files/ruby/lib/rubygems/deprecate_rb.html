@@ -56,10 +56,10 @@
             <li>
                 ruby/lib/rubygems/deprecate.rb
                 
-                    <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/deprecate.rb" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/deprecate.rb" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2022-04-14 02:20:29 +0300</li>
+            <li>Last modified: 2022-09-06 00:52:29 +0300</li>
         </ul>
     </div>
 
@@ -68,23 +68,74 @@
   
     <div class="description">
       
-<p>Provides a single method <code>deprecate</code> to be used to declare when something is going away.</p>
+<p>Provides 3 methods for declaring when something is going away.</p>
+
+<p>+deprecate(name, repl, year, month)+:</p>
+
+<pre><code>Indicate something may be removed on/after a certain date.
+</code></pre>
+
+<p>+rubygems_deprecate(name, replacement=:none)+:</p>
+
+<pre><code>Indicate something will be removed in the next major RubyGems version,
+and (optionally) a replacement for it.
+</code></pre>
+
+<p><code>rubygems_deprecate_command</code>:</p>
+
+<pre><code>Indicate a RubyGems command (in +lib/rubygems/commands/*.rb+) will be
+removed in the next RubyGems version.
+</code></pre>
+
+<p>Also provides <code>skip_during</code> for temporarily turning off deprecation warnings. This is intended to be used in the test suite, so deprecation warnings don’t cause test failures if you need to make sure stderr is otherwise empty.</p>
+
+<p>Example usage of <code>deprecate</code> and <code>rubygems_deprecate</code>:</p>
 
 <pre><code>class Legacy
-  def self.klass_method
+  def self.some_class_method
     # ...
   end
 
-  def instance_method
+  def some_instance_method
+    # ...
+  end
+
+  def some_old_method
     # ...
   end
 
   extend Gem::Deprecate
-  deprecate :instance_method, &quot;X.z&quot;, 2011, 4
+  deprecate :some_instance_method, &quot;X.z&quot;, 2011, 4
+  rubygems_deprecate :some_old_method, &quot;Modern#some_new_method&quot;
 
   class &lt;&lt; self
     extend Gem::Deprecate
-    deprecate :klass_method, :none, 2011, 4
+    deprecate :some_class_method, :none, 2011, 4
+  end
+end
+</code></pre>
+
+<p>Example usage of <code>rubygems_deprecate_command</code>:</p>
+
+<pre><code>class Gem::Commands::QueryCommand &lt; Gem::Command
+  extend Gem::Deprecate
+  rubygems_deprecate_command
+
+  # ...
+end
+</code></pre>
+
+<p>Example usage of <code>skip_during</code>:</p>
+
+<pre><code>class TestSomething &lt; Gem::Testcase
+  def test_some_thing_with_deprecations
+    Gem::Deprecate.skip_during do
+      actual_stdout, actual_stderr = capture_output do
+        Gem.something_deprecated
+      end
+      assert_empty actual_stdout
+      assert_equal(expected, actual_stderr)
+    end
   end
 end
 </code></pre>

@@ -418,10 +418,14 @@ p STDIN_SOCK.remote_address
               </p>
               <div id="method-c-for_fd_source" class="dyn-source">
                 <pre>static VALUE
-bsock_s_for_fd(VALUE klass, VALUE fd)
+bsock_s_for_fd(VALUE klass, VALUE _descriptor)
 {
     rb_io_t *fptr;
-    VALUE sock = rsock_init_sock(rb_obj_alloc(klass), NUM2INT(fd));
+
+    int descriptor = RB_NUM2INT(_descriptor);
+    rsock_validate_descriptor(descriptor);
+
+    VALUE sock = rsock_init_sock(rb_obj_alloc(klass), descriptor);
 
     GetOpenFile(sock, fptr);
 
@@ -591,7 +595,7 @@ bsock_close_write(VALUE sock)
                 Source:
                 <a href="javascript:toggleSource('method-i-connect_address_source')" id="l_method-i-connect_address_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L251" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L251" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-connect_address_source" class="dyn-source">
@@ -961,7 +965,7 @@ reuseaddr = optval[0] == 0 ? false : true
 <pre><code>ipttl = sock.getsockopt(:IP, :TTL).int
 
 optval = sock.getsockopt(Socket::IPPROTO_IP, Socket::IP_TTL)
-ipttl = optval.unpack(&quot;i&quot;)[0]
+ipttl = optval.unpack1(&quot;i&quot;)
 </code></pre>
 
 <p>Option values may be structs. Decoding them can be complex as it involves examining your system headers to determine the correct definition. An example is a +struct linger+, which may be defined in your system headers as:</p>
@@ -1219,7 +1223,7 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-recv_nonblock_source')" id="l_method-i-recv_nonblock_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L371" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L371" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-recv_nonblock_source" class="dyn-source">
@@ -1296,7 +1300,7 @@ controls.each {|ancdata|
                 Source:
                 <a href="javascript:toggleSource('method-i-recvmsg_source')" id="l_method-i-recvmsg_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L426" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L426" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-recvmsg_source" class="dyn-source">
@@ -1340,7 +1344,7 @@ controls.each {|ancdata|
                 Source:
                 <a href="javascript:toggleSource('method-i-recvmsg_nonblock_source')" id="l_method-i-recvmsg_nonblock_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L442" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L442" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-recvmsg_nonblock_source" class="dyn-source">
@@ -1457,12 +1461,11 @@ bsock_remote_address(VALUE sock)
               </p>
               <div id="method-i-send_source" class="dyn-source">
                 <pre>VALUE
-rsock_bsock_send(int argc, VALUE *argv, VALUE sock)
+rsock_bsock_send(int argc, VALUE *argv, VALUE socket)
 {
     struct rsock_send_arg arg;
     VALUE flags, to;
     rb_io_t *fptr;
-    ssize_t n;
     rb_blocking_function_t *func;
     const char *funcname;
 
@@ -1481,17 +1484,27 @@ rsock_bsock_send(int argc, VALUE *argv, VALUE sock)
         func = rsock_send_blocking;
         funcname = &quot;send(2)&quot;;
     }
-    GetOpenFile(sock, fptr);
+
+    RB_IO_POINTER(socket, fptr);
+
     arg.fd = fptr-&gt;fd;
     arg.flags = NUM2INT(flags);
-    while (rsock_maybe_fd_writable(arg.fd),
-           (n = (ssize_t)BLOCKING_REGION_FD(func, &amp;arg)) &lt; 0) {
-        if (rb_io_wait_writable(arg.fd)) {
+
+    while (true) {
+#ifdef RSOCK_WAIT_BEFORE_BLOCKING
+        rb_io_wait(socket, RB_INT2NUM(RUBY_IO_WRITABLE), Qnil);
+#endif
+
+        ssize_t n = (ssize_t)BLOCKING_REGION_FD(func, &amp;arg);
+
+        if (n &gt;= 0) return SSIZET2NUM(n);
+
+        if (rb_io_maybe_wait_writable(errno, socket, Qnil)) {
             continue;
         }
+
         rb_sys_fail(funcname);
     }
-    return SSIZET2NUM(n);
 }</pre>
               </div>
             </div>
@@ -1546,7 +1559,7 @@ sock.sendmsg(&quot;\0&quot;, 0, nil, ancdata)
                 Source:
                 <a href="javascript:toggleSource('method-i-sendmsg_source')" id="l_method-i-sendmsg_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L303" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L303" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-sendmsg_source" class="dyn-source">
@@ -1590,7 +1603,7 @@ sock.sendmsg(&quot;\0&quot;, 0, nil, ancdata)
                 Source:
                 <a href="javascript:toggleSource('method-i-sendmsg_nonblock_source')" id="l_method-i-sendmsg_nonblock_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L319" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L319" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-sendmsg_nonblock_source" class="dyn-source">

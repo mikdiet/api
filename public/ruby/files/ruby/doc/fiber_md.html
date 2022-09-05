@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>fiber.md</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+
+<meta name="data-rel-prefix" content="/">
+<meta name="data-tree-keys" content='[]'>
+
+</head>
+
+<body>
+    <a class="sr-only sr-only-focusable" href="#content" data-turbolinks="false">Skip to Content</a>
+    <a class="sr-only sr-only-focusable" href="#search" data-turbolinks="false">Skip to Search</a>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<nav class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search (/) for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</nav>
+
+
+    <div class="banner">
+        
+        <h2>
+            fiber.md
+        </h2>
+        <ul class="files">
+            
+            <li>
+                ruby/doc/fiber.md
+                
+                    <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/doc/fiber.md" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2022-09-06 00:52:29 +0300</li>
+        </ul>
+    </div>
+
+    <main id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h1 id="label-Fiber"><a href="../../../classes/Fiber.html"><code>Fiber</code></a></h1>
+
+<p>Fibers provide a mechanism for cooperative concurrency.</p>
+
+<h2 id="label-Context+Switching">Context Switching</h2>
+
+<p>Fibers execute a user-provided block. During the execution, the block may call <code>Fiber.yield</code> or <code>Fiber.transfer</code> to switch to another fiber. <code>Fiber#resume</code> is used to continue execution from the point where <code>Fiber.yield</code> was called.</p>
+
+<pre><code>#!/usr/bin/env ruby
+
+puts &quot;1: Start program.&quot;
+
+f = Fiber.new do
+  puts &quot;3: Entered fiber.&quot;
+  Fiber.yield
+  puts &quot;5: Resumed fiber.&quot;
+end
+
+puts &quot;2: Resume fiber first time.&quot;
+f.resume
+
+puts &quot;4: Resume fiber second time.&quot;
+f.resume
+
+puts &quot;6: Finished.&quot;
+</code></pre>
+
+<p>This program demonstrates the flow control of fibers.</p>
+
+<h2 id="label-Scheduler">Scheduler</h2>
+
+<p>The scheduler interface is used to intercept blocking operations. A typical implementation would be a wrapper for a gem like <code>EventMachine</code> or <code>Async</code>. This design provides separation of concerns between the event loop implementation and application code. It also allows for layered schedulers which can perform instrumentation.</p>
+
+<p>To set the scheduler for the current thread:</p>
+
+<pre><code>Fiber.set_scheduler(MyScheduler.new)
+</code></pre>
+
+<p>When the thread exits, there is an implicit call to <code>set_scheduler</code>:</p>
+
+<pre><code>Fiber.set_scheduler(nil)
+</code></pre>
+
+<h3 id="label-Design">Design</h3>
+
+<p>The scheduler interface is designed to be a un-opinionated light-weight layer between user code and blocking operations. The scheduler hooks should avoid translating or converting arguments or return values. Ideally, the exact same arguments from the user code are provided directly to the scheduler hook with no changes.</p>
+
+<h3 id="label-Interface">Interface</h3>
+
+<p>This is the interface you need to implement.</p>
+
+<pre><code>class Scheduler
+  # Wait for the specified process ID to exit.
+  # This hook is optional.
+  # @parameter pid [Integer] The process ID to wait for.
+  # @parameter flags [Integer] A bit-mask of flags suitable for `Process::Status.wait`.
+  # @returns [Process::Status] A process status instance.
+  def process_wait(pid, flags)
+    Thread.new do
+      Process::Status.wait(pid, flags)
+    end.value
+  end
+
+  # Wait for the given io readiness to match the specified events within
+  # the specified timeout.
+  # @parameter event [Integer] A bit mask of `IO::READABLE`,
+  #   `IO::WRITABLE` and `IO::PRIORITY`.
+  # @parameter timeout [Numeric] The amount of time to wait for the event in seconds.
+  # @returns [Integer] The subset of events that are ready.
+  def io_wait(io, events, timeout)
+  end
+
+  # Read from the given io into the specified buffer.
+  # WARNING: Experimental hook! Do not use in production code!
+  # @parameter io [IO] The io to read from.
+  # @parameter buffer [IO::Buffer] The buffer to read into.
+  # @parameter length [Integer] The minimum amount to read.
+  def io_read(io, buffer, length)
+  end
+
+  # Write from the given buffer into the specified IO.
+  # WARNING: Experimental hook! Do not use in production code!
+  # @parameter io [IO] The io to write to.
+  # @parameter buffer [IO::Buffer] The buffer to write from.
+  # @parameter length [Integer] The minimum amount to write.
+  def io_write(io, buffer, length)
+  end
+
+  # Sleep the current task for the specified duration, or forever if not
+  # specified.
+  # @parameter duration [Numeric] The amount of time to sleep in seconds.
+  def kernel_sleep(duration = nil)
+  end
+
+  # Execute the given block. If the block execution exceeds the given timeout,
+  # the specified exception `klass` will be raised. Typically, only non-blocking
+  # methods which enter the scheduler will raise such exceptions.
+  # @parameter duration [Integer] The amount of time to wait, after which an exception will be raised.
+  # @parameter klass [Class] The exception class to raise.
+  # @parameter *arguments [Array] The arguments to send to the constructor of the exception.
+  # @yields {...} The user code to execute.
+  def timeout_after(duration, klass, *arguments, &amp;block)
+  end
+
+  # Resolve hostname to an array of IP addresses.
+  # This hook is optional.
+  # @parameter hostname [String] Example: &quot;www.ruby-lang.org&quot;.
+  # @returns [Array] An array of IPv4 and/or IPv6 address strings that the hostname resolves to.
+  def address_resolve(hostname)
+  end
+
+  # Block the calling fiber.
+  # @parameter blocker [Object] What we are waiting on, informational only.
+  # @parameter timeout [Numeric | Nil] The amount of time to wait for in seconds.
+  # @returns [Boolean] Whether the blocking operation was successful or not.
+  def block(blocker, timeout = nil)
+  end
+
+  # Unblock the specified fiber.
+  # @parameter blocker [Object] What we are waiting on, informational only.
+  # @parameter fiber [Fiber] The fiber to unblock.
+  # @reentrant Thread safe.
+  def unblock(blocker, fiber)
+  end
+
+  # Intercept the creation of a non-blocking fiber.
+  # @returns [Fiber]
+  def fiber(&amp;block)
+    Fiber.new(blocking: false, &amp;block)
+  end
+
+  # Invoked when the thread exits.
+  def close
+    self.run
+  end
+
+  def run
+    # Implement event loop here.
+  end
+end
+</code></pre>
+
+<p>Additional hooks may be introduced in the future, we will use feature detection in order to enable these hooks.</p>
+
+<h3 id="label-Non-blocking+Execution">Non-blocking Execution</h3>
+
+<p>The scheduler hooks will only be used in special non-blocking execution contexts. Non-blocking execution contexts introduce non-determinism because the execution of scheduler hooks may introduce context switching points into your program.</p>
+
+<h4 id="label-Fibers">Fibers</h4>
+
+<p>Fibers can be used to create non-blocking execution contexts.</p>
+
+<pre><code>Fiber.new do
+  puts Fiber.current.blocking? # false
+
+  # May invoke `Fiber.scheduler&amp;.io_wait`.
+  io.read(...)
+
+  # May invoke `Fiber.scheduler&amp;.io_wait`.
+  io.write(...)
+
+  # Will invoke `Fiber.scheduler&amp;.kernel_sleep`.
+  sleep(n)
+end.resume
+</code></pre>
+
+<p>We also introduce a new method which simplifies the creation of these non-blocking fibers:</p>
+
+<pre><code>Fiber.schedule do
+  puts Fiber.current.blocking? # false
+end
+</code></pre>
+
+<p>The purpose of this method is to allow the scheduler to internally decide the policy for when to start the fiber, and whether to use symmetric or asymmetric fibers.</p>
+
+<p>You can also create blocking execution contexts:</p>
+
+<pre><code>Fiber.new(blocking: true) do
+  # Won&#39;t use the scheduler:
+  sleep(n)
+end
+</code></pre>
+
+<p>However you should generally avoid this unless you are implementing a scheduler.</p>
+
+<h4 id="label-IO"><a href="../../../classes/IO.html"><code>IO</code></a></h4>
+
+<p>By default, I/O is non-blocking. Not all operating systems support non-blocking I/O. Windows is a notable example where socket I/O can be non-blocking but pipe I/O is blocking. Provided that there <em>is</em> a scheduler and the current thread <em>is non-blocking</em>, the operation will invoke the scheduler.</p>
+
+<h4 id="label-Mutex">Mutex</h4>
+
+<p>The <code>Mutex</code> class can be used in a non-blocking context and is fiber specific.</p>
+
+<h4 id="label-ConditionVariable">ConditionVariable</h4>
+
+<p>The <code>ConditionVariable</code> class can be used in a non-blocking context and is fiber-specific.</p>
+
+<h4 id="label-Queue+-2F+SizedQueue">Queue / SizedQueue</h4>
+
+<p>The <code>Queue</code> and <code>SizedQueue</code> classes can be used in a non-blocking context and are fiber-specific.</p>
+
+<h4 id="label-Thread"><a href="../../../classes/Thread.html"><code>Thread</code></a></h4>
+
+<p>The <code>Thread#join</code> operation can be used in a non-blocking context and is fiber-specific.</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </main>
+  </body>
+</html>

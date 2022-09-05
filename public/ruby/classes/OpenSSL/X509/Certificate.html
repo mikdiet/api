@@ -30,7 +30,7 @@
     <meta property="og:description" content="Implementation of an X.509 certificate as specified in RFC 5280.">
   
 
-    <meta name="keywords" content="OpenSSL::X509::Certificate class, pretty_print, new, initialize_copy, to_der, to_pem, to_text, version, version=, signature_algorithm, serial, serial=, subject, subject=, issuer, issuer=, not_before, not_before=, not_after, not_after=, public_key, public_key=, sign, verify, check_private_key, extensions, extensions=, add_extension, inspect, ==, to_s">
+    <meta name="keywords" content="OpenSSL::X509::Certificate class, pretty_print, load_file, load, new, initialize_copy, to_der, to_pem, to_text, version, version=, signature_algorithm, serial, serial=, subject, subject=, issuer, issuer=, not_before, not_before=, not_after, not_after=, public_key, public_key=, sign, verify, check_private_key, extensions, extensions=, add_extension, inspect, ==, to_s">
 </head>
 
 <body>
@@ -89,7 +89,7 @@
 
 <p><a href="Certificate.html"><code>Certificate</code></a> is capable of handling DER-encoded certificates and certificates encoded in OpenSSL’s PEM format.</p>
 
-<pre><code>raw = File.read &quot;cert.cer&quot; # DER- or PEM-encoded
+<pre><code>raw = File.binread &quot;cert.cer&quot; # DER- or PEM-encoded
 certificate = OpenSSL::X509::Certificate.new raw
 </code></pre>
 
@@ -133,7 +133,7 @@ root_ca.add_extension(ef.create_extension(&quot;basicConstraints&quot;,&quot;CA:
 root_ca.add_extension(ef.create_extension(&quot;keyUsage&quot;,&quot;keyCertSign, cRLSign&quot;, true))
 root_ca.add_extension(ef.create_extension(&quot;subjectKeyIdentifier&quot;,&quot;hash&quot;,false))
 root_ca.add_extension(ef.create_extension(&quot;authorityKeyIdentifier&quot;,&quot;keyid:always&quot;,false))
-root_ca.sign(root_key, OpenSSL::Digest::SHA256.new)
+root_ca.sign(root_key, OpenSSL::Digest.new(&#39;SHA256&#39;))
 </code></pre>
 
 <p>The next step is to create the end-entity certificate using the root CA certificate.</p>
@@ -152,7 +152,7 @@ ef.subject_certificate = cert
 ef.issuer_certificate = root_ca
 cert.add_extension(ef.create_extension(&quot;keyUsage&quot;,&quot;digitalSignature&quot;, true))
 cert.add_extension(ef.create_extension(&quot;subjectKeyIdentifier&quot;,&quot;hash&quot;,false))
-cert.sign(root_key, OpenSSL::Digest::SHA256.new)
+cert.sign(root_key, OpenSSL::Digest.new(&#39;SHA256&#39;))
 </code></pre>
 
     </div>
@@ -249,6 +249,23 @@ cert.sign(root_key, OpenSSL::Digest::SHA256.new)
               
               <li>
                 <a href="#method-i-issuer-3D">issuer=</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>L</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-load">load</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-load_file">load_file</a>
               </li>
             
           </ul>
@@ -398,6 +415,52 @@ cert.sign(root_key, OpenSSL::Digest::SHA256.new)
   
 
   
+    <!-- Includes -->
+    <div class="sectiontitle">Included Modules</div>
+    <ul>
+      
+        <li>
+          
+            <a href="../Marshal.html">
+              OpenSSL::Marshal
+            </a>
+          
+        </li>
+      
+        <li>
+          
+            <a href="Extension/SubjectKeyIdentifier.html">
+              OpenSSL::X509::Extension::SubjectKeyIdentifier
+            </a>
+          
+        </li>
+      
+        <li>
+          
+            <a href="Extension/AuthorityKeyIdentifier.html">
+              OpenSSL::X509::Extension::AuthorityKeyIdentifier
+            </a>
+          
+        </li>
+      
+        <li>
+          
+            <a href="Extension/CRLDistributionPoints.html">
+              OpenSSL::X509::Extension::CRLDistributionPoints
+            </a>
+          
+        </li>
+      
+        <li>
+          
+            <a href="Extension/AuthorityInfoAccess.html">
+              OpenSSL::X509::Extension::AuthorityInfoAccess
+            </a>
+          
+        </li>
+      
+    </ul>
+  
 
 
 
@@ -417,6 +480,92 @@ cert.sign(root_key, OpenSSL::Digest::SHA256.new)
     
       <h2 class="sectiontitle">Class Public methods</h2>
       
+        <div class="method">
+          <h3 class="title method-title" id="method-c-load">
+            
+              <b>OpenSSL::X509::Certificate.load(string) &rarr; [certs...]<br />OpenSSL::X509::Certificate.load(file) &rarr; [certs...]
+</b>
+            
+            <a href="../../../classes/OpenSSL/X509/Certificate.html#method-c-load" name="method-c-load" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Read the chained certificates from the given input. Supports both PEM and DER encoded certificates.</p>
+
+<p>PEM is a text format and supports more than one certificate.</p>
+
+<p>DER is a binary format and only supports one certificate.</p>
+
+<p>If the file is empty, or contains only unrelated data, an <code>OpenSSL::X509::CertificateError</code> exception will be raised.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-load_source')" id="l_method-c-load_source">show</a>
+                
+              </p>
+              <div id="method-c-load_source" class="dyn-source">
+                <pre>static VALUE
+ossl_x509_load(VALUE klass, VALUE buffer)
+{
+    BIO *in = ossl_obj2bio(&amp;buffer);
+
+    return rb_ensure(load_chained_certificates, (VALUE)in, load_chained_certificates_ensure, (VALUE)in);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-load_file">
+            
+              <b>load_file</b>(path)
+            
+            <a href="../../../classes/OpenSSL/X509/Certificate.html#method-c-load_file" name="method-c-load_file" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-load_file_source')" id="l_method-c-load_file_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/x509.rb#L360" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-load_file_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 360</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">load_file</span>(<span class="ruby-identifier">path</span>)
+  <span class="ruby-identifier">load</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">binread</span>(<span class="ruby-identifier">path</span>))
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
@@ -449,24 +598,27 @@ cert.sign(root_key, OpenSSL::Digest::SHA256.new)
 ossl_x509_initialize(int argc, VALUE *argv, VALUE self)
 {
     BIO *in;
-    X509 *x509, *x = DATA_PTR(self);
+    X509 *x509, *x509_orig = RTYPEDDATA_DATA(self);
     VALUE arg;
 
+    rb_check_frozen(self);
     if (rb_scan_args(argc, argv, &quot;01&quot;, &amp;arg) == 0) {
         /* create just empty X509Cert */
         return self;
     }
     arg = ossl_to_der_if_possible(arg);
     in = ossl_obj2bio(&amp;arg);
-    x509 = PEM_read_bio_X509(in, &amp;x, NULL, NULL);
-    DATA_PTR(self) = x;
+    x509 = d2i_X509_bio(in, NULL);
     if (!x509) {
         OSSL_BIO_reset(in);
-        x509 = d2i_X509_bio(in, &amp;x);
-        DATA_PTR(self) = x;
+        x509 = PEM_read_bio_X509(in, NULL, NULL, NULL);
     }
     BIO_free(in);
-    if (!x509) ossl_raise(eX509CertError, NULL);
+    if (!x509)
+        ossl_raise(eX509CertError, &quot;PEM_read_bio_X509&quot;);
+
+    RTYPEDDATA_DATA(self) = x509;
+    X509_free(x509_orig);
 
     return self;
 }</pre>
@@ -1138,11 +1290,11 @@ ossl_x509_set_not_before(VALUE self, VALUE time)
                 Source:
                 <a href="javascript:toggleSource('method-i-pretty_print_source')" id="l_method-i-pretty_print_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/x509.rb#L182" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/x509.rb#L349" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-pretty_print_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 182</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 349</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">pretty_print</span>(<span class="ruby-identifier">q</span>)
   <span class="ruby-identifier">q</span>.<span class="ruby-identifier">object_group</span>(<span class="ruby-keyword">self</span>) {
     <span class="ruby-identifier">q</span>.<span class="ruby-identifier">breakable</span>

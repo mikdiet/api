@@ -30,7 +30,7 @@
     <meta property="og:description" content="The objspace library extends the ObjectSpace module and adds several methods to get internal statistic information about object/memory management.">
   
 
-    <meta name="keywords" content="ObjectSpace class, trace_object_allocations, trace_object_allocations_start, trace_object_allocations_stop, trace_object_allocations_clear, trace_object_allocations_debug_start, allocation_sourcefile, allocation_sourceline, allocation_class_path, allocation_method_id, allocation_generation, memsize_of, memsize_of_all, count_objects_size, count_symbols, count_nodes, count_tdata_objects, count_imemo_objects, reachable_objects_from, reachable_objects_from_root, internal_class_of, internal_super_of, dump, dump_all, each_object, define_finalizer, undefine_finalizer, _id2ref, count_objects, garbage_collect">
+    <meta name="keywords" content="ObjectSpace class, dump, dump_all, trace_object_allocations, trace_object_allocations_start, trace_object_allocations_stop, trace_object_allocations_clear, trace_object_allocations_debug_start, allocation_sourcefile, allocation_sourceline, allocation_class_path, allocation_method_id, allocation_generation, memsize_of, memsize_of_all, count_objects_size, count_symbols, count_nodes, count_tdata_objects, count_imemo_objects, reachable_objects_from, reachable_objects_from_root, internal_class_of, internal_super_of, _dump, _dump_all, each_object, define_finalizer, undefine_finalizer, _id2ref, count_objects, garbage_collect">
 </head>
 
 <body>
@@ -65,6 +65,8 @@
         </h2>
         <ul class="files">
             
+            <li><a href="../files/ruby/ext/objspace/lib/objspace_rb.html">ruby/ext/objspace/lib/objspace.rb</a></li>
+            
             <li><a href="../files/ruby/ext/objspace/object_tracing_c.html">ruby/ext/objspace/object_tracing.c</a></li>
             
             <li><a href="../files/ruby/ext/objspace/objspace_c.html">ruby/ext/objspace/objspace.c</a></li>
@@ -97,15 +99,16 @@
 
 <p>The <a href="ObjectSpace.html"><code>ObjectSpace</code></a> module contains a number of routines that interact with the garbage collection facility and allow you to traverse all living objects with an iterator.</p>
 
-<p><a href="ObjectSpace.html"><code>ObjectSpace</code></a> also provides support for object finalizers, procs that will be called when a specific object is about to be destroyed by garbage collection.</p>
+<p><a href="ObjectSpace.html"><code>ObjectSpace</code></a> also provides support for object finalizers, procs that will be called when a specific object is about to be destroyed by garbage collection. See the documentation for <code>ObjectSpace.define_finalizer</code> for important information on how to use this method correctly.</p>
 
-<pre><code>require &#39;objspace&#39;
-
-a = &quot;A&quot;
+<pre><code>a = &quot;A&quot;
 b = &quot;B&quot;
 
 ObjectSpace.define_finalizer(a, proc {|id| puts &quot;Finalizer one on #{id}&quot; })
 ObjectSpace.define_finalizer(b, proc {|id| puts &quot;Finalizer two on #{id}&quot; })
+
+a = nil
+b = nil
 </code></pre>
 
 <p><em>produces:</em></p>
@@ -152,6 +155,16 @@ Finalizer one on 537763480
         <dt>#</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-c-_dump">_dump</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-_dump_all">_dump_all</a>,
+              </li>
             
               
               <li>
@@ -241,12 +254,12 @@ Finalizer one on 537763480
             
               
               <li>
-                <a href="#method-c-dump">dump</a>,
+                <a href="#method-i-dump">dump</a>,
               </li>
             
               
               <li>
-                <a href="#method-c-dump_all">dump_all</a>
+                <a href="#method-i-dump_all">dump_all</a>
               </li>
             
           </ul>
@@ -394,6 +407,99 @@ Finalizer one on 537763480
     
       <h2 class="sectiontitle">Class Public methods</h2>
       
+        <div class="method">
+          <h3 class="title method-title" id="method-c-_dump">
+            
+              <b>_dump</b>(p1, p2)
+            
+            <a href="../classes/ObjectSpace.html#method-c-_dump" name="method-c-_dump" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-_dump_source')" id="l_method-c-_dump_source">show</a>
+                
+              </p>
+              <div id="method-c-_dump_source" class="dyn-source">
+                <pre>static VALUE
+objspace_dump(VALUE os, VALUE obj, VALUE output)
+{
+    struct dump_config dc = {0,};
+    dump_output(&amp;dc, output, Qnil, Qnil);
+
+    dump_object(obj, &amp;dc);
+
+    return dump_result(&amp;dc);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-_dump_all">
+            
+              <b>_dump_all</b>(p1, p2, p3)
+            
+            <a href="../classes/ObjectSpace.html#method-c-_dump_all" name="method-c-_dump_all" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-_dump_all_source')" id="l_method-c-_dump_all_source">show</a>
+                
+              </p>
+              <div id="method-c-_dump_all_source" class="dyn-source">
+                <pre>static VALUE
+objspace_dump_all(VALUE os, VALUE output, VALUE full, VALUE since)
+{
+    struct dump_config dc = {0,};
+    dump_output(&amp;dc, output, full, since);
+
+    if (!dc.partial_dump || dc.since == 0) {
+        /* dump roots */
+        rb_objspace_reachable_objects_from_root(root_obj_i, &amp;dc);
+        if (dc.roots) dump_append(&amp;dc, &quot;]}\n&quot;);
+    }
+
+    /* dump all objects */
+    rb_objspace_each_objects(heap_i, &amp;dc);
+
+    return dump_result(&amp;dc);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
         <div class="method">
           <h3 class="title method-title" id="method-c-_id2ref">
             
@@ -775,9 +881,12 @@ count_imemo_objects(int argc, VALUE *argv, VALUE self)
         imemo_type_ids[8] = rb_intern(&quot;imemo_tmpbuf&quot;);
         imemo_type_ids[9] = rb_intern(&quot;imemo_ast&quot;);
         imemo_type_ids[10] = rb_intern(&quot;imemo_parser_strterm&quot;);
+        imemo_type_ids[11] = rb_intern(&quot;imemo_callinfo&quot;);
+        imemo_type_ids[12] = rb_intern(&quot;imemo_callcache&quot;);
+        imemo_type_ids[13] = rb_intern(&quot;imemo_constcache&quot;);
     }
 
-    rb_objspace_each_objects(count_imemo_objects_i, (void *)hash);
+    each_object_with_flags(count_imemo_objects_i, (void *)hash);
 
     return hash;
 }</pre>
@@ -839,7 +948,7 @@ count_nodes(int argc, VALUE *argv, VALUE os)
         nodes[i] = 0;
     }
 
-    rb_objspace_each_objects(cn_i, &amp;nodes[0]);
+    each_object_with_flags(cn_i, &amp;nodes[0]);
 
     for (i=0; i&lt;NODE_LAST; i++) {
         if (nodes[i] != 0) {
@@ -873,7 +982,6 @@ count_nodes(int argc, VALUE *argv, VALUE os)
                 COUNT_NODE(NODE_MASGN);
                 COUNT_NODE(NODE_LASGN);
                 COUNT_NODE(NODE_DASGN);
-                COUNT_NODE(NODE_DASGN_CURR);
                 COUNT_NODE(NODE_GASGN);
                 COUNT_NODE(NODE_IASGN);
                 COUNT_NODE(NODE_CDECL);
@@ -949,6 +1057,7 @@ count_nodes(int argc, VALUE *argv, VALUE os)
                 COUNT_NODE(NODE_ATTRASGN);
                 COUNT_NODE(NODE_LAMBDA);
                 COUNT_NODE(NODE_ARYPTN);
+                COUNT_NODE(NODE_FNDPTN);
                 COUNT_NODE(NODE_HSHPTN);
 #undef COUNT_NODE
               case NODE_LAST: break;
@@ -1041,27 +1150,31 @@ count_objects(int argc, VALUE *argv, VALUE os)
 
     for (i = 0; i &lt; heap_allocated_pages; i++) {
         struct heap_page *page = heap_pages_sorted[i];
-        RVALUE *p, *pend;
+        short stride = page-&gt;slot_size;
 
-        p = page-&gt;start; pend = p + page-&gt;total_slots;
-        for (;p &lt; pend; p++) {
-            void *poisoned = asan_poisoned_object_p((VALUE)p);
-            asan_unpoison_object((VALUE)p, false);
-            if (p-&gt;as.basic.flags) {
-                counts[BUILTIN_TYPE(p)]++;
+        uintptr_t p = (uintptr_t)page-&gt;start;
+        uintptr_t pend = p + page-&gt;total_slots * stride;
+        for (;p &lt; pend; p += stride) {
+            VALUE vp = (VALUE)p;
+            GC_ASSERT((NUM_IN_PAGE(vp) * sizeof(RVALUE)) % page-&gt;slot_size == 0);
+
+            void *poisoned = asan_poisoned_object_p(vp);
+            asan_unpoison_object(vp, false);
+            if (RANY(p)-&gt;as.basic.flags) {
+                counts[BUILTIN_TYPE(vp)]++;
             }
             else {
                 freed++;
             }
             if (poisoned) {
-                GC_ASSERT(BUILTIN_TYPE((VALUE)p) == T_NONE);
-                asan_poison_object((VALUE)p);
+                GC_ASSERT(BUILTIN_TYPE(vp) == T_NONE);
+                asan_poison_object(vp);
             }
         }
         total += page-&gt;total_slots;
     }
 
-    if (hash == Qnil) {
+    if (NIL_P(hash)) {
         hash = rb_hash_new();
     }
     else if (!RHASH_EMPTY_P(hash)) {
@@ -1137,7 +1250,7 @@ count_objects_size(int argc, VALUE *argv, VALUE os)
         counts[i] = 0;
     }
 
-    rb_objspace_each_objects(cos_i, &amp;counts[0]);
+    each_object_with_flags(cos_i, &amp;counts[0]);
 
     for (i = 0; i &lt;= T_MASK; i++) {
         if (counts[i]) {
@@ -1206,7 +1319,7 @@ count_symbols(int argc, VALUE *argv, VALUE os)
     VALUE hash = setup_hash(argc, argv);
 
     size_t immortal_symbols = rb_sym_immortal_count();
-    rb_objspace_each_objects(cs_i, &amp;dynamic_counts);
+    each_object_with_flags(cs_i, &amp;dynamic_counts);
 
     rb_hash_aset(hash, ID2SYM(rb_intern(&quot;mortal_dynamic_symbol&quot;)),   SIZET2NUM(dynamic_counts.mortal));
     rb_hash_aset(hash, ID2SYM(rb_intern(&quot;immortal_dynamic_symbol&quot;)), SIZET2NUM(dynamic_counts.immortal));
@@ -1274,7 +1387,7 @@ count_symbols(int argc, VALUE *argv, VALUE os)
 count_tdata_objects(int argc, VALUE *argv, VALUE self)
 {
     VALUE hash = setup_hash(argc, argv);
-    rb_objspace_each_objects(cto_i, (void *)hash);
+    each_object_with_flags(cto_i, (void *)hash);
     return hash;
 }</pre>
               </div>
@@ -1294,6 +1407,53 @@ count_tdata_objects(int argc, VALUE *argv, VALUE self)
           
             <div class="description">
               <p>Adds <em>aProc</em> as a finalizer, to be called after <em>obj</em> was destroyed. The object ID of the <em>obj</em> will be passed as an argument to <em>aProc</em>. If <em>aProc</em> is a lambda or method, make sure it can be called with a single argument.</p>
+
+<p>The return value is an array <code>[0, aProc]</code>.</p>
+
+<p>The two recommended patterns are to either create the finaliser proc in a non-instance method where it can safely capture the needed state, or to use a custom callable object that stores the needed state explicitly as instance variables.</p>
+
+<pre><code>class Foo
+  def initialize(data_needed_for_finalization)
+    ObjectSpace.define_finalizer(self, self.class.create_finalizer(data_needed_for_finalization))
+  end
+
+  def self.create_finalizer(data_needed_for_finalization)
+    proc {
+      puts &quot;finalizing #{data_needed_for_finalization}&quot;
+    }
+  end
+end
+
+class Bar
+ class Remover
+    def initialize(data_needed_for_finalization)
+      @data_needed_for_finalization = data_needed_for_finalization
+    end
+
+    def call(id)
+      puts &quot;finalizing #{@data_needed_for_finalization}&quot;
+    end
+  end
+
+  def initialize(data_needed_for_finalization)
+    ObjectSpace.define_finalizer(self, Remover.new(data_needed_for_finalization))
+  end
+end
+</code></pre>
+
+<p>Note that if your finalizer references the object to be finalized it will never be run on <a href="GC.html"><code>GC</code></a>, although it will still be run at exit. You will get a warning if you capture the object to be finalized as the receiver of the finalizer.</p>
+
+<pre><code>class CapturesSelf
+  def initialize(name)
+    ObjectSpace.define_finalizer(self, proc {
+      # this finalizer will only be run on exit
+      puts &quot;finalizing #{name}&quot;
+    })
+  end
+end
+</code></pre>
+
+<p>Also note that finalization can be unpredictable and is never guaranteed to be run except on exit.</p>
             </div>
           
 
@@ -1325,114 +1485,11 @@ define_final(int argc, VALUE *argv, VALUE os)
         should_be_callable(block);
     }
 
+    if (rb_callable_receiver(block) == obj) {
+        rb_warn(&quot;finalizer references object to be finalized&quot;);
+    }
+
     return define_final0(obj, block);
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-c-dump">
-            
-              <b>ObjectSpace.dump(obj[, output: :string]) # => "{ ... }"<br />ObjectSpace.dump(obj, output: :file)     # => #<File:/tmp/rubyobj20131125-88733-1xkfmpv.json><br />ObjectSpace.dump(obj, output: :stdout)   # => nil
-</b>
-            
-            <a href="../classes/ObjectSpace.html#method-c-dump" name="method-c-dump" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Dump the contents of a ruby object as <a href="JSON.html"><code>JSON</code></a>.</p>
-
-<p>This method is only expected to work with C Ruby. This is an experimental method and is subject to change. In particular, the function signature and output format are not guaranteed to be compatible in future versions of ruby.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-c-dump_source')" id="l_method-c-dump_source">show</a>
-                
-              </p>
-              <div id="method-c-dump_source" class="dyn-source">
-                <pre>static VALUE
-objspace_dump(int argc, VALUE *argv, VALUE os)
-{
-    static const char filename[] = &quot;rubyobj&quot;;
-    VALUE obj = Qnil, opts = Qnil, output;
-    struct dump_config dc = {0,};
-
-    rb_scan_args(argc, argv, &quot;1:&quot;, &amp;obj, &amp;opts);
-
-    output = dump_output(&amp;dc, opts, sym_string, filename);
-
-    dump_object(obj, &amp;dc);
-
-    return dump_result(&amp;dc, output);
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-c-dump_all">
-            
-              <b>ObjectSpace.dump_all([output: :file]) # => #<File:/tmp/rubyheap20131125-88469-laoj3v.json><br />ObjectSpace.dump_all(output: :stdout) # => nil<br />ObjectSpace.dump_all(output: :string) # => "{...}\n{...}\n..."<br />ObjectSpace.dump_all(output:<br />File.open('heap.json','w'))         # => #<File:heap.json>
-</b>
-            
-            <a href="../classes/ObjectSpace.html#method-c-dump_all" name="method-c-dump_all" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Dump the contents of the ruby heap as <a href="JSON.html"><code>JSON</code></a>.</p>
-
-<p>This method is only expected to work with C Ruby. This is an experimental method and is subject to change. In particular, the function signature and output format are not guaranteed to be compatible in future versions of ruby.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-c-dump_all_source')" id="l_method-c-dump_all_source">show</a>
-                
-              </p>
-              <div id="method-c-dump_all_source" class="dyn-source">
-                <pre>static VALUE
-objspace_dump_all(int argc, VALUE *argv, VALUE os)
-{
-    static const char filename[] = &quot;rubyheap&quot;;
-    VALUE opts = Qnil, output;
-    struct dump_config dc = {0,};
-
-    rb_scan_args(argc, argv, &quot;0:&quot;, &amp;opts);
-
-    output = dump_output(&amp;dc, opts, sym_file, filename);
-
-    /* dump roots */
-    rb_objspace_reachable_objects_from_root(root_obj_i, &amp;dc);
-    if (dc.roots) dump_append(&amp;dc, &quot;]}\n&quot;);
-
-    /* dump all objects */
-    rb_objspace_each_objects(heap_i, &amp;dc);
-
-    return dump_result(&amp;dc, output);
 }</pre>
               </div>
             </div>
@@ -1529,13 +1586,13 @@ os_each_obj(int argc, VALUE *argv, VALUE os)
                 Source:
                 <a href="javascript:toggleSource('method-c-garbage_collect_source')" id="l_method-c-garbage_collect_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/gc.rb#L164" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L306" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-garbage_collect_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 164</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 306</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">garbage_collect</span> <span class="ruby-value">full_mark:</span> <span class="ruby-keyword">true</span>, <span class="ruby-value">immediate_mark:</span> <span class="ruby-keyword">true</span>, <span class="ruby-value">immediate_sweep:</span> <span class="ruby-keyword">true</span>
-  <span class="ruby-identifier">__builtin_gc_start_internal</span> <span class="ruby-identifier">full_mark</span>, <span class="ruby-identifier">immediate_mark</span>, <span class="ruby-identifier">immediate_sweep</span>
+  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_start_internal</span> <span class="ruby-identifier">full_mark</span>, <span class="ruby-identifier">immediate_mark</span>, <span class="ruby-identifier">immediate_sweep</span>, <span class="ruby-keyword">false</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1587,8 +1644,13 @@ objspace_internal_class_of(VALUE self, VALUE obj)
         obj = (VALUE)DATA_PTR(obj);
     }
 
-    klass = CLASS_OF(obj);
-    return wrap_klass_iow(klass);
+    if (RB_TYPE_P(obj, T_IMEMO)) {
+        return Qnil;
+    }
+    else {
+        klass = CLASS_OF(obj);
+        return wrap_klass_iow(klass);
+    }
 }</pre>
               </div>
             </div>
@@ -1668,7 +1730,7 @@ objspace_internal_super_of(VALUE self, VALUE obj)
 
           
             <div class="description">
-              <p>Return consuming memory size of obj.</p>
+              <p>Return consuming memory size of obj in bytes.</p>
 
 <p>Note that the return size is incomplete.  You need to deal with this information as only a <strong>HINT</strong>. Especially, the size of <code>T_DATA</code> may not be correct.</p>
 
@@ -1713,7 +1775,7 @@ memsize_of_m(VALUE self, VALUE obj)
 
           
             <div class="description">
-              <p>Return consuming memory size of all living objects.</p>
+              <p>Return consuming memory size of all living objects in bytes.</p>
 
 <p>If <code>klass</code> (should be <a href="Class.html"><code>Class</code></a> object) is given, return the total memory size of instances of the given class.</p>
 
@@ -1759,7 +1821,7 @@ memsize_of_all_m(int argc, VALUE *argv, VALUE self)
         rb_scan_args(argc, argv, &quot;01&quot;, &amp;data.klass);
     }
 
-    rb_objspace_each_objects(total_i, &amp;data);
+    each_object_with_flags(total_i, &amp;data);
     return SIZET2NUM(data.total);
 }</pre>
               </div>
@@ -1832,20 +1894,18 @@ ObjectSpace.reachable_objects_from(1)
 reachable_objects_from(VALUE self, VALUE obj)
 {
     if (rb_objspace_markable_object_p(obj)) {
-        VALUE ret = rb_ary_new();
         struct rof_data data;
 
         if (rb_typeddata_is_kind_of(obj, &amp;iow_data_type)) {
             obj = (VALUE)DATA_PTR(obj);
         }
 
-        data.refs = st_init_numtable();
+        data.refs = rb_ident_hash_new();
         data.internals = rb_ary_new();
 
         rb_objspace_reachable_objects_from(obj, reachable_object_from_i, &amp;data);
 
-        st_foreach(data.refs, collect_values, (st_data_t)ret);
-        return ret;
+        return rb_funcall(data.refs, rb_intern(&quot;values&quot;), 0);
     }
     else {
         return Qnil;
@@ -2100,9 +2160,7 @@ trace_object_allocations_start(VALUE self)
     else {
         if (arg-&gt;newobj_trace == 0) {
             arg-&gt;newobj_trace = rb_tracepoint_new(0, RUBY_INTERNAL_EVENT_NEWOBJ, newobj_i, arg);
-            rb_gc_register_mark_object(arg-&gt;newobj_trace);
             arg-&gt;freeobj_trace = rb_tracepoint_new(0, RUBY_INTERNAL_EVENT_FREEOBJ, freeobj_i, arg);
-            rb_gc_register_mark_object(arg-&gt;freeobj_trace);
         }
         rb_tracepoint_enable(arg-&gt;newobj_trace);
         rb_tracepoint_enable(arg-&gt;freeobj_trace);
@@ -2156,8 +2214,12 @@ trace_object_allocations_stop(VALUE self)
     }
 
     if (arg-&gt;running == 0) {
-        rb_tracepoint_disable(arg-&gt;newobj_trace);
-        rb_tracepoint_disable(arg-&gt;freeobj_trace);
+        if (arg-&gt;newobj_trace != 0) {
+            rb_tracepoint_disable(arg-&gt;newobj_trace);
+        }
+        if (arg-&gt;freeobj_trace != 0) {
+            rb_tracepoint_disable(arg-&gt;freeobj_trace);
+        }
     }
 
     return Qnil;
@@ -2208,6 +2270,133 @@ undefine_final(VALUE os, VALUE obj)
         
       
     
+      <h2 class="sectiontitle">Instance Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-i-dump">
+            
+              <b>ObjectSpace.dump(obj[, output: :string]) # => "{ ... }"<br />ObjectSpace.dump(obj, output: :file)     # => #<File:/tmp/rubyobj20131125-88733-1xkfmpv.json><br />ObjectSpace.dump(obj, output: :stdout)   # => nil
+</b>
+            
+            <a href="../classes/ObjectSpace.html#method-i-dump" name="method-i-dump" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Dump the contents of a ruby object as <a href="JSON.html"><code>JSON</code></a>.</p>
+
+<p>This method is only expected to work with C Ruby. This is an experimental method and is subject to change. In particular, the function signature and output format are not guaranteed to be compatible in future versions of ruby.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-dump_source')" id="l_method-i-dump_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/objspace/lib/objspace.rb#L24" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-dump_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/ext/objspace/lib/objspace.rb, line 24</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">dump</span>(<span class="ruby-identifier">obj</span>, <span class="ruby-value">output:</span> <span class="ruby-value">:string</span>)
+  <span class="ruby-identifier">out</span> = <span class="ruby-keyword">case</span> <span class="ruby-identifier">output</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-value">:file</span>, <span class="ruby-keyword">nil</span>
+    <span class="ruby-identifier">require</span> <span class="ruby-string">&#39;tempfile&#39;</span>
+    <span class="ruby-constant">Tempfile</span>.<span class="ruby-identifier">create</span>(<span class="ruby-node">%w(rubyobj .json)</span>)
+  <span class="ruby-keyword">when</span> <span class="ruby-value">:stdout</span>
+    <span class="ruby-constant">STDOUT</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-value">:string</span>
+    <span class="ruby-string">+&#39;&#39;</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-constant">IO</span>
+    <span class="ruby-identifier">output</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;wrong output option: #{output.inspect}&quot;</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">ret</span> = <span class="ruby-identifier">_dump</span>(<span class="ruby-identifier">obj</span>, <span class="ruby-identifier">out</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">output</span> <span class="ruby-operator">==</span> <span class="ruby-value">:stdout</span>
+  <span class="ruby-identifier">ret</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-dump_all">
+            
+              <b>ObjectSpace.dump_all([output: :file]) # => #<File:/tmp/rubyheap20131125-88469-laoj3v.json><br />ObjectSpace.dump_all(output: :stdout) # => nil<br />ObjectSpace.dump_all(output: :string) # => "{...}\n{...}\n..."<br />ObjectSpace.dump_all(output:<br />File.open('heap.json','w'))         # => #<File:heap.json><br />ObjectSpace.dump_all(output: :string,<br />since: 42)                          # => "{...}\n{...}\n..."
+</b>
+            
+            <a href="../classes/ObjectSpace.html#method-i-dump_all" name="method-i-dump_all" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Dump the contents of the ruby heap as <a href="JSON.html"><code>JSON</code></a>.</p>
+
+<p><em>since</em> must be a non-negative integer or <code>nil</code>.</p>
+
+<p>If <em>since</em> is a positive integer, only objects of that generation and newer generations are dumped. The current generation can be accessed using <a href="GC.html#method-c-count"><code>GC::count</code></a>.</p>
+
+<p>Objects that were allocated without object allocation tracing enabled are ignored. See <a href="ObjectSpace.html#method-c-trace_object_allocations"><code>::trace_object_allocations</code></a> for more information and examples.</p>
+
+<p>If <em>since</em> is omitted or is <code>nil</code>, all objects are dumped.</p>
+
+<p>This method is only expected to work with C Ruby. This is an experimental method and is subject to change. In particular, the function signature and output format are not guaranteed to be compatible in future versions of ruby.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-dump_all_source')" id="l_method-i-dump_all_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/objspace/lib/objspace.rb#L72" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-dump_all_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/ext/objspace/lib/objspace.rb, line 72</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">dump_all</span>(<span class="ruby-value">output:</span> <span class="ruby-value">:file</span>, <span class="ruby-value">full:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">since:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-identifier">out</span> = <span class="ruby-keyword">case</span> <span class="ruby-identifier">output</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-value">:file</span>, <span class="ruby-keyword">nil</span>
+    <span class="ruby-identifier">require</span> <span class="ruby-string">&#39;tempfile&#39;</span>
+    <span class="ruby-constant">Tempfile</span>.<span class="ruby-identifier">create</span>(<span class="ruby-node">%w(rubyheap .json)</span>)
+  <span class="ruby-keyword">when</span> <span class="ruby-value">:stdout</span>
+    <span class="ruby-constant">STDOUT</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-value">:string</span>
+    <span class="ruby-string">+&#39;&#39;</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-constant">IO</span>
+    <span class="ruby-identifier">output</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;wrong output option: #{output.inspect}&quot;</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">ret</span> = <span class="ruby-identifier">_dump_all</span>(<span class="ruby-identifier">out</span>, <span class="ruby-identifier">full</span>, <span class="ruby-identifier">since</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">output</span> <span class="ruby-operator">==</span> <span class="ruby-value">:stdout</span>
+  <span class="ruby-identifier">ret</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
     
   
 </div>

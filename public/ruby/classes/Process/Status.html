@@ -30,7 +30,7 @@
     <meta property="og:description" content="Process::Status encapsulates the information on the status of a running or terminated system process. The built-in variable $? is either nil or a Process::Status object.">
   
 
-    <meta name="keywords" content="Process::Status class, ==, &, >>, to_i, to_s, inspect, pid, stopped?, stopsig, signaled?, termsig, exited?, exitstatus, success?, coredump?">
+    <meta name="keywords" content="Process::Status class, wait, ==, &, >>, to_i, to_s, inspect, pid, stopped?, stopsig, signaled?, termsig, exited?, exitstatus, success?, coredump?">
 </head>
 
 <body>
@@ -238,6 +238,18 @@ $?.exitstatus      #=&gt; 99
           </ul>
         </dd>
       
+        <dt>W</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-wait">wait</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
     </dl>
   
 
@@ -259,6 +271,94 @@ $?.exitstatus      #=&gt; 99
 
     <!-- Methods -->
     
+      <h2 class="sectiontitle">Class Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-c-wait">
+            
+              <b>Process::Status.wait(pid=-1, flags=0)      &rarr; Process::Status
+</b>
+            
+            <a href="../../classes/Process/Status.html#method-c-wait" name="method-c-wait" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Waits for a child process to exit and returns a <a href="Status.html"><code>Process::Status</code></a> object containing information on that process. Which child it waits on depends on the value of <em>pid</em>:</p>
+<dl class="rdoc-list note-list"><dt>&gt; 0
+<dd>
+<p>Waits for the child whose process ID equals <em>pid</em>.</p>
+</dd><dt>0
+<dd>
+<p>Waits for any child whose process group ID equals that of the calling process.</p>
+</dd><dt>-1
+<dd>
+<p>Waits for any child process (the default if no <em>pid</em> is given).</p>
+</dd><dt>&lt; -1
+<dd>
+<p>Waits for any child whose process group ID equals the absolute value of <em>pid</em>.</p>
+</dd></dl>
+
+<p>The <em>flags</em> argument may be a logical or of the flag values Process::WNOHANG (do not block if no child available) or Process::WUNTRACED (return stopped children that haven’t been reported). Not all flags are available on all platforms, but a flag value of zero will work on all platforms.</p>
+
+<p>Returns <code>nil</code> if there are no child processes. Not available on all platforms.</p>
+
+<p>May invoke the scheduler hook <em>process_wait</em>.</p>
+
+<pre><code>fork { exit 99 }                              #=&gt; 27429
+Process::Status.wait                          #=&gt; pid 27429 exit 99
+$?                                            #=&gt; nil
+
+pid = fork { sleep 3 }                        #=&gt; 27440
+Time.now                                      #=&gt; 2008-03-08 19:56:16 +0900
+Process::Status.wait(pid, Process::WNOHANG)   #=&gt; nil
+Time.now                                      #=&gt; 2008-03-08 19:56:16 +0900
+Process::Status.wait(pid, 0)                  #=&gt; pid 27440 exit 99
+Time.now                                      #=&gt; 2008-03-08 19:56:19 +0900
+</code></pre>
+
+<p>This is an EXPERIMENTAL FEATURE.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-wait_source')" id="l_method-c-wait_source">show</a>
+                
+              </p>
+              <div id="method-c-wait_source" class="dyn-source">
+                <pre>VALUE
+rb_process_status_waitv(int argc, VALUE *argv, VALUE _)
+{
+    rb_check_arity(argc, 0, 2);
+
+    rb_pid_t pid = -1;
+    int flags = 0;
+
+    if (argc &gt;= 1) {
+        pid = NUM2PIDT(argv[0]);
+    }
+
+    if (argc &gt;= 2) {
+        flags = RB_NUM2INT(argv[1]);
+    }
+
+    return rb_process_status_wait(pid, flags);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
     
       <h2 class="sectiontitle">Instance Public methods</h2>
       
@@ -431,10 +531,7 @@ pst_wcoredump(VALUE st)
 #ifdef WCOREDUMP
     int status = PST2INT(st);
 
-    if (WCOREDUMP(status))
-        return Qtrue;
-    else
-        return Qfalse;
+    return RBOOL(WCOREDUMP(status));
 #else
     return Qfalse;
 #endif
@@ -478,10 +575,7 @@ pst_wifexited(VALUE st)
 {
     int status = PST2INT(st);
 
-    if (WIFEXITED(status))
-        return Qtrue;
-    else
-        return Qfalse;
+    return RBOOL(WIFEXITED(status));
 }</pre>
               </div>
             </div>
@@ -580,13 +674,12 @@ pst_inspect(VALUE st)
 {
     rb_pid_t pid;
     int status;
-    VALUE vpid, str;
+    VALUE str;
 
-    vpid = pst_pid(st);
-    if (NIL_P(vpid)) {
+    pid = pst_pid(st);
+    if (!pid) {
         return rb_sprintf(&quot;#&lt;%s: uninitialized&gt;&quot;, rb_class2name(CLASS_OF(st)));
     }
-    pid = NUM2PIDT(vpid);
     status = PST2INT(st);
 
     str = rb_sprintf(&quot;#&lt;%s: &quot;, rb_class2name(CLASS_OF(st)));
@@ -634,9 +727,10 @@ $?.pid          #=&gt; 26569
               </p>
               <div id="method-i-pid_source" class="dyn-source">
                 <pre>static VALUE
-pst_pid(VALUE st)
+pst_pid_m(VALUE self)
 {
-    return rb_attr_get(st, id_pid);
+    rb_pid_t pid = pst_pid(self);
+    return PIDT2NUM(pid);
 }</pre>
               </div>
             </div>
@@ -677,10 +771,7 @@ pst_wifsignaled(VALUE st)
 {
     int status = PST2INT(st);
 
-    if (WIFSIGNALED(status))
-        return Qtrue;
-    else
-        return Qfalse;
+    return RBOOL(WIFSIGNALED(status));
 }</pre>
               </div>
             </div>
@@ -721,10 +812,7 @@ pst_wifstopped(VALUE st)
 {
     int status = PST2INT(st);
 
-    if (WIFSTOPPED(status))
-        return Qtrue;
-    else
-        return Qfalse;
+    return RBOOL(WIFSTOPPED(status));
 }</pre>
               </div>
             </div>
@@ -810,7 +898,7 @@ pst_success_p(VALUE st)
 
     if (!WIFEXITED(status))
         return Qnil;
-    return WEXITSTATUS(status) == EXIT_SUCCESS ? Qtrue : Qfalse;
+    return RBOOL(WEXITSTATUS(status) == EXIT_SUCCESS);
 }</pre>
               </div>
             </div>
@@ -871,7 +959,7 @@ pst_wtermsig(VALUE st)
 
           
             <div class="description">
-              <p>Returns the bits in <em>stat</em> as a <a href="../Integer.html"><code>Integer</code></a>. Poking around in these bits is platform dependent.</p>
+              <p>Returns the bits in <em>stat</em> as an <a href="../Integer.html"><code>Integer</code></a>. Poking around in these bits is platform dependent.</p>
 
 <pre><code>fork { exit 0xab }         #=&gt; 26566
 Process.wait               #=&gt; 26566
@@ -895,9 +983,10 @@ sprintf(&#39;%04x&#39;, $?.to_i)   #=&gt; &quot;ab00&quot;
               </p>
               <div id="method-i-to_i_source" class="dyn-source">
                 <pre>static VALUE
-pst_to_i(VALUE st)
+pst_to_i(VALUE self)
 {
-    return rb_ivar_get(st, id_status);
+    int status = pst_status(self);
+    return RB_INT2NUM(status);
 }</pre>
               </div>
             </div>
@@ -944,7 +1033,7 @@ pst_to_s(VALUE st)
     int status;
     VALUE str;
 
-    pid = NUM2PIDT(pst_pid(st));
+    pid = pst_pid(st);
     status = PST2INT(st);
 
     str = rb_str_buf_new(0);

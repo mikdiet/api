@@ -252,10 +252,6 @@ thgroup_add(VALUE group, VALUE thread)
         rb_raise(rb_eThreadError, &quot;can&#39;t move to the enclosed thread group&quot;);
     }
 
-    if (!target_th-&gt;thgroup) {
-        return Qnil;
-    }
-
     if (OBJ_FROZEN(target_th-&gt;thgroup)) {
         rb_raise(rb_eThreadError, &quot;can&#39;t move from the frozen thread group&quot;);
     }
@@ -361,9 +357,7 @@ thgroup_enclosed_p(VALUE group)
     struct thgroup *data;
 
     TypedData_Get_Struct(group, struct thgroup, &amp;thgroup_data_type, data);
-    if (data-&gt;enclosed)
-        return Qtrue;
-    return Qfalse;
+    return RBOOL(data-&gt;enclosed);
 }</pre>
               </div>
             </div>
@@ -406,10 +400,10 @@ thgroup_enclosed_p(VALUE group)
 thgroup_list(VALUE group)
 {
     VALUE ary = rb_ary_new();
-    rb_vm_t *vm = GET_THREAD()-&gt;vm;
     rb_thread_t *th = 0;
+    rb_ractor_t *r = GET_RACTOR();
 
-    list_for_each(&amp;vm-&gt;living_threads, th, vmlt_node) {
+    list_for_each(&amp;r-&gt;threads.set, th, lt_node) {
         if (th-&gt;thgroup == group) {
             rb_ary_push(ary, th-&gt;self);
         }

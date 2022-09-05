@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>OpenSSL::Timestamp</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+
+<meta name="data-rel-prefix" content="/">
+<meta name="data-tree-keys" content='["OpenSSL", "Timestamp"]'>
+
+
+    <meta property="og:title" value="OpenSSL::Timestamp">
+
+  
+    
+    <meta name="description" content="Provides classes and methods to request, create and validate RFC3161-compliant timestamps.">
+    <meta property="og:description" content="Provides classes and methods to request, create and validate RFC3161-compliant timestamps.">
+  
+
+    <meta name="keywords" content="OpenSSL::Timestamp class, ">
+</head>
+
+<body>
+    <a class="sr-only sr-only-focusable" href="#content" data-turbolinks="false">Skip to Content</a>
+    <a class="sr-only sr-only-focusable" href="#search" data-turbolinks="false">Skip to Search</a>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<nav class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search (/) for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</nav>
+
+
+    <div class="banner">
+        
+        <h2>
+            <span class="type">Module</span>
+            OpenSSL::Timestamp
+            
+        </h2>
+        <ul class="files">
+            
+            <li><a href="../../files/ruby/ext/openssl/ossl_c.html">ruby/ext/openssl/ossl.c</a></li>
+            
+        </ul>
+    </div>
+
+    <main id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>Provides classes and methods to request, create and validate <a href="http://www.ietf.org/rfc/rfc3161.txt">RFC3161-compliant</a> timestamps. <a href="Timestamp/Request.html"><code>Request</code></a> may be used to either create requests from scratch or to parse existing requests that again can be used to request timestamps from a timestamp server, e.g. via the net/http. The resulting timestamp response may be parsed using <a href="Timestamp/Response.html"><code>Response</code></a>.</p>
+
+<p>Please note that <a href="Timestamp/Response.html"><code>Response</code></a> is read-only and immutable. To create a <a href="Timestamp/Response.html"><code>Response</code></a>, an instance of <a href="Timestamp/Factory.html"><code>Factory</code></a> as well as a valid <a href="Timestamp/Request.html"><code>Request</code></a> are needed.</p>
+
+<h3 id="module-OpenSSL::Timestamp-label-Create+a+Response-3A">Create a Response:</h3>
+
+<pre><code>#Assumes ts.p12 is a PKCS#12-compatible file with a private key
+#and a certificate that has an extended key usage of &#39;timeStamping&#39;
+p12 = OpenSSL::PKCS12.new(File.binread(&#39;ts.p12&#39;), &#39;pwd&#39;)
+md = OpenSSL::Digest.new(&#39;SHA1&#39;)
+hash = md.digest(data) #some binary data to be timestamped
+req = OpenSSL::Timestamp::Request.new
+req.algorithm = &#39;SHA1&#39;
+req.message_imprint = hash
+req.policy_id = &quot;1.2.3.4.5&quot;
+req.nonce = 42
+fac = OpenSSL::Timestamp::Factory.new
+fac.gen_time = Time.now
+fac.serial_number = 1
+timestamp = fac.create_timestamp(p12.key, p12.certificate, req)
+</code></pre>
+
+<h3 id="module-OpenSSL::Timestamp-label-Verify+a+timestamp+response-3A">Verify a timestamp response:</h3>
+
+<pre><code>#Assume we have a timestamp token in a file called ts.der
+ts = OpenSSL::Timestamp::Response.new(File.binread(&#39;ts.der&#39;))
+#Assume we have the Request for this token in a file called req.der
+req = OpenSSL::Timestamp::Request.new(File.binread(&#39;req.der&#39;))
+# Assume the associated root CA certificate is contained in a
+# DER-encoded file named root.cer
+root = OpenSSL::X509::Certificate.new(File.binread(&#39;root.cer&#39;))
+# get the necessary intermediate certificates, available in
+# DER-encoded form in inter1.cer and inter2.cer
+inter1 = OpenSSL::X509::Certificate.new(File.binread(&#39;inter1.cer&#39;))
+inter2 = OpenSSL::X509::Certificate.new(File.binread(&#39;inter2.cer&#39;))
+ts.verify(req, root, inter1, inter2) -&gt; ts or raises an exception if validation fails
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+    <!-- Namespace -->
+    <div class="sectiontitle">Namespace</div>
+    <ul>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Timestamp/Factory.html">OpenSSL::Timestamp::Factory</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Timestamp/Request.html">OpenSSL::Timestamp::Request</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Timestamp/Response.html">OpenSSL::Timestamp::Response</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Timestamp/TimestampError.html">OpenSSL::Timestamp::TimestampError</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Timestamp/TokenInfo.html">OpenSSL::Timestamp::TokenInfo</a>
+        </li>
+      
+    </ul>
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </main>
+  </body>
+</html>

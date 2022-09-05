@@ -30,7 +30,7 @@
     <meta property="og:description" content="Enumerator::Lazy is a special type of Enumerator, that allows constructing chains of operations without evaluating them immediately, and evaluating values on as-needed basis.">
   
 
-    <meta name="keywords" content="Enumerator::Lazy class, new, to_enum, enum_for, eager, map, collect, flat_map, collect_concat, select, find_all, filter, filter_map, reject, grep, grep_v, zip, take, take_while, drop, drop_while, lazy, chunk, slice_before, slice_after, slice_when, chunk_while, uniq, with_index, to_a, _enumerable_map, _enumerable_collect, _enumerable_flat_map, _enumerable_collect_concat, _enumerable_select, _enumerable_find_all, _enumerable_filter, _enumerable_filter_map, _enumerable_reject, _enumerable_grep, _enumerable_grep_v, _enumerable_zip, _enumerable_take, _enumerable_take_while, _enumerable_drop, _enumerable_drop_while, _enumerable_uniq, force">
+    <meta name="keywords" content="Enumerator::Lazy class, new, to_enum, enum_for, eager, map, collect, flat_map, collect_concat, select, find_all, filter, filter_map, reject, grep, grep_v, zip, take, take_while, drop, drop_while, lazy, chunk, slice_before, slice_after, slice_when, chunk_while, uniq, compact, with_index, to_a, _enumerable_map, _enumerable_collect, _enumerable_flat_map, _enumerable_collect_concat, _enumerable_select, _enumerable_find_all, _enumerable_filter, _enumerable_filter_map, _enumerable_reject, _enumerable_grep, _enumerable_grep_v, _enumerable_zip, _enumerable_take, _enumerable_take_while, _enumerable_drop, _enumerable_drop_while, _enumerable_uniq, force">
 </head>
 
 <body>
@@ -112,13 +112,13 @@ lazy.force
 
 # This will fetch all URLs before selecting
 # necessary data
-URLS.map { |u| JSON.parse(open(u).read) }
+URLS.map { |u| JSON.parse(URI.open(u).read) }
   .select { |data| data.key?(&#39;stats&#39;) }
   .first(5)
 
 # This will fetch URLs one-by-one, only till
 # there is enough data to satisfy the condition
-URLS.lazy.map { |u| JSON.parse(open(u).read) }
+URLS.lazy.map { |u| JSON.parse(URI.open(u).read) }
   .select { |data| data.key?(&#39;stats&#39;) }
   .first(5)
 </code></pre>
@@ -273,7 +273,12 @@ all_checked = active_items.select(&amp;:checked)
             
               
               <li>
-                <a href="#method-i-collect_concat">collect_concat</a>
+                <a href="#method-i-collect_concat">collect_concat</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-compact">compact</a>
               </li>
             
           </ul>
@@ -1217,6 +1222,45 @@ lazy_super(int argc, VALUE *argv, VALUE lazy)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-compact">
+            
+              <b>lazy.compact                  &rarr; lazy_enumerator
+</b>
+            
+            <a href="../../classes/Enumerator/Lazy.html#method-i-compact" name="method-i-compact" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="../Enumerable.html#method-i-compact"><code>Enumerable#compact</code></a>, but chains operation to be lazy-evaluated.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-compact_source')" id="l_method-i-compact_source">show</a>
+                
+              </p>
+              <div id="method-i-compact_source" class="dyn-source">
+                <pre>static VALUE
+lazy_compact(VALUE obj)
+{
+    return lazy_add_method(obj, 0, 0, Qnil, Qnil, &amp;lazy_compact_funcs);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-drop">
             
               <b>lazy.drop(n)               &rarr; lazy_enumerator</b>
@@ -1554,9 +1598,7 @@ lazy_flat_map(VALUE obj)
         rb_raise(rb_eArgError, &quot;tried to call lazy flat_map without a block&quot;);
     }
 
-    return lazy_set_method(rb_block_call(rb_cLazy, id_new, 1, &amp;obj,
-                                         lazy_flat_map_proc, 0),
-                           Qnil, 0);
+    return lazy_add_method(obj, 0, 0, Qnil, Qnil, &amp;lazy_flat_map_funcs);
 }</pre>
               </div>
             </div>
@@ -2132,7 +2174,7 @@ lazy_to_enum(int argc, VALUE *argv, VALUE self)
     if (RTEST((super_meth = rb_hash_aref(lazy_use_super_method, meth)))) {
         meth = super_meth;
     }
-    lazy = lazy_to_enum_i(self, meth, argc, argv, 0, PASS_KW_SPLAT);
+    lazy = lazy_to_enum_i(self, meth, argc, argv, 0, rb_keyword_given_p());
     if (rb_block_given_p()) {
         enumerator_ptr(lazy)-&gt;size = rb_block_proc();
     }
@@ -2198,7 +2240,7 @@ lazy_uniq(VALUE obj)
 
           
             <div class="description">
-              <p>If a block is given, iterates the given block for each element with an index, which starts from <code>offset</code>, and returns a lazy enumerator that yields the same values (without the index).</p>
+              <p>If a block is given, returns a lazy enumerator that will iterate over the given block for each element with an index, which starts from <code>offset</code>, and returns a lazy enumerator that yields the same values (without the index).</p>
 
 <p>If a block is not given, returns a new lazy enumerator that includes the index, starting from <code>offset</code>.</p>
 <dl class="rdoc-list note-list"><dt><code>offset</code>
@@ -2277,7 +2319,7 @@ lazy_zip(int argc, VALUE *argv, VALUE obj)
 {
     VALUE ary, v;
     long i;
-    rb_block_call_func *func = lazy_zip_arrays_func;
+    const lazyenum_funcs *funcs = &amp;lazy_zip_funcs[1];
 
     if (rb_block_given_p()) {
         return rb_call_super(argc, argv);
@@ -2294,15 +2336,13 @@ lazy_zip(int argc, VALUE *argv, VALUE obj)
                 }
             }
             ary = rb_ary_new4(argc, argv);
-            func = lazy_zip_func;
+            funcs = &amp;lazy_zip_funcs[0];
             break;
         }
         rb_ary_push(ary, v);
     }
 
-    return lazy_set_method(rb_block_call(rb_cLazy, id_new, 1, &amp;obj,
-                                         func, ary),
-                           ary, lazy_receiver_size);
+    return lazy_add_method(obj, 0, 0, ary, ary, funcs);
 }</pre>
               </div>
             </div>

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>OpenSSL::Timestamp::Factory</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+
+<meta name="data-rel-prefix" content="/">
+<meta name="data-tree-keys" content='["OpenSSL", "Timestamp", "Factory"]'>
+
+
+    <meta property="og:title" value="OpenSSL::Timestamp::Factory">
+
+  
+    
+    <meta name="description" content="Used to generate a Response from scratch.">
+    <meta property="og:description" content="Used to generate a Response from scratch.">
+  
+
+    <meta name="keywords" content="OpenSSL::Timestamp::Factory class, create_timestamp">
+</head>
+
+<body>
+    <a class="sr-only sr-only-focusable" href="#content" data-turbolinks="false">Skip to Content</a>
+    <a class="sr-only sr-only-focusable" href="#search" data-turbolinks="false">Skip to Search</a>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<nav class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search (/) for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</nav>
+
+
+    <div class="banner">
+        
+        <h2>
+            <span class="type">Class</span>
+            OpenSSL::Timestamp::Factory
+            
+                <span class="parent">&lt;
+                    
+                    <a href="../../Object.html">Object</a>
+                    
+                </span>
+            
+        </h2>
+        <ul class="files">
+            
+            <li><a href="../../../files/ruby/ext/openssl/ossl_ts_c.html">ruby/ext/openssl/ossl_ts.c</a></li>
+            
+        </ul>
+    </div>
+
+    <main id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>Used to generate a <a href="Response.html"><code>Response</code></a> from scratch.</p>
+
+<p>Please bear in mind that the implementation will always apply and prefer the policy object identifier given in the request over the default policy id specified in the <a href="Factory.html"><code>Factory</code></a>. As a consequence, <code>default_policy_id</code> will only be applied if no <a href="Request.html#method-i-policy_id"><code>Request#policy_id</code></a> was given. But this also means that one needs to check the policy identifier in the request manually before creating the <a href="Response.html"><code>Response</code></a>, e.g. to check whether it complies to a specific set of acceptable policies.</p>
+
+<p>There exists also the possibility to add certificates (instances of <a href="../X509/Certificate.html"><code>OpenSSL::X509::Certificate</code></a>) besides the timestamping certificate that will be included in the resulting timestamp token if <a href="Request.html#method-i-cert_requested-3F"><code>Request#cert_requested?</code></a> is <code>true</code>. Ideally, one would also include any intermediate certificates (the root certificate can be left out - in order to trust it any verifying party will have to be in its possession anyway). This simplifies validation of the timestamp since these intermediate certificates are “already there” and need not be passed as external parameters to <a href="Response.html#method-i-verify"><code>Response#verify</code></a> anymore, thus minimizing external resources needed for verification.</p>
+
+<h3 id="class-OpenSSL::Timestamp::Factory-label-Example-3A+Inclusion+of+-28untrusted-29+intermediate+certificates">Example: Inclusion of (untrusted) intermediate certificates</h3>
+
+<p>Assume we received a timestamp request that has set <a href="Request.html#method-i-policy_id"><code>Request#policy_id</code></a> to <code>nil</code> and <a href="Request.html#method-i-cert_requested-3F"><code>Request#cert_requested?</code></a> to true. The raw request bytes are stored in a variable called <code>req_raw</code>. We’d still like to integrate the necessary intermediate certificates (in <code>inter1.cer</code> and <code>inter2.cer</code>) to simplify validation of the resulting <a href="Response.html"><code>Response</code></a>. <code>ts.p12</code> is a PKCS#12-compatible file including the private key and the timestamping certificate.</p>
+
+<pre><code>req = OpenSSL::Timestamp::Request.new(raw_bytes)
+p12 = OpenSSL::PKCS12.new(File.binread(&#39;ts.p12&#39;), &#39;pwd&#39;)
+inter1 = OpenSSL::X509::Certificate.new(File.binread(&#39;inter1.cer&#39;))
+inter2 = OpenSSL::X509::Certificate.new(File.binread(&#39;inter2.cer&#39;))
+fac = OpenSSL::Timestamp::Factory.new
+fac.gen_time = Time.now
+fac.serial_number = 1
+fac.allowed_digests = [&quot;sha256&quot;, &quot;sha384&quot;, &quot;sha512&quot;]
+#needed because the Request contained no policy identifier
+fac.default_policy_id = &#39;1.2.3.4.5&#39;
+fac.additional_certificates = [ inter1, inter2 ]
+timestamp = fac.create_timestamp(p12.key, p12.certificate, req)
+</code></pre>
+
+<h2 id="class-OpenSSL::Timestamp::Factory-label-Attributes">Attributes</h2>
+
+<h3 id="class-OpenSSL::Timestamp::Factory-label-default_policy_id"><a href="Factory.html#attribute-i-default_policy_id"><code>default_policy_id</code></a></h3>
+
+<p><a href="Request.html#method-i-policy_id"><code>Request#policy_id</code></a> will always be preferred over this if present in the <a href="Request.html"><code>Request</code></a>, only if <a href="Request.html#method-i-policy_id"><code>Request#policy_id</code></a> is nil default_policy will be used. If none of both is present, a <a href="TimestampError.html"><code>TimestampError</code></a> will be raised when trying to create a <a href="Response.html"><code>Response</code></a>.</p>
+
+<p>call-seq:</p>
+
+<pre><code>factory.default_policy_id = &quot;string&quot; -&gt; string
+factory.default_policy_id            -&gt; string or nil
+</code></pre>
+
+<h3 id="class-OpenSSL::Timestamp::Factory-label-serial_number"><a href="Factory.html#attribute-i-serial_number"><code>serial_number</code></a></h3>
+
+<p>Sets or retrieves the serial number to be used for timestamp creation. Must be present for timestamp creation.</p>
+
+<p>call-seq:</p>
+
+<pre><code>factory.serial_number = number -&gt; number
+factory.serial_number          -&gt; number or nil
+</code></pre>
+
+<h3 id="class-OpenSSL::Timestamp::Factory-label-gen_time"><a href="Factory.html#attribute-i-gen_time"><code>gen_time</code></a></h3>
+
+<p>Sets or retrieves the <a href="../../Time.html"><code>Time</code></a> value to be used in the <a href="Response.html"><code>Response</code></a>. Must be present for timestamp creation.</p>
+
+<p>call-seq:</p>
+
+<pre><code>factory.gen_time = Time -&gt; Time
+factory.gen_time        -&gt; Time or nil
+</code></pre>
+
+<h3 id="class-OpenSSL::Timestamp::Factory-label-additional_certs"><a href="Factory.html#attribute-i-additional_certs"><code>additional_certs</code></a></h3>
+
+<p>Sets or retrieves additional certificates apart from the timestamp certificate (e.g. intermediate certificates) to be added to the <a href="Response.html"><code>Response</code></a>. Must be an <a href="../../Array.html"><code>Array</code></a> of <a href="../X509/Certificate.html"><code>OpenSSL::X509::Certificate</code></a>.</p>
+
+<p>call-seq:</p>
+
+<pre><code>factory.additional_certs = [cert1, cert2] -&gt; [ cert1, cert2 ]
+factory.additional_certs                  -&gt; array or nil
+</code></pre>
+
+<h3 id="class-OpenSSL::Timestamp::Factory-label-allowed_digests"><a href="Factory.html#attribute-i-allowed_digests"><code>allowed_digests</code></a></h3>
+
+<p>Sets or retrieves the digest algorithms that the factory is allowed create timestamps for. Known vulnerable or weak algorithms should not be allowed where possible. Must be an <a href="../../Array.html"><code>Array</code></a> of <a href="../../String.html"><code>String</code></a> or <a href="../Digest.html"><code>OpenSSL::Digest</code></a> subclass instances.</p>
+
+<p>call-seq:</p>
+
+<pre><code>factory.allowed_digests = [&quot;sha1&quot;, OpenSSL::Digest.new(&#39;SHA256&#39;).new] -&gt; [ &quot;sha1&quot;, OpenSSL::Digest) ]
+factory.allowed_digests                                               -&gt; array or nil
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>C</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-create_timestamp">create_timestamp</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+      <!-- Section attributes -->
+      <h2 class="sectiontitle">Attributes</h2>
+      <table border='0' cellpadding='5'>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [RW]
+            </td>
+            <td class='attr-name'>additional_certs</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [RW]
+            </td>
+            <td class='attr-name'>allowed_digests</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [RW]
+            </td>
+            <td class='attr-name'>default_policy_id</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [RW]
+            </td>
+            <td class='attr-name'>gen_time</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [RW]
+            </td>
+            <td class='attr-name'>serial_number</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+      </table>
+    
+
+
+    <!-- Methods -->
+    
+    
+      <h2 class="sectiontitle">Instance Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-i-create_timestamp">
+            
+              <b>factory.create_timestamp(key, certificate, request) &rarr; Response</b>
+            
+            <a href="../../../classes/OpenSSL/Timestamp/Factory.html#method-i-create_timestamp" name="method-i-create_timestamp" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Creates a <a href="Response.html"><code>Response</code></a> with the help of an <a href="../PKey.html"><code>OpenSSL::PKey</code></a>, an <a href="../X509/Certificate.html"><code>OpenSSL::X509::Certificate</code></a> and a <a href="Request.html"><code>Request</code></a>.</p>
+
+<p>Mandatory parameters for timestamp creation that need to be set in the Request:</p>
+<ul><li>
+<p><a href="Request.html#method-i-algorithm"><code>Request#algorithm</code></a></p>
+</li><li>
+<p><a href="Request.html#method-i-message_imprint"><code>Request#message_imprint</code></a></p>
+</li></ul>
+
+<p>Mandatory parameters that need to be set in the Factory:</p>
+<ul><li>
+<p><a href="Factory.html#attribute-i-serial_number"><code>Factory#serial_number</code></a></p>
+</li><li>
+<p><a href="Factory.html#attribute-i-gen_time"><code>Factory#gen_time</code></a></p>
+</li><li>
+<p><a href="Factory.html#attribute-i-allowed_digests"><code>Factory#allowed_digests</code></a></p>
+</li></ul>
+
+<p>In addition one of either <a href="Request.html#method-i-policy_id"><code>Request#policy_id</code></a> or <a href="Factory.html#attribute-i-default_policy_id"><code>Factory#default_policy_id</code></a> must be set.</p>
+
+<p>Raises a <a href="TimestampError.html"><code>TimestampError</code></a> if creation fails, though successfully created error responses may be returned.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-create_timestamp_source')" id="l_method-i-create_timestamp_source">show</a>
+                
+              </p>
+              <div id="method-i-create_timestamp_source" class="dyn-source">
+                <pre>static VALUE
+ossl_tsfac_create_ts(VALUE self, VALUE key, VALUE certificate, VALUE request)
+{
+    VALUE serial_number, def_policy_id, gen_time, additional_certs, allowed_digests;
+    VALUE str;
+    STACK_OF(X509) *inter_certs;
+    VALUE tsresp, ret = Qnil;
+    EVP_PKEY *sign_key;
+    X509 *tsa_cert;
+    TS_REQ *req;
+    TS_RESP *response = NULL;
+    TS_RESP_CTX *ctx = NULL;
+    BIO *req_bio;
+    ASN1_INTEGER *asn1_serial = NULL;
+    ASN1_OBJECT *def_policy_id_obj = NULL;
+    long lgen_time;
+    const char * err_msg = NULL;
+    int status = 0;
+
+    tsresp = NewTSResponse(cTimestampResponse);
+    tsa_cert = GetX509CertPtr(certificate);
+    sign_key = GetPrivPKeyPtr(key);
+    GetTSRequest(request, req);
+
+    gen_time = ossl_tsfac_get_gen_time(self);
+    if (!rb_obj_is_instance_of(gen_time, rb_cTime)) {
+        err_msg = &quot;@gen_time must be a Time.&quot;;
+        goto end;
+    }
+    lgen_time = NUM2LONG(rb_funcall(gen_time, rb_intern(&quot;to_i&quot;), 0));
+
+    serial_number = ossl_tsfac_get_serial_number(self);
+    if (NIL_P(serial_number)) {
+        err_msg = &quot;@serial_number must be set.&quot;;
+        goto end;
+    }
+    asn1_serial = num_to_asn1integer(serial_number, NULL);
+
+    def_policy_id = ossl_tsfac_get_default_policy_id(self);
+    if (NIL_P(def_policy_id) &amp;&amp; !TS_REQ_get_policy_id(req)) {
+        err_msg = &quot;No policy id in the request and no default policy set&quot;;
+        goto end;
+    }
+    if (!NIL_P(def_policy_id) &amp;&amp; !TS_REQ_get_policy_id(req)) {
+        def_policy_id_obj = (ASN1_OBJECT*)rb_protect(obj_to_asn1obj_i, (VALUE)def_policy_id, &amp;status);
+        if (status)
+            goto end;
+    }
+
+    if (!(ctx = TS_RESP_CTX_new())) {
+        err_msg = &quot;Memory allocation failed.&quot;;
+        goto end;
+    }
+
+    TS_RESP_CTX_set_serial_cb(ctx, ossl_tsfac_serial_cb, &amp;asn1_serial);
+    if (!TS_RESP_CTX_set_signer_cert(ctx, tsa_cert)) {
+        err_msg = &quot;Certificate does not contain the timestamping extension&quot;;
+        goto end;
+    }
+
+    additional_certs = ossl_tsfac_get_additional_certs(self);
+    if (rb_obj_is_kind_of(additional_certs, rb_cArray)) {
+        inter_certs = ossl_protect_x509_ary2sk(additional_certs, &amp;status);
+        if (status)
+                goto end;
+
+        /* this dups the sk_X509 and ups each cert&#39;s ref count */
+        TS_RESP_CTX_set_certs(ctx, inter_certs);
+        sk_X509_pop_free(inter_certs, X509_free);
+    }
+
+    TS_RESP_CTX_set_signer_key(ctx, sign_key);
+    if (!NIL_P(def_policy_id) &amp;&amp; !TS_REQ_get_policy_id(req))
+        TS_RESP_CTX_set_def_policy(ctx, def_policy_id_obj);
+    if (TS_REQ_get_policy_id(req))
+        TS_RESP_CTX_set_def_policy(ctx, TS_REQ_get_policy_id(req));
+    TS_RESP_CTX_set_time_cb(ctx, ossl_tsfac_time_cb, &amp;lgen_time);
+
+    allowed_digests = ossl_tsfac_get_allowed_digests(self);
+    if (rb_obj_is_kind_of(allowed_digests, rb_cArray)) {
+        int i;
+        VALUE rbmd;
+        const EVP_MD *md;
+
+        for (i = 0; i &lt; RARRAY_LEN(allowed_digests); i++) {
+            rbmd = rb_ary_entry(allowed_digests, i);
+            md = (const EVP_MD *)rb_protect(ossl_evp_get_digestbyname_i, rbmd, &amp;status);
+            if (status)
+                goto end;
+            TS_RESP_CTX_add_md(ctx, md);
+        }
+    }
+
+    str = rb_protect(ossl_to_der, request, &amp;status);
+    if (status)
+        goto end;
+
+    req_bio = (BIO*)rb_protect(ossl_obj2bio_i, (VALUE)&amp;str, &amp;status);
+    if (status)
+        goto end;
+
+    response = TS_RESP_create_response(ctx, req_bio);
+    BIO_free(req_bio);
+
+    if (!response) {
+        err_msg = &quot;Error during response generation&quot;;
+        goto end;
+    }
+
+    /* bad responses aren&#39;t exceptional, but openssl still sets error
+     * information. */
+    ossl_clear_error();
+
+    SetTSResponse(tsresp, response);
+    ret = tsresp;
+
+end:
+    ASN1_INTEGER_free(asn1_serial);
+    ASN1_OBJECT_free(def_policy_id_obj);
+    TS_RESP_CTX_free(ctx);
+    if (err_msg)
+        rb_exc_raise(ossl_make_error(eTimestampError, rb_str_new_cstr(err_msg)));
+    if (status)
+        rb_jump_tag(status);
+    return ret;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
+    
+  
+</div>
+
+    </main>
+  </body>
+</html>

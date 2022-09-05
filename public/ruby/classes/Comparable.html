@@ -103,6 +103,44 @@ s4.between?(s3, s5)           #=&gt; true
 [ s3, s2, s5, s4, s1 ].sort   #=&gt; [Z, YY, XXX, WWWW, VVVVV]
 </code></pre>
 
+<h2 id="module-Comparable-label-What-27s+Here">What’s Here</h2>
+
+<p>Module Comparable provides these methods, all of which use method <code>&lt;=&gt;</code>:</p>
+<ul><li><dl class="rdoc-list note-list"><dt><a href="#method-i-3C"><</a>
+<dd>
+<p>Returns whether <code>self</code> is less than the given object.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="#method-i-3C-3D"><=</a>
+<dd>
+<p>Returns whether <code>self</code> is less than or equal to the given object.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="#method-i-3D-3D">==</a>
+<dd>
+<p>Returns whether <code>self</code> is equal to the given object.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="#method-i-3E">></a>
+<dd>
+<p>Returns whether <code>self</code> is greater than or equal to the given object.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="#method-i-3E-3D">>=</a>
+<dd>
+<p>Returns whether <code>self</code> is greater than the given object.</p>
+</dd></dl>
+</li><li>
+<p><a href="Comparable.html#method-i-between-3F"><code>between?</code></a> Returns <code>true</code> if <code>self</code> is between two given objects.</p>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Comparable.html#method-i-clamp"><code>clamp</code></a>
+<dd>
+<p>For given objects <code>min</code> and <code>max</code>, or range <code>(min..max)</code>, returns:</p>
+</dd></dl>
+<ul><li>
+<p><code>min</code> if <code>(self &lt;=&gt; min) &lt; 0</code>.</p>
+</li><li>
+<p><code>max</code> if <code>(self &lt;=&gt; max) &gt; 0</code>.</p>
+</li><li>
+<p><code>self</code> otherwise.</p>
+</li></ul>
+</li></ul>
+
     </div>
   
 
@@ -234,8 +272,7 @@ s4.between?(s3, s5)           #=&gt; true
                 <pre>static VALUE
 cmp_lt(VALUE x, VALUE y)
 {
-    if (cmpint(x, y) &lt; 0) return Qtrue;
-    return Qfalse;
+    return RBOOL(cmpint(x, y) &lt; 0);
 }</pre>
               </div>
             </div>
@@ -274,8 +311,7 @@ cmp_lt(VALUE x, VALUE y)
                 <pre>static VALUE
 cmp_le(VALUE x, VALUE y)
 {
-    if (cmpint(x, y) &lt;= 0) return Qtrue;
-    return Qfalse;
+    return RBOOL(cmpint(x, y) &lt;= 0);
 }</pre>
               </div>
             </div>
@@ -320,8 +356,7 @@ cmp_equal(VALUE x, VALUE y)
     c = rb_exec_recursive_paired_outer(cmp_eq_recursive, x, y, y);
 
     if (NIL_P(c)) return Qfalse;
-    if (rb_cmpint(c, x, y) == 0) return Qtrue;
-    return Qfalse;
+    return RBOOL(rb_cmpint(c, x, y) == 0);
 }</pre>
               </div>
             </div>
@@ -360,8 +395,7 @@ cmp_equal(VALUE x, VALUE y)
                 <pre>static VALUE
 cmp_gt(VALUE x, VALUE y)
 {
-    if (cmpint(x, y) &gt; 0) return Qtrue;
-    return Qfalse;
+    return RBOOL(cmpint(x, y) &gt; 0);
 }</pre>
               </div>
             </div>
@@ -400,8 +434,7 @@ cmp_gt(VALUE x, VALUE y)
                 <pre>static VALUE
 cmp_ge(VALUE x, VALUE y)
 {
-    if (cmpint(x, y) &gt;= 0) return Qtrue;
-    return Qfalse;
+    return RBOOL(cmpint(x, y) &gt;= 0);
 }</pre>
               </div>
             </div>
@@ -527,11 +560,9 @@ cmp_clamp(int argc, VALUE *argv, VALUE x)
         }
         if (!NIL_P(max)) {
             if (excl) rb_raise(rb_eArgError, &quot;cannot clamp with an exclusive range&quot;);
-            if (!NIL_P(min) &amp;&amp; cmpint(min, max) &gt; 0) goto arg_error;
         }
     }
-    else if (cmpint(min, max) &gt; 0) {
-      arg_error:
+    if (!NIL_P(min) &amp;&amp; !NIL_P(max) &amp;&amp; cmpint(min, max) &gt; 0) {
         rb_raise(rb_eArgError, &quot;min argument must be smaller than max argument&quot;);
     }
 

@@ -288,6 +288,28 @@
   
 
   
+    <!-- Includes -->
+    <div class="sectiontitle">Included Modules</div>
+    <ul>
+      
+        <li>
+          
+            <a href="../Marshal.html">
+              OpenSSL::Marshal
+            </a>
+          
+        </li>
+      
+        <li>
+          
+            <a href="Extension/AuthorityKeyIdentifier.html">
+              OpenSSL::X509::Extension::AuthorityKeyIdentifier
+            </a>
+          
+        </li>
+      
+    </ul>
+  
 
 
 
@@ -339,23 +361,26 @@
 ossl_x509crl_initialize(int argc, VALUE *argv, VALUE self)
 {
     BIO *in;
-    X509_CRL *crl, *x = DATA_PTR(self);
+    X509_CRL *crl, *crl_orig = RTYPEDDATA_DATA(self);
     VALUE arg;
 
+    rb_check_frozen(self);
     if (rb_scan_args(argc, argv, &quot;01&quot;, &amp;arg) == 0) {
         return self;
     }
     arg = ossl_to_der_if_possible(arg);
     in = ossl_obj2bio(&amp;arg);
-    crl = PEM_read_bio_X509_CRL(in, &amp;x, NULL, NULL);
-    DATA_PTR(self) = x;
+    crl = d2i_X509_CRL_bio(in, NULL);
     if (!crl) {
         OSSL_BIO_reset(in);
-        crl = d2i_X509_CRL_bio(in, &amp;x);
-        DATA_PTR(self) = x;
+        crl = PEM_read_bio_X509_CRL(in, NULL, NULL, NULL);
     }
     BIO_free(in);
-    if (!crl) ossl_raise(eX509CRLError, NULL);
+    if (!crl)
+        ossl_raise(eX509CRLError, &quot;PEM_read_bio_X509_CRL&quot;);
+
+    RTYPEDDATA_DATA(self) = crl;
+    X509_CRL_free(crl_orig);
 
     return self;
 }</pre>
@@ -394,11 +419,11 @@ ossl_x509crl_initialize(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-3D-3D_source')" id="l_method-i-3D-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/x509.rb#L195" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/x509.rb#L369" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3D-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 195</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 369</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">==</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span> <span class="ruby-keyword">unless</span> <span class="ruby-constant">CRL</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
   <span class="ruby-identifier">to_der</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">to_der</span>

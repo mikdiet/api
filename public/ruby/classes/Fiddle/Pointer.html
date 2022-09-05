@@ -30,7 +30,7 @@
     <meta property="og:description" content="Fiddle::Pointer is a class to handle C pointers.">
   
 
-    <meta name="keywords" content="Fiddle::Pointer class, malloc, to_ptr, [], new, free=, free, to_i, to_int, to_value, ptr, +@, ref, -@, null?, to_s, to_str, inspect, <=>, ==, eql?, +, -, [], []=, size, size=">
+    <meta name="keywords" content="Fiddle::Pointer class, malloc, to_ptr, [], new, free=, free, call_free, freed?, to_i, to_int, to_value, ptr, +@, ref, -@, null?, to_s, to_str, inspect, <=>, ==, eql?, +, -, [], []=, size, size=">
 </head>
 
 <body>
@@ -138,17 +138,29 @@
             
               
               <li>
-                <a href="#method-c-5B-5D">[]</a>,
-              </li>
-            
-              
-              <li>
                 <a href="#method-i-5B-5D">[]</a>,
               </li>
             
               
               <li>
+                <a href="#method-c-5B-5D">[]</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-5B-5D-3D">[]=</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>C</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-call_free">call_free</a>
               </li>
             
           </ul>
@@ -177,7 +189,12 @@
             
               
               <li>
-                <a href="#method-i-free-3D">free=</a>
+                <a href="#method-i-free-3D">free=</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-freed-3F">freed?</a>
               </li>
             
           </ul>
@@ -368,6 +385,7 @@ rb_fiddle_ptr_s_to_ptr(VALUE self, VALUE val)
     }
     else if (RTEST(rb_obj_is_kind_of(val, rb_cString))){
         char *str = StringValuePtr(val);
+        wrap = val;
         ptr = rb_fiddle_ptr_new(str, RSTRING_LEN(val), NULL);
     }
     else if ((vptr = rb_check_funcall(val, id_to_ptr, 0, 0)) != Qundef){
@@ -376,7 +394,7 @@ rb_fiddle_ptr_s_to_ptr(VALUE self, VALUE val)
             wrap = 0;
         }
         else{
-            rb_raise(rb_eFiddleError, &quot;to_ptr should return a Fiddle::Pointer object&quot;);
+            rb_raise(rb_eFiddleDLError, &quot;to_ptr should return a Fiddle::Pointer object&quot;);
         }
     }
     else{
@@ -395,7 +413,7 @@ rb_fiddle_ptr_s_to_ptr(VALUE self, VALUE val)
         <div class="method">
           <h3 class="title method-title" id="method-c-malloc">
             
-              <b>Fiddle::Pointer.malloc(size, freefunc = nil)  => fiddle pointer instance
+              <b>Fiddle::Pointer.malloc(size, freefunc = nil)  => fiddle pointer instance<br />Fiddle::Pointer.malloc(size, freefunc) { |pointer| ... } => ...
 </b>
             
             <a href="../../classes/Fiddle/Pointer.html#method-c-malloc" name="method-c-malloc" class="permalink">Link</a>
@@ -403,9 +421,40 @@ rb_fiddle_ptr_s_to_ptr(VALUE self, VALUE val)
 
           
             <div class="description">
-              <p>Allocate <code>size</code> bytes of memory and associate it with an optional <code>freefunc</code> that will be called when the pointer is garbage collected.</p>
+              <h2 id="method-c-malloc-label-Examples">Examples</h2>
 
-<p><code>freefunc</code> must be an address pointing to a function or an instance of <a href="Function.html"><code>Fiddle::Function</code></a></p>
+<pre><code># Automatically freeing the pointer when the block is exited - recommended
+Fiddle::Pointer.malloc(size, Fiddle::RUBY_FREE) do |pointer|
+  ...
+end
+
+# Manually freeing but relying on the garbage collector otherwise
+pointer = Fiddle::Pointer.malloc(size, Fiddle::RUBY_FREE)
+...
+pointer.call_free
+
+# Relying on the garbage collector - may lead to unlimited memory allocated before freeing any, but safe
+pointer = Fiddle::Pointer.malloc(size, Fiddle::RUBY_FREE)
+...
+
+# Only manually freeing
+pointer = Fiddle::Pointer.malloc(size)
+begin
+  ...
+ensure
+  Fiddle.free pointer
+end
+
+# No free function and no call to free - the native memory will leak if the pointer is garbage collected
+pointer = Fiddle::Pointer.malloc(size)
+...
+</code></pre>
+
+<p>Allocate <code>size</code> bytes of memory and associate it with an optional <code>freefunc</code>.</p>
+
+<p>If a block is supplied, the pointer will be yielded to the block instead of being returned, and the return value of the block will be returned. A <code>freefunc</code> must be supplied if a block is.</p>
+
+<p>If a <code>freefunc</code> is supplied it will be called once, when the pointer is garbage collected or when the block is left if a block is supplied or when the user calls <code>call_free</code>, whichever happens first. <code>freefunc</code> must be an address pointing to a function or an instance of <code>Fiddle::Function</code>.</p>
             </div>
           
 
@@ -443,10 +492,17 @@ rb_fiddle_ptr_s_malloc(int argc, VALUE argv[], VALUE klass)
         rb_bug(&quot;rb_fiddle_ptr_s_malloc&quot;);
     }
 
-    obj = rb_fiddle_ptr_malloc(s,f);
+    obj = rb_fiddle_ptr_malloc(klass, s,f);
     if (wrap) RPTR_DATA(obj)-&gt;wrap[1] = wrap;
 
-    return obj;
+    if (rb_block_given_p()) {
+        if (!f) {
+            rb_raise(rb_eArgError, &quot;a free function must be supplied to Fiddle::Pointer.malloc when it is called with a block&quot;);
+        }
+        return rb_ensure(rb_yield, obj, rb_fiddle_ptr_call_free, obj);
+    } else {
+        return obj;
+    }
 }</pre>
               </div>
             </div>
@@ -568,6 +624,7 @@ rb_fiddle_ptr_s_to_ptr(VALUE self, VALUE val)
     }
     else if (RTEST(rb_obj_is_kind_of(val, rb_cString))){
         char *str = StringValuePtr(val);
+        wrap = val;
         ptr = rb_fiddle_ptr_new(str, RSTRING_LEN(val), NULL);
     }
     else if ((vptr = rb_check_funcall(val, id_to_ptr, 0, 0)) != Qundef){
@@ -576,7 +633,7 @@ rb_fiddle_ptr_s_to_ptr(VALUE self, VALUE val)
             wrap = 0;
         }
         else{
-            rb_raise(rb_eFiddleError, &quot;to_ptr should return a Fiddle::Pointer object&quot;);
+            rb_raise(rb_eFiddleDLError, &quot;to_ptr should return a Fiddle::Pointer object&quot;);
         }
     }
     else{
@@ -879,7 +936,7 @@ rb_fiddle_ptr_aref(int argc, VALUE argv[], VALUE self)
     struct ptr_data *data;
 
     TypedData_Get_Struct(self, struct ptr_data, &amp;fiddle_ptr_data_type, data);
-    if (!data-&gt;ptr) rb_raise(rb_eFiddleError, &quot;NULL pointer dereference&quot;);
+    if (!data-&gt;ptr) rb_raise(rb_eFiddleDLError, &quot;NULL pointer dereference&quot;);
     switch( rb_scan_args(argc, argv, &quot;11&quot;, &amp;arg0, &amp;arg1) ){
       case 1:
         offset = NUM2ULONG(arg0);
@@ -941,7 +998,7 @@ rb_fiddle_ptr_aset(int argc, VALUE argv[], VALUE self)
     struct ptr_data *data;
 
     TypedData_Get_Struct(self, struct ptr_data, &amp;fiddle_ptr_data_type, data);
-    if (!data-&gt;ptr) rb_raise(rb_eFiddleError, &quot;NULL pointer dereference&quot;);
+    if (!data-&gt;ptr) rb_raise(rb_eFiddleDLError, &quot;NULL pointer dereference&quot;);
     switch( rb_scan_args(argc, argv, &quot;21&quot;, &amp;arg0, &amp;arg1, &amp;arg2) ){
       case 2:
         offset = NUM2ULONG(arg0);
@@ -967,6 +1024,48 @@ rb_fiddle_ptr_aset(int argc, VALUE argv[], VALUE self)
         rb_bug(&quot;rb_fiddle_ptr_aset()&quot;);
     }
     return retval;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-call_free">
+            
+              <b>call_free => nil
+</b>
+            
+            <a href="../../classes/Fiddle/Pointer.html#method-i-call_free" name="method-i-call_free" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Call the free function for this pointer. Calling more than once will do nothing. Does nothing if there is no free function attached.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-call_free_source')" id="l_method-i-call_free_source">show</a>
+                
+              </p>
+              <div id="method-i-call_free_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiddle_ptr_call_free(VALUE self)
+{
+    struct ptr_data *pdata;
+    TypedData_Get_Struct(self, struct ptr_data, &amp;fiddle_ptr_data_type, pdata);
+    fiddle_ptr_free_ptr(pdata);
+    return Qnil;
 }</pre>
               </div>
             </div>
@@ -1094,6 +1193,47 @@ rb_fiddle_ptr_free_set(VALUE self, VALUE val)
     data-&gt;free = get_freefunc(val, &amp;data-&gt;wrap[1]);
 
     return Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-freed-3F">
+            
+              <b>freed? => bool
+</b>
+            
+            <a href="../../classes/Fiddle/Pointer.html#method-i-freed-3F" name="method-i-freed-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns if the free function for this pointer has been called.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-freed-3F_source')" id="l_method-i-freed-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-freed-3F_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiddle_ptr_freed_p(VALUE self)
+{
+    struct ptr_data *pdata;
+    TypedData_Get_Struct(self, struct ptr_data, &amp;fiddle_ptr_data_type, pdata);
+    return pdata-&gt;freed ? Qtrue : Qfalse;
 }</pre>
               </div>
             </div>

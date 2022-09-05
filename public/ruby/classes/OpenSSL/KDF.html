@@ -106,7 +106,7 @@ key = OpenSSL::KDF.pbkdf2_hmac(pass, salt: salt, iterations: iter,
 # store this with the generated value
 salt = OpenSSL::Random.random_bytes(16)
 iter = 20_000
-hash = OpenSSL::Digest::SHA256.new
+hash = OpenSSL::Digest.new(&#39;SHA256&#39;)
 len = hash.digest_length
 # the final value to be stored
 value = OpenSSL::KDF.pbkdf2_hmac(pass, salt: salt, iterations: iter,
@@ -115,22 +115,7 @@ value = OpenSSL::KDF.pbkdf2_hmac(pass, salt: salt, iterations: iter,
 
 <h2 id="module-OpenSSL::KDF-label-Important+Note+on+Checking+Passwords">Important Note on Checking Passwords</h2>
 
-<p>When comparing passwords provided by the user with previously stored values, a common mistake made is comparing the two values using “==”. Typically, “==” short-circuits on evaluation, and is therefore vulnerable to timing attacks. The proper way is to use a method that always takes the same amount of time when comparing two values, thus not leaking any information to potential attackers. To compare two values, the following could be used:</p>
-
-<pre><code>def eql_time_cmp(a, b)
-  unless a.length == b.length
-    return false
-  end
-  cmp = b.bytes
-  result = 0
-  a.bytes.each_with_index {|c,i|
-    result |= c ^ cmp[i]
-  }
-  result == 0
-end
-</code></pre>
-
-<p>Please note that the premature return in case of differing lengths typically does not leak valuable information - when using PBKDF2, the length of the values to be compared is of fixed size.</p>
+<p>When comparing passwords provided by the user with previously stored values, a common mistake made is comparing the two values using “==”. Typically, “==” short-circuits on evaluation, and is therefore vulnerable to timing attacks. The proper way is to use a method that always takes the same amount of time when comparing two values, thus not leaking any information to potential attackers. To do this, use <code>OpenSSL.fixed_length_secure_compare</code>.</p>
 
     </div>
   
@@ -253,6 +238,16 @@ end
 <dd>
 <p>The hash function.</p>
 </dd></dl>
+
+<h3 id="method-c-hkdf-label-Example">Example</h3>
+
+<pre><code># The values from https://datatracker.ietf.org/doc/html/rfc5869#appendix-A.1
+ikm = [&quot;0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b&quot;].pack(&quot;H*&quot;)
+salt = [&quot;000102030405060708090a0b0c&quot;].pack(&quot;H*&quot;)
+info = [&quot;f0f1f2f3f4f5f6f7f8f9&quot;].pack(&quot;H*&quot;)
+p OpenSSL::KDF.hkdf(ikm, salt: salt, info: info, length: 42, hash: &quot;SHA256&quot;).unpack1(&quot;H*&quot;)
+# =&gt; &quot;3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865&quot;
+</code></pre>
             </div>
           
 

@@ -97,28 +97,31 @@ argv #=&gt; [&quot;three&quot;, &quot;blind&quot;, &quot;mice&quot;]
 argv #=&gt; [&quot;see&quot;, &quot;how&quot;, &quot;they&quot;, &quot;run&quot;]
 </code></pre>
 
-<p>Be careful you don’t leave a quote unmatched.</p>
+<p>They treat quotes as special characters, so an unmatched quote will cause an <a href="ArgumentError.html"><code>ArgumentError</code></a>.</p>
 
 <pre><code>argv = &quot;they all ran after the farmer&#39;s wife&quot;.shellsplit
-     #=&gt; ArgumentError: Unmatched double quote: ...
+     #=&gt; ArgumentError: Unmatched quote: ...
 </code></pre>
 
-<p>In this case, you might want to use <a href="Shellwords.html#method-c-escape"><code>Shellwords.escape</code></a>, or its alias <a href="String.html#method-i-shellescape"><code>String#shellescape</code></a>.</p>
+<p><a href="Shellwords.html"><code>Shellwords</code></a> also provides methods that do the opposite. <a href="Shellwords.html#method-c-escape"><code>Shellwords.escape</code></a>, or its alias, <a href="String.html#method-i-shellescape"><code>String#shellescape</code></a>, escapes shell metacharacters in a string for use in a command line.</p>
 
-<p>This method will escape the <a href="String.html"><code>String</code></a> for you to safely use with a Bourne shell.</p>
+<pre><code>filename = &quot;special&#39;s.txt&quot;
 
-<pre><code>argv = Shellwords.escape(&quot;special&#39;s.txt&quot;)
-argv #=&gt; &quot;special\\&#39;s.txt&quot;
-system(&quot;cat &quot; + argv)
+system(&quot;cat -- #{filename.shellescape}&quot;)
+# runs &quot;cat -- special\\&#39;s.txt&quot;
 </code></pre>
+
+<p>Note the ‘–’.  Without it, cat(1) will treat the following argument as a command line option if it starts with ‘-’.  It is guaranteed that <a href="Shellwords.html#method-c-escape"><code>Shellwords.escape</code></a> converts a string to a form that a Bourne shell will parse back to the original string, but it is the programmer’s responsibility to make sure that passing an arbitrary argument to a command does no harm.</p>
 
 <p><a href="Shellwords.html"><code>Shellwords</code></a> also comes with a core extension for <a href="Array.html"><code>Array</code></a>, <a href="Array.html#method-i-shelljoin"><code>Array#shelljoin</code></a>.</p>
 
-<pre><code>argv = %w{ls -lta lib}
-system(argv.shelljoin)
+<pre><code>dir = &quot;Funny GIFs&quot;
+argv = %W[ls -lta -- #{dir}]
+system(argv.shelljoin + &quot; | less&quot;)
+# runs &quot;ls -lta -- Funny\\ GIFs | less&quot;
 </code></pre>
 
-<p>You can use this method to create an escaped string out of an array of tokens separated by a space. In this example we used the literal shortcut for <a href="Array.html#method-c-new"><code>Array.new</code></a>.</p>
+<p>You can use this method to build a complete command line out of an array of arguments.</p>
 
 <h3 id="module-Shellwords-label-Authors">Authors</h3>
 <ul><li>
@@ -309,7 +312,7 @@ argv #=&gt; &quot;It\\&#39;s\\ better\\ to\\ give\\ than\\ to\\ receive&quot;
 
 # Search files in lib for method definitions
 pattern = &quot;^[ \t]*def &quot;
-open(&quot;| grep -Ern #{pattern.shellescape} lib&quot;) { |grep|
+open(&quot;| grep -Ern -e #{pattern.shellescape} lib&quot;) { |grep|
   grep.each_line { |line|
     file, lineno, matched_line = line.split(&#39;:&#39;, 3)
     # ...
@@ -341,11 +344,11 @@ open(&quot;| grep -Ern #{pattern.shellescape} lib&quot;) { |grep|
                 Source:
                 <a href="javascript:toggleSource('method-c-shellescape_source')" id="l_method-c-shellescape_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/shellwords.rb#L139" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/shellwords.rb#L148" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-shellescape_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/shellwords.rb, line 139</span>
+                <pre><span class="ruby-comment"># File ruby/lib/shellwords.rb, line 148</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">shellescape</span>(<span class="ruby-identifier">str</span>)
   <span class="ruby-identifier">str</span> = <span class="ruby-identifier">str</span>.<span class="ruby-identifier">to_s</span>
 
@@ -419,11 +422,11 @@ argv #=&gt; &quot;Don\\&#39;t rock the boat&quot;
                 Source:
                 <a href="javascript:toggleSource('method-c-shelljoin_source')" id="l_method-c-shelljoin_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/shellwords.rb#L185" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/shellwords.rb#L194" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-shelljoin_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/shellwords.rb, line 185</span>
+                <pre><span class="ruby-comment"># File ruby/lib/shellwords.rb, line 194</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">shelljoin</span>(<span class="ruby-identifier">array</span>)
   <span class="ruby-identifier">array</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">arg</span><span class="ruby-operator">|</span> <span class="ruby-identifier">shellescape</span>(<span class="ruby-identifier">arg</span>) }.<span class="ruby-identifier">join</span>(<span class="ruby-string">&#39; &#39;</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -478,17 +481,17 @@ argv #=&gt; [&quot;here&quot;, &quot;are&quot;, &quot;two words&quot;]
                 Source:
                 <a href="javascript:toggleSource('method-c-shellsplit_source')" id="l_method-c-shellsplit_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/shellwords.rb#L79" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/shellwords.rb#L88" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-shellsplit_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/shellwords.rb, line 79</span>
+                <pre><span class="ruby-comment"># File ruby/lib/shellwords.rb, line 88</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">shellsplit</span>(<span class="ruby-identifier">line</span>)
   <span class="ruby-identifier">words</span> = []
   <span class="ruby-identifier">field</span> = <span class="ruby-constant">String</span>.<span class="ruby-identifier">new</span>
   <span class="ruby-identifier">line</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-regexp">/\G\s*(?&gt;([^\s\\\&#39;\&quot;]+)|&#39;([^\&#39;]*)&#39;|&quot;((?:[^\&quot;\\]|\\.)*)&quot;|(\\.?)|(\S))(\s|\z)?/m</span>) <span class="ruby-keyword">do</span>
     <span class="ruby-operator">|</span><span class="ruby-identifier">word</span>, <span class="ruby-identifier">sq</span>, <span class="ruby-identifier">dq</span>, <span class="ruby-identifier">esc</span>, <span class="ruby-identifier">garbage</span>, <span class="ruby-identifier">sep</span><span class="ruby-operator">|</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;Unmatched double quote: #{line.inspect}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">garbage</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;Unmatched quote: #{line.inspect}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">garbage</span>
     <span class="ruby-comment"># 2.2.3 Double-Quotes:</span>
     <span class="ruby-comment">#</span>
     <span class="ruby-comment">#   The &lt;backslash&gt; shall retain its special meaning as an</span>

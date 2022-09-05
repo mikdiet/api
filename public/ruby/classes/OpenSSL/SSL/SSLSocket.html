@@ -26,7 +26,7 @@
 
   
 
-    <meta name="keywords" content="OpenSSL::SSL::SSLSocket class, sysclose, post_connection_check, session, new, connect, connect_nonblock, accept, accept_nonblock, sysread, syswrite, cert, peer_cert, peer_cert_chain, ssl_version, cipher, state, pending, session_reused?, session=, verify_result, client_ca, hostname=, tmp_key, alpn_protocol, npn_protocol">
+    <meta name="keywords" content="OpenSSL::SSL::SSLSocket class, sysclose, post_connection_check, session, new, connect, connect_nonblock, accept, accept_nonblock, sysread, syswrite, cert, peer_cert, peer_cert_chain, ssl_version, cipher, state, pending, session_reused?, session=, verify_result, client_ca, hostname=, finished_message, peer_finished_message, tmp_key, alpn_protocol, npn_protocol">
 </head>
 
 <body>
@@ -148,6 +148,18 @@
           </ul>
         </dd>
       
+        <dt>F</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-finished_message">finished_message</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>H</dt>
         <dd>
           <ul>
@@ -189,6 +201,11 @@
               
               <li>
                 <a href="#method-i-peer_cert_chain">peer_cert_chain</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-peer_finished_message">peer_finished_message</a>,
               </li>
             
               
@@ -421,6 +438,7 @@ ossl_ssl_initialize(int argc, VALUE *argv, VALUE self)
 
     if (rb_respond_to(io, rb_intern(&quot;nonblock=&quot;)))
         rb_funcall(io, rb_intern(&quot;nonblock=&quot;), 1, Qtrue);
+    Check_Type(io, T_FILE);
     rb_ivar_set(self, id_i_io, io);
 
     ssl = SSL_new(ctx);
@@ -457,7 +475,7 @@ ossl_ssl_initialize(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Waits for a SSL/TLS client to initiate a handshake.  The handshake may be started after unencrypted data has been sent over the socket.</p>
+              <p>Waits for a SSL/TLS client to initiate a handshake.</p>
             </div>
           
 
@@ -749,7 +767,7 @@ ossl_ssl_get_client_ca_list(VALUE self)
 
           
             <div class="description">
-              <p>Initiates an SSL/TLS handshake with a server.  The handshake may be started after unencrypted data has been sent over the socket.</p>
+              <p>Initiates an SSL/TLS handshake with a server.</p>
             </div>
           
 
@@ -831,6 +849,57 @@ ossl_ssl_connect_nonblock(int argc, VALUE *argv, VALUE self)
     ossl_ssl_setup(self);
 
     return ossl_start_ssl(self, SSL_connect, &quot;SSL_connect&quot;, opts);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-finished_message">
+            
+              <b>ssl.finished_message => "finished message"
+</b>
+            
+            <a href="../../../classes/OpenSSL/SSL/SSLSocket.html#method-i-finished_message" name="method-i-finished_message" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the last <strong>Finished</strong> message sent</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-finished_message_source')" id="l_method-i-finished_message_source">show</a>
+                
+              </p>
+              <div id="method-i-finished_message_source" class="dyn-source">
+                <pre>static VALUE
+ossl_ssl_get_finished(VALUE self)
+{
+    SSL *ssl;
+    char sizer[1], *buf;
+    size_t len;
+
+    GetSSL(self, ssl);
+
+    len = SSL_get_finished(ssl, sizer, 0);
+    if (len == 0)
+        return Qnil;
+
+    buf = ALLOCA_N(char, len);
+    SSL_get_finished(ssl, buf, len);
+    return rb_str_new(buf, len);
 }</pre>
               </div>
             </div>
@@ -1049,6 +1118,57 @@ ossl_ssl_get_peer_cert_chain(VALUE self)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-peer_finished_message">
+            
+              <b>ssl.peer_finished_message => "peer finished message"
+</b>
+            
+            <a href="../../../classes/OpenSSL/SSL/SSLSocket.html#method-i-peer_finished_message" name="method-i-peer_finished_message" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the last <strong>Finished</strong> message received</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-peer_finished_message_source')" id="l_method-i-peer_finished_message_source">show</a>
+                
+              </p>
+              <div id="method-i-peer_finished_message_source" class="dyn-source">
+                <pre>static VALUE
+ossl_ssl_get_peer_finished(VALUE self)
+{
+    SSL *ssl;
+    char sizer[1], *buf;
+    size_t len;
+
+    GetSSL(self, ssl);
+
+    len = SSL_get_peer_finished(ssl, sizer, 0);
+    if (len == 0)
+        return Qnil;
+
+    buf = ALLOCA_N(char, len);
+    SSL_get_peer_finished(ssl, buf, len);
+    return rb_str_new(buf, len);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-pending">
             
               <b>ssl.pending => Integer
@@ -1120,11 +1240,11 @@ ossl_ssl_pending(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-post_connection_check_source')" id="l_method-i-post_connection_check_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/ssl.rb#L384" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/ssl.rb#L394" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-post_connection_check_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 384</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 394</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">post_connection_check</span>(<span class="ruby-identifier">hostname</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">peer_cert</span>.<span class="ruby-identifier">nil?</span>
     <span class="ruby-identifier">msg</span> = <span class="ruby-string">&quot;Peer verification enabled, but no certificate received.&quot;</span>
@@ -1172,11 +1292,11 @@ ossl_ssl_pending(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-session_source')" id="l_method-i-session_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/ssl.rb#L405" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/ssl.rb#L415" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-session_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 405</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 415</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">session</span>
   <span class="ruby-constant">SSL</span><span class="ruby-operator">::</span><span class="ruby-constant">Session</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>)
 <span class="ruby-keyword">rescue</span> <span class="ruby-constant">SSL</span><span class="ruby-operator">::</span><span class="ruby-constant">Session</span><span class="ruby-operator">::</span><span class="ruby-constant">SessionError</span>
@@ -1399,11 +1519,11 @@ ossl_ssl_get_state(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-sysclose_source')" id="l_method-i-sysclose_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/ssl.rb#L371" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/ssl.rb#L381" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-sysclose_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 371</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 381</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">sysclose</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">closed?</span>
   <span class="ruby-identifier">stop</span>
@@ -1575,7 +1695,7 @@ ossl_ssl_get_verify_result(VALUE self)
 
     GetSSL(self, ssl);
 
-    return INT2NUM(SSL_get_verify_result(ssl));
+    return LONG2NUM(SSL_get_verify_result(ssl));
 }</pre>
               </div>
             </div>

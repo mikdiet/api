@@ -67,6 +67,8 @@
             
             <li><a href="../files/ruby/marshal_c.html">ruby/marshal.c</a></li>
             
+            <li><a href="../files/ruby/marshal_rb.html">ruby/marshal.rb</a></li>
+            
         </ul>
     </div>
 
@@ -298,7 +300,7 @@ obj.say_hello  #=&gt; &quot;hello\n&quot;
 </li><li>
 <p>objects which are related to system (ex: <a href="Dir.html"><code>Dir</code></a>, <a href="File/Stat.html"><code>File::Stat</code></a>, <a href="IO.html"><code>IO</code></a>, <a href="File.html"><code>File</code></a>, <a href="Socket.html"><code>Socket</code></a> and so on)</p>
 </li><li>
-<p>an instance of <a href="MatchData.html"><code>MatchData</code></a>, <a href="Data.html"><code>Data</code></a>, <a href="Method.html"><code>Method</code></a>, <a href="UnboundMethod.html"><code>UnboundMethod</code></a>, <a href="Proc.html"><code>Proc</code></a>, <a href="Thread.html"><code>Thread</code></a>, <a href="ThreadGroup.html"><code>ThreadGroup</code></a>, <a href="Continuation.html"><code>Continuation</code></a></p>
+<p>an instance of <a href="MatchData.html"><code>MatchData</code></a>, Data, <a href="Method.html"><code>Method</code></a>, <a href="UnboundMethod.html"><code>UnboundMethod</code></a>, <a href="Proc.html"><code>Proc</code></a>, <a href="Thread.html"><code>Thread</code></a>, <a href="ThreadGroup.html"><code>ThreadGroup</code></a>, <a href="Continuation.html"><code>Continuation</code></a></p>
 </li><li>
 <p>objects which define singleton methods</p>
 </li></ul>
@@ -347,8 +349,7 @@ marshal_dump(int argc, VALUE *argv, VALUE _)
         <div class="method">
           <h3 class="title method-title" id="method-c-load">
             
-              <b>load( source [, proc] ) &rarr; obj<br />restore( source [, proc] ) &rarr; obj
-</b>
+              <b>load(source, proc = nil, freeze: false) &rarr; obj</b>
             
             <a href="../classes/Marshal.html#method-c-load" name="method-c-load" class="permalink">Link</a>
           </h3>
@@ -358,9 +359,30 @@ marshal_dump(int argc, VALUE *argv, VALUE _)
               <p>Returns the result of converting the serialized data in source into a Ruby object (possibly with associated subordinate objects). source may be either an instance of <a href="IO.html"><code>IO</code></a> or an object that responds to to_str. If proc is specified, each object will be passed to the proc, as the object is being deserialized.</p>
 
 <p>Never pass untrusted data (including user supplied input) to this method. Please see the overview for further details.</p>
+
+<p>If the <code>freeze: true</code> argument is passed, deserialized object would be deeply frozen. Note that it may lead to more efficient memory usage due to frozen strings deduplication:</p>
+
+<pre><code>serialized = Marshal.dump([&#39;value1&#39;, &#39;value2&#39;, &#39;value1&#39;, &#39;value2&#39;])
+
+deserialized = Marshal.load(serialized)
+deserialized.map(&amp;:frozen?)
+# =&gt; [false, false, false, false]
+deserialized.map(&amp;:object_id)
+# =&gt; [1023900, 1023920, 1023940, 1023960] -- 4 different objects
+
+deserialized = Marshal.load(serialized, freeze: true)
+deserialized.map(&amp;:frozen?)
+# =&gt; [true, true, true, true]
+deserialized.map(&amp;:object_id)
+# =&gt; [1039360, 1039380, 1039360, 1039380] -- only 2 different objects, object_ids repeating
+</code></pre>
             </div>
           
 
+          
+            <div class="aka">
+              Also aliased as: <a href="Marshal.html#method-c-restore">restore</a>
+            </div>
           
 
           
@@ -373,18 +395,14 @@ marshal_dump(int argc, VALUE *argv, VALUE _)
                 Source:
                 <a href="javascript:toggleSource('method-c-load_source')" id="l_method-c-load_source">show</a>
                 
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/marshal.rb#L33" target="_blank" class="github_url">on GitHub</a>
+                
               </p>
               <div id="method-c-load_source" class="dyn-source">
-                <pre>static VALUE
-marshal_load(int argc, VALUE *argv, VALUE _)
-{
-    VALUE port, proc;
-
-    rb_check_arity(argc, 1, 2);
-    port = argv[0];
-    proc = argc &gt; 1 ? argv[1] : Qnil;
-    return rb_marshal_load_with_proc(port, proc);
-}</pre>
+                <pre><span class="ruby-comment"># File ruby/marshal.rb, line 33</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">load</span>(<span class="ruby-identifier">source</span>, <span class="ruby-identifier">proc</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-value">freeze:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">marshal_load</span>(<span class="ruby-identifier">source</span>, <span class="ruby-identifier">proc</span>, <span class="ruby-identifier">freeze</span>)
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -393,47 +411,26 @@ marshal_load(int argc, VALUE *argv, VALUE _)
         <div class="method">
           <h3 class="title method-title" id="method-c-restore">
             
-              <b>load( source [, proc] ) &rarr; obj<br />restore( source [, proc] ) &rarr; obj
-</b>
+              <b>restore(source, proc = nil, freeze: false) &rarr; obj</b>
             
             <a href="../classes/Marshal.html#method-c-restore" name="method-c-restore" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns the result of converting the serialized data in source into a Ruby object (possibly with associated subordinate objects). source may be either an instance of <a href="IO.html"><code>IO</code></a> or an object that responds to to_str. If proc is specified, each object will be passed to the proc, as the object is being deserialized.</p>
-
-<p>Never pass untrusted data (including user supplied input) to this method. Please see the overview for further details.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
               
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-c-restore_source')" id="l_method-c-restore_source">show</a>
-                
-              </p>
-              <div id="method-c-restore_source" class="dyn-source">
-                <pre>static VALUE
-marshal_load(int argc, VALUE *argv, VALUE _)
-{
-    VALUE port, proc;
-
-    rb_check_arity(argc, 1, 2);
-    port = argv[0];
-    proc = argc &gt; 1 ? argv[1] : Qnil;
-    return rb_marshal_load_with_proc(port, proc);
-}</pre>
-              </div>
             </div>
-            
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="Marshal.html#method-c-load">load</a>
+            </div>
+          
+
+          
           </div>
         
       

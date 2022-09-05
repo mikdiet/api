@@ -214,6 +214,7 @@ s.close             # close socket when done
                 <pre>static VALUE
 tcp_s_gethostbyname(VALUE obj, VALUE host)
 {
+    rb_warn(&quot;TCPSocket.gethostbyname is deprecated; use Addrinfo.getaddrinfo instead.&quot;);
     struct rb_addrinfo *res =
         rsock_addrinfo(host, Qnil, AF_UNSPEC, SOCK_STREAM, AI_CANONNAME);
     return rsock_make_hostent(host, res, tcp_sockaddr);
@@ -226,7 +227,7 @@ tcp_s_gethostbyname(VALUE obj, VALUE host)
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>TCPSocket.new(remote_host, remote_port, local_host=nil, local_port=nil)
+              <b>TCPSocket.new(remote_host, remote_port, local_host=nil, local_port=nil, connect_timeout: nil)
 </b>
             
             <a href="../classes/TCPSocket.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -235,6 +236,10 @@ tcp_s_gethostbyname(VALUE obj, VALUE host)
           
             <div class="description">
               <p>Opens a TCP connection to <code>remote_host</code> on <code>remote_port</code>.  If <code>local_host</code> and <code>local_port</code> are specified, then those parameters are used on the local end to establish the connection.</p>
+<dl class="rdoc-list label-list"><dt>:connect_timeout
+<dd>
+<p>specify the timeout in seconds.</p>
+</dd></dl>
             </div>
           
 
@@ -257,12 +262,29 @@ tcp_init(int argc, VALUE *argv, VALUE sock)
 {
     VALUE remote_host, remote_serv;
     VALUE local_host, local_serv;
+    VALUE opt;
+    static ID keyword_ids[2];
+    VALUE kwargs[2];
+    VALUE resolv_timeout = Qnil;
+    VALUE connect_timeout = Qnil;
 
-    rb_scan_args(argc, argv, &quot;22&quot;, &amp;remote_host, &amp;remote_serv,
-                        &amp;local_host, &amp;local_serv);
+    if (!keyword_ids[0]) {
+        CONST_ID(keyword_ids[0], &quot;resolv_timeout&quot;);
+        CONST_ID(keyword_ids[1], &quot;connect_timeout&quot;);
+    }
+
+    rb_scan_args(argc, argv, &quot;22:&quot;, &amp;remote_host, &amp;remote_serv,
+                        &amp;local_host, &amp;local_serv, &amp;opt);
+
+    if (!NIL_P(opt)) {
+        rb_get_kwargs(opt, keyword_ids, 0, 2, kwargs);
+        if (kwargs[0] != Qundef) { resolv_timeout = kwargs[0]; }
+        if (kwargs[1] != Qundef) { connect_timeout = kwargs[1]; }
+    }
 
     return rsock_init_inetsock(sock, remote_host, remote_serv,
-                               local_host, local_serv, INET_CLIENT);
+                               local_host, local_serv, INET_CLIENT,
+                               resolv_timeout, connect_timeout);
 }</pre>
               </div>
             </div>
@@ -295,7 +317,7 @@ tcp_init(int argc, VALUE *argv, VALUE sock)
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/resolv-replace.rb#L23" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/resolv-replace.rb#L23" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">

@@ -79,23 +79,15 @@
             
             <li><a href="../files/ruby/ext/socket/socket_c.html">ruby/ext/socket/socket.c</a></li>
             
-            <li><a href="../files/ruby/lib/bundler/mirror_rb.html">ruby/lib/bundler/mirror.rb</a></li>
-            
-            <li><a href="../files/ruby/lib/bundler/vendor/net-http-persistent/lib/net/http/persistent_rb.html">ruby/lib/bundler/vendor/net-http-persistent/lib/net/http/persistent.rb</a></li>
-            
             <li><a href="../files/ruby/lib/drb/drb_rb.html">ruby/lib/drb/drb.rb</a></li>
             
             <li><a href="../files/ruby/lib/ipaddr_rb.html">ruby/lib/ipaddr.rb</a></li>
-            
-            <li><a href="../files/ruby/lib/net/ftp_rb.html">ruby/lib/net/ftp.rb</a></li>
             
             <li><a href="../files/ruby/lib/net/http_rb.html">ruby/lib/net/http.rb</a></li>
             
             <li><a href="../files/ruby/lib/resolv_rb.html">ruby/lib/resolv.rb</a></li>
             
             <li><a href="../files/ruby/lib/rinda/ring_rb.html">ruby/lib/rinda/ring.rb</a></li>
-            
-            <li><a href="../files/ruby/lib/webrick/utils_rb.html">ruby/lib/webrick/utils.rb</a></li>
             
         </ul>
     </div>
@@ -615,7 +607,7 @@ s.close             # close socket when done
                 Source:
                 <a href="javascript:toggleSource('method-c-accept_loop_source')" id="l_method-c-accept_loop_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L800" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L800" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-accept_loop_source" class="dyn-source">
@@ -674,7 +666,7 @@ Socket.getaddrinfo(&quot;localhost&quot;, nil)
 <p><em>reverse_lookup</em> directs the form of the third element, and has to be one of below.  If <em>reverse_lookup</em> is omitted, the default value is <code>nil</code>.</p>
 
 <pre><code>+true+, +:hostname+:  hostname is obtained from numeric address using reverse lookup, which may take a time.
-+false+, +:numeric+:  hostname is same as numeric address.
++false+, +:numeric+:  hostname is the same as numeric address.
 +nil+:              obey to the current +do_not_reverse_lookup+ flag.
 </code></pre>
 
@@ -721,6 +713,7 @@ sock_s_getaddrinfo(int argc, VALUE *argv, VALUE _)
     if (NIL_P(revlookup) || !rsock_revlookup_flag(revlookup, &amp;norevlookup)) {
         norevlookup = rsock_do_not_reverse_lookup;
     }
+
     res = rsock_getaddrinfo(host, port, &amp;hints, 0);
 
     ret = make_addrinfo(res, norevlookup);
@@ -788,6 +781,8 @@ sock_s_gethostbyaddr(int argc, VALUE *argv, VALUE _)
     char **pch;
     VALUE ary, names;
     int t = AF_INET;
+
+    rb_warn(&quot;Socket.gethostbyaddr is deprecated; use Addrinfo#getnameinfo instead.&quot;);
 
     rb_scan_args(argc, argv, &quot;11&quot;, &amp;addr, &amp;family);
     StringValue(addr);
@@ -879,6 +874,7 @@ sock_s_gethostbyaddr(int argc, VALUE *argv, VALUE _)
                 <pre>static VALUE
 sock_s_gethostbyname(VALUE obj, VALUE host)
 {
+    rb_warn(&quot;Socket.gethostbyname is deprecated; use Addrinfo.getaddrinfo instead.&quot;);
     struct rb_addrinfo *res =
         rsock_addrinfo(host, Qnil, AF_UNSPEC, SOCK_STREAM, AI_CANONNAME);
     return rsock_make_hostent(host, res, sock_sockaddr);
@@ -1088,7 +1084,6 @@ Socket.getnameinfo([&quot;AF_INET&quot;, 80, &quot;localhost&quot;, &quot;127.0.
 sock_s_getnameinfo(int argc, VALUE *argv, VALUE _)
 {
     VALUE sa, af = Qnil, host = Qnil, port = Qnil, flags, tmp;
-    char *hptr, *pptr;
     char hbuf[1024], pbuf[1024];
     int fl;
     struct rb_addrinfo *res = NULL;
@@ -1149,34 +1144,10 @@ sock_s_getnameinfo(int argc, VALUE *argv, VALUE _)
             rb_raise(rb_eArgError, &quot;array size should be 3 or 4, %ld given&quot;,
                      RARRAY_LEN(sa));
         }
-        /* host */
-        if (NIL_P(host)) {
-            hptr = NULL;
-        }
-        else {
-            strncpy(hbuf, StringValueCStr(host), sizeof(hbuf));
-            hbuf[sizeof(hbuf) - 1] = &#39;\0&#39;;
-            hptr = hbuf;
-        }
-        /* port */
-        if (NIL_P(port)) {
-            strcpy(pbuf, &quot;0&quot;);
-            pptr = NULL;
-        }
-        else if (FIXNUM_P(port)) {
-            snprintf(pbuf, sizeof(pbuf), &quot;%ld&quot;, NUM2LONG(port));
-            pptr = pbuf;
-        }
-        else {
-            strncpy(pbuf, StringValueCStr(port), sizeof(pbuf));
-            pbuf[sizeof(pbuf) - 1] = &#39;\0&#39;;
-            pptr = pbuf;
-        }
         hints.ai_socktype = (fl &amp; NI_DGRAM) ? SOCK_DGRAM : SOCK_STREAM;
         /* af */
         hints.ai_family = NIL_P(af) ? PF_UNSPEC : rsock_family_arg(af);
-        error = rb_getaddrinfo(hptr, pptr, &amp;hints, &amp;res);
-        if (error) goto error_exit_addr;
+        res = rsock_getaddrinfo(host, port, &amp;hints, 0);
         sap = res-&gt;ai-&gt;ai_addr;
         salen = res-&gt;ai-&gt;ai_addrlen;
     }
@@ -1205,12 +1176,6 @@ sock_s_getnameinfo(int argc, VALUE *argv, VALUE _)
         rb_freeaddrinfo(res);
     }
     return rb_assoc_new(rb_str_new2(hbuf), rb_str_new2(pbuf));
-
-  error_exit_addr:
-    saved_errno = errno;
-    if (res) rb_freeaddrinfo(res);
-    errno = saved_errno;
-    rsock_raise_socket_error(&quot;getaddrinfo&quot;, error);
 
   error_exit_name:
     saved_errno = errno;
@@ -2190,7 +2155,7 @@ rsock_sock_s_socketpair(int argc, VALUE *argv, VALUE klass)
                 Source:
                 <a href="javascript:toggleSource('method-c-tcp_source')" id="l_method-c-tcp_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L623" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L623" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-tcp_source" class="dyn-source">
@@ -2302,7 +2267,7 @@ Socket.tcp_server_loop(16807) {|sock, client_addrinfo|
                 Source:
                 <a href="javascript:toggleSource('method-c-tcp_server_loop_source')" id="l_method-c-tcp_server_loop_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L856" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L856" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-tcp_server_loop_source" class="dyn-source">
@@ -2370,7 +2335,7 @@ Socket.tcp_server_sockets(0) {|sockets|
                 Source:
                 <a href="javascript:toggleSource('method-c-tcp_server_sockets_source')" id="l_method-c-tcp_server_sockets_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L756" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L756" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-tcp_server_sockets_source" class="dyn-source">
@@ -2453,7 +2418,7 @@ Socket.udp_server_loop(9261) {|msg, msg_src|
                 Source:
                 <a href="javascript:toggleSource('method-c-udp_server_loop_source')" id="l_method-c-udp_server_loop_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L1026" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L1026" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-udp_server_loop_source" class="dyn-source">
@@ -2499,7 +2464,7 @@ Socket.udp_server_loop(9261) {|msg, msg_src|
                 Source:
                 <a href="javascript:toggleSource('method-c-udp_server_loop_on_source')" id="l_method-c-udp_server_loop_on_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L999" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L999" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-udp_server_loop_on_source" class="dyn-source">
@@ -2554,7 +2519,7 @@ Socket.udp_server_loop(9261) {|msg, msg_src|
                 Source:
                 <a href="javascript:toggleSource('method-c-udp_server_recv_source')" id="l_method-c-udp_server_recv_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L972" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L972" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-udp_server_recv_source" class="dyn-source">
@@ -2623,7 +2588,7 @@ Socket.udp_server_sockets(0) {|sockets|
                 Source:
                 <a href="javascript:toggleSource('method-c-udp_server_sockets_source')" id="l_method-c-udp_server_sockets_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L884" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L884" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-udp_server_sockets_source" class="dyn-source">
@@ -2739,7 +2704,7 @@ Socket.unix(&quot;/tmp/sock&quot;) {|sock|
                 Source:
                 <a href="javascript:toggleSource('method-c-unix_source')" id="l_method-c-unix_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L1076" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L1076" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-unix_source" class="dyn-source">
@@ -2805,7 +2770,7 @@ Socket.unix_server_loop(&quot;/tmp/sock&quot;) {|sock, client_addrinfo|
                 Source:
                 <a href="javascript:toggleSource('method-c-unix_server_loop_source')" id="l_method-c-unix_server_loop_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L1163" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L1163" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-unix_server_loop_source" class="dyn-source">
@@ -2860,7 +2825,7 @@ Socket.unix_server_socket(&quot;/tmp/sock&quot;) {|s|
                 Source:
                 <a href="javascript:toggleSource('method-c-unix_server_socket_source')" id="l_method-c-unix_server_socket_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L1106" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L1106" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-unix_server_socket_source" class="dyn-source">
@@ -3064,17 +3029,14 @@ p serv.accept #=&gt; [#&lt;Socket:fd 6&gt;, #&lt;Addrinfo: 127.0.0.1:48555 TCP&g
               </p>
               <div id="method-i-accept_source" class="dyn-source">
                 <pre>static VALUE
-sock_accept(VALUE sock)
+sock_accept(VALUE server)
 {
-    rb_io_t *fptr;
-    VALUE sock2;
-    union_sockaddr buf;
-    socklen_t len = (socklen_t)sizeof buf;
+    union_sockaddr buffer;
+    socklen_t length = (socklen_t)sizeof(buffer);
 
-    GetOpenFile(sock, fptr);
-    sock2 = rsock_s_accept(rb_cSocket,fptr-&gt;fd,&amp;buf.addr,&amp;len);
+    VALUE peer = rsock_s_accept(rb_cSocket, server, &amp;buffer.addr, &amp;length);
 
-    return rb_assoc_new(sock2, rsock_io_socket_addrinfo(sock2, &amp;buf.addr, len));
+    return rb_assoc_new(peer, rsock_io_socket_addrinfo(peer, &amp;buffer.addr, length));
 }</pre>
               </div>
             </div>
@@ -3128,7 +3090,7 @@ socket.close
 
 <p><a href="Socket.html#method-i-accept_nonblock"><code>Socket#accept_nonblock</code></a> may raise any error corresponding to accept(2) failure, including Errno::EWOULDBLOCK.</p>
 
-<p>If the exception is Errno::EWOULDBLOCK, Errno::EAGAIN, <a href="Errno/ECONNABORTED.html"><code>Errno::ECONNABORTED</code></a> or <a href="Errno/EPROTO.html"><code>Errno::EPROTO</code></a>, it is extended by <a href="IO/WaitReadable.html"><code>IO::WaitReadable</code></a>. So <a href="IO/WaitReadable.html"><code>IO::WaitReadable</code></a> can be used to rescue the exceptions for retrying accept_nonblock.</p>
+<p>If the exception is Errno::EWOULDBLOCK, Errno::EAGAIN, Errno::ECONNABORTED or Errno::EPROTO, it is extended by <a href="IO/WaitReadable.html"><code>IO::WaitReadable</code></a>. So <a href="IO/WaitReadable.html"><code>IO::WaitReadable</code></a> can be used to rescue the exceptions for retrying accept_nonblock.</p>
 
 <p>By specifying a keyword argument <em>exception</em> to <code>false</code>, you can indicate that <a href="Socket.html#method-i-accept_nonblock"><code>accept_nonblock</code></a> should not raise an <a href="IO/WaitReadable.html"><code>IO::WaitReadable</code></a> exception, but return the symbol <code>:wait_readable</code> instead.</p>
 
@@ -3151,7 +3113,7 @@ socket.close
                 Source:
                 <a href="javascript:toggleSource('method-i-accept_nonblock_source')" id="l_method-i-accept_nonblock_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L592" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L592" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-accept_nonblock_source" class="dyn-source">
@@ -3360,7 +3322,7 @@ results = socket.read
 </li><li>
 <p>Errno::ECONNREFUSED - the target <em>sockaddr</em> was not listening for connections refused the connection request</p>
 </li><li>
-<p><a href="Errno/ECONNRESET.html"><code>Errno::ECONNRESET</code></a> - the remote host reset the connection request</p>
+<p>Errno::ECONNRESET - the remote host reset the connection request</p>
 </li><li>
 <p>Errno::EFAULT - the <em>sockaddr</em> cannot be accessed</p>
 </li><li>
@@ -3390,7 +3352,7 @@ results = socket.read
 </li><li>
 <p>Errno::EPROTOTYPE - the <em>sockaddr</em> has a different type than the socket bound to the specified peer address</p>
 </li><li>
-<p>Errno::ETIMEDOUT - the attempt to connect time out before a connection was made.</p>
+<p>Errno::ETIMEDOUT - the attempt to connect timed out before a connection was made.</p>
 </li></ul>
 
 <p>On unix-based systems if the address family of the calling <code>socket</code> is AF_UNIX the follow exceptions may be raised if the call to <em>connect</em> fails:</p>
@@ -3440,7 +3402,7 @@ results = socket.read
 </li><li>
 <p>Errno::ENOTSOCK - the <code>socket</code> argument does not refer to a socket</p>
 </li><li>
-<p>Errno::ETIMEDOUT - the attempt to connect time out before a connection was made.</p>
+<p>Errno::ETIMEDOUT - the attempt to connect timed out before a connection was made.</p>
 </li><li>
 <p>Errno::EWOULDBLOCK - the socket is marked as nonblocking and the connection cannot be completed immediately</p>
 </li><li>
@@ -3481,7 +3443,7 @@ sock_connect(VALUE sock, VALUE addr)
     addr = rb_str_new4(addr);
     GetOpenFile(sock, fptr);
     fd = fptr-&gt;fd;
-    n = rsock_connect(fd, (struct sockaddr*)RSTRING_PTR(addr), RSTRING_SOCKLEN(addr), 0);
+    n = rsock_connect(fd, (struct sockaddr*)RSTRING_PTR(addr), RSTRING_SOCKLEN(addr), 0, NULL);
     if (n &lt; 0) {
         rsock_sys_fail_raddrinfo_or_sockaddr(&quot;connect(2)&quot;, addr, rai);
     }
@@ -3558,7 +3520,7 @@ results = socket.read
                 Source:
                 <a href="javascript:toggleSource('method-i-connect_nonblock_source')" id="l_method-i-connect_nonblock_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L1213" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L1213" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-connect_nonblock_source" class="dyn-source">
@@ -3597,7 +3559,7 @@ results = socket.read
                 Source:
                 <a href="javascript:toggleSource('method-i-ipv6only-21_source')" id="l_method-i-ipv6only-21_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L463" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L463" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ipv6only-21_source" class="dyn-source">
@@ -3792,7 +3754,7 @@ socket.close
 </li><li>
 <p>Errno::EBADF - the <code>socket</code> is not a valid file descriptor</p>
 </li><li>
-<p><a href="Errno/ECONNRESET.html"><code>Errno::ECONNRESET</code></a> - a connection was forcibly closed by a peer</p>
+<p>Errno::ECONNRESET - a connection was forcibly closed by a peer</p>
 </li><li>
 <p>Errno::EFAULT - the socket’s internal buffer, address or address length cannot be accessed or written</p>
 </li><li>
@@ -3845,7 +3807,7 @@ socket.close
 </li><li>
 <p>Errno::ETIMEDOUT - the connection has been dropped, because of a network failure or because the system on the other end went down without notice</p>
 </li><li>
-<p><a href="Errno/ECONNRESET.html"><code>Errno::ECONNRESET</code></a> - the virtual circuit was reset by the remote side executing a hard or abortive close. The application should close the socket; it is no longer usable. On a UDP-datagram socket this error indicates a previous send operation resulted in an ICMP Port Unreachable message.</p>
+<p>Errno::ECONNRESET - the virtual circuit was reset by the remote side executing a hard or abortive close. The application should close the socket; it is no longer usable. On a UDP-datagram socket this error indicates a previous send operation resulted in an ICMP Port Unreachable message.</p>
 </li></ul>
             </div>
           
@@ -3958,7 +3920,7 @@ socket.close
                 Source:
                 <a href="javascript:toggleSource('method-i-recvfrom_nonblock_source')" id="l_method-i-recvfrom_nonblock_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/socket/lib/socket.rb#L535" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L535" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-recvfrom_nonblock_source" class="dyn-source">
@@ -4034,17 +3996,14 @@ socket.close
               </p>
               <div id="method-i-sysaccept_source" class="dyn-source">
                 <pre>static VALUE
-sock_sysaccept(VALUE sock)
+sock_sysaccept(VALUE server)
 {
-    rb_io_t *fptr;
-    VALUE sock2;
-    union_sockaddr buf;
-    socklen_t len = (socklen_t)sizeof buf;
+    union_sockaddr buffer;
+    socklen_t length = (socklen_t)sizeof(buffer);
 
-    GetOpenFile(sock, fptr);
-    sock2 = rsock_s_accept(0,fptr-&gt;fd,&amp;buf.addr,&amp;len);
+    VALUE peer = rsock_s_accept(0, server, &amp;buffer.addr, &amp;length);
 
-    return rb_assoc_new(sock2, rsock_io_socket_addrinfo(sock2, &amp;buf.addr, len));
+    return rb_assoc_new(peer, rsock_io_socket_addrinfo(peer, &amp;buffer.addr, length));
 }</pre>
               </div>
             </div>

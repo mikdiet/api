@@ -85,7 +85,7 @@ issuer  = OpenSSL::X509::Certificate.new issuer_pem
 
 <p>To create the request we need to create a certificate ID for the subject certificate so the CA knows which certificate we are asking about:</p>
 
-<pre><code>digest = OpenSSL::Digest::SHA1.new
+<pre><code>digest = OpenSSL::Digest.new(&#39;SHA1&#39;)
 certificate_id =
   OpenSSL::OCSP::CertificateId.new subject, issuer, digest
 </code></pre>
@@ -103,18 +103,11 @@ request.add_certid certificate_id
 
 <p>To submit the request to the CA for verification we need to extract the <a href="OCSP.html"><code>OCSP</code></a> <a href="../URI.html"><code>URI</code></a> from the subject certificate:</p>
 
-<pre><code>authority_info_access = subject.extensions.find do |extension|
-  extension.oid == &#39;authorityInfoAccess&#39;
-end
-
-descriptions = authority_info_access.value.split &quot;\n&quot;
-ocsp = descriptions.find do |description|
-  description.start_with? &#39;OCSP&#39;
-end
+<pre><code>ocsp_uris = subject.ocsp_uris
 
 require &#39;uri&#39;
 
-ocsp_uri = URI ocsp[/URI:(.*)/, 1]
+ocsp_uri = URI ocsp_uris[0]
 </code></pre>
 
 <p>To submit the request we’ll POST the request to the <a href="OCSP.html"><code>OCSP</code></a> <a href="../URI.html"><code>URI</code></a> (per RFC 2560).  Note that we only handle HTTP requests and don’t handle any redirects in this example, so this is insufficient for serious use.</p>
@@ -156,7 +149,7 @@ end
 <pre><code>single_response = basic_response.find_response(certificate_id)
 
 unless single_response
-  raise &#39;basic_response does not have the status for the certificiate&#39;
+  raise &#39;basic_response does not have the status for the certificate&#39;
 end
 </code></pre>
 

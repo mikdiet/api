@@ -30,7 +30,7 @@
     <meta property="og:description" content="Threads are the Ruby implementation for a concurrent programming model.  Programs that require multiple threads of execution are a perfect candidate for Ruby’s Thread class.">
   
 
-    <meta name="keywords" content="Thread class, exclusive, new, start, fork, main, current, stop, kill, exit, pass, list, abort_on_exception, abort_on_exception=, report_on_exception, report_on_exception=, DEBUG, DEBUG=, handle_interrupt, pending_interrupt?, pending_interrupt?, raise, join, value, kill, terminate, exit, run, wakeup, [], []=, fetch, key?, keys, priority, priority=, status, thread_variable_get, thread_variable_set, thread_variables, thread_variable?, alive?, stop?, abort_on_exception, abort_on_exception=, report_on_exception, report_on_exception=, safe_level, group, backtrace, backtrace_locations, name, name=, to_s, inspect, set_trace_func, add_trace_func">
+    <meta name="keywords" content="Thread class, new, start, fork, main, current, stop, kill, exit, pass, list, abort_on_exception, abort_on_exception=, report_on_exception, report_on_exception=, ignore_deadlock, ignore_deadlock=, DEBUG, DEBUG=, handle_interrupt, pending_interrupt?, pending_interrupt?, raise, join, value, kill, terminate, exit, run, wakeup, [], []=, fetch, key?, keys, priority, priority=, status, thread_variable_get, thread_variable_set, thread_variables, thread_variable?, alive?, stop?, abort_on_exception, abort_on_exception=, report_on_exception, report_on_exception=, group, backtrace, backtrace_locations, name, name=, native_thread_id, to_s, inspect, set_trace_func, add_trace_func">
 </head>
 
 <body>
@@ -71,9 +71,9 @@
         </h2>
         <ul class="files">
             
-            <li><a href="../files/ruby/prelude_rb.html">ruby/prelude.rb</a></li>
-            
             <li><a href="../files/ruby/thread_c.html">ruby/thread.c</a></li>
+            
+            <li><a href="../files/ruby/thread_sync_c.html">ruby/thread_sync.c</a></li>
             
             <li><a href="../files/ruby/vm_c.html">ruby/vm.c</a></li>
             
@@ -236,6 +236,26 @@ t.value #=&gt; RuntimeError: something went wrong
           <a href="Thread/Backtrace.html">Thread::Backtrace</a>
         </li>
       
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Thread/ConditionVariable.html">Thread::ConditionVariable</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Thread/Mutex.html">Thread::Mutex</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Thread/Queue.html">Thread::Queue</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Thread/SizedQueue.html">Thread::SizedQueue</a>
+        </li>
+      
     </ul>
   
 
@@ -351,17 +371,12 @@ t.value #=&gt; RuntimeError: something went wrong
             
               
               <li>
-                <a href="#method-c-exclusive">exclusive</a>,
+                <a href="#method-i-exit">exit</a>,
               </li>
             
               
               <li>
-                <a href="#method-c-exit">exit</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-exit">exit</a>
+                <a href="#method-c-exit">exit</a>
               </li>
             
           </ul>
@@ -411,6 +426,16 @@ t.value #=&gt; RuntimeError: something went wrong
         <dt>I</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-c-ignore_deadlock">ignore_deadlock</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-ignore_deadlock-3D">ignore_deadlock=</a>,
+              </li>
             
               
               <li>
@@ -499,6 +524,11 @@ t.value #=&gt; RuntimeError: something went wrong
             
               
               <li>
+                <a href="#method-i-native_thread_id">native_thread_id</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-c-new">new</a>
               </li>
             
@@ -516,12 +546,12 @@ t.value #=&gt; RuntimeError: something went wrong
             
               
               <li>
-                <a href="#method-c-pending_interrupt-3F">pending_interrupt?</a>,
+                <a href="#method-i-pending_interrupt-3F">pending_interrupt?</a>,
               </li>
             
               
               <li>
-                <a href="#method-i-pending_interrupt-3F">pending_interrupt?</a>,
+                <a href="#method-c-pending_interrupt-3F">pending_interrupt?</a>,
               </li>
             
               
@@ -558,12 +588,12 @@ t.value #=&gt; RuntimeError: something went wrong
             
               
               <li>
-                <a href="#method-i-report_on_exception-3D">report_on_exception=</a>,
+                <a href="#method-c-report_on_exception-3D">report_on_exception=</a>,
               </li>
             
               
               <li>
-                <a href="#method-c-report_on_exception-3D">report_on_exception=</a>,
+                <a href="#method-i-report_on_exception-3D">report_on_exception=</a>,
               </li>
             
               
@@ -577,11 +607,6 @@ t.value #=&gt; RuntimeError: something went wrong
         <dt>S</dt>
         <dd>
           <ul>
-            
-              
-              <li>
-                <a href="#method-i-safe_level">safe_level</a>,
-              </li>
             
               
               <li>
@@ -725,7 +750,7 @@ t.value #=&gt; RuntimeError: something went wrong
               </p>
               <div id="method-c-DEBUG_source" class="dyn-source">
                 <pre>static VALUE
-rb_thread_s_debug(void)
+rb_thread_s_debug(VALUE _)
 {
     return INT2NUM(rb_thread_debug_enabled);
 }</pre>
@@ -816,7 +841,7 @@ rb_thread_s_debug_set(VALUE self, VALUE val)
                 <pre>static VALUE
 rb_thread_s_abort_exc(VALUE _)
 {
-    return GET_THREAD()-&gt;vm-&gt;thread_abort_on_exception ? Qtrue : Qfalse;
+    return RBOOL(GET_THREAD()-&gt;vm-&gt;thread_abort_on_exception);
 }</pre>
               </div>
             </div>
@@ -928,44 +953,6 @@ thread_s_current(VALUE klass)
           </div>
         
         <div class="method">
-          <h3 class="title method-title" id="method-c-exclusive">
-            
-              <b>Thread.exclusive { block }   &rarr; obj
-</b>
-            
-            <a href="../classes/Thread.html#method-c-exclusive" name="method-c-exclusive" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Wraps the block in a single, VM-global <a href="Mutex.html#method-i-synchronize"><code>Mutex.synchronize</code></a>, returning the value of the block. A thread executing inside the exclusive section will only block other threads which also use the <a href="Thread.html#method-c-exclusive"><code>Thread.exclusive</code></a> mechanism.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-c-exclusive_source')" id="l_method-c-exclusive_source">show</a>
-                
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/prelude.rb#L8" target="_blank" class="github_url">on GitHub</a>
-                
-              </p>
-              <div id="method-c-exclusive_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/prelude.rb, line 8</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">exclusive</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>) <span class="ruby-keyword">end</span></pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
           <h3 class="title method-title" id="method-c-exit">
             
               <b>Thread.exit   &rarr; thread
@@ -1041,7 +1028,12 @@ rb_thread_exit(VALUE _)
                 <pre>static VALUE
 thread_start(VALUE klass, VALUE args)
 {
-    return thread_create_core(rb_thread_alloc(klass), args, 0);
+    struct thread_create_params params = {
+        .type = thread_invoke_type_proc,
+        .args = args,
+        .proc = rb_block_proc(),
+    };
+    return thread_create_core(rb_thread_alloc(klass), &amp;params);
 }</pre>
               </div>
             </div>
@@ -1083,7 +1075,7 @@ thread_start(VALUE klass, VALUE args)
 
 <p>Asynchronous interrupts are difficult to use.</p>
 
-<p>If you need to communicate between threads, please consider to use another way such as <a href="Queue.html"><code>Queue</code></a>.</p>
+<p>If you need to communicate between threads, please consider to use another way such as <a href="Thread/Queue.html"><code>Queue</code></a>.</p>
 
 <p>Or use them with deep understanding about this method.</p>
 
@@ -1150,6 +1142,8 @@ Thread.handle_interrupt(Timeout::Error =&gt; :never) {
   # all exceptions inherited from Exception are prohibited.
 }
 </code></pre>
+
+<p>For handling all interrupts, use <code>Object</code> and not <code>Exception</code> as the ExceptionClass, as kill/terminate interrupts are not handled by <code>Exception</code>.</p>
             </div>
           
 
@@ -1212,6 +1206,98 @@ rb_thread_s_handle_interrupt(VALUE self, VALUE mask_arg)
     }
 
     return r;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-ignore_deadlock">
+            
+              <b>Thread.ignore_deadlock &rarr; true or false
+</b>
+            
+            <a href="../classes/Thread.html#method-c-ignore_deadlock" name="method-c-ignore_deadlock" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the status of the global “ignore deadlock” condition. The default is <code>false</code>, so that deadlock conditions are not ignored.</p>
+
+<p>See also <a href="Thread.html#method-c-ignore_deadlock-3D"><code>::ignore_deadlock=</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-ignore_deadlock_source')" id="l_method-c-ignore_deadlock_source">show</a>
+                
+              </p>
+              <div id="method-c-ignore_deadlock_source" class="dyn-source">
+                <pre>static VALUE
+rb_thread_s_ignore_deadlock(VALUE _)
+{
+    return RBOOL(GET_THREAD()-&gt;vm-&gt;thread_ignore_deadlock);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-ignore_deadlock-3D">
+            
+              <b>Thread.ignore_deadlock = boolean   &rarr; true or false
+</b>
+            
+            <a href="../classes/Thread.html#method-c-ignore_deadlock-3D" name="method-c-ignore_deadlock-3D" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the new state. When set to <code>true</code>, the VM will not check for deadlock conditions. It is only useful to set this if your application can break a deadlock condition via some other means, such as a signal.</p>
+
+<pre><code>Thread.ignore_deadlock = true
+queue = Thread::Queue.new
+
+trap(:SIGUSR1){queue.push &quot;Received signal&quot;}
+
+# raises fatal error unless ignoring deadlock
+puts queue.pop
+</code></pre>
+
+<p>See also <a href="Thread.html#method-c-ignore_deadlock"><code>::ignore_deadlock</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-ignore_deadlock-3D_source')" id="l_method-c-ignore_deadlock-3D_source">show</a>
+                
+              </p>
+              <div id="method-c-ignore_deadlock-3D_source" class="dyn-source">
+                <pre>static VALUE
+rb_thread_s_ignore_deadlock_set(VALUE self, VALUE val)
+{
+    GET_THREAD()-&gt;vm-&gt;thread_ignore_deadlock = RTEST(val);
+    return val;
 }</pre>
               </div>
             </div>
@@ -1404,8 +1490,9 @@ thread_s_new(int argc, VALUE *argv, VALUE klass)
     rb_thread_t *th;
     VALUE thread = rb_thread_alloc(klass);
 
-    if (GET_VM()-&gt;main_thread-&gt;status == THREAD_KILLED)
+    if (GET_RACTOR()-&gt;threads.main-&gt;status == THREAD_KILLED) {
         rb_raise(rb_eThreadError, &quot;can&#39;t alloc thread&quot;);
+    }
 
     rb_obj_call_init_kw(thread, argc, argv, RB_PASS_CALLED_KEYWORDS);
     th = rb_thread_ptr(thread);
@@ -1609,7 +1696,7 @@ Traceback (most recent call last):
                 <pre>static VALUE
 rb_thread_s_report_exc(VALUE _)
 {
-    return GET_THREAD()-&gt;vm-&gt;thread_report_on_exception ? Qtrue : Qfalse;
+    return RBOOL(GET_THREAD()-&gt;vm-&gt;thread_report_on_exception);
 }</pre>
               </div>
             </div>
@@ -1710,7 +1797,12 @@ rb_thread_s_report_exc_set(VALUE self, VALUE val)
                 <pre>static VALUE
 thread_start(VALUE klass, VALUE args)
 {
-    return thread_create_core(rb_thread_alloc(klass), args, 0);
+    struct thread_create_params params = {
+        .type = thread_invoke_type_proc,
+        .args = args,
+        .proc = rb_block_proc(),
+    };
+    return thread_create_core(rb_thread_alloc(klass), &amp;params);
 }</pre>
               </div>
             </div>
@@ -1938,7 +2030,7 @@ rb_thread_aset(VALUE self, VALUE id, VALUE val)
                 <pre>static VALUE
 rb_thread_abort_exc(VALUE thread)
 {
-    return rb_thread_ptr(thread)-&gt;abort_on_exception ? Qtrue : Qfalse;
+    return RBOOL(rb_thread_ptr(thread)-&gt;abort_on_exception);
 }</pre>
               </div>
             </div>
@@ -2071,12 +2163,7 @@ thr.alive?              #=&gt; false
                 <pre>static VALUE
 rb_thread_alive_p(VALUE thread)
 {
-    if (rb_threadptr_dead(rb_thread_ptr(thread))) {
-        return Qfalse;
-    }
-    else {
-        return Qtrue;
-    }
+    return RBOOL(!thread_finished(rb_thread_ptr(thread)));
 }</pre>
               </div>
             </div>
@@ -2086,7 +2173,7 @@ rb_thread_alive_p(VALUE thread)
         <div class="method">
           <h3 class="title method-title" id="method-i-backtrace">
             
-              <b>thread.backtrace    &rarr; array
+              <b>thread.backtrace    &rarr; array or nil
 </b>
             
             <a href="../classes/Thread.html#method-i-backtrace" name="method-i-backtrace" class="permalink">Link</a>
@@ -2241,7 +2328,7 @@ rb_thread_fetch(int argc, VALUE *argv, VALUE self)
         return target_th-&gt;ec-&gt;local_storage_recursive_hash;
     }
     else if (id &amp;&amp; target_th-&gt;ec-&gt;local_storage &amp;&amp;
-             st_lookup(target_th-&gt;ec-&gt;local_storage, id, &amp;val)) {
+             rb_id_table_lookup(target_th-&gt;ec-&gt;local_storage, id, &amp;val)) {
         return val;
     }
     else if (block_given) {
@@ -2270,7 +2357,7 @@ rb_thread_fetch(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Returns the <a href="ThreadGroup.html"><code>ThreadGroup</code></a> which contains the given thread, or returns <code>nil</code> if <code>thr</code> is not a member of any group.</p>
+              <p>Returns the <a href="ThreadGroup.html"><code>ThreadGroup</code></a> which contains the given thread.</p>
 
 <pre><code>Thread.main.group   #=&gt; #&lt;ThreadGroup:0x4029d914&gt;
 </code></pre>
@@ -2294,8 +2381,7 @@ rb_thread_fetch(int argc, VALUE *argv, VALUE self)
                 <pre>VALUE
 rb_thread_group(VALUE thread)
 {
-    VALUE group = rb_thread_ptr(thread)-&gt;thgroup;
-    return group == 0 ? Qnil : group;
+    return rb_thread_ptr(thread)-&gt;thgroup;
 }</pre>
               </div>
             </div>
@@ -2389,25 +2475,30 @@ tick...
                 <pre>static VALUE
 thread_join_m(int argc, VALUE *argv, VALUE self)
 {
-    VALUE limit;
-    rb_hrtime_t rel, *to = 0;
+    VALUE timeout = Qnil;
+    rb_hrtime_t rel = 0, *limit = 0;
 
+    if (rb_check_arity(argc, 0, 1)) {
+        timeout = argv[0];
+    }
+
+    // Convert the timeout eagerly, so it&#39;s always converted and deterministic
     /*
      * This supports INFINITY and negative values, so we can&#39;t use
      * rb_time_interval right now...
      */
-    if (!rb_check_arity(argc, 0, 1) || NIL_P(argv[0])) {
+    if (NIL_P(timeout)) {
         /* unlimited */
     }
-    else if (FIXNUM_P(limit = argv[0])) {
-        rel = rb_sec2hrtime(NUM2TIMET(limit));
-        to = &amp;rel;
+    else if (FIXNUM_P(timeout)) {
+        rel = rb_sec2hrtime(NUM2TIMET(timeout));
+        limit = &amp;rel;
     }
     else {
-        to = double2hrtime(&amp;rel, rb_num2dbl(limit));
+        limit = double2hrtime(&amp;rel, rb_num2dbl(timeout));
     }
 
-    return thread_join(rb_thread_ptr(self), to);
+    return thread_join(rb_thread_ptr(self), timeout, limit);
 }</pre>
               </div>
             </div>
@@ -2452,18 +2543,14 @@ me.key?(:stanley)   #=&gt; false
                 <pre>static VALUE
 rb_thread_key_p(VALUE self, VALUE key)
 {
+    VALUE val;
     ID id = rb_check_id(&amp;key);
-    st_table *local_storage = rb_thread_ptr(self)-&gt;ec-&gt;local_storage;
+    struct rb_id_table *local_storage = rb_thread_ptr(self)-&gt;ec-&gt;local_storage;
 
     if (!id || local_storage == NULL) {
         return Qfalse;
     }
-    else if (st_is_member(local_storage, id)) {
-        return Qtrue;
-    }
-    else {
-        return Qfalse;
-    }
+    return RBOOL(rb_id_table_lookup(local_storage, id, &amp;val));
 }</pre>
               </div>
             </div>
@@ -2510,11 +2597,11 @@ thr.keys   #=&gt; [:dog, :cat]
                 <pre>static VALUE
 rb_thread_keys(VALUE self)
 {
-    st_table *local_storage = rb_thread_ptr(self)-&gt;ec-&gt;local_storage;
+    struct rb_id_table *local_storage = rb_thread_ptr(self)-&gt;ec-&gt;local_storage;
     VALUE ary = rb_ary_new();
 
     if (local_storage) {
-        st_foreach(local_storage, thread_keys_i, ary);
+        rb_id_table_foreach(local_storage, thread_keys_i, (void *)ary);
     }
     return ary;
 }</pre>
@@ -2563,7 +2650,7 @@ rb_thread_kill(VALUE thread)
     if (th-&gt;to_kill || th-&gt;status == THREAD_KILLED) {
         return thread;
     }
-    if (th == th-&gt;vm-&gt;main_thread) {
+    if (th == th-&gt;vm-&gt;ractor.main_thread) {
         rb_exit(EXIT_SUCCESS);
     }
 
@@ -2680,6 +2767,62 @@ rb_thread_setname(VALUE thread, VALUE name)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-native_thread_id">
+            
+              <b>thr.native_thread_id   &rarr; integer
+</b>
+            
+            <a href="../classes/Thread.html#method-i-native_thread_id" name="method-i-native_thread_id" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Return the native thread ID which is used by the Ruby thread.</p>
+
+<p>The ID depends on the OS. (not POSIX thread ID returned by pthread_self(3))</p>
+<ul><li>
+<p>On Linux it is TID returned by gettid(2).</p>
+</li><li>
+<p>On macOS it is the system-wide unique integral ID of thread returned by pthread_threadid_np(3).</p>
+</li><li>
+<p>On FreeBSD it is the unique integral ID of the thread returned by pthread_getthreadid_np(3).</p>
+</li><li>
+<p>On Windows it is the thread identifier returned by GetThreadId().</p>
+</li><li>
+<p>On other platforms, it raises <a href="NotImplementedError.html"><code>NotImplementedError</code></a>.</p>
+</li></ul>
+
+<p>NOTE: If the thread is not associated yet or already deassociated with a native thread, it returns <em>nil</em>. If the Ruby implementation uses M:N thread model, the ID may change depending on the timing.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-native_thread_id_source')" id="l_method-i-native_thread_id_source">show</a>
+                
+              </p>
+              <div id="method-i-native_thread_id_source" class="dyn-source">
+                <pre>static VALUE
+rb_thread_native_thread_id(VALUE thread)
+{
+    rb_thread_t *target_th = rb_thread_ptr(thread);
+    if (rb_threadptr_dead(target_th)) return Qnil;
+    return native_thread_native_thread_id(target_th);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-pending_interrupt-3F">
             
               <b>target_thread.pending_interrupt?(error = nil) &rarr; true/false
@@ -2728,12 +2871,7 @@ rb_thread_pending_interrupt_p(int argc, VALUE *argv, VALUE target_thread)
         if (!rb_obj_is_kind_of(err, rb_cModule)) {
             rb_raise(rb_eTypeError, &quot;class or module required for rescue clause&quot;);
         }
-        if (rb_threadptr_pending_interrupt_include_p(target_th, err)) {
-            return Qtrue;
-        }
-        else {
-            return Qfalse;
-        }
+        return RBOOL(rb_threadptr_pending_interrupt_include_p(target_th, err));
     }
     else {
         return Qtrue;
@@ -2960,7 +3098,7 @@ thread_raise_m(int argc, VALUE *argv, VALUE self)
                 <pre>static VALUE
 rb_thread_report_exc(VALUE thread)
 {
-    return rb_thread_ptr(thread)-&gt;report_on_exception ? Qtrue : Qfalse;
+    return RBOOL(rb_thread_ptr(thread)-&gt;report_on_exception);
 }</pre>
               </div>
             </div>
@@ -3062,48 +3200,6 @@ rb_thread_run(VALUE thread)
     rb_thread_wakeup(thread);
     rb_thread_schedule();
     return thread;
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-safe_level">
-            
-              <b>thr.safe_level   &rarr; integer
-</b>
-            
-            <a href="../classes/Thread.html#method-i-safe_level" name="method-i-safe_level" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Returns the safe level.</p>
-
-<p>This method is obsolete because $SAFE is a process global state. Simply check $SAFE.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-safe_level_source')" id="l_method-i-safe_level_source">show</a>
-                
-              </p>
-              <div id="method-i-safe_level_source" class="dyn-source">
-                <pre>static VALUE
-rb_thread_safe_level(VALUE thread)
-{
-    rb_warn(&quot;Thread#safe_level will be removed in Ruby 3.0&quot;);
-    return UINT2NUM(GET_VM()-&gt;safe_level_);
 }</pre>
               </div>
             </div>
@@ -3289,13 +3385,7 @@ rb_thread_stop_p(VALUE thread)
     if (rb_threadptr_dead(th)) {
         return Qtrue;
     }
-    else if (th-&gt;status == THREAD_STOPPED ||
-             th-&gt;status == THREAD_STOPPED_FOREVER) {
-        return Qtrue;
-    }
-    else {
-        return Qfalse;
-    }
+    return RBOOL(th-&gt;status == THREAD_STOPPED || th-&gt;status == THREAD_STOPPED_FOREVER);
 }</pre>
               </div>
             </div>
@@ -3368,23 +3458,13 @@ me.thread_variable?(:stanley)   #=&gt; false
 rb_thread_variable_p(VALUE thread, VALUE key)
 {
     VALUE locals;
-    ID id = rb_check_id(&amp;key);
-
-    if (!id) return Qfalse;
 
     if (LIKELY(!THREAD_LOCAL_STORAGE_INITIALISED_P(thread))) {
         return Qfalse;
     }
     locals = rb_thread_local_storage(thread);
 
-    if (rb_hash_lookup(locals, ID2SYM(id)) != Qnil) {
-        return Qtrue;
-    }
-    else {
-        return Qfalse;
-    }
-
-    return Qfalse;
+    return RBOOL(rb_hash_lookup(locals, rb_to_symbol(key)) != Qnil);
 }</pre>
               </div>
             </div>
@@ -3483,7 +3563,7 @@ rb_thread_variable_get(VALUE thread, VALUE key)
               </p>
               <div id="method-i-thread_variable_set_source" class="dyn-source">
                 <pre>static VALUE
-rb_thread_variable_set(VALUE thread, VALUE id, VALUE val)
+rb_thread_variable_set(VALUE thread, VALUE key, VALUE val)
 {
     VALUE locals;
 
@@ -3492,7 +3572,7 @@ rb_thread_variable_set(VALUE thread, VALUE id, VALUE val)
     }
 
     locals = rb_thread_local_storage(thread);
-    return rb_hash_aset(locals, rb_to_symbol(id), val);
+    return rb_hash_aset(locals, rb_to_symbol(key), val);
 }</pre>
               </div>
             </div>
@@ -3606,7 +3686,6 @@ rb_thread_to_s(VALUE thread)
     if ((loc = threadptr_invoke_proc_location(target_th)) != Qnil) {
         rb_str_catf(str, &quot; %&quot;PRIsVALUE&quot;:%&quot;PRIsVALUE,
                     RARRAY_AREF(loc, 0), RARRAY_AREF(loc, 1));
-        rb_gc_force_recycle(loc);
     }
     rb_str_catf(str, &quot; %s&gt;&quot;, status);
 
@@ -3657,7 +3736,7 @@ b.value   #=&gt; RuntimeError: something went wrong
 thread_value(VALUE self)
 {
     rb_thread_t *th = rb_thread_ptr(self);
-    thread_join(th, 0);
+    thread_join(th, Qnil, 0);
     return th-&gt;value;
 }</pre>
               </div>

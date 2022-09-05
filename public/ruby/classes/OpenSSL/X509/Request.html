@@ -249,6 +249,20 @@
   
 
   
+    <!-- Includes -->
+    <div class="sectiontitle">Included Modules</div>
+    <ul>
+      
+        <li>
+          
+            <a href="../Marshal.html">
+              OpenSSL::Marshal
+            </a>
+          
+        </li>
+      
+    </ul>
+  
 
 
 
@@ -300,23 +314,26 @@
 ossl_x509req_initialize(int argc, VALUE *argv, VALUE self)
 {
     BIO *in;
-    X509_REQ *req, *x = DATA_PTR(self);
+    X509_REQ *req, *req_orig = RTYPEDDATA_DATA(self);
     VALUE arg;
 
+    rb_check_frozen(self);
     if (rb_scan_args(argc, argv, &quot;01&quot;, &amp;arg) == 0) {
         return self;
     }
     arg = ossl_to_der_if_possible(arg);
     in = ossl_obj2bio(&amp;arg);
-    req = PEM_read_bio_X509_REQ(in, &amp;x, NULL, NULL);
-    DATA_PTR(self) = x;
+    req = d2i_X509_REQ_bio(in, NULL);
     if (!req) {
         OSSL_BIO_reset(in);
-        req = d2i_X509_REQ_bio(in, &amp;x);
-        DATA_PTR(self) = x;
+        req = PEM_read_bio_X509_REQ(in, NULL, NULL, NULL);
     }
     BIO_free(in);
-    if (!req) ossl_raise(eX509ReqError, NULL);
+    if (!req)
+        ossl_raise(eX509ReqError, &quot;PEM_read_bio_X509_REQ&quot;);
+
+    RTYPEDDATA_DATA(self) = req;
+    X509_REQ_free(req_orig);
 
     return self;
 }</pre>
@@ -355,11 +372,11 @@ ossl_x509req_initialize(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-3D-3D_source')" id="l_method-i-3D-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/x509.rb#L209" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/x509.rb#L385" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3D-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 209</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 385</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">==</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span> <span class="ruby-keyword">unless</span> <span class="ruby-constant">Request</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
   <span class="ruby-identifier">to_der</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">to_der</span>

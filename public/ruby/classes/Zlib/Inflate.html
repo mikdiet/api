@@ -454,7 +454,7 @@ rb_inflate_add_dictionary(VALUE obj, VALUE dictionary)
         <div class="method">
           <h3 class="title method-title" id="method-i-inflate">
             
-              <b>inflate(deflate_string)                 &rarr; String<br />inflate(deflate_string) { |chunk| ... } &rarr; nil
+              <b>inflate(deflate_string, buffer: nil)                 &rarr; String<br />inflate(deflate_string, buffer: nil) { |chunk| ... } &rarr; nil
 </b>
             
             <a href="../../classes/Zlib/Inflate.html#method-i-inflate" name="method-i-inflate" class="permalink">Link</a>
@@ -465,6 +465,15 @@ rb_inflate_add_dictionary(VALUE obj, VALUE dictionary)
               <p>Inputs <code>deflate_string</code> into the inflate stream and returns the output from the stream.  Calling this method, both the input and the output buffer of the stream are flushed.  If string is <code>nil</code>, this method finishes the stream, just like <a href="ZStream.html#method-i-finish"><code>Zlib::ZStream#finish</code></a>.</p>
 
 <p>If a block is given consecutive inflated chunks from the <code>deflate_string</code> are yielded to the block and <code>nil</code> is returned.</p>
+
+<p>If a :buffer keyword argument is given and not nil:</p>
+<ul><li>
+<p>The :buffer keyword should be a <a href="../String.html"><code>String</code></a>, and will used as the output buffer. Using this option can reuse the memory required during inflation.</p>
+</li><li>
+<p>When not passing a block, the return value will be the same object as the :buffer keyword argument.</p>
+</li><li>
+<p>When passing a block, the yielded chunks will be the same value as the :buffer keyword argument.</p>
+</li></ul>
 
 <p>Raises a <a href="NeedDict.html"><code>Zlib::NeedDict</code></a> exception if a preset dictionary is needed to decompress.  <a href="../Set.html"><code>Set</code></a> the dictionary by <a href="Inflate.html#method-i-set_dictionary"><code>Zlib::Inflate#set_dictionary</code></a> and then call this method again with an empty string to flush the stream:</p>
 
@@ -504,10 +513,37 @@ inflater.close
               </p>
               <div id="method-i-inflate_source" class="dyn-source">
                 <pre>static VALUE
-rb_inflate_inflate(VALUE obj, VALUE src)
+rb_inflate_inflate(int argc, VALUE* argv, VALUE obj)
 {
     struct zstream *z = get_zstream(obj);
-    VALUE dst;
+    VALUE dst, src, opts, buffer = Qnil;
+
+    if (OPTHASH_GIVEN_P(opts)) {
+        VALUE buf;
+        rb_get_kwargs(opts, &amp;id_buffer, 0, 1, &amp;buf);
+        if (buf != Qundef &amp;&amp; buf != Qnil) {
+            buffer = StringValue(buf);
+        }
+    }
+    if (buffer != Qnil) {
+        if (!(ZSTREAM_REUSE_BUFFER_P(z) &amp;&amp; z-&gt;buf == buffer)) {
+            long len = RSTRING_LEN(buffer);
+            if (len &gt;= ZSTREAM_AVAIL_OUT_STEP_MAX) {
+                rb_str_modify(buffer);
+            }
+            else {
+                len = ZSTREAM_AVAIL_OUT_STEP_MAX - len;
+                rb_str_modify_expand(buffer, len);
+            }
+            rb_str_set_len(buffer, 0);
+            z-&gt;flags |= ZSTREAM_REUSE_BUFFER;
+            z-&gt;buf = buffer;
+        }
+    } else if (ZSTREAM_REUSE_BUFFER_P(z)) {
+        z-&gt;flags &amp;= ~ZSTREAM_REUSE_BUFFER;
+        z-&gt;buf = Qnil;
+    }
+    rb_scan_args(argc, argv, &quot;10&quot;, &amp;src);
 
     if (ZSTREAM_IS_FINISHED(z)) {
         if (NIL_P(src)) {
@@ -516,7 +552,11 @@ rb_inflate_inflate(VALUE obj, VALUE src)
         else {
             StringValue(src);
             zstream_append_buffer2(z, src);
-            dst = rb_str_new(0, 0);
+            if (ZSTREAM_REUSE_BUFFER_P(z)) {
+                dst = rb_str_resize(buffer, 0);
+            } else {
+                dst = rb_str_new(0, 0);
+            }
         }
     }
     else {

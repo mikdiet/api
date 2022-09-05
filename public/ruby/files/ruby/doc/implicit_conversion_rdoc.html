@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>implicit_conversion.rdoc</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+
+<meta name="data-rel-prefix" content="/">
+<meta name="data-tree-keys" content='[]'>
+
+</head>
+
+<body>
+    <a class="sr-only sr-only-focusable" href="#content" data-turbolinks="false">Skip to Content</a>
+    <a class="sr-only sr-only-focusable" href="#search" data-turbolinks="false">Skip to Search</a>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<nav class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search (/) for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</nav>
+
+
+    <div class="banner">
+        
+        <h2>
+            implicit_conversion.rdoc
+        </h2>
+        <ul class="files">
+            
+            <li>
+                ruby/doc/implicit_conversion.rdoc
+                
+                    <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/doc/implicit_conversion.rdoc" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2022-09-06 00:52:29 +0300</li>
+        </ul>
+    </div>
+
+    <main id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h2 id="label-Implicit+Conversions">Implicit Conversions</h2>
+
+<p>Some Ruby methods accept one or more objects that can be either:</p>
+<ul><li>
+<p><em>Of a given class</em>, and so accepted as is.</p>
+</li><li>
+<p><em>Implicitly convertible to that class</em>, in which case the called method converts the object.</p>
+</li></ul>
+
+<p>For each of the relevant classes, the conversion is done by calling a specific conversion method:</p>
+<ul><li>
+<p>Array: <code>to_ary</code></p>
+</li><li>
+<p>Hash: <code>to_hash</code></p>
+</li><li>
+<p>Integer: <code>to_int</code></p>
+</li><li>
+<p>String: <code>to_str</code></p>
+</li></ul>
+
+<h3 id="label-Array-Convertible+Objects">Array-Convertible Objects</h3>
+
+<p>An <em>Array-convertible object</em> is an object that:</p>
+<ul><li>
+<p>Has instance method <code>to_ary</code>.</p>
+</li><li>
+<p>The method accepts no arguments.</p>
+</li><li>
+<p>The method returns an object <code>obj</code> for which <code>obj.kind_of?(Array)</code> returns <code>true</code>.</p>
+</li></ul>
+
+<p>The examples in this section use method <code>Array#replace</code>, which accepts an Array-convertible argument.</p>
+
+<p>This class is Array-convertible:</p>
+
+<pre><code>class ArrayConvertible
+  def to_ary
+    [:foo, &#39;bar&#39;, 2]
+  end
+end
+a = []
+a.replace(ArrayConvertible.new) # =&gt; [:foo, &quot;bar&quot;, 2]
+</code></pre>
+
+<p>This class is not Array-convertible (no <code>to_ary</code> method):</p>
+
+<pre><code>class NotArrayConvertible; end
+a = []
+# Raises TypeError (no implicit conversion of NotArrayConvertible into Array)
+a.replace(NotArrayConvertible.new)
+</code></pre>
+
+<p>This class is not Array-convertible (method <code>to_ary</code> takes arguments):</p>
+
+<pre><code>class NotArrayConvertible
+  def to_ary(x)
+    [:foo, &#39;bar&#39;, 2]
+  end
+end
+a = []
+# Raises ArgumentError (wrong number of arguments (given 0, expected 1))
+a.replace(NotArrayConvertible.new)
+</code></pre>
+
+<p>This class is not Array-convertible (method <code>to_ary</code> returns non-Array):</p>
+
+<pre><code>class NotArrayConvertible
+  def to_ary
+    :foo
+  end
+end
+a = []
+# Raises TypeError (can&#39;t convert NotArrayConvertible to Array (NotArrayConvertible#to_ary gives Symbol))
+a.replace(NotArrayConvertible.new)
+</code></pre>
+
+<h3 id="label-Hash-Convertible+Objects">Hash-Convertible Objects</h3>
+
+<p>A <em>Hash-convertible object</em> is an object that:</p>
+<ul><li>
+<p>Has instance method <code>to_hash</code>.</p>
+</li><li>
+<p>The method accepts no arguments.</p>
+</li><li>
+<p>The method returns an object <code>obj</code> for which <code>obj.kind_of?(Hash)</code> returns <code>true</code>.</p>
+</li></ul>
+
+<p>The examples in this section use method <code>Hash#merge</code>, which accepts a Hash-convertible argument.</p>
+
+<p>This class is Hash-convertible:</p>
+
+<pre><code>class HashConvertible
+  def to_hash
+    {foo: 0, bar: 1, baz: 2}
+  end
+end
+h = {}
+h.merge(HashConvertible.new) # =&gt; {:foo=&gt;0, :bar=&gt;1, :baz=&gt;2}
+</code></pre>
+
+<p>This class is not Hash-convertible (no <code>to_hash</code> method):</p>
+
+<pre><code>class NotHashConvertible; end
+h = {}
+# Raises TypeError (no implicit conversion of NotHashConvertible into Hash)
+h.merge(NotHashConvertible.new)
+</code></pre>
+
+<p>This class is not Hash-convertible (method <code>to_hash</code> takes arguments):</p>
+
+<pre><code>class NotHashConvertible
+  def to_hash(x)
+    {foo: 0, bar: 1, baz: 2}
+  end
+end
+h = {}
+# Raises ArgumentError (wrong number of arguments (given 0, expected 1))
+h.merge(NotHashConvertible.new)
+</code></pre>
+
+<p>This class is not Hash-convertible (method <code>to_hash</code> returns non-Hash):</p>
+
+<pre><code>class NotHashConvertible
+  def to_hash
+    :foo
+  end
+end
+h = {}
+# Raises TypeError (can&#39;t convert NotHashConvertible to Hash (ToHashReturnsNonHash#to_hash gives Symbol))
+h.merge(NotHashConvertible.new)
+</code></pre>
+
+<h3 id="label-Integer-Convertible+Objects">Integer-Convertible Objects</h3>
+
+<p>An <em>Integer-convertible object</em> is an object that:</p>
+<ul><li>
+<p>Has instance method <code>to_int</code>.</p>
+</li><li>
+<p>The method accepts no arguments.</p>
+</li><li>
+<p>The method returns an object <code>obj</code> for which <code>obj.kind_of?(Integer)</code> returns <code>true</code>.</p>
+</li></ul>
+
+<p>The examples in this section use method <code>Array.new</code>, which accepts an Integer-convertible argument.</p>
+
+<p>This user-defined class is Integer-convertible:</p>
+
+<pre><code>class IntegerConvertible
+  def to_int
+    3
+  end
+end
+a = Array.new(IntegerConvertible.new).size
+a # =&gt; 3
+</code></pre>
+
+<p>This class is not Integer-convertible (method <code>to_int</code> takes arguments):</p>
+
+<pre><code>class NotIntegerConvertible
+  def to_int(x)
+    3
+  end
+end
+# Raises ArgumentError (wrong number of arguments (given 0, expected 1))
+Array.new(NotIntegerConvertible.new)
+</code></pre>
+
+<p>This class is not Integer-convertible (method <code>to_int</code> returns non-Integer):</p>
+
+<pre><code>class NotIntegerConvertible
+  def to_int
+    :foo
+  end
+end
+# Raises TypeError (can&#39;t convert NotIntegerConvertible to Integer (NotIntegerConvertible#to_int gives Symbol))
+Array.new(NotIntegerConvertible.new)
+</code></pre>
+
+<h3 id="label-String-Convertible+Objects">String-Convertible Objects</h3>
+
+<p>A <em>String-convertible object</em> is an object that:</p>
+<ul><li>
+<p>Has instance method <code>to_str</code>.</p>
+</li><li>
+<p>The method accepts no arguments.</p>
+</li><li>
+<p>The method returns an object <code>obj</code> for which <code>obj.kind_of?(String)</code> returns <code>true</code>.</p>
+</li></ul>
+
+<p>The examples in this section use method <code>String::new</code>, which accepts a String-convertible argument.</p>
+
+<p>This class is String-convertible:</p>
+
+<pre><code>class StringConvertible
+  def to_str
+    &#39;foo&#39;
+  end
+end
+String.new(StringConvertible.new) # =&gt; &quot;foo&quot;
+</code></pre>
+
+<p>This class is not String-convertible (no <code>to_str</code> method):</p>
+
+<pre><code>class NotStringConvertible; end
+# Raises TypeError (no implicit conversion of NotStringConvertible into String)
+String.new(NotStringConvertible.new)
+</code></pre>
+
+<p>This class is not String-convertible (method <code>to_str</code> takes arguments):</p>
+
+<pre><code>class NotStringConvertible
+  def to_str(x)
+    &#39;foo&#39;
+  end
+end
+# Raises ArgumentError (wrong number of arguments (given 0, expected 1))
+String.new(NotStringConvertible.new)
+</code></pre>
+
+<p>This class is not String-convertible (method <code>to_str</code> returns non-String):</p>
+
+<pre><code>class NotStringConvertible
+  def to_str
+    :foo
+  end
+end
+# Raises TypeError (can&#39;t convert NotStringConvertible to String (NotStringConvertible#to_str gives Symbol))
+String.new(NotStringConvertible.new)
+</code></pre>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </main>
+  </body>
+</html>

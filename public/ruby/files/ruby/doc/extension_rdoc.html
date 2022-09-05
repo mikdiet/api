@@ -56,10 +56,10 @@
             <li>
                 ruby/doc/extension.rdoc
                 
-                    <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/doc/extension.rdoc" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/doc/extension.rdoc" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2022-04-14 02:20:28 +0300</li>
+            <li>Last modified: 2022-09-06 00:52:29 +0300</li>
         </ul>
     </div>
 
@@ -76,7 +76,7 @@
 
 <p>In C, variables have types and data do not have types.  In contrast, Ruby variables do not have a static type, and data themselves have types, so data will need to be converted between the languages.</p>
 
-<p><a href="../../../classes/Data.html"><code>Data</code></a> in Ruby are represented by the C type ‘VALUE’.  Each VALUE data has its data type.</p>
+<p>Data in Ruby are represented by the C type ‘VALUE’.  Each VALUE data has its data type.</p>
 
 <p>To retrieve C data from a VALUE, you need to:</p>
 <ol><li>
@@ -87,7 +87,7 @@
 
 <p>Converting to the wrong data type may cause serious problems.</p>
 
-<h3 id="label-Data+Types"><a href="../../../classes/Data.html"><code>Data</code></a> Types</h3>
+<h3 id="label-Data+Types">Data Types</h3>
 
 <p>The Ruby interpreter has the following data types:</p>
 <dl class="rdoc-list note-list"><dt>T_NIL       
@@ -169,7 +169,7 @@
 
 <p>Most of the types are represented by C structures.</p>
 
-<h3 id="label-Check+Data+Type+of+the+VALUE">Check <a href="../../../classes/Data.html"><code>Data</code></a> Type of the VALUE</h3>
+<h3 id="label-Check+Data+Type+of+the+VALUE">Check Data Type of the VALUE</h3>
 
 <p>The macro TYPE() defined in ruby.h shows the data type of the VALUE. TYPE() returns the constant number T_XXXX described above.  To handle data types, your code will look something like this:</p>
 
@@ -203,9 +203,9 @@
 NIL_P(obj)
 </code></pre>
 
-<h3 id="label-Convert+VALUE+into+C+Data">Convert VALUE into C <a href="../../../classes/Data.html"><code>Data</code></a></h3>
+<h3 id="label-Convert+VALUE+into+C+Data">Convert VALUE into C Data</h3>
 
-<p>The data for type T_NIL, T_FALSE, T_TRUE are nil, false, true respectively.  They are singletons for the data type. The equivalent C constants are: Qnil, Qfalse, Qtrue. Note that Qfalse is false in C also (i.e. 0), but not Qnil.</p>
+<p>The data for type T_NIL, T_FALSE, T_TRUE are nil, false, true respectively.  They are singletons for the data type. The equivalent C constants are: Qnil, Qfalse, Qtrue. RTEST() will return true if a VALUE is neither Qfalse nor Qnil. If you need to differentiate Qfalse from Qnil, specifically test against Qfalse.</p>
 
 <p>The T_FIXNUM data is a 31bit or 63bit length fixed integer. This size depends on the size of long: if long is 32bit then T_FIXNUM is 31bit, if long is 64bit then T_FIXNUM is 63bit. T_FIXNUM can be converted to a C integer by using the FIX2INT() macro or FIX2LONG().  Though you have to check that the data is really FIXNUM before using them, they are faster.  FIX2LONG() never raises exceptions, but FIX2INT() raises <a href="../../../classes/RangeError.html"><code>RangeError</code></a> if the result is bigger or smaller than the size of int. There are also NUM2INT() and NUM2LONG() which converts any Ruby numbers into C integers.  These macros include a type check, so an exception will be raised if the conversion failed.  NUM2DBL() can be used to retrieve the double float value in the same way.</p>
 
@@ -219,7 +219,7 @@ NIL_P(obj)
 
 <p>Notice: Do not change the value of the structure directly, unless you are responsible for the result.  This ends up being the cause of interesting bugs.</p>
 
-<h3 id="label-Convert+C+Data+into+VALUE">Convert C <a href="../../../classes/Data.html"><code>Data</code></a> into VALUE</h3>
+<h3 id="label-Convert+C+Data+into+VALUE">Convert C Data into VALUE</h3>
 
 <p>To convert C data to Ruby values:</p>
 <dl class="rdoc-list note-list"><dt>FIXNUM 
@@ -245,7 +245,19 @@ NIL_P(obj)
 
 <p>INT2NUM() converts an integer into a Bignum if it is out of the FIXNUM range, but is a bit slower.</p>
 
-<h3 id="label-Manipulating+Ruby+Data">Manipulating Ruby <a href="../../../classes/Data.html"><code>Data</code></a></h3>
+<p>To convert C boolean to Ruby <code>true</code> or <code>false</code> :</p>
+<dl class="rdoc-list note-list"><dt>RBOOL() 
+<dd>
+<p><code>RBOOL(v)</code> returns <code>Qtrue</code> if <em>v</em> is not 0, or <code>Qfalse</code> otherwisze <em>v</em> is 0.</p>
+
+<p>Notice: RBOOL is defined since Ruby 3.1, if you want to use it in a program which supports older versions, the fallback definition will be needed, like as the following.</p>
+
+<pre><code>#ifndef RBOOL
+#define RBOOL(v) ((v) ? Qtrue : Qfalse)
+#endif
+</code></pre>
+
+<h3 id="label-Manipulating+Ruby+Data">Manipulating Ruby Data</h3>
 
 <p>As I already mentioned, it is not recommended to modify an object’s internal structure.  To manipulate objects, use the functions supplied by the Ruby interpreter. Some (not all) of the useful functions are listed below:</p>
 
@@ -476,7 +488,7 @@ void rb_undef_alloc_func(VALUE klass);
 
 <p>To specify whether keyword arguments are passed when calling super:</p>
 
-<pre><code>VALUE rb_call_super(int argc, const VALUE *argv, int kw_splat)
+<pre><code>VALUE rb_call_super_kw(int argc, const VALUE *argv, int kw_splat)
 </code></pre>
 
 <p><code>kw_splat</code> can have these possible values (used by all methods that accept <code>kw_splat</code> argument):</p>
@@ -486,9 +498,6 @@ void rb_undef_alloc_func(VALUE klass);
 </dd><dt>RB_PASS_KEYWORDS 
 <dd>
 <p>Pass keywords, final argument should be a hash of keywords</p>
-</dd><dt>RB_PASS_EMPTY_KEYWORDS 
-<dd>
-<p>Pass empty keywords (not included in arguments) (this will be removed in Ruby 3.0)</p>
 </dd><dt>RB_PASS_CALLED_KEYWORDS 
 <dd>
 <p>Pass keywords if current method was called with keywords, useful for argument delegation</p>
@@ -657,7 +666,7 @@ void (*setter)(VALUE val, ID id, VALUE *var);
 void (*setter)(VALUE val, ID id);
 </code></pre>
 
-<h3 id="label-Encapsulate+C+Data+into+a+Ruby+Object">Encapsulate C <a href="../../../classes/Data.html"><code>Data</code></a> into a Ruby <a href="../../../classes/Object.html"><code>Object</code></a></h3>
+<h3 id="label-Encapsulate+C+Data+into+a+Ruby+Object">Encapsulate C Data into a Ruby <a href="../../../classes/Object.html"><code>Object</code></a></h3>
 
 <p>Sometimes you need to expose your struct in the C world as a Ruby object. In a situation like this, making use of the TypedData_XXX macro family, the pointer to the struct and the Ruby object can be mutually converted.</p>
 
@@ -670,25 +679,26 @@ void (*setter)(VALUE val, ID id);
 
 <p>TypedData_Wrap_Struct() returns a created Ruby object as a VALUE.</p>
 
-<p>The klass argument is the class for the object. data_type is a pointer to a const rb_data_type_t which describes how Ruby should manage the struct.</p>
+<p>The klass argument is the class for the object.  The klass should derive from rb_cObject, and the allocator must be set by calling rb_define_alloc_func or rb_undef_alloc_func.</p>
 
-<p>It is recommended that klass derives from a special class called <a href="../../../classes/Data.html"><code>Data</code></a> (rb_cData) but not from <a href="../../../classes/Object.html"><code>Object</code></a> or other ordinal classes. If it doesn’t, you have to call rb_undef_alloc_func(klass).</p>
+<p>data_type is a pointer to a const rb_data_type_t which describes how Ruby should manage the struct.</p>
 
 <p>rb_data_type_t is defined like this.  Let’s take a look at each member of the struct.</p>
 
 <pre><code>typedef struct rb_data_type_struct rb_data_type_t;
 
 struct rb_data_type_struct {
-        const char *wrap_struct_name;
-        struct {
-                void (*dmark)(void*);
-                void (*dfree)(void*);
-                size_t (*dsize)(const void *);
-                void *reserved[2];
-        } function;
-        const rb_data_type_t *parent;
-        void *data;
-        VALUE flags;
+    const char *wrap_struct_name;
+    struct {
+        void (*dmark)(void*);
+        void (*dfree)(void*);
+        size_t (*dsize)(const void *);
+        void (*dcompact)(void*);
+        void *reserved[1];
+    } function;
+    const rb_data_type_t *parent;
+    void *data;
+    VALUE flags;
 };
 </code></pre>
 
@@ -698,11 +708,15 @@ struct rb_data_type_struct {
 
 <p>dmark is a function to mark Ruby objects referred from your struct. It must mark all references from your struct with rb_gc_mark or its family if your struct keeps such references.</p>
 
-<p>dfree is a function to free the pointer allocation. If this is -1, the pointer will be just freed.</p>
+<p>dfree is a function to free the pointer allocation. If this is RUBY_DEFAULT_FREE, the pointer will be just freed.</p>
 
 <p>dsize calculates memory consumption in bytes by the struct. Its parameter is a pointer to your struct. You can pass 0 as dsize if it is hard to implement such a function. But it is still recommended to avoid 0.</p>
 
-<p>You have to fill reserved and parent with 0.</p>
+<p>dcompact is invoked when memory compaction took place. Referred Ruby objects that were marked by rb_gc_mark_movable() can here be updated per rb_gc_location().</p>
+
+<p>You have to fill reserved with 0.</p>
+
+<p>parent can point to another C type definition that the Ruby object is inherited from. Then TypedData_Get_Struct() does also accept derived objects.</p>
 
 <p>You can fill “data” with an arbitrary value for your use. Ruby does nothing with the member.</p>
 
@@ -719,6 +733,11 @@ struct rb_data_type_struct {
 <p>When it is set, however, you are responsible for putting write barriers in all implementations of methods of that object as appropriate. Otherwise Ruby might crash while running.</p>
 
 <p>More about write barriers can be found in “Generational GC” in Appendix D.</p>
+</dd><dt>RUBY_TYPED_FROZEN_SHAREABLE 
+<dd>
+<p>This flag indicates that the object is shareable object if the object is frozen. See Appendix F more details.</p>
+
+<p>If this flag is not set, the object can not become a shareable object by <a href="../../../classes/Ractor.html#method-c-make_shareable"><code>Ractor.make_shareable()</code></a> method.</p>
 </dd></dl>
 
 <p>You can allocate and wrap the structure in one step.</p>
@@ -726,7 +745,7 @@ struct rb_data_type_struct {
 <pre><code>TypedData_Make_Struct(klass, type, data_type, sval)
 </code></pre>
 
-<p>This macro returns an allocated <a href="../../../classes/Data.html"><code>Data</code></a> object, wrapping the pointer to the structure, which is also allocated.  This macro works like:</p>
+<p>This macro returns an allocated Data object, wrapping the pointer to the structure, which is also allocated.  This macro works like:</p>
 
 <pre><code>(sval = ZALLOC(type), TypedData_Wrap_Struct(klass, data_type, sval))
 </code></pre>
@@ -735,7 +754,7 @@ struct rb_data_type_struct {
 
 <h4 id="label-Ruby+object+to+C+struct">Ruby object to C struct</h4>
 
-<p>To retrieve the C pointer from the <a href="../../../classes/Data.html"><code>Data</code></a> object, use the macro TypedData_Get_Struct().</p>
+<p>To retrieve the C pointer from the Data object, use the macro TypedData_Get_Struct().</p>
 
 <pre><code>TypedData_Get_Struct(obj, type, &amp;data_type, sval)
 </code></pre>
@@ -767,11 +786,14 @@ struct rb_data_type_struct {
 
 <p>Here’s the example of an initializing function.</p>
 
-<pre><code>void
+<pre><code>#include &lt;ruby.h&gt;
+void
 Init_dbm(void)
 {
     /* define DBM class */
     VALUE cDBM = rb_define_class(&quot;DBM&quot;, rb_cObject);
+    /* Redefine DBM.allocate
+    rb_define_alloc_func(cDBM, fdbm_alloc);
     /* DBM includes Enumerable module */
     rb_include_module(cDBM, rb_mEnumerable);
 
@@ -781,7 +803,7 @@ Init_dbm(void)
     /* DBM instance method close(): no args */
     rb_define_method(cDBM, &quot;close&quot;, fdbm_close, 0);
     /* DBM instance method []: 1 argument */
-    rb_define_method(cDBM, &quot;[]&quot;, fdbm_fetch, 1);
+    rb_define_method(cDBM, &quot;[]&quot;, fdbm_aref, 1);
 
     /* ... */
 
@@ -804,10 +826,16 @@ static const rb_data_type_t dbm_type = {
     RUBY_TYPED_FREE_IMMEDIATELY,
 };
 
-obj = TypedData_Make_Struct(klass, struct dbmdata, &amp;dbm_type, dbmp);
+static VALUE
+fdbm_alloc(VALUE klass)
+{
+    struct dbmdata *dbmp;
+    /* Allocate T_DATA object and C struct and fill struct with zero bytes */
+    return TypedData_Make_Struct(klass, struct dbmdata, &amp;dbm_type, dbmp);
+}
 </code></pre>
 
-<p>This code wraps the dbmdata structure into a Ruby object.  We avoid wrapping DBM* directly, because we want to cache size information.</p>
+<p>This code wraps the dbmdata structure into a Ruby object.  We avoid wrapping DBM* directly, because we want to cache size information. Since Object.allocate allocates an ordinary T_OBJECT type (instead of T_DATA), it’s important to either use rb_define_alloc_func() to overwrite it or rb_undef_alloc_func() to delete it.</p>
 
 <p>To retrieve the dbmdata structure from a Ruby object, we define the following macro:</p>
 
@@ -818,14 +846,18 @@ obj = TypedData_Make_Struct(klass, struct dbmdata, &amp;dbm_type, dbmp);
 } while (0)
 </code></pre>
 
-<p>This sort of complicated macro does the retrieving and close checking for the <a href="../../../classes/DBM.html"><code>DBM</code></a>.</p>
+<p>This sort of complicated macro does the retrieving and close checking for the DBM.</p>
 
 <p>There are three kinds of way to receive method arguments.  First, methods with a fixed number of arguments receive arguments like this:</p>
 
 <pre><code>static VALUE
-fdbm_delete(VALUE obj, VALUE keystr)
+fdbm_aref(VALUE obj, VALUE keystr)
 {
-      /* ... */
+    struct dbmdata *dbmp;
+    GetDBM(obj, dbmp);
+    /* Use dbmp to access the key */
+    dbm_fetch(dbmp-&gt;di_dbm, StringValueCStr(keystr));
+    /* ... */
 }
 </code></pre>
 
@@ -956,7 +988,15 @@ $objs: list of object file names
 
 <p>You can do anything you want with your library.  The author of Ruby will not claim any restrictions on your code depending on the Ruby API. Feel free to use, modify, distribute or sell your program.</p>
 
-<h2 id="label-Appendix+A.+Ruby+Source+Files+Overview">Appendix A. Ruby Source Files Overview</h2>
+<h2 id="label-Appendix+A.+Ruby+Header+and+Source+Files+Overview">Appendix A. Ruby Header and Source Files Overview</h2>
+
+<h3 id="label-Ruby+Header+Files">Ruby Header Files</h3>
+
+<p>Everything under <code>$repo_root/include/ruby</code> is installed with <code>make install</code>. It should be included per <code>#include &lt;ruby.h&gt;</code> from C extensions. All symbols are public API with the exception of symbols prefixed with <code>rbimpl_</code> or <code>RBIMPL_</code>. They are implementation details and shouldn’t be used by C extensions.</p>
+
+<p>Only <code>$repo_root/include/ruby/*.h</code> are allowed to be <code>#include</code>-d by C extensions. Files under <code>$repo_root/include/ruby/internal</code> should not be <code>#include</code>-d directly.</p>
+
+<p>Header files under <code>$repo_root/internal/</code> or directly under the root <code>$repo_root/*.h</code> are not make-installed. They are internal headers with only internal APIs.</p>
 
 <h3 id="label-Ruby+Language+Core">Ruby Language Core</h3>
 <dl class="rdoc-list note-list"><dt>class.c    
@@ -1021,10 +1061,9 @@ defs/opt_operand.def     : definitions for optimization
   -&gt; vm.inc              : automatically generated
 </code></pre>
 
-<h3 id="label-Regular+Expression+Engine+-28Oniguruma-29">Regular Expression Engine (Oniguruma)</h3>
+<h3 id="label-Regular+Expression+Engine+-28Onigumo-29">Regular Expression Engine (Onigumo)</h3>
 
-<pre><code>regex.c
-regcomp.c
+<pre><code>regcomp.c
 regenc.c
 regerror.c
 regexec.c
@@ -1206,7 +1245,7 @@ golf_prelude.rb     : goruby specific libraries.
 <p>This macro retrieves the pointer value from DATA, and assigns it to the variable sval.</p>
 </dd></dl>
 
-<h3 id="label-Checking+Data+Types">Checking <a href="../../../classes/Data.html"><code>Data</code></a> Types</h3>
+<h3 id="label-Checking+Data+Types">Checking Data Types</h3>
 <dl class="rdoc-list note-list"><dt>RB_TYPE_P(value, type) 
 <dd>
 <p>Is <code>value</code> an internal type (T_NIL, T_FIXNUM, etc.)?</p>
@@ -1230,7 +1269,7 @@ golf_prelude.rb     : goruby specific libraries.
 <p>Ensures <code>value</code> is of the given internal <code>type</code> or raises a <a href="../../../classes/TypeError.html"><code>TypeError</code></a></p>
 </dd></dl>
 
-<h3 id="label-Data+Type+Conversion"><a href="../../../classes/Data.html"><code>Data</code></a> Type Conversion</h3>
+<h3 id="label-Data+Type+Conversion">Data Type Conversion</h3>
 <dl class="rdoc-list note-list"><dt>FIX2INT(value), INT2FIX(i) 
 <dd>
 <p>Fixnum &lt;-&gt; integer</p>
@@ -1403,28 +1442,6 @@ sym-for-keyword-arg            := &quot;:&quot;   ; Indicates that keyword
                                         ; argument captured as a hash.
                                         ; If keyword arguments are not
                                         ; provided, returns nil.
-                                        ;
-                                        ; Currently, will also consider
-                                        ; final argument as keywords if
-                                        ; it is a hash or can be
-                                        ; converted to a hash with
-                                        ; #to_hash.  When the last
-                                        ; argument is nil, it is
-                                        ; captured if it is not
-                                        ; ambiguous to take it as
-                                        ; empty option hash; i.e. &#39;*&#39;
-                                        ; is not specified and
-                                        ; arguments are given more
-                                        ; than sufficient.
-                                        ;
-                                        ; However, handling final
-                                        ; argument as keywords if
-                                        ; method was not called with
-                                        ; keywords (whether final
-                                        ; argument is hash or nil) is
-                                        ; deprecated. In that case, a
-                                        ; warning will be emitted, and
-                                        ; in Ruby 3.0 it will be an error.
 sym-for-block-arg              := &quot;&amp;&quot;   ; Indicates that an iterator
                                         ; block should be captured if
                                         ; given
@@ -1442,9 +1459,6 @@ sym-for-block-arg              := &quot;&amp;&quot;   ; Indicates that an iterat
 </dd><dt>RB_SCAN_ARGS_KEYWORDS 
 <dd>
 <p>The final argument should be a hash treated as keywords.</p>
-</dd><dt>RB_SCAN_ARGS_EMPTY_KEYWORDS 
-<dd>
-<p>Don’t treat a final hash as keywords. (this will be removed in Ruby 3.0)</p>
 </dd><dt>RB_SCAN_ARGS_LAST_HASH_KEYWORDS 
 <dd>
 <p>Treat a final argument as keywords if it is a hash, and not as keywords otherwise.</p>
@@ -1708,10 +1722,10 @@ RUBY_EVENT_ALL
 <p>Means that NORETURN macro is functional style instead of prefix.</p>
 </dd><dt>HAVE_RB_DEFINE_ALLOC_FUNC 
 <dd>
-<p>Means that function rb_define_alloc_func() is provided, that means the allocation framework is used.  This is same as the result of have_func(“rb_define_alloc_func”, “ruby.h”).</p>
+<p>Means that function rb_define_alloc_func() is provided, that means the allocation framework is used.  This is the same as the result of have_func(“rb_define_alloc_func”, “ruby.h”).</p>
 </dd><dt>HAVE_RB_REG_NEW_STR 
 <dd>
-<p>Means that function rb_reg_new_str() is provided, that creates <a href="../../../classes/Regexp.html"><code>Regexp</code></a> object from <a href="../../../classes/String.html"><code>String</code></a> object.  This is same as the result of have_func(“rb_reg_new_str”, “ruby.h”).</p>
+<p>Means that function rb_reg_new_str() is provided, that creates <a href="../../../classes/Regexp.html"><code>Regexp</code></a> object from <a href="../../../classes/String.html"><code>String</code></a> object.  This is the same as the result of have_func(“rb_reg_new_str”, “ruby.h”).</p>
 </dd><dt>HAVE_RB_IO_T 
 <dd>
 <p>Means that type rb_io_t is provided.</p>
@@ -1759,6 +1773,7 @@ RUBY_EVENT_ALL
 #define rb_proc_call_with_block_kw(p, c, v, b, kw) rb_proc_call_with_block(p, c, v, b)
 #define rb_method_call_kw(c, v, m, kw) rb_method_call(c, v, m)
 #define rb_method_call_with_block_kw(c, v, m, b, kw) rb_method_call_with_block(c, v, m, b)
+#define rb_eval_cmd_kwd(c, a, kw) rb_eval_cmd(c, a, 0)
 #endif
 </code></pre>
 
@@ -1823,7 +1838,7 @@ RUBY_EVENT_ALL
 
 <p>Before inserting write barriers, you need to know about RGenGC algorithm (gc.c will help you). Macros and functions to insert write barriers are available in include/ruby/ruby.h. An example is available in iseq.c.</p>
 
-<p>For a complete guide for RGenGC and write barriers, please refer to &lt;<a href="https://bugs.ruby-lang.org/projects/ruby-trunk/wiki/RGenGC">bugs.ruby-lang.org/projects/ruby-trunk/wiki/RGenGC</a>&gt;.</p>
+<p>For a complete guide for RGenGC and write barriers, please refer to &lt;<a href="https://bugs.ruby-lang.org/projects/ruby-master/wiki/RGenGC">bugs.ruby-lang.org/projects/ruby-master/wiki/RGenGC</a>&gt;.</p>
 
 <h2 id="label-Appendix+E.+RB_GC_GUARD+to+protect+from+premature+GC">Appendix E. RB_GC_GUARD to protect from premature <a href="../../../classes/GC.html"><code>GC</code></a></h2>
 
@@ -1858,6 +1873,66 @@ RB_GC_GUARD(s); /* ensure s (and thus sptr) do not get GC-ed */
 </li><li>
 <p>“volatile” implementations may be buggy/inconsistent in some compilers and architectures. RB_GC_GUARD is customizable for broken systems/compilers without negatively affecting other systems.</p>
 </li></ol>
+
+<h2 id="label-Appendix+F.+Ractor+support">Appendix F. <a href="../../../classes/Ractor.html"><code>Ractor</code></a> support</h2>
+
+<p><a href="../../../classes/Ractor.html"><code>Ractor</code></a> is parallel execution mechanism introduced from Ruby 3.0. All ractrors can run in parallel by different OS thread (underlying system provided thread), so the C extension should be thread-safe. Now we call the property that C extension can run in multiple ractors “Ractor-safe”.</p>
+
+<p>By default, all C extensions are recognized as Ractor-unsafe. If C extension becomes Ractor-safe, the extension should call rb_ext_ractor_safe(true) at the Init_ function and all defined method marked as Ractor-safe. Ractor-unsafe C-methods only been called from main-ractor. If non-main ractor calls it, then <a href="../../../classes/Ractor/UnsafeError.html"><code>Ractor::UnsafeError</code></a> is raised.</p>
+
+<p>BTW non-“Ractor-safe” extensions raises an error on non-main ractors, so that it is “safe” because unsafe operations are not allowed. “Ractor-safe” property means “multi-Ractor-ready” or “safe on multi-ractors execution”. “Ractor-safe” term comes from “Thread-safe”.</p>
+
+<p>To make “Ractor-safe” C extension, we need to check the following points:</p>
+
+<p>(1) Do not share unshareable objects between ractors</p>
+
+<p>For example, C’s global variable can lead sharing an unshareable objects between ractors.</p>
+
+<pre><code>VALUE g_var;
+VALUE set(VALUE self, VALUE v){ return g_var = v; }
+VALUE get(VALUE self){ return g_var; }
+</code></pre>
+
+<p>set() and get() pair can share an unshareable objects using g_var, and it is Ractor-unsafe.</p>
+
+<p>Not only using global variables directly, some indirect data structure such as global st_table can share the objects, so please take care.</p>
+
+<p>Note that class and module objects are shareable objects, so you can keep the code “cFoo = rb_define_class(…)” with C’s global variables.</p>
+
+<p>(2) Check the thread-safety of the extension</p>
+
+<p>An extension should be thread-safe. For example, the following code is not thread-safe:</p>
+
+<pre><code>bool g_called = false;
+VALUE call(VALUE self) {
+  if (g_called) rb_raise(&quot;recursive call is not allowed.&quot;);
+  g_called = true;
+  VALUE ret = do_something();
+  g_called = false;
+  return ret;
+}
+</code></pre>
+
+<p>because g_called global variable should be synchronized by other ractor’s threads. To avoid such data-race, some synchronization should be used. Check include/ruby/thread_native.h and include/ruby/atomic.h.</p>
+
+<p>On the <a href="../../../classes/Ractor.html"><code>Ractor</code></a> mechanism, most of objects given by the method parameters or the receiver are isolated by Ractor’s boundary, it is easy to make thread-safe code than usual thread-programming in general. For example, we don’t need to lock an array object to access the element of it.</p>
+
+<p>(3) Check the thread-safety of using library</p>
+
+<p>If an extension relies on the external library libfoo and the function foo(), the function foo() should be thread safe.</p>
+
+<p>(4) Make an object shareable</p>
+
+<p>This is not required to make an extension Ractor-safe.</p>
+
+<p>If an extension provides special objects defined by rb_data_type_t, consider these objects can become shareable or not.</p>
+
+<p>RUBY_TYPED_FROZEN_SHAREABLE flag indicates that these objects can be shareable objects if the object is frozen. This means that if the object is frozen, the mutation of wrapped data is not allowed.</p>
+
+<p>(5) Others</p>
+
+<p>Maybe there are more points which should be considered to make Ractor-safe extension, so this document will be extended.</p>
+</dd></dl>
 
     </div>
   

@@ -25,8 +25,12 @@
     <meta property="og:title" value="OpenStruct">
 
   
+    
+    <meta name="description" content="An OpenStruct is a data structure, similar to a Hash, that allows the definition of arbitrary attributes with their accompanying values.">
+    <meta property="og:description" content="An OpenStruct is a data structure, similar to a Hash, that allows the definition of arbitrary attributes with their accompanying values.">
+  
 
-    <meta name="keywords" content="OpenStruct class, json_create, as_json, to_json, new, to_h, each_pair, marshal_dump, marshal_load, freeze, [], []=, dig, delete_field, inspect, to_s, ==, eql?, hash">
+    <meta name="keywords" content="OpenStruct class, json_create, as_json, to_json, new, to_h, each_pair, freeze, [], []=, dig, delete_field, inspect, to_s, ==, eql?">
 </head>
 
 <body>
@@ -76,6 +80,92 @@
 
     <main id="bodyContent">
         <div id="content">
+  
+    <div class="description">
+      
+<p>An <a href="OpenStruct.html"><code>OpenStruct</code></a> is a data structure, similar to a <a href="Hash.html"><code>Hash</code></a>, that allows the definition of arbitrary attributes with their accompanying values. This is accomplished by using Ruby’s metaprogramming to define methods on the class itself.</p>
+
+<h2 id="class-OpenStruct-label-Examples">Examples</h2>
+
+<pre><code>require &quot;ostruct&quot;
+
+person = OpenStruct.new
+person.name = &quot;John Smith&quot;
+person.age  = 70
+
+person.name      # =&gt; &quot;John Smith&quot;
+person.age       # =&gt; 70
+person.address   # =&gt; nil
+</code></pre>
+
+<p>An <a href="OpenStruct.html"><code>OpenStruct</code></a> employs a <a href="Hash.html"><code>Hash</code></a> internally to store the attributes and values and can even be initialized with one:</p>
+
+<pre><code>australia = OpenStruct.new(:country =&gt; &quot;Australia&quot;, :capital =&gt; &quot;Canberra&quot;)
+  # =&gt; #&lt;OpenStruct country=&quot;Australia&quot;, capital=&quot;Canberra&quot;&gt;
+</code></pre>
+
+<p><a href="Hash.html"><code>Hash</code></a> keys with spaces or characters that could normally not be used for method calls (e.g. <code>()[]*</code>) will not be immediately available on the <a href="OpenStruct.html"><code>OpenStruct</code></a> object as a method for retrieval or assignment, but can still be reached through the <a href="Object.html#method-i-send"><code>Object#send</code></a> method or using [].</p>
+
+<pre><code>measurements = OpenStruct.new(&quot;length (in inches)&quot; =&gt; 24)
+measurements[:&quot;length (in inches)&quot;]       # =&gt; 24
+measurements.send(&quot;length (in inches)&quot;)   # =&gt; 24
+
+message = OpenStruct.new(:queued? =&gt; true)
+message.queued?                           # =&gt; true
+message.send(&quot;queued?=&quot;, false)
+message.queued?                           # =&gt; false
+</code></pre>
+
+<p>Removing the presence of an attribute requires the execution of the <a href="OpenStruct.html#method-i-delete_field"><code>delete_field</code></a> method as setting the property value to <code>nil</code> will not remove the attribute.</p>
+
+<pre><code>first_pet  = OpenStruct.new(:name =&gt; &quot;Rowdy&quot;, :owner =&gt; &quot;John Smith&quot;)
+second_pet = OpenStruct.new(:name =&gt; &quot;Rowdy&quot;)
+
+first_pet.owner = nil
+first_pet                 # =&gt; #&lt;OpenStruct name=&quot;Rowdy&quot;, owner=nil&gt;
+first_pet == second_pet   # =&gt; false
+
+first_pet.delete_field(:owner)
+first_pet                 # =&gt; #&lt;OpenStruct name=&quot;Rowdy&quot;&gt;
+first_pet == second_pet   # =&gt; true
+</code></pre>
+
+<p><a href="Ractor.html"><code>Ractor</code></a> compatibility: A frozen <a href="OpenStruct.html"><code>OpenStruct</code></a> with shareable values is itself shareable.</p>
+
+<h2 id="class-OpenStruct-label-Caveats">Caveats</h2>
+
+<p>An <a href="OpenStruct.html"><code>OpenStruct</code></a> utilizes Ruby’s method lookup structure to find and define the necessary methods for properties. This is accomplished through the methods method_missing and define_singleton_method.</p>
+
+<p>This should be a consideration if there is a concern about the performance of the objects that are created, as there is much more overhead in the setting of these properties compared to using a <a href="Hash.html"><code>Hash</code></a> or a <a href="Struct.html"><code>Struct</code></a>. Creating an open struct from a small <a href="Hash.html"><code>Hash</code></a> and accessing a few of the entries can be 200 times slower than accessing the hash directly.</p>
+
+<p>This is a potential security issue; building <a href="OpenStruct.html"><code>OpenStruct</code></a> from untrusted user data (e.g. <a href="JSON.html"><code>JSON</code></a> web request) may be susceptible to a “symbol denial of service” attack since the keys create methods and names of methods are never garbage collected.</p>
+
+<p>This may also be the source of incompatibilities between Ruby versions:</p>
+
+<pre><code>o = OpenStruct.new
+o.then # =&gt; nil in Ruby &lt; 2.6, enumerator for Ruby &gt;= 2.6
+</code></pre>
+
+<p>Builtin methods may be overwritten this way, which may be a source of bugs or security issues:</p>
+
+<pre><code>o = OpenStruct.new
+o.methods # =&gt; [:to_h, :marshal_load, :marshal_dump, :each_pair, ...
+o.methods = [:foo, :bar]
+o.methods # =&gt; [:foo, :bar]
+</code></pre>
+
+<p>To help remedy clashes, <a href="OpenStruct.html"><code>OpenStruct</code></a> uses only protected/private methods ending with <code>!</code> and defines aliases for builtin public methods by adding a <code>!</code>:</p>
+
+<pre><code>o = OpenStruct.new(make: &#39;Bentley&#39;, class: :luxury)
+o.class # =&gt; :luxury
+o.class! # =&gt; OpenStruct
+</code></pre>
+
+<p>It is recommended (but not enforced) to not use fields ending in <code>!</code>; Note that a subclass’ methods may not be overwritten, nor can OpenStruct’s own methods ending with <code>!</code>.</p>
+
+<p>For all these reasons, consider not using <a href="OpenStruct.html"><code>OpenStruct</code></a> at all.</p>
+
+    </div>
   
 
 
@@ -174,18 +264,6 @@
           </ul>
         </dd>
       
-        <dt>H</dt>
-        <dd>
-          <ul>
-            
-              
-              <li>
-                <a href="#method-i-hash">hash</a>
-              </li>
-            
-          </ul>
-        </dd>
-      
         <dt>I</dt>
         <dd>
           <ul>
@@ -205,23 +283,6 @@
               
               <li>
                 <a href="#method-c-json_create">json_create</a>
-              </li>
-            
-          </ul>
-        </dd>
-      
-        <dt>M</dt>
-        <dd>
-          <ul>
-            
-              
-              <li>
-                <a href="#method-i-marshal_dump">marshal_dump</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-marshal_load">marshal_load</a>
               </li>
             
           </ul>
@@ -275,6 +336,24 @@
     
 
     
+      <!-- Section constants -->
+      <h2 class="sectiontitle">Constants</h2>
+      <table border='0' cellpadding='5'>
+        
+          <tr valign='top'>
+            <td class="attr-name">VERSION</td>
+            <td>=</td>
+            <td class="attr-value">&quot;0.5.2&quot;</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+      </table>
+    
 
 
     
@@ -310,7 +389,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-json_create_source')" id="l_method-c-json_create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/ostruct.rb#L11" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/ostruct.rb#L11" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-json_create_source" class="dyn-source">
@@ -358,18 +437,16 @@ data   # =&gt; #&lt;OpenStruct country=&quot;Australia&quot;, capital=&quot;Canb
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L94" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L126" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 94</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 126</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">hash</span>=<span class="ruby-keyword">nil</span>)
-  <span class="ruby-ivar">@table</span> = {}
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">hash</span>
-    <span class="ruby-identifier">hash</span>.<span class="ruby-identifier">each_pair</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">k</span>, <span class="ruby-identifier">v</span><span class="ruby-operator">|</span>
-      <span class="ruby-identifier">k</span> = <span class="ruby-identifier">k</span>.<span class="ruby-identifier">to_sym</span>
-      <span class="ruby-ivar">@table</span>[<span class="ruby-identifier">k</span>] = <span class="ruby-identifier">v</span>
-    <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">update_to_values!</span>(<span class="ruby-identifier">hash</span>)
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-ivar">@table</span> = {}
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -416,11 +493,11 @@ first_pet == third_pet    # =&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-3D-3D_source')" id="l_method-i-3D-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L356" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L411" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3D-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 356</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 411</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">==</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">kind_of?</span>(<span class="ruby-constant">OpenStruct</span>)
   <span class="ruby-ivar">@table</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">table!</span>
@@ -441,7 +518,7 @@ first_pet == third_pet    # =&gt; false
 
           
             <div class="description">
-              <p>Returns the value of an attribute.</p>
+              <p>Returns the value of an attribute, or <code>nil</code> if there is no such attribute.</p>
 
 <pre><code>require &quot;ostruct&quot;
 person = OpenStruct.new(&quot;name&quot; =&gt; &quot;John Smith&quot;, &quot;age&quot; =&gt; 70)
@@ -462,11 +539,11 @@ person[:age]   # =&gt; 70, same as person.age
                 Source:
                 <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L241" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L291" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-5B-5D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 241</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 291</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-ivar">@table</span>[<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -478,8 +555,7 @@ person[:age]   # =&gt; 70, same as person.age
         <div class="method">
           <h3 class="title method-title" id="method-i-5B-5D-3D">
             
-              <b>ostruct[name] = obj  &rarr; obj
-</b>
+              <b>ostruct[name] = obj  &rarr; obj</b>
             
             <a href="../classes/OpenStruct.html#method-i-5B-5D-3D" name="method-i-5B-5D-3D" class="permalink">Link</a>
           </h3>
@@ -497,6 +573,10 @@ person.age          # =&gt; 42
           
 
           
+            <div class="aka">
+              Also aliased as: <a href="OpenStruct.html#method-i-set_ostruct_member_value-21">set_ostruct_member_value!</a>
+            </div>
+          
 
           
 
@@ -508,13 +588,15 @@ person.age          # =&gt; 42
                 Source:
                 <a href="javascript:toggleSource('method-i-5B-5D-3D_source')" id="l_method-i-5B-5D-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L256" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L306" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-5B-5D-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 256</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 306</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]=</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">value</span>)
-  <span class="ruby-identifier">modifiable?</span>[<span class="ruby-identifier">new_ostruct_member!</span>(<span class="ruby-identifier">name</span>)] = <span class="ruby-identifier">value</span>
+  <span class="ruby-identifier">name</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>
+  <span class="ruby-identifier">new_ostruct_member!</span>(<span class="ruby-identifier">name</span>)
+  <span class="ruby-ivar">@table</span>[<span class="ruby-identifier">name</span>] = <span class="ruby-identifier">value</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -547,7 +629,7 @@ person.age          # =&gt; 42
                 Source:
                 <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/ostruct.rb#L17" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/ostruct.rb#L17" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-as_json_source" class="dyn-source">
@@ -575,13 +657,13 @@ person.age          # =&gt; 42
 
           
             <div class="description">
-              <p>Removes the named field from the object. Returns the value that the field contained if it was defined.</p>
+              <p>Removes the named field from the object and returns the value the field contained if it was defined. You may optionally provide a block. If the field is not defined, the result of the block is returned, or a <a href="NameError.html"><code>NameError</code></a> is raised if no block was given.</p>
 
 <pre><code>require &quot;ostruct&quot;
 
 person = OpenStruct.new(name: &quot;John&quot;, age: 70, pension: 300)
 
-person.delete_field(&quot;age&quot;)   # =&gt; 70
+person.delete_field!(&quot;age&quot;)  # =&gt; 70
 person                       # =&gt; #&lt;OpenStruct name=&quot;John&quot;, pension=300&gt;
 </code></pre>
 
@@ -589,6 +671,10 @@ person                       # =&gt; #&lt;OpenStruct name=&quot;John&quot;, pens
 
 <pre><code>person.pension = nil
 person                 # =&gt; #&lt;OpenStruct name=&quot;John&quot;, pension=nil&gt;
+
+person.delete_field(&#39;number&#39;)  # =&gt; NameError
+
+person.delete_field(&#39;number&#39;) { 8675_309 } # =&gt; 8675309
 </code></pre>
             </div>
           
@@ -605,11 +691,11 @@ person                 # =&gt; #&lt;OpenStruct name=&quot;John&quot;, pension=ni
                 Source:
                 <a href="javascript:toggleSource('method-i-delete_field_source')" id="l_method-i-delete_field_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L305" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L359" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-delete_field_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 305</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 359</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">delete_field</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-identifier">sym</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>
   <span class="ruby-keyword">begin</span>
@@ -617,7 +703,8 @@ person                 # =&gt; #&lt;OpenStruct name=&quot;John&quot;, pension=ni
   <span class="ruby-keyword">rescue</span> <span class="ruby-constant">NameError</span>
   <span class="ruby-keyword">end</span>
   <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">sym</span>) <span class="ruby-keyword">do</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-constant">NameError</span>.<span class="ruby-identifier">new</span>(<span class="ruby-node">&quot;no field `#{sym}&#39; in #{self}&quot;</span>, <span class="ruby-identifier">sym</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-keyword">yield</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">block_given!</span>
+    <span class="ruby-identifier">raise!</span> <span class="ruby-constant">NameError</span>.<span class="ruby-identifier">new</span>(<span class="ruby-node">&quot;no field `#{sym}&#39; in #{self}&quot;</span>, <span class="ruby-identifier">sym</span>)
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -628,7 +715,7 @@ person                 # =&gt; #&lt;OpenStruct name=&quot;John&quot;, pension=ni
         <div class="method">
           <h3 class="title method-title" id="method-i-dig">
             
-              <b>ostruct.dig(name, ...)  &rarr; object
+              <b>ostruct.dig(name, *identifiers) &rarr; object
 </b>
             
             <a href="../classes/OpenStruct.html#method-i-dig" name="method-i-dig" class="permalink">Link</a>
@@ -636,19 +723,15 @@ person                 # =&gt; #&lt;OpenStruct name=&quot;John&quot;, pension=ni
 
           
             <div class="description">
-              <p>Extracts the nested value specified by the sequence of <code>name</code> objects by calling <code>dig</code> at each step, returning <code>nil</code> if any intermediate step is <code>nil</code>.</p>
+              <p>Finds and returns the object in nested objects that is specified by <code>name</code> and <code>identifiers</code>. The nested objects may be instances of various classes. See <a href="../files/ruby/doc/dig_methods_rdoc.html">Dig Methods</a>.</p>
+
+<p>Examples:</p>
 
 <pre><code>require &quot;ostruct&quot;
 address = OpenStruct.new(&quot;city&quot; =&gt; &quot;Anytown NC&quot;, &quot;zip&quot; =&gt; 12345)
 person  = OpenStruct.new(&quot;name&quot; =&gt; &quot;John Smith&quot;, &quot;address&quot; =&gt; address)
-
-person.dig(:address, &quot;zip&quot;)            # =&gt; 12345
-person.dig(:business_address, &quot;zip&quot;)   # =&gt; nil
-
-data = OpenStruct.new(:array =&gt; [1, [2, 3]])
-
-data.dig(:array, 1, 0)   # =&gt; 2
-data.dig(:array, 0, 0)   # TypeError: Integer does not have #dig method
+person.dig(:address, &quot;zip&quot;) # =&gt; 12345
+person.dig(:business_address, &quot;zip&quot;) # =&gt; nil
 </code></pre>
             </div>
           
@@ -665,16 +748,16 @@ data.dig(:array, 0, 0)   # TypeError: Integer does not have #dig method
                 Source:
                 <a href="javascript:toggleSource('method-i-dig_source')" id="l_method-i-dig_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L280" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L328" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-dig_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 280</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 328</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">dig</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">names</span>)
   <span class="ruby-keyword">begin</span>
     <span class="ruby-identifier">name</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_sym</span>
   <span class="ruby-keyword">rescue</span> <span class="ruby-constant">NoMethodError</span>
-    <span class="ruby-identifier">raise</span> <span class="ruby-constant">TypeError</span>, <span class="ruby-node">&quot;#{name} is not a symbol nor a string&quot;</span>
+    <span class="ruby-identifier">raise!</span> <span class="ruby-constant">TypeError</span>, <span class="ruby-node">&quot;#{name} is not a symbol nor a string&quot;</span>
   <span class="ruby-keyword">end</span>
   <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">dig</span>(<span class="ruby-identifier">name</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">names</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -715,13 +798,13 @@ data.each_pair.to_a   # =&gt; [[:country, &quot;Australia&quot;], [:capital, &qu
                 Source:
                 <a href="javascript:toggleSource('method-i-each_pair_source')" id="l_method-i-each_pair_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L147" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L199" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-each_pair_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 147</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 199</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">each_pair</span>
-  <span class="ruby-keyword">return</span> <span class="ruby-identifier">to_enum</span>(<span class="ruby-identifier">__method__</span>) { <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">size</span> } <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block_given?</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">to_enum</span>(<span class="ruby-identifier">__method__</span>) { <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">size</span> } <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block_given!</span>
   <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">each_pair</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">p</span><span class="ruby-operator">|</span> <span class="ruby-keyword">yield</span> <span class="ruby-identifier">p</span>}
   <span class="ruby-keyword">self</span>
 <span class="ruby-keyword">end</span></pre>
@@ -756,11 +839,11 @@ data.each_pair.to_a   # =&gt; [[:country, &quot;Australia&quot;], [:capital, &qu
                 Source:
                 <a href="javascript:toggleSource('method-i-eql-3F_source')" id="l_method-i-eql-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L366" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L421" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-eql-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 366</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 421</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">eql?</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">false</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">kind_of?</span>(<span class="ruby-constant">OpenStruct</span>)
   <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">eql?</span>(<span class="ruby-identifier">other</span>.<span class="ruby-identifier">table!</span>)
@@ -796,55 +879,14 @@ data.each_pair.to_a   # =&gt; [[:country, &quot;Australia&quot;], [:capital, &qu
                 Source:
                 <a href="javascript:toggleSource('method-i-freeze_source')" id="l_method-i-freeze_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L197" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L257" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-freeze_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 197</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 257</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">freeze</span>
-  <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">each_key</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">key</span><span class="ruby-operator">|</span> <span class="ruby-identifier">new_ostruct_member!</span>(<span class="ruby-identifier">key</span>)}
+  <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">freeze</span>
   <span class="ruby-keyword">super</span>
-<span class="ruby-keyword">end</span></pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-hash">
-            
-              <b>hash</b>()
-            
-            <a href="../classes/OpenStruct.html#method-i-hash" name="method-i-hash" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Computes a hash code for this <a href="OpenStruct.html"><code>OpenStruct</code></a>. Two <a href="OpenStruct.html"><code>OpenStruct</code></a> objects with the same content will have the same hash code (and will compare using <a href="OpenStruct.html#method-i-eql-3F"><code>eql?</code></a>).</p>
-
-<p>See also <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-hash_source')" id="l_method-i-hash_source">show</a>
-                
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L376" target="_blank" class="github_url">on GitHub</a>
-                
-              </p>
-              <div id="method-i-hash_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 376</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">hash</span>
-  <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">hash</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -881,11 +923,11 @@ data.each_pair.to_a   # =&gt; [[:country, &quot;Australia&quot;], [:capital, &qu
                 Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L321" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L376" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-inspect_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 321</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 376</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">inspect</span>
   <span class="ruby-identifier">ids</span> = (<span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>[<span class="ruby-constant">InspectKey</span>] <span class="ruby-operator">||=</span> [])
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">ids</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">object_id</span>)
@@ -900,85 +942,7 @@ data.each_pair.to_a   # =&gt; [[:country, &quot;Australia&quot;], [:capital, &qu
       <span class="ruby-identifier">ids</span>.<span class="ruby-identifier">pop</span>
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span>
-  [<span class="ruby-string">&#39;#&lt;&#39;</span>, <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>, <span class="ruby-identifier">detail</span>, <span class="ruby-string">&#39;&gt;&#39;</span>].<span class="ruby-identifier">join</span>
-<span class="ruby-keyword">end</span></pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-marshal_dump">
-            
-              <b>marshal_dump</b>()
-            
-            <a href="../classes/OpenStruct.html#method-i-marshal_dump" name="method-i-marshal_dump" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Provides marshalling support for use by the <a href="Marshal.html"><code>Marshal</code></a> library.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-marshal_dump_source')" id="l_method-i-marshal_dump_source">show</a>
-                
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L156" target="_blank" class="github_url">on GitHub</a>
-                
-              </p>
-              <div id="method-i-marshal_dump_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 156</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">marshal_dump</span>
-  <span class="ruby-ivar">@table</span>
-<span class="ruby-keyword">end</span></pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-marshal_load">
-            
-              <b>marshal_load</b>(x)
-            
-            <a href="../classes/OpenStruct.html#method-i-marshal_load" name="method-i-marshal_load" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Provides marshalling support for use by the <a href="Marshal.html"><code>Marshal</code></a> library.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-marshal_load_source')" id="l_method-i-marshal_load_source">show</a>
-                
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L163" target="_blank" class="github_url">on GitHub</a>
-                
-              </p>
-              <div id="method-i-marshal_load_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 163</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">marshal_load</span>(<span class="ruby-identifier">x</span>)
-  <span class="ruby-ivar">@table</span> = <span class="ruby-identifier">x</span>
+  [<span class="ruby-string">&#39;#&lt;&#39;</span>, <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class!</span>, <span class="ruby-identifier">detail</span>, <span class="ruby-string">&#39;&gt;&#39;</span>].<span class="ruby-identifier">join</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -988,24 +952,14 @@ data.each_pair.to_a   # =&gt; [[:country, &quot;Australia&quot;], [:capital, &qu
         <div class="method">
           <h3 class="title method-title" id="method-i-to_h">
             
-              <b>ostruct.to_h                        &rarr; hash<br />ostruct.to_h {|name, value| block } &rarr; hash
-</b>
+              <b>to_h</b>(&amp;block)
             
             <a href="../classes/OpenStruct.html#method-i-to_h" name="method-i-to_h" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Converts the <a href="OpenStruct.html"><code>OpenStruct</code></a> to a hash with keys representing each attribute (as symbols) and their corresponding values.</p>
-
-<p>If a block is given, the results of the block on each pair of the receiver will be used as pairs.</p>
-
-<pre><code>require &quot;ostruct&quot;
-data = OpenStruct.new(&quot;country&quot; =&gt; &quot;Australia&quot;, :capital =&gt; &quot;Canberra&quot;)
-data.to_h   # =&gt; {:country =&gt; &quot;Australia&quot;, :capital =&gt; &quot;Canberra&quot; }
-data.to_h {|name, value| [name.to_s, value.upcase] }
-            # =&gt; {&quot;country&quot; =&gt; &quot;AUSTRALIA&quot;, &quot;capital&quot; =&gt; &quot;CANBERRA&quot; }
-</code></pre>
+              
             </div>
           
 
@@ -1021,13 +975,13 @@ data.to_h {|name, value| [name.to_s, value.upcase] }
                 Source:
                 <a href="javascript:toggleSource('method-i-to_h_source')" id="l_method-i-to_h_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/ostruct.rb#L127" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/ostruct.rb#L170" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_h_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 127</span>
+                <pre><span class="ruby-comment"># File ruby/lib/ostruct.rb, line 170</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_h</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">block_given?</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">block</span>
     <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">to_h</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-keyword">else</span>
     <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">dup</span>
@@ -1064,7 +1018,7 @@ data.to_h {|name, value| [name.to_s, value.upcase] }
                 Source:
                 <a href="javascript:toggleSource('method-i-to_json_source')" id="l_method-i-to_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/ostruct.rb#L28" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/ostruct.rb#L28" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_json_source" class="dyn-source">

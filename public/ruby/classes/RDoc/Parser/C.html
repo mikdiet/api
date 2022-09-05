@@ -30,7 +30,7 @@
     <meta property="og:description" content="RDoc::Parser::C attempts to parse C extension files.  It looks for the standard patterns that you find in extensions: rb_define_class, rb_define_method and so on.">
   
 
-    <meta name="keywords" content="RDoc::Parser::C class, new, deduplicate_call_seq, do_aliases, do_attrs, do_boot_defclass, do_classes_and_modules, do_constants, do_includes, do_methods, do_missing, find_alias_comment, find_attr_comment, gen_body_table, find_body, find_class, find_class_comment, gen_const_table, find_const_comment, find_modifiers, find_override_comment, handle_attr, handle_class_module, handle_constants, handle_ifdefs_in, handle_method, handle_singleton, handle_tab_width, load_variable_map, look_for_directives_in, rb_scan_args, remove_commented_out_lines, scan">
+    <meta name="keywords" content="RDoc::Parser::C class, new, do_aliases, add_alias, do_attrs, do_boot_defclass, do_classes_and_modules, do_constants, do_includes, do_methods, do_missing, find_alias_comment, find_attr_comment, gen_body_table, find_body, find_class, find_class_comment, gen_const_table, find_const_comment, find_modifiers, find_override_comment, handle_attr, handle_class_module, handle_constants, handle_ifdefs_in, handle_method, handle_singleton, handle_tab_width, load_variable_map, look_for_directives_in, rb_scan_args, remove_commented_out_lines, scan, new_comment">
 </head>
 
 <body>
@@ -201,14 +201,21 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
       
-        <dt>D</dt>
+        <dt>A</dt>
         <dd>
           <ul>
             
               
               <li>
-                <a href="#method-i-deduplicate_call_seq">deduplicate_call_seq</a>,
+                <a href="#method-i-add_alias">add_alias</a>
               </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>D</dt>
+        <dd>
+          <ul>
             
               
               <li>
@@ -382,7 +389,12 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
             
               
               <li>
-                <a href="#method-c-new">new</a>
+                <a href="#method-c-new">new</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-new_comment">new_comment</a>
               </li>
             
           </ul>
@@ -542,7 +554,7 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L166" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L166" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
@@ -556,6 +568,8 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
 
   <span class="ruby-ivar">@classes</span>           = <span class="ruby-identifier">load_variable_map</span> <span class="ruby-value">:c_class_variables</span>
   <span class="ruby-ivar">@singleton_classes</span> = <span class="ruby-identifier">load_variable_map</span> <span class="ruby-value">:c_singleton_class_variables</span>
+
+  <span class="ruby-ivar">@markup</span> = <span class="ruby-ivar">@options</span>.<span class="ruby-identifier">markup</span>
 
   <span class="ruby-comment"># class_variable =&gt; { function =&gt; [method, ...] }</span>
   <span class="ruby-ivar">@methods</span> = <span class="ruby-constant">Hash</span>.<span class="ruby-identifier">new</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">h</span>, <span class="ruby-identifier">f</span><span class="ruby-operator">|</span> <span class="ruby-identifier">h</span>[<span class="ruby-identifier">f</span>] = <span class="ruby-constant">Hash</span>.<span class="ruby-identifier">new</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">i</span>, <span class="ruby-identifier">m</span><span class="ruby-operator">|</span> <span class="ruby-identifier">i</span>[<span class="ruby-identifier">m</span>] = [] } }
@@ -602,16 +616,16 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
       <h2 class="sectiontitle">Instance Public methods</h2>
       
         <div class="method">
-          <h3 class="title method-title" id="method-i-deduplicate_call_seq">
+          <h3 class="title method-title" id="method-i-add_alias">
             
-              <b>deduplicate_call_seq</b>()
+              <b>add_alias</b>(var_name, class_obj, old_name, new_name, comment)
             
-            <a href="../../../classes/RDoc/Parser/C.html#method-i-deduplicate_call_seq" name="method-i-deduplicate_call_seq" class="permalink">Link</a>
+            <a href="../../../classes/RDoc/Parser/C.html#method-i-add_alias" name="method-i-add_alias" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Removes duplicate call-seq entries for methods using the same implementation.</p>
+              <p>Add alias, either from a direct alias definition, or from two method that reference the same function.</p>
             </div>
           
 
@@ -625,27 +639,21 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
               
               <p class="source-link">
                 Source:
-                <a href="javascript:toggleSource('method-i-deduplicate_call_seq_source')" id="l_method-i-deduplicate_call_seq_source">show</a>
+                <a href="javascript:toggleSource('method-i-add_alias_source')" id="l_method-i-add_alias_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L216" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L245" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
-              <div id="method-i-deduplicate_call_seq_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 216</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">deduplicate_call_seq</span>
-  <span class="ruby-ivar">@methods</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">functions</span><span class="ruby-operator">|</span>
-    <span class="ruby-identifier">class_name</span> = <span class="ruby-ivar">@known_classes</span>[<span class="ruby-identifier">var_name</span>]
-    <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">class_name</span>
-    <span class="ruby-identifier">class_obj</span>  = <span class="ruby-identifier">find_class</span> <span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">class_name</span>
-
-    <span class="ruby-identifier">functions</span>.<span class="ruby-identifier">each_value</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">method_names</span><span class="ruby-operator">|</span>
-      <span class="ruby-keyword">next</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">method_names</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">==</span> <span class="ruby-value">1</span>
-
-      <span class="ruby-identifier">method_names</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">method_name</span><span class="ruby-operator">|</span>
-        <span class="ruby-identifier">deduplicate_method_name</span> <span class="ruby-identifier">class_obj</span>, <span class="ruby-identifier">method_name</span>
-      <span class="ruby-keyword">end</span>
-    <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">end</span>
+              <div id="method-i-add_alias_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 245</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_alias</span>(<span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">class_obj</span>, <span class="ruby-identifier">old_name</span>, <span class="ruby-identifier">new_name</span>, <span class="ruby-identifier">comment</span>)
+  <span class="ruby-identifier">al</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Alias</span>.<span class="ruby-identifier">new</span> <span class="ruby-string">&#39;&#39;</span>, <span class="ruby-identifier">old_name</span>, <span class="ruby-identifier">new_name</span>, <span class="ruby-string">&#39;&#39;</span>
+  <span class="ruby-identifier">al</span>.<span class="ruby-identifier">singleton</span> = <span class="ruby-ivar">@singleton_classes</span>.<span class="ruby-identifier">key?</span> <span class="ruby-identifier">var_name</span>
+  <span class="ruby-identifier">al</span>.<span class="ruby-identifier">comment</span> = <span class="ruby-identifier">comment</span>
+  <span class="ruby-identifier">al</span>.<span class="ruby-identifier">record_location</span> <span class="ruby-ivar">@top_level</span>
+  <span class="ruby-identifier">class_obj</span>.<span class="ruby-identifier">add_alias</span> <span class="ruby-identifier">al</span>
+  <span class="ruby-ivar">@stats</span>.<span class="ruby-identifier">add_alias</span> <span class="ruby-identifier">al</span>
+  <span class="ruby-identifier">al</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -678,11 +686,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-do_aliases_source')" id="l_method-i-do_aliases_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L257" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L217" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-do_aliases_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 257</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 217</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">do_aliases</span>
   <span class="ruby-ivar">@content</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-regexp">/rb_define_alias\s*\(
                  \s*(\w+),
@@ -698,20 +706,12 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
     <span class="ruby-keyword">end</span>
 
     <span class="ruby-identifier">class_obj</span> = <span class="ruby-identifier">find_class</span> <span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">class_name</span>
-
-    <span class="ruby-identifier">al</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Alias</span>.<span class="ruby-identifier">new</span> <span class="ruby-string">&#39;&#39;</span>, <span class="ruby-identifier">old_name</span>, <span class="ruby-identifier">new_name</span>, <span class="ruby-string">&#39;&#39;</span>
-    <span class="ruby-identifier">al</span>.<span class="ruby-identifier">singleton</span> = <span class="ruby-ivar">@singleton_classes</span>.<span class="ruby-identifier">key?</span> <span class="ruby-identifier">var_name</span>
-
     <span class="ruby-identifier">comment</span> = <span class="ruby-identifier">find_alias_comment</span> <span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">new_name</span>, <span class="ruby-identifier">old_name</span>
-
     <span class="ruby-identifier">comment</span>.<span class="ruby-identifier">normalize</span>
-
-    <span class="ruby-identifier">al</span>.<span class="ruby-identifier">comment</span> = <span class="ruby-identifier">comment</span>
-
-    <span class="ruby-identifier">al</span>.<span class="ruby-identifier">record_location</span> <span class="ruby-ivar">@top_level</span>
-
-    <span class="ruby-identifier">class_obj</span>.<span class="ruby-identifier">add_alias</span> <span class="ruby-identifier">al</span>
-    <span class="ruby-ivar">@stats</span>.<span class="ruby-identifier">add_alias</span> <span class="ruby-identifier">al</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">comment</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-keyword">and</span> <span class="ruby-identifier">existing_method</span> = <span class="ruby-identifier">class_obj</span>.<span class="ruby-identifier">method_list</span>.<span class="ruby-identifier">find</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">m</span><span class="ruby-operator">|</span> <span class="ruby-identifier">m</span>.<span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">old_name</span>}
+      <span class="ruby-identifier">comment</span> = <span class="ruby-identifier">existing_method</span>.<span class="ruby-identifier">comment</span>
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">add_alias</span>(<span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">class_obj</span>, <span class="ruby-identifier">old_name</span>, <span class="ruby-identifier">new_name</span>, <span class="ruby-identifier">comment</span>)
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -745,11 +745,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-do_attrs_source')" id="l_method-i-do_attrs_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L292" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L258" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-do_attrs_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 292</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 258</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">do_attrs</span>
   <span class="ruby-ivar">@content</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-regexp">/rb_attr\s*\(
                  \s*(\w+),
@@ -800,11 +800,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-do_boot_defclass_source')" id="l_method-i-do_boot_defclass_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L315" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L281" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-do_boot_defclass_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 315</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 281</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">do_boot_defclass</span>
   <span class="ruby-ivar">@content</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-regexp">/(\w+)\s*=\s*boot_defclass\s*\(\s*&quot;(\w+?)&quot;,\s*(\w+?)\s*\)/</span>) <span class="ruby-keyword">do</span>
     <span class="ruby-operator">|</span><span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">class_name</span>, <span class="ruby-identifier">parent</span><span class="ruby-operator">|</span>
@@ -843,11 +843,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-do_classes_and_modules_source')" id="l_method-i-do_classes_and_modules_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L327" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L293" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-do_classes_and_modules_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 327</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 293</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">do_classes_and_modules</span>
   <span class="ruby-identifier">do_boot_defclass</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@file_name</span> <span class="ruby-operator">==</span> <span class="ruby-string">&quot;class.c&quot;</span>
 
@@ -878,7 +878,7 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
               \s*&quot;(?&lt;module_name_1&gt;\w+)&quot;\s*
             \)
           |
-            _under\s*\( # rb_define_module_under(module_under, module_name_1)
+            _under\s*\( # rb_define_module_under(module_under, module_name_2)
               \s*(?&lt;module_under&gt;\w+),
               \s*&quot;(?&lt;module_name_2&gt;\w+)&quot;
             \s*\)
@@ -974,11 +974,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-do_constants_source')" id="l_method-i-do_constants_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L427" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L393" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-do_constants_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 427</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 393</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">do_constants</span>
   <span class="ruby-ivar">@content</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-regexp">%r%\Wrb_define_
                  ( variable          |
@@ -1051,17 +1051,17 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-do_includes_source')" id="l_method-i-do_includes_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L473" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L439" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-do_includes_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 473</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 439</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">do_includes</span>
   <span class="ruby-ivar">@content</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-regexp">/rb_include_module\s*\(\s*(\w+?),\s*(\w+?)\s*\)/</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">c</span>,<span class="ruby-identifier">m</span><span class="ruby-operator">|</span>
     <span class="ruby-keyword">next</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">cls</span> = <span class="ruby-ivar">@classes</span>[<span class="ruby-identifier">c</span>]
     <span class="ruby-identifier">m</span> = <span class="ruby-ivar">@known_classes</span>[<span class="ruby-identifier">m</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">m</span>
 
-    <span class="ruby-identifier">comment</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span> <span class="ruby-string">&#39;&#39;</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
+    <span class="ruby-identifier">comment</span> = <span class="ruby-identifier">new_comment</span> <span class="ruby-string">&#39;&#39;</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
     <span class="ruby-identifier">incl</span> = <span class="ruby-identifier">cls</span>.<span class="ruby-identifier">add_include</span> <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Include</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">m</span>, <span class="ruby-identifier">comment</span>)
     <span class="ruby-identifier">incl</span>.<span class="ruby-identifier">record_location</span> <span class="ruby-ivar">@top_level</span>
   <span class="ruby-keyword">end</span>
@@ -1097,11 +1097,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-do_methods_source')" id="l_method-i-do_methods_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L489" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L455" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-do_methods_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 489</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 455</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">do_methods</span>
   <span class="ruby-ivar">@content</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-regexp">%r%rb_define_
                  (
@@ -1177,11 +1177,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-do_missing_source')" id="l_method-i-do_missing_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L538" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L504" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-do_missing_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 538</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 504</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">do_missing</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@missing_dependencies</span>.<span class="ruby-identifier">empty?</span>
 
@@ -1224,18 +1224,18 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-find_alias_comment_source')" id="l_method-i-find_alias_comment_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L554" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L520" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-find_alias_comment_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 554</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 520</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_alias_comment</span> <span class="ruby-identifier">class_name</span>, <span class="ruby-identifier">new_name</span>, <span class="ruby-identifier">old_name</span>
   <span class="ruby-identifier">content</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp">%r%((?&gt;/\*.*?\*/\s+))
                 rb_define_alias\(\s*#{Regexp.escape class_name}\s*,
                                  \s*&quot;#{Regexp.escape new_name}&quot;\s*,
                                  \s*&quot;#{Regexp.escape old_name}&quot;\s*\);%xm</span>
 
-  <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span>(<span class="ruby-node">$1</span> <span class="ruby-operator">||</span> <span class="ruby-string">&#39;&#39;</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>)
+  <span class="ruby-identifier">new_comment</span>(<span class="ruby-node">$1</span> <span class="ruby-operator">||</span> <span class="ruby-string">&#39;&#39;</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1272,11 +1272,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-find_attr_comment_source')" id="l_method-i-find_attr_comment_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L572" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L538" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-find_attr_comment_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 572</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 538</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_attr_comment</span> <span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">attr_name</span>, <span class="ruby-identifier">read</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">write</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-identifier">attr_name</span> = <span class="ruby-constant">Regexp</span>.<span class="ruby-identifier">escape</span> <span class="ruby-identifier">attr_name</span>
 
@@ -1304,7 +1304,7 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
               <span class="ruby-string">&#39;&#39;</span>
             <span class="ruby-keyword">end</span>
 
-  <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
+  <span class="ruby-identifier">new_comment</span> <span class="ruby-identifier">comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1337,11 +1337,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-find_body_source')" id="l_method-i-find_body_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L630" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L596" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-find_body_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 630</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 596</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_body</span> <span class="ruby-identifier">class_name</span>, <span class="ruby-identifier">meth_name</span>, <span class="ruby-identifier">meth_obj</span>, <span class="ruby-identifier">file_content</span>, <span class="ruby-identifier">quiet</span> = <span class="ruby-keyword">false</span>
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">file_content</span>
     <span class="ruby-ivar">@body_table</span> <span class="ruby-operator">||=</span> {}
@@ -1351,7 +1351,7 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
 
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">type</span>
   <span class="ruby-keyword">when</span> <span class="ruby-value">:func_def</span>
-    <span class="ruby-identifier">comment</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">args</span>[<span class="ruby-value">0</span>], <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
+    <span class="ruby-identifier">comment</span> = <span class="ruby-identifier">new_comment</span> <span class="ruby-identifier">args</span>[<span class="ruby-value">0</span>], <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
     <span class="ruby-identifier">body</span> = <span class="ruby-identifier">args</span>[<span class="ruby-value">1</span>]
     <span class="ruby-identifier">offset</span>, = <span class="ruby-identifier">args</span>[<span class="ruby-value">2</span>]
 
@@ -1381,7 +1381,7 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
 
     <span class="ruby-identifier">body</span>
   <span class="ruby-keyword">when</span> <span class="ruby-value">:macro_def</span>
-    <span class="ruby-identifier">comment</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">args</span>[<span class="ruby-value">0</span>], <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
+    <span class="ruby-identifier">comment</span> = <span class="ruby-identifier">new_comment</span> <span class="ruby-identifier">args</span>[<span class="ruby-value">0</span>], <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
     <span class="ruby-identifier">body</span> = <span class="ruby-identifier">args</span>[<span class="ruby-value">1</span>]
     <span class="ruby-identifier">offset</span>, = <span class="ruby-identifier">args</span>[<span class="ruby-value">2</span>]
 
@@ -1453,11 +1453,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-find_class_source')" id="l_method-i-find_class_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L714" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L680" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-find_class_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 714</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 680</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_class</span>(<span class="ruby-identifier">raw_name</span>, <span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@classes</span>[<span class="ruby-identifier">raw_name</span>]
     <span class="ruby-keyword">if</span> <span class="ruby-identifier">raw_name</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp">/^rb_m/</span>
@@ -1523,11 +1523,11 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
                 Source:
                 <a href="javascript:toggleSource('method-i-find_class_comment_source')" id="l_method-i-find_class_comment_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L754" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L720" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-find_class_comment_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 754</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 720</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_class_comment</span> <span class="ruby-identifier">class_name</span>, <span class="ruby-identifier">class_mod</span>
   <span class="ruby-identifier">comment</span> = <span class="ruby-keyword">nil</span>
 
@@ -1550,7 +1550,7 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
     <span class="ruby-identifier">comment</span> = <span class="ruby-string">&#39;&#39;</span>
   <span class="ruby-keyword">end</span>
 
-  <span class="ruby-identifier">comment</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
+  <span class="ruby-identifier">comment</span> = <span class="ruby-identifier">new_comment</span> <span class="ruby-identifier">comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
   <span class="ruby-identifier">comment</span>.<span class="ruby-identifier">normalize</span>
 
   <span class="ruby-identifier">look_for_directives_in</span> <span class="ruby-identifier">class_mod</span>, <span class="ruby-identifier">comment</span>
@@ -1588,11 +1588,11 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
                 Source:
                 <a href="javascript:toggleSource('method-i-find_const_comment_source')" id="l_method-i-find_const_comment_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L810" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L776" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-find_const_comment_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 810</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 776</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_const_comment</span>(<span class="ruby-identifier">type</span>, <span class="ruby-identifier">const_name</span>, <span class="ruby-identifier">class_name</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-ivar">@const_table</span> <span class="ruby-operator">||=</span> {}
   <span class="ruby-ivar">@const_table</span>[<span class="ruby-ivar">@content</span>] <span class="ruby-operator">||=</span> <span class="ruby-identifier">gen_const_table</span> <span class="ruby-ivar">@content</span>
@@ -1604,7 +1604,7 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
     <span class="ruby-identifier">table</span>[<span class="ruby-identifier">const_name</span>] <span class="ruby-operator">||</span>
     <span class="ruby-string">&#39;&#39;</span>
 
-  <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
+  <span class="ruby-identifier">new_comment</span> <span class="ruby-identifier">comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1637,11 +1637,11 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
                 Source:
                 <a href="javascript:toggleSource('method-i-find_modifiers_source')" id="l_method-i-find_modifiers_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L827" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L793" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-find_modifiers_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 827</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 793</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_modifiers</span> <span class="ruby-identifier">comment</span>, <span class="ruby-identifier">meth_obj</span>
   <span class="ruby-identifier">comment</span>.<span class="ruby-identifier">normalize</span>
   <span class="ruby-identifier">comment</span>.<span class="ruby-identifier">extract_call_seq</span> <span class="ruby-identifier">meth_obj</span>
@@ -1679,11 +1679,11 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
                 Source:
                 <a href="javascript:toggleSource('method-i-find_override_comment_source')" id="l_method-i-find_override_comment_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L837" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L803" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-find_override_comment_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 837</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 803</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_override_comment</span> <span class="ruby-identifier">class_name</span>, <span class="ruby-identifier">meth_obj</span>
   <span class="ruby-identifier">name</span> = <span class="ruby-constant">Regexp</span>.<span class="ruby-identifier">escape</span> <span class="ruby-identifier">meth_obj</span>.<span class="ruby-identifier">name</span>
   <span class="ruby-identifier">prefix</span> = <span class="ruby-constant">Regexp</span>.<span class="ruby-identifier">escape</span> <span class="ruby-identifier">meth_obj</span>.<span class="ruby-identifier">name_prefix</span>
@@ -1699,7 +1699,7 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
 
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">comment</span>
 
-  <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
+  <span class="ruby-identifier">new_comment</span> <span class="ruby-identifier">comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1732,18 +1732,18 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
                 Source:
                 <a href="javascript:toggleSource('method-i-gen_body_table_source')" id="l_method-i-gen_body_table_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L605" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L571" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-gen_body_table_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 605</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 571</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">gen_body_table</span> <span class="ruby-identifier">file_content</span>
   <span class="ruby-identifier">table</span> = {}
   <span class="ruby-identifier">file_content</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-regexp">%r{
     ((?&gt;/\*.*?\*/\s*)?)
     ((?:(?:\w+)\s+)?
       (?:intern\s+)?VALUE\s+(\w+)
-      \s*(?:\([^)]*\))(?:[^;]|$))
+      \s*(?:\([^)]*\))(?:[^\);]|$))
   | ((?&gt;/\*.*?\*/\s*))^\s*(\#\s*define\s+(\w+)\s+(\w+))
   | ^\s*\#\s*define\s+(\w+)\s+(\w+)
   }xm</span>) <span class="ruby-keyword">do</span>
@@ -1789,11 +1789,11 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
                 Source:
                 <a href="javascript:toggleSource('method-i-gen_const_table_source')" id="l_method-i-gen_const_table_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L787" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L753" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-gen_const_table_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 787</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 753</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">gen_const_table</span> <span class="ruby-identifier">file_content</span>
   <span class="ruby-identifier">table</span> = {}
   <span class="ruby-ivar">@content</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-regexp">%r{
@@ -1843,11 +1843,11 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
                 Source:
                 <a href="javascript:toggleSource('method-i-handle_attr_source')" id="l_method-i-handle_attr_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L859" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L825" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-handle_attr_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 859</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 825</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">handle_attr</span>(<span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">attr_name</span>, <span class="ruby-identifier">read</span>, <span class="ruby-identifier">write</span>)
   <span class="ruby-identifier">rw</span> = <span class="ruby-string">&#39;&#39;</span>
   <span class="ruby-identifier">rw</span> <span class="ruby-operator">+=</span> <span class="ruby-string">&#39;R&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-string">&#39;1&#39;</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">read</span>
@@ -1903,11 +1903,11 @@ VALUE cFoo = rb_define_class(&quot;Foo&quot;, rb_cObject);
                 Source:
                 <a href="javascript:toggleSource('method-i-handle_class_module_source')" id="l_method-i-handle_class_module_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L888" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L854" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-handle_class_module_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 888</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 854</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">handle_class_module</span>(<span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">type</span>, <span class="ruby-identifier">class_name</span>, <span class="ruby-identifier">parent</span>, <span class="ruby-identifier">in_module</span>)
   <span class="ruby-identifier">parent_name</span> = <span class="ruby-ivar">@known_classes</span>[<span class="ruby-identifier">parent</span>] <span class="ruby-operator">||</span> <span class="ruby-identifier">parent</span>
 
@@ -1999,11 +1999,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-handle_constants_source')" id="l_method-i-handle_constants_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L953" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L919" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-handle_constants_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 953</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 919</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">handle_constants</span>(<span class="ruby-identifier">type</span>, <span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">const_name</span>, <span class="ruby-identifier">definition</span>)
   <span class="ruby-identifier">class_name</span> = <span class="ruby-ivar">@known_classes</span>[<span class="ruby-identifier">var_name</span>]
 
@@ -2037,7 +2037,7 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
 
       <span class="ruby-identifier">new_comment</span> = <span class="ruby-node">&quot;#{$1}#{new_comment.lstrip}&quot;</span>
 
-      <span class="ruby-identifier">new_comment</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">new_comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>
+      <span class="ruby-identifier">new_comment</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">new_comment</span>(<span class="ruby-identifier">new_comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:c</span>)
 
       <span class="ruby-identifier">con</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Constant</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">const_name</span>, <span class="ruby-identifier">new_definition</span>, <span class="ruby-identifier">new_comment</span>
     <span class="ruby-keyword">else</span>
@@ -2082,11 +2082,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-handle_ifdefs_in_source')" id="l_method-i-handle_ifdefs_in_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L1004" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L970" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-handle_ifdefs_in_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1004</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 970</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">handle_ifdefs_in</span>(<span class="ruby-identifier">body</span>)
   <span class="ruby-identifier">body</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/^#ifdef HAVE_PROTOTYPES.*?#else.*?\n(.*?)#endif.*?\n/m</span>, <span class="ruby-string">&#39;\1&#39;</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -2121,11 +2121,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-handle_method_source')" id="l_method-i-handle_method_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L1013" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L979" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-handle_method_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1013</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 979</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">handle_method</span>(<span class="ruby-identifier">type</span>, <span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">meth_name</span>, <span class="ruby-identifier">function</span>, <span class="ruby-identifier">param_count</span>,
                   <span class="ruby-identifier">source_file</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-identifier">class_name</span> = <span class="ruby-ivar">@known_classes</span>[<span class="ruby-identifier">var_name</span>]
@@ -2136,6 +2136,10 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">class_name</span>
 
   <span class="ruby-identifier">class_obj</span> = <span class="ruby-identifier">find_class</span> <span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">class_name</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">existing_method</span> = <span class="ruby-identifier">class_obj</span>.<span class="ruby-identifier">method_list</span>.<span class="ruby-identifier">find</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">m</span><span class="ruby-operator">|</span> <span class="ruby-identifier">m</span>.<span class="ruby-identifier">c_function</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">function</span> }
+    <span class="ruby-identifier">add_alias</span>(<span class="ruby-identifier">var_name</span>, <span class="ruby-identifier">class_obj</span>, <span class="ruby-identifier">existing_method</span>.<span class="ruby-identifier">name</span>, <span class="ruby-identifier">meth_name</span>, <span class="ruby-identifier">existing_method</span>.<span class="ruby-identifier">comment</span>)
+  <span class="ruby-keyword">end</span>
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">class_obj</span> <span class="ruby-keyword">then</span>
     <span class="ruby-keyword">if</span> <span class="ruby-identifier">meth_name</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;initialize&#39;</span> <span class="ruby-keyword">then</span>
@@ -2176,7 +2180,12 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
 
 
       <span class="ruby-identifier">meth_obj</span>.<span class="ruby-identifier">record_location</span> <span class="ruby-ivar">@top_level</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">meth_obj</span>.<span class="ruby-identifier">section_title</span>
+        <span class="ruby-identifier">class_obj</span>.<span class="ruby-identifier">temporary_section</span> = <span class="ruby-identifier">class_obj</span>.<span class="ruby-identifier">add_section</span>(<span class="ruby-identifier">meth_obj</span>.<span class="ruby-identifier">section_title</span>)
+      <span class="ruby-keyword">end</span>
       <span class="ruby-identifier">class_obj</span>.<span class="ruby-identifier">add_method</span> <span class="ruby-identifier">meth_obj</span>
+
       <span class="ruby-ivar">@stats</span>.<span class="ruby-identifier">add_method</span> <span class="ruby-identifier">meth_obj</span>
       <span class="ruby-identifier">meth_obj</span>.<span class="ruby-identifier">visibility</span> = <span class="ruby-value">:private</span> <span class="ruby-keyword">if</span> <span class="ruby-string">&#39;private_method&#39;</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">type</span>
     <span class="ruby-keyword">end</span>
@@ -2213,11 +2222,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-handle_singleton_source')" id="l_method-i-handle_singleton_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L1073" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L1048" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-handle_singleton_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1073</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1048</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">handle_singleton</span> <span class="ruby-identifier">sclass_var</span>, <span class="ruby-identifier">class_var</span>
   <span class="ruby-identifier">class_name</span> = <span class="ruby-ivar">@known_classes</span>[<span class="ruby-identifier">class_var</span>]
 
@@ -2255,11 +2264,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-handle_tab_width_source')" id="l_method-i-handle_tab_width_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L1083" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L1058" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-handle_tab_width_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1083</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1058</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">handle_tab_width</span>(<span class="ruby-identifier">body</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-regexp">/\t/</span> <span class="ruby-operator">=~</span> <span class="ruby-identifier">body</span>
     <span class="ruby-identifier">tab_width</span> = <span class="ruby-ivar">@options</span>.<span class="ruby-identifier">tab_width</span>
@@ -2304,11 +2313,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-load_variable_map_source')" id="l_method-i-load_variable_map_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L1101" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L1076" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-load_variable_map_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1101</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1076</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">load_variable_map</span> <span class="ruby-identifier">map_name</span>
   <span class="ruby-keyword">return</span> {} <span class="ruby-keyword">unless</span> <span class="ruby-identifier">files</span> = <span class="ruby-ivar">@store</span>.<span class="ruby-identifier">cache</span>[<span class="ruby-identifier">map_name</span>]
   <span class="ruby-keyword">return</span> {} <span class="ruby-keyword">unless</span> <span class="ruby-identifier">name_map</span> = <span class="ruby-identifier">files</span>[<span class="ruby-ivar">@file_name</span>]
@@ -2366,11 +2375,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-look_for_directives_in_source')" id="l_method-i-look_for_directives_in_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L1130" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L1105" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-look_for_directives_in_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1130</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1105</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">look_for_directives_in</span> <span class="ruby-identifier">context</span>, <span class="ruby-identifier">comment</span>
   <span class="ruby-ivar">@preprocess</span>.<span class="ruby-identifier">handle</span> <span class="ruby-identifier">comment</span>, <span class="ruby-identifier">context</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">directive</span>, <span class="ruby-identifier">param</span><span class="ruby-operator">|</span>
     <span class="ruby-keyword">case</span> <span class="ruby-identifier">directive</span>
@@ -2384,6 +2393,47 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-identifier">comment</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-new_comment">
+            
+              <b>new_comment</b>(text = nil, location = nil, language = nil)
+            
+            <a href="../../../classes/RDoc/Parser/C.html#method-i-new_comment" name="method-i-new_comment" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-new_comment_source')" id="l_method-i-new_comment_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L1232" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-new_comment_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1232</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">new_comment</span> <span class="ruby-identifier">text</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">location</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">language</span> = <span class="ruby-keyword">nil</span>
+  <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">text</span>, <span class="ruby-identifier">location</span>, <span class="ruby-identifier">language</span>).<span class="ruby-identifier">tap</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">comment</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">comment</span>.<span class="ruby-identifier">format</span> = <span class="ruby-ivar">@markup</span>
+  <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -2416,11 +2466,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-rb_scan_args_source')" id="l_method-i-rb_scan_args_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L1149" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L1124" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-rb_scan_args_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1149</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1124</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">rb_scan_args</span> <span class="ruby-identifier">method_body</span>
   <span class="ruby-identifier">method_body</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp">/rb_scan_args\((.*?)\)/m</span>
   <span class="ruby-keyword">return</span> <span class="ruby-string">&#39;(*args)&#39;</span> <span class="ruby-keyword">unless</span> <span class="ruby-node">$1</span>
@@ -2530,11 +2580,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-remove_commented_out_lines_source')" id="l_method-i-remove_commented_out_lines_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L1232" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L1207" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-remove_commented_out_lines_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1232</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1207</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">remove_commented_out_lines</span>
   <span class="ruby-ivar">@content</span> = <span class="ruby-ivar">@content</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">%r%//.*rb_define_%</span>, <span class="ruby-string">&#39;//&#39;</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -2569,11 +2619,11 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
                 Source:
                 <a href="javascript:toggleSource('method-i-scan_source')" id="l_method-i-scan_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rdoc/parser/c.rb#L1240" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/c.rb#L1215" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-scan_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1240</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/c.rb, line 1215</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">scan</span>
   <span class="ruby-identifier">remove_commented_out_lines</span>
 
@@ -2585,8 +2635,6 @@ rb_define_const(cFoo, &quot;PERFECT&quot;, INT2FIX(300));
   <span class="ruby-identifier">do_includes</span>
   <span class="ruby-identifier">do_aliases</span>
   <span class="ruby-identifier">do_attrs</span>
-
-  <span class="ruby-identifier">deduplicate_call_seq</span>
 
   <span class="ruby-ivar">@store</span>.<span class="ruby-identifier">add_c_variables</span> <span class="ruby-keyword">self</span>
 

@@ -356,11 +356,11 @@ Cooked potato: true
                 Source:
                 <a href="javascript:toggleSource('method-i-irb_source')" id="l_method-i-irb_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/irb.rb#L901" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/irb.rb#L970" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-irb_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 901</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 970</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">irb</span>
   <span class="ruby-constant">IRB</span>.<span class="ruby-identifier">setup</span>(<span class="ruby-identifier">source_location</span>[<span class="ruby-value">0</span>], <span class="ruby-value">argv:</span> [])
   <span class="ruby-identifier">workspace</span> = <span class="ruby-constant">IRB</span><span class="ruby-operator">::</span><span class="ruby-constant">WorkSpace</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>)
@@ -426,7 +426,7 @@ bind_local_variable_defined_p(VALUE bindval, VALUE sym)
 
     GetBindingPtr(bindval, bind);
     env = VM_ENV_ENVVAL_PTR(vm_block_ep(&amp;bind-&gt;block));
-    return get_local_variable_ptr(&amp;env, lid) ? Qtrue : Qfalse;
+    return RBOOL(get_local_variable_ptr(&amp;env, lid));
 }</pre>
               </div>
             </div>
@@ -487,14 +487,15 @@ bind_local_variable_get(VALUE bindval, VALUE sym)
     GetBindingPtr(bindval, bind);
 
     env = VM_ENV_ENVVAL_PTR(vm_block_ep(&amp;bind-&gt;block));
-    if ((ptr = get_local_variable_ptr(&amp;env, lid)) == NULL) {
-        sym = ID2SYM(lid);
-      undefined:
-        rb_name_err_raise(&quot;local variable `%1$s&#39; is not defined for %2$s&quot;,
-                          bindval, sym);
+    if ((ptr = get_local_variable_ptr(&amp;env, lid)) != NULL) {
+        return *ptr;
     }
 
-    return *ptr;
+    sym = ID2SYM(lid);
+  undefined:
+    rb_name_err_raise(&quot;local variable `%1$s&#39; is not defined for %2$s&quot;,
+                      bindval, sym);
+    UNREACHABLE_RETURN(Qundef);
 }</pre>
               </div>
             </div>
@@ -568,6 +569,10 @@ bind_local_variable_set(VALUE bindval, VALUE sym, VALUE val)
         ptr = rb_binding_add_dynavars(bindval, bind, 1, &amp;lid);
         env = VM_ENV_ENVVAL_PTR(vm_block_ep(&amp;bind-&gt;block));
     }
+
+#if YJIT_STATS
+    rb_yjit_collect_binding_set();
+#endif
 
     RB_OBJ_WRITE(env, ptr, val);
 

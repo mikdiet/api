@@ -26,8 +26,8 @@
 
   
     
-    <meta name="description" content="A Range represents an interval—a set of values with a beginning and an end. Ranges may be constructed using the s..e and s...e literals, or with Range::new. Ranges constructed using ..">
-    <meta property="og:description" content="A Range represents an interval—a set of values with a beginning and an end. Ranges may be constructed using the s..e and s...e literals, or with Range::new. Ranges constructed using ..">
+    <meta name="description" content="A Range object represents a collection of values that are between given begin and end values.  You can create an Range object explicitly with:  A range literal:  # Ranges that use &#39;..">
+    <meta property="og:description" content="A Range object represents a collection of values that are between given begin and end values.  You can create an Range object explicitly with:  A range literal:  # Ranges that use &#39;..">
   
 
     <meta name="keywords" content="Range class, json_create, as_json, to_json, new, ==, ===, eql?, hash, each, step, %, bsearch, begin, end, first, last, min, max, minmax, size, to_a, entries, to_s, inspect, exclude_end?, member?, include?, cover?, count">
@@ -85,62 +85,133 @@
   
     <div class="description">
       
-<p>A <a href="Range.html"><code>Range</code></a> represents an interval—a set of values with a beginning and an end. Ranges may be constructed using the <em>s</em><code>..</code><em>e</em> and <em>s</em><code>...</code><em>e</em> literals, or with <a href="Range.html#method-c-new"><code>Range::new</code></a>. Ranges constructed using <code>..</code> run from the beginning to the end inclusively. Those created using <code>...</code> exclude the end value. When used as an iterator, ranges return each value in the sequence.</p>
+<p>A Range object represents a collection of values that are between given begin and end values.</p>
 
-<pre><code>(-1..-5).to_a      #=&gt; []
-(-5..-1).to_a      #=&gt; [-5, -4, -3, -2, -1]
-(&#39;a&#39;..&#39;e&#39;).to_a    #=&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;, &quot;e&quot;]
-(&#39;a&#39;...&#39;e&#39;).to_a   #=&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;]
-</code></pre>
-
-<h2 id="class-Range-label-Beginless-2FEndless+Ranges">Beginless/Endless Ranges</h2>
-
-<p>A “beginless range” and “endless range” represents a semi-infinite range.  Literal notation for a beginless range is:</p>
-
-<pre><code>(..1)
-# or
-(...1)
-</code></pre>
-
-<p>Literal notation for an endless range is:</p>
-
-<pre><code>(1..)
-# or similarly
-(1...)
-</code></pre>
-
-<p>Which is equivalent to</p>
-
-<pre><code>(1..nil)  # or similarly (1...nil)
-Range.new(1, nil) # or Range.new(1, nil, true)
-</code></pre>
-
-<p>Beginless/endless ranges are useful, for example, for idiomatic slicing of arrays:</p>
-
-<pre><code>[1, 2, 3, 4, 5][...2]   # =&gt; [1, 2]
-[1, 2, 3, 4, 5][2...]   # =&gt; [3, 4, 5]
-</code></pre>
-
-<p>Some implementation details:</p>
+<p>You can create an Range object explicitly with:</p>
 <ul><li>
-<p><code>begin</code> of beginless range and <code>end</code> of endless range are <code>nil</code>;</p>
-</li><li>
-<p><code>each</code> of beginless range raises an exception;</p>
-</li><li>
-<p><code>each</code> of endless range enumerates infinite sequence (may be useful in combination with <a href="Enumerable.html#method-i-take_while"><code>Enumerable#take_while</code></a> or similar methods);</p>
-</li><li>
-<p><code>(1..)</code> and <code>(1...)</code> are not equal, although technically representing the same sequence.</p>
+<p>A <a href="doc/syntax/literals_rdoc.html#label-Range+Literals">range literal</a>:</p>
+
+<pre><code># Ranges that use &#39;..&#39; to include the given end value.
+(1..4).to_a      # =&gt; [1, 2, 3, 4]
+(&#39;a&#39;..&#39;d&#39;).to_a  # =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;]
+# Ranges that use &#39;...&#39; to exclude the given end value.
+(1...4).to_a     # =&gt; [1, 2, 3]
+(&#39;a&#39;...&#39;d&#39;).to_a # =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;]
+</code></pre>
 </li></ul>
 
-<h2 id="class-Range-label-Custom+Objects+in+Ranges">Custom Objects in Ranges</h2>
+<p>A range may be created using method <a href="Range.html#method-c-new"><code>Range.new</code></a>:</p>
 
-<p>Ranges can be constructed using any objects that can be compared using the <code>&lt;=&gt;</code> operator. Methods that treat the range as a sequence (<a href="Range.html#method-i-each"><code>each</code></a> and methods inherited from <a href="Enumerable.html"><code>Enumerable</code></a>) expect the begin object to implement a <code>succ</code> method to return the next object in sequence. The <a href="Range.html#method-i-step"><code>step</code></a> and <a href="Range.html#method-i-include-3F"><code>include?</code></a> methods require the begin object to implement <code>succ</code> or to be numeric.</p>
+<pre><code># Ranges that by default include the given end value.
+Range.new(1, 4).to_a     # =&gt; [1, 2, 3, 4]
+Range.new(&#39;a&#39;, &#39;d&#39;).to_a # =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;]
+# Ranges that use third argument +exclude_end+ to exclude the given end value.
+Range.new(1, 4, true).to_a     # =&gt; [1, 2, 3]
+Range.new(&#39;a&#39;, &#39;d&#39;, true).to_a # =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;]
+</code></pre>
 
-<p>In the <code>Xs</code> class below both <code>&lt;=&gt;</code> and <code>succ</code> are implemented so <code>Xs</code> can be used to construct ranges. Note that the <a href="Comparable.html"><code>Comparable</code></a> module is included so the <code>==</code> method is defined in terms of <code>&lt;=&gt;</code>.</p>
+<h2 id="class-Range-label-Beginless+Ranges">Beginless Ranges</h2>
 
-<pre><code>class Xs                # represent a string of &#39;x&#39;s
+<p>A <em>beginless</em> <em>range</em> has a definite end value, but a <code>nil</code> begin value. Such a range includes all values up to the end value.</p>
+
+<pre><code>r = (..4)               # =&gt; nil..4
+r.begin                 # =&gt; nil
+r.include?(-50)         # =&gt; true
+r.include?(4)           # =&gt; true
+
+r = (...4)              # =&gt; nil...4
+r.include?(4)           # =&gt; false
+
+Range.new(nil, 4)       # =&gt; nil..4
+Range.new(nil, 4, true) # =&gt; nil...4
+</code></pre>
+
+<p>A beginless range may be used to slice an array:</p>
+
+<pre><code>a = [1, 2, 3, 4]
+r = (..2) # =&gt; nil...2
+a[r]      # =&gt; [1, 2]
+</code></pre>
+
+<p>Method <code>each</code> for a beginless range raises an exception.</p>
+
+<h2 id="class-Range-label-Endless+Ranges">Endless Ranges</h2>
+
+<p>An <em>endless</em> <em>range</em> has a definite begin value, but a <code>nil</code> end value. Such a range includes all values from the begin value.</p>
+
+<pre><code>r = (1..)         # =&gt; 1..
+r.end             # =&gt; nil
+r.include?(50)    # =&gt; true
+
+Range.new(1, nil) # =&gt; 1..
+</code></pre>
+
+<p>The literal for  an endless range may be written with either two dots or three. The range has the same elements, either way. But note that the two are not equal:</p>
+
+<pre><code>r0 = (1..)           # =&gt; 1..
+r1 = (1...)          # =&gt; 1...
+r0.begin == r1.begin # =&gt; true
+r0.end == r1.end     # =&gt; true
+r0 == r1             # =&gt; false
+</code></pre>
+
+<p>An endless range may be used to slice an array:</p>
+
+<pre><code>a = [1, 2, 3, 4]
+r = (2..) # =&gt; 2..
+a[r]      # =&gt; [3, 4]
+</code></pre>
+
+<p>Method <code>each</code> for an endless range calls the given block indefinitely:</p>
+
+<pre><code>a = []
+r = (1..)
+r.each do |i|
+  a.push(i) if i.even?
+  break if i &gt; 10
+end
+a # =&gt; [2, 4, 6, 8, 10]
+</code></pre>
+
+<h2 id="class-Range-label-Ranges+and+Other+Classes">Ranges and Other Classes</h2>
+
+<p>An object may be put into a range if its class implements instance method <code>&lt;=&gt;</code>. Ruby core classes that do so include <a href="Array.html"><code>Array</code></a>, <a href="Complex.html"><code>Complex</code></a>, <a href="File/Stat.html"><code>File::Stat</code></a>, <a href="Float.html"><code>Float</code></a>, <a href="Integer.html"><code>Integer</code></a>, <a href="Kernel.html"><code>Kernel</code></a>, <a href="Module.html"><code>Module</code></a>, <a href="Numeric.html"><code>Numeric</code></a>, <a href="Rational.html"><code>Rational</code></a>, <a href="String.html"><code>String</code></a>, <a href="Symbol.html"><code>Symbol</code></a>, and <a href="Time.html"><code>Time</code></a>.</p>
+
+<p>Example:</p>
+
+<pre><code>t0 = Time.now         # =&gt; 2021-09-19 09:22:48.4854986 -0500
+t1 = Time.now         # =&gt; 2021-09-19 09:22:56.0365079 -0500
+t2 = Time.now         # =&gt; 2021-09-19 09:23:08.5263283 -0500
+(t0..t2).include?(t1) # =&gt; true
+(t0..t1).include?(t2) # =&gt; false
+</code></pre>
+
+<p>A range can be iterated over only if its elements implement instance method <code>succ</code>. Ruby core classes that do so include <a href="Integer.html"><code>Integer</code></a>, <a href="String.html"><code>String</code></a>, and <a href="Symbol.html"><code>Symbol</code></a> (but not the other classes mentioned above).</p>
+
+<p>Iterator methods include:</p>
+<ul><li>
+<p>In Range itself: <a href="Range.html#method-i-each"><code>each</code></a>, <a href="Range.html#method-i-step"><code>step</code></a>, and <a href="Range.html#method-i-25"><code>%</code></a></p>
+</li><li>
+<p>Included from module Enumerable: <a href="Enumerable.html#method-i-each_entry"><code>each_entry</code></a>, <a href="Enumerable.html#method-i-each_with_index"><code>each_with_index</code></a>, <a href="Enumerable.html#method-i-each_with_object"><code>each_with_object</code></a>, <a href="Enumerable.html#method-i-each_slice"><code>each_slice</code></a>, <a href="Enumerable.html#method-i-each_cons"><code>each_cons</code></a>, and <a href="Enumerable.html#method-i-reverse_each"><code>reverse_each</code></a>.</p>
+</li></ul>
+
+<p>Example:</p>
+
+<pre><code>a = []
+(1..4).each {|i| a.push(i) }
+a # =&gt; [1, 2, 3, 4]
+</code></pre>
+
+<h2 id="class-Range-label-Ranges+and+User-Defined+Classes">Ranges and User-Defined Classes</h2>
+
+<p>A user-defined class that is to be used in a range must implement instance <code>&lt;=&gt;</code>; see <a href="Integer.html#label-method-i-3C-3D-3E">Integer#<=></a>. To make iteration available, it must also implement instance method <code>succ</code>; see <a href="Integer.html#method-i-succ"><code>Integer#succ</code></a>.</p>
+
+<p>The class below implements both <code>&lt;=&gt;</code> and <code>succ</code>, and so can be used both to construct ranges and to iterate over them. Note that the <a href="Comparable.html"><code>Comparable</code></a> module is included so the <code>==</code> method is defined in terms of <code>&lt;=&gt;</code>.</p>
+
+<pre><code># Represent a string of &#39;X&#39; characters.
+class Xs
   include Comparable
-  attr :length
+  attr_accessor :length
   def initialize(n)
     @length = n
   end
@@ -154,17 +225,148 @@ Range.new(1, nil) # or Range.new(1, nil, true)
     sprintf &quot;%2d #{inspect}&quot;, @length
   end
   def inspect
-    &#39;x&#39; * @length
+    &#39;X&#39; * @length
   end
 end
+
+r = Xs.new(3)..Xs.new(6) #=&gt; XXX..XXXXXX
+r.to_a                   #=&gt; [XXX, XXXX, XXXXX, XXXXXX]
+r.include?(Xs.new(5))    #=&gt; true
+r.include?(Xs.new(7))    #=&gt; false
 </code></pre>
 
-<p>An example of using <code>Xs</code> to construct a range:</p>
+<h2 id="class-Range-label-What-27s+Here">What’s Here</h2>
 
-<pre><code>r = Xs.new(3)..Xs.new(6)   #=&gt; xxx..xxxxxx
-r.to_a                     #=&gt; [xxx, xxxx, xxxxx, xxxxxx]
-r.member?(Xs.new(5))       #=&gt; true
-</code></pre>
+<p>First, what’s elsewhere. Class Range:</p>
+<ul><li>
+<p>Inherits from <a href="Object.html#class-Object-label-What-27s+Here">class Object</a>.</p>
+</li><li>
+<p>Includes <a href="Enumerable.html#module-Enumerable-label-What-27s+Here">module Enumerable</a>, which provides dozens of additional methods.</p>
+</li></ul>
+
+<p>Here, class Range provides methods that are useful for:</p>
+<ul><li>
+<p><a href="#class-Range-label-Methods+for+Creating+a+Range">Creating a Range</a></p>
+</li><li>
+<p><a href="#class-Range-label-Methods+for+Querying">Querying</a></p>
+</li><li>
+<p><a href="#class-Range-label-Methods+for+Comparing">Comparing</a></p>
+</li><li>
+<p><a href="#class-Range-label-Methods+for+Iterating">Iterating</a></p>
+</li><li>
+<p><a href="#class-Range-label-Methods+for+Converting">Converting</a></p>
+</li></ul>
+
+<h3 id="class-Range-label-Methods+for+Creating+a+Range">Methods for Creating a Range</h3>
+<ul><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-c-new"><code>::new</code></a>
+<dd>
+<p>Returns a new range.</p>
+</dd></dl>
+</li></ul>
+
+<h3 id="class-Range-label-Methods+for+Querying">Methods for Querying</h3>
+<ul><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-begin"><code>begin</code></a>
+<dd>
+<p>Returns the begin value given for <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-bsearch"><code>bsearch</code></a>
+<dd>
+<p>Returns an element from <code>self</code> selected by a binary search.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-count"><code>count</code></a>
+<dd>
+<p>Returns a count of elements in <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-end"><code>end</code></a>
+<dd>
+<p>Returns the end value given for <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a>
+<dd>
+<p>Returns whether the end object is excluded.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-first"><code>first</code></a>
+<dd>
+<p>Returns the first elements of <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-hash"><code>hash</code></a>
+<dd>
+<p>Returns the integer hash code.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-last"><code>last</code></a>
+<dd>
+<p>Returns the last elements of <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-max"><code>max</code></a>
+<dd>
+<p>Returns the maximum values in <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-min"><code>min</code></a>
+<dd>
+<p>Returns the minimum values in <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-minmax"><code>minmax</code></a>
+<dd>
+<p>Returns the minimum and maximum values in <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-size"><code>size</code></a>
+<dd>
+<p>Returns the count of elements in <code>self</code>.</p>
+</dd></dl>
+</li></ul>
+
+<h3 id="class-Range-label-Methods+for+Comparing">Methods for Comparing</h3>
+<ul><li><dl class="rdoc-list note-list"><dt><a href="#method-i-3D-3D">#==</a>
+<dd>
+<p>Returns whether a given object is equal to <code>self</code> (uses <a href="Range.html#method-i-3D-3D"><code>==</code></a>).</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-3D-3D-3D"><code>===</code></a>
+<dd>
+<p>Returns whether the given object is between the begin and end values.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-cover-3F"><code>cover?</code></a>
+<dd>
+<p>Returns whether a given object is within <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-eql-3F"><code>eql?</code></a>
+<dd>
+<p>Returns whether a given object is equal to <code>self</code> (uses <a href="Range.html#method-i-eql-3F"><code>eql?</code></a>).</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-include-3F"><code>include?</code></a> (aliased as <a href="Range.html#method-i-member-3F"><code>member?</code></a>)
+<dd>
+<p>Returns whether a given object is an element of <code>self</code>.</p>
+</dd></dl>
+</li></ul>
+
+<h3 id="class-Range-label-Methods+for+Iterating">Methods for Iterating</h3>
+<ul><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-25"><code>%</code></a>
+<dd>
+<p>Requires argument <code>n</code>; calls the block with each <code>n</code>-th element of <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-each"><code>each</code></a>
+<dd>
+<p>Calls the block with each element of <code>self</code>.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-step"><code>step</code></a>
+<dd>
+<p>Takes optional argument <code>n</code> (defaults to 1); calls the block with each <code>n</code>-th element of <code>self</code>.</p>
+</dd></dl>
+</li></ul>
+
+<h3 id="class-Range-label-Methods+for+Converting">Methods for Converting</h3>
+<ul><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-inspect"><code>inspect</code></a>
+<dd>
+<p>Returns a string representation of <code>self</code> (uses <a href="Range.html#method-i-inspect"><code>inspect</code></a>).</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-to_a"><code>to_a</code></a> (aliased as <a href="Range.html#method-i-entries"><code>entries</code></a>)
+<dd>
+<p>Returns elements of <code>self</code> in an array.</p>
+</dd></dl>
+</li><li><dl class="rdoc-list note-list"><dt><a href="Range.html#method-i-to_s"><code>to_s</code></a>
+<dd>
+<p>Returns a string representation of <code>self</code> (uses <a href="Range.html#method-i-to_s"><code>to_s</code></a>).</p>
+</dd></dl>
+</li></ul>
 
     </div>
   
@@ -491,7 +693,7 @@ r.member?(Xs.new(5))       #=&gt; true
                 Source:
                 <a href="javascript:toggleSource('method-c-json_create_source')" id="l_method-c-json_create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/range.rb#L10" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/range.rb#L10" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-json_create_source" class="dyn-source">
@@ -507,7 +709,7 @@ r.member?(Xs.new(5))       #=&gt; true
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>Range.new(begin, end, exclude_end=false)    &rarr; rng
+              <b>Range.new(begin, end, exclude_end = false) &rarr; new_range
 </b>
             
             <a href="../classes/Range.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -515,7 +717,13 @@ r.member?(Xs.new(5))       #=&gt; true
 
           
             <div class="description">
-              <p>Constructs a range using the given <code>begin</code> and <code>end</code>. If the <code>exclude_end</code> parameter is omitted or is <code>false</code>, the range will include the end object; otherwise, it will be excluded.</p>
+              <p>Returns a new range based on the given objects <code>begin</code> and <code>end</code>. Optional argument <code>exclude_end</code> determines whether object <code>end</code> is included as the last object in the range:</p>
+
+<pre><code>Range.new(2, 5).to_a            # =&gt; [2, 3, 4, 5]
+Range.new(2, 5, true).to_a      # =&gt; [2, 3, 4]
+Range.new(&#39;a&#39;, &#39;d&#39;).to_a        # =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;]
+Range.new(&#39;a&#39;, &#39;d&#39;, true).to_a  # =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;]
+</code></pre>
             </div>
           
 
@@ -555,7 +763,7 @@ range_initialize(int argc, VALUE *argv, VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-25">
             
-              <b>rng.step(n=1) {| obj | block }    &rarr; rng<br />rng.step(n=1)                     &rarr; an_enumerator<br />rng.step(n=1)                     &rarr; an_arithmetic_sequence<br />rng % n                           &rarr; an_enumerator<br />rng % n                           &rarr; an_arithmetic_sequence
+              <b>%(n) {|element| ... } &rarr; self<br />%(n)                  &rarr; enumerator
 </b>
             
             <a href="../classes/Range.html#method-i-25" name="method-i-25" class="permalink">Link</a>
@@ -563,31 +771,26 @@ range_initialize(int argc, VALUE *argv, VALUE range)
 
           
             <div class="description">
-              <p>Iterates over the range, passing each <code>n</code>th element to the block. If begin and end are numeric, <code>n</code> is added for each iteration. Otherwise <a href="Range.html#method-i-step"><code>step</code></a> invokes succ to iterate through range elements.</p>
+              <p>Iterates over the elements of <code>self</code>.</p>
 
-<p>If no block is given, an enumerator is returned instead. Especially, the enumerator is an <a href="Enumerator/ArithmeticSequence.html"><code>Enumerator::ArithmeticSequence</code></a> if begin and end of the range are numeric.</p>
+<p>With a block given, calls the block with selected elements of the range; returns <code>self</code>:</p>
 
-<pre><code>range = Xs.new(1)..Xs.new(10)
-range.step(2) {|x| puts x}
-puts
-range.step(3) {|x| puts x}
+<pre><code>a = []
+(1..5).%(2) {|element| a.push(element) } # =&gt; 1..5
+a # =&gt; [1, 3, 5]
+a = []
+(&#39;a&#39;..&#39;e&#39;).%(2) {|element| a.push(element) } # =&gt; &quot;a&quot;..&quot;e&quot;
+a # =&gt; [&quot;a&quot;, &quot;c&quot;, &quot;e&quot;]
 </code></pre>
 
-<p><em>produces:</em></p>
+<p>With no block given, returns an enumerator, which will be of class <a href="Enumerator/ArithmeticSequence.html"><code>Enumerator::ArithmeticSequence</code></a> if <code>self</code> is numeric; otherwise of class Enumerator:</p>
 
-<pre><code> 1 x
- 3 xxx
- 5 xxxxx
- 7 xxxxxxx
- 9 xxxxxxxxx
-
- 1 x
- 4 xxxx
- 7 xxxxxxx
-10 xxxxxxxxxx
+<pre><code>e = (1..5) % 2 # =&gt; ((1..5).%(2))
+e.class        # =&gt; Enumerator::ArithmeticSequence
+(&#39;a&#39;..&#39;e&#39;) % 2 # =&gt;  #&lt;Enumerator: ...&gt;
 </code></pre>
 
-<p>See <a href="Range.html"><code>Range</code></a> for the definition of class Xs.</p>
+<p>Related: <a href="Range.html#method-i-step"><code>Range#step</code></a>.</p>
             </div>
           
 
@@ -618,7 +821,7 @@ range_percent_step(VALUE range, VALUE step)
         <div class="method">
           <h3 class="title method-title" id="method-i-3D-3D">
             
-              <b>rng == obj    &rarr; true or false
+              <b>self == other &rarr; true or false
 </b>
             
             <a href="../classes/Range.html#method-i-3D-3D" name="method-i-3D-3D" class="permalink">Link</a>
@@ -626,12 +829,36 @@ range_percent_step(VALUE range, VALUE step)
 
           
             <div class="description">
-              <p>Returns <code>true</code> only if <code>obj</code> is a <a href="Range.html"><code>Range</code></a>, has equivalent begin and end items (by comparing them with <code>==</code>), and has the same <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> setting as the range.</p>
+              <p>Returns <code>true</code> if and only if:</p>
+<ul><li>
+<p><code>other</code> is a range.</p>
+</li><li>
+<p><code>other.begin == self.begin</code>.</p>
+</li><li>
+<p><code>other.end == self.end</code>.</p>
+</li><li>
+<p><code>other.exclude_end? == self.exclude_end?</code>.</p>
+</li></ul>
 
-<pre><code>(0..2) == (0..2)            #=&gt; true
-(0..2) == Range.new(0,2)    #=&gt; true
-(0..2) == (0...2)           #=&gt; false
+<p>Otherwise returns <code>false</code>.</p>
+
+<pre><code>r = (1..5)
+r == (1..5)                # =&gt; true
+r = Range.new(1, 5)
+r == &#39;foo&#39;                 # =&gt; false
+r == (2..5)                # =&gt; false
+r == (1..4)                # =&gt; false
+r == (1...5)               # =&gt; false
+r == Range.new(1, 5, true) # =&gt; false
 </code></pre>
+
+<p>Note that even with the same argument, the return values of <a href="Range.html#method-i-3D-3D"><code>==</code></a> and <a href="Range.html#method-i-eql-3F"><code>eql?</code></a> can differ:</p>
+
+<pre><code>(1..2) == (1..2.0)   # =&gt; true
+(1..2).eql? (1..2.0) # =&gt; false
+</code></pre>
+
+<p>Related: <a href="Range.html#method-i-eql-3F"><code>Range#eql?</code></a>.</p>
             </div>
           
 
@@ -667,7 +894,7 @@ range_eq(VALUE range, VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-3D-3D-3D">
             
-              <b>rng === obj       &rarr;  true or false
+              <b>self === object &rarr;  true or false
 </b>
             
             <a href="../classes/Range.html#method-i-3D-3D-3D" name="method-i-3D-3D-3D" class="permalink">Link</a>
@@ -675,22 +902,38 @@ range_eq(VALUE range, VALUE obj)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>obj</code> is between begin and end of range, <code>false</code> otherwise (same as <a href="Range.html#method-i-cover-3F"><code>cover?</code></a>). Conveniently, <code>===</code> is the comparison operator used by <code>case</code> statements.</p>
+              <p>Returns <code>true</code> if <code>object</code> is between <code>self.begin</code> and <code>self.end</code>. <code>false</code> otherwise:</p>
+
+<pre><code>(1..4) === 2       # =&gt; true
+(1..4) === 5       # =&gt; false
+(1..4) === &#39;a&#39;     # =&gt; false
+(1..4) === 4       # =&gt; true
+(1...4) === 4      # =&gt; false
+(&#39;a&#39;..&#39;d&#39;) === &#39;c&#39; # =&gt; true
+(&#39;a&#39;..&#39;d&#39;) === &#39;e&#39; # =&gt; false
+</code></pre>
+
+<p>A case statement uses method <code>===</code>, and so:</p>
 
 <pre><code>case 79
-when 1..50   then   puts &quot;low&quot;
-when 51..75  then   puts &quot;medium&quot;
-when 76..100 then   puts &quot;high&quot;
-end
-# Prints &quot;high&quot;
+when (1..50)
+  &quot;low&quot;
+when (51..75)
+  &quot;medium&quot;
+when (76..100)
+  &quot;high&quot;
+end # =&gt; &quot;high&quot;
 
 case &quot;2.6.5&quot;
-when ...&quot;2.4&quot; then puts &quot;EOL&quot;
-when &quot;2.4&quot;...&quot;2.5&quot; then puts &quot;maintenance&quot;
-when &quot;2.5&quot;...&quot;2.7&quot; then puts &quot;stable&quot;
-when &quot;2.7&quot;.. then puts &quot;upcoming&quot;
-end
-# Prints &quot;stable&quot;
+when ...&quot;2.4&quot;
+  &quot;EOL&quot;
+when &quot;2.4&quot;...&quot;2.5&quot;
+  &quot;maintenance&quot;
+when &quot;2.5&quot;...&quot;3.0&quot;
+  &quot;stable&quot;
+when &quot;3.1&quot;..
+  &quot;upcoming&quot;
+end # =&gt; &quot;stable&quot;
 </code></pre>
             </div>
           
@@ -747,7 +990,7 @@ range_eqq(VALUE range, VALUE val)
                 Source:
                 <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/range.rb#L16" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/range.rb#L16" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-as_json_source" class="dyn-source">
@@ -766,7 +1009,7 @@ range_eqq(VALUE range, VALUE val)
         <div class="method">
           <h3 class="title method-title" id="method-i-begin">
             
-              <b>rng.begin    &rarr; obj
+              <b>self.begin &rarr; object
 </b>
             
             <a href="../classes/Range.html#method-i-begin" name="method-i-begin" class="permalink">Link</a>
@@ -774,10 +1017,13 @@ range_eqq(VALUE range, VALUE val)
 
           
             <div class="description">
-              <p>Returns the object that defines the beginning of the range.</p>
+              <p>Returns the object that defines the beginning of <code>self</code>.</p>
 
-<pre><code>(1..10).begin   #=&gt; 1
+<pre><code>(1..4).begin # =&gt; 1
+(..2).begin  # =&gt; nil
 </code></pre>
+
+<p>Related: <a href="Range.html#method-i-first"><code>Range#first</code></a>, <a href="Range.html#method-i-end"><code>Range#end</code></a>.</p>
             </div>
           
 
@@ -808,7 +1054,7 @@ range_begin(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-bsearch">
             
-              <b>rng.bsearch {|obj| block }  &rarr; value
+              <b>bsearch {|obj| block }  &rarr; value
 </b>
             
             <a href="../classes/Range.html#method-i-bsearch" name="method-i-bsearch" class="permalink">Link</a>
@@ -816,46 +1062,9 @@ range_begin(VALUE range)
 
           
             <div class="description">
-              <p>By using binary search, finds a value in range which meets the given condition in O(log n) where n is the size of the range.</p>
+              <p>Returns an element from <code>self</code> selected by a binary search.</p>
 
-<p>You can use this method in two use cases: a find-minimum mode and a find-any mode.  In either case, the elements of the range must be monotone (or sorted) with respect to the block.</p>
-
-<p>In find-minimum mode (this is a good choice for typical use case), the block must return true or false, and there must be a value x so that:</p>
-<ul><li>
-<p>the block returns false for any value which is less than x, and</p>
-</li><li>
-<p>the block returns true for any value which is greater than or equal to x.</p>
-</li></ul>
-
-<p>If x is within the range, this method returns the value x. Otherwise, it returns nil.</p>
-
-<pre><code>ary = [0, 4, 7, 10, 12]
-(0...ary.size).bsearch {|i| ary[i] &gt;= 4 } #=&gt; 1
-(0...ary.size).bsearch {|i| ary[i] &gt;= 6 } #=&gt; 2
-(0...ary.size).bsearch {|i| ary[i] &gt;= 8 } #=&gt; 3
-(0...ary.size).bsearch {|i| ary[i] &gt;= 100 } #=&gt; nil
-
-(0.0...Float::INFINITY).bsearch {|x| Math.log(x) &gt;= 0 } #=&gt; 1.0
-</code></pre>
-
-<p>In find-any mode (this behaves like libc’s bsearch(3)), the block must return a number, and there must be two values x and y (x &lt;= y) so that:</p>
-<ul><li>
-<p>the block returns a positive number for v if v &lt; x,</p>
-</li><li>
-<p>the block returns zero for v if x &lt;= v &lt; y, and</p>
-</li><li>
-<p>the block returns a negative number for v if y &lt;= v.</p>
-</li></ul>
-
-<p>This method returns any value which is within the intersection of the given range and x…y (if any).  If there is no value that satisfies the condition, it returns nil.</p>
-
-<pre><code>ary = [0, 100, 100, 100, 200]
-(0..4).bsearch {|i| 100 - ary[i] } #=&gt; 1, 2 or 3
-(0..4).bsearch {|i| 300 - ary[i] } #=&gt; nil
-(0..4).bsearch {|i|  50 - ary[i] } #=&gt; nil
-</code></pre>
-
-<p>You must not mix the two modes at a time; the block must always return either true/false, or always return a number.  It is undefined which value is actually picked up at each iteration.</p>
+<p>See <a href="../files/ruby/doc/bsearch_rdoc.html">Binary Searching</a>.</p>
             </div>
           
 
@@ -927,7 +1136,7 @@ range_bsearch(VALUE range)
         BSEARCH(INT2FIX);
     }
 #if SIZEOF_DOUBLE == 8 &amp;&amp; defined(HAVE_INT64_T)
-    else if (RB_TYPE_P(beg, T_FLOAT) || RB_TYPE_P(end, T_FLOAT)) {
+    else if (RB_FLOAT_TYPE_P(beg) || RB_FLOAT_TYPE_P(end)) {
         int64_t low  = double_as_int64(NIL_P(beg) ? -HUGE_VAL : RFLOAT_VALUE(rb_Float(beg)));
         int64_t high = double_as_int64(NIL_P(end) ?  HUGE_VAL : RFLOAT_VALUE(rb_Float(end)));
         int64_t mid, org_high;
@@ -975,7 +1184,7 @@ range_bsearch(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-count">
             
-              <b>range.count                 &rarr; int<br />range.count(item)           &rarr; int<br />range.count { |obj| block } &rarr; int
+              <b>count &rarr; integer<br />count(object) &rarr; integer<br />count {|element| ... } &rarr; integer
 </b>
             
             <a href="../classes/Range.html#method-i-count" name="method-i-count" class="permalink">Link</a>
@@ -983,7 +1192,31 @@ range_bsearch(VALUE range)
 
           
             <div class="description">
-              <p>Identical to <a href="Enumerable.html#method-i-count"><code>Enumerable#count</code></a>, except it returns Infinity for endless ranges.</p>
+              <p>Returns the count of elements, based on an argument or block criterion, if given.</p>
+
+<p>With no argument and no block given, returns the number of elements:</p>
+
+<pre><code>(1..4).count      # =&gt; 4
+(1...4).count     # =&gt; 3
+(&#39;a&#39;..&#39;d&#39;).count  # =&gt; 4
+(&#39;a&#39;...&#39;d&#39;).count # =&gt; 3
+(1..).count       # =&gt; Infinity
+(..4).count       # =&gt; Infinity
+</code></pre>
+
+<p>With argument <code>object</code>, returns the number of <code>object</code> found in <code>self</code>, which will usually be zero or one:</p>
+
+<pre><code>(1..4).count(2)   # =&gt; 1
+(1..4).count(5)   # =&gt; 0
+(1..4).count(&#39;a&#39;)  # =&gt; 0
+</code></pre>
+
+<p>With a block given, calls the block with each element; returns the number of elements for which the block returns a truthy value:</p>
+
+<pre><code>(1..4).count {|element| element &lt; 3 } # =&gt; 2
+</code></pre>
+
+<p>Related: <a href="Range.html#method-i-size"><code>Range#size</code></a>.</p>
             </div>
           
 
@@ -1034,7 +1267,7 @@ range_count(int argc, VALUE *argv, VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-cover-3F">
             
-              <b>rng.cover?(obj)   &rarr;  true or false<br />rng.cover?(range) &rarr;  true or false
+              <b>cover?(object) &rarr; true or false<br />cover?(range) &rarr; true or false
 </b>
             
             <a href="../classes/Range.html#method-i-cover-3F" name="method-i-cover-3F" class="permalink">Link</a>
@@ -1042,20 +1275,87 @@ range_count(int argc, VALUE *argv, VALUE range)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>obj</code> is between the begin and end of the range.</p>
+              <p>Returns <code>true</code> if the given argument is within <code>self</code>, <code>false</code> otherwise.</p>
 
-<p>This tests <code>begin &lt;= obj &lt;= end</code> when <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> is <code>false</code> and <code>begin &lt;= obj &lt; end</code> when <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> is <code>true</code>.</p>
+<p>With non-range argument <code>object</code>, evaluates with <code>&lt;=</code> and <code>&lt;</code>.</p>
 
-<p>If called with a <a href="Range.html"><code>Range</code></a> argument, returns <code>true</code> when the given range is covered by the receiver, by comparing the begin and end values. If the argument can be treated as a sequence, this method treats it that way. In the specific case of <code>(a..b).cover?(c...d)</code> with <code>a &lt;= c &amp;&amp; b &lt; d</code>, the end of the sequence must be calculated, which may exhibit poor performance if <code>c</code> is non-numeric. Returns <code>false</code> if the begin value of the range is larger than the end value. Also returns <code>false</code> if one of the internal calls to <code>&lt;=&gt;</code> returns <code>nil</code> (indicating the objects are not comparable).</p>
+<p>For range <code>self</code> with included end value (<code>#exclude_end? == false</code>), evaluates thus:</p>
 
-<pre><code>(&quot;a&quot;..&quot;z&quot;).cover?(&quot;c&quot;)  #=&gt; true
-(&quot;a&quot;..&quot;z&quot;).cover?(&quot;5&quot;)  #=&gt; false
-(&quot;a&quot;..&quot;z&quot;).cover?(&quot;cc&quot;) #=&gt; true
-(&quot;a&quot;..&quot;z&quot;).cover?(1)    #=&gt; false
-(1..5).cover?(2..3)     #=&gt; true
-(1..5).cover?(0..6)     #=&gt; false
-(1..5).cover?(1...6)    #=&gt; true
+<pre><code>self.begin &lt;= object &lt;= self.end
 </code></pre>
+
+<p>Examples:</p>
+
+<pre><code>r = (1..4)
+r.cover?(1)     # =&gt; true
+r.cover?(4)     # =&gt; true
+r.cover?(0)     # =&gt; false
+r.cover?(5)     # =&gt; false
+r.cover?(&#39;foo&#39;) # =&gt; false
+
+r = (&#39;a&#39;..&#39;d&#39;)
+r.cover?(&#39;a&#39;)     # =&gt; true
+r.cover?(&#39;d&#39;)     # =&gt; true
+r.cover?(&#39; &#39;)     # =&gt; false
+r.cover?(&#39;e&#39;)     # =&gt; false
+r.cover?(0)       # =&gt; false
+</code></pre>
+
+<p>For range <code>r</code> with excluded end value (<code>#exclude_end? == true</code>), evaluates thus:</p>
+
+<pre><code>r.begin &lt;= object &lt; r.end
+</code></pre>
+
+<p>Examples:</p>
+
+<pre><code>r = (1...4)
+r.cover?(1)     # =&gt; true
+r.cover?(3)     # =&gt; true
+r.cover?(0)     # =&gt; false
+r.cover?(4)     # =&gt; false
+r.cover?(&#39;foo&#39;) # =&gt; false
+
+r = (&#39;a&#39;...&#39;d&#39;)
+r.cover?(&#39;a&#39;)     # =&gt; true
+r.cover?(&#39;c&#39;)     # =&gt; true
+r.cover?(&#39; &#39;)     # =&gt; false
+r.cover?(&#39;d&#39;)     # =&gt; false
+r.cover?(0)       # =&gt; false
+</code></pre>
+
+<p>With range argument <code>range</code>, compares the first and last elements of <code>self</code> and <code>range</code>:</p>
+
+<pre><code>r = (1..4)
+r.cover?(1..4)     # =&gt; true
+r.cover?(0..4)     # =&gt; false
+r.cover?(1..5)     # =&gt; false
+r.cover?(&#39;a&#39;..&#39;d&#39;) # =&gt; false
+
+r = (1...4)
+r.cover?(1..3)     # =&gt; true
+r.cover?(1..4)     # =&gt; false
+</code></pre>
+
+<p>If begin and end are numeric, <a href="Range.html#method-i-cover-3F"><code>cover?</code></a> behaves like <a href="Range.html#method-i-include-3F"><code>include?</code></a></p>
+
+<pre><code>(1..3).cover?(1.5) # =&gt; true
+(1..3).include?(1.5) # =&gt; true
+</code></pre>
+
+<p>But when not numeric, the two methods may differ:</p>
+
+<pre><code>(&#39;a&#39;..&#39;d&#39;).cover?(&#39;cc&#39;)   # =&gt; true
+(&#39;a&#39;..&#39;d&#39;).include?(&#39;cc&#39;) # =&gt; false
+</code></pre>
+
+<p>Returns <code>false</code> if either:</p>
+<ul><li>
+<p>The begin value of <code>self</code> is larger than its end value.</p>
+</li><li>
+<p>An internal call to <code>&lt;=&gt;</code> returns <code>nil</code>; that is, the operands are not comparable.</p>
+</li></ul>
+
+<p>Related: <a href="Range.html#method-i-include-3F"><code>Range#include?</code></a>.</p>
             </div>
           
 
@@ -1094,7 +1394,7 @@ range_cover(VALUE range, VALUE val)
         <div class="method">
           <h3 class="title method-title" id="method-i-each">
             
-              <b>rng.each {| i | block } &rarr; rng<br />rng.each                &rarr; an_enumerator
+              <b>each {|element| ... } &rarr; self<br />each                  &rarr; an_enumerator
 </b>
             
             <a href="../classes/Range.html#method-i-each" name="method-i-each" class="permalink">Link</a>
@@ -1102,18 +1402,16 @@ range_cover(VALUE range, VALUE val)
 
           
             <div class="description">
-              <p>Iterates over the elements of range, passing each in turn to the block.</p>
+              <p>With a block given, passes each element of <code>self</code> to the block:</p>
 
-<p>The <code>each</code> method can only be used if the begin object of the range supports the <code>succ</code> method.  A <a href="TypeError.html"><code>TypeError</code></a> is raised if the object does not have <code>succ</code> method defined (like <a href="Float.html"><code>Float</code></a>).</p>
-
-<p>If no block is given, an enumerator is returned instead.</p>
-
-<pre><code>(10..15).each {|n| print n, &#39; &#39; }
-# prints: 10 11 12 13 14 15
-
-(2.5..5).each {|n| print n, &#39; &#39; }
-# raises: TypeError: can&#39;t iterate from Float
+<pre><code>a = []
+(1..4).each {|element| a.push(element) } # =&gt; 1..4
+a # =&gt; [1, 2, 3, 4]
 </code></pre>
+
+<p>Raises an exception unless <code>self.first.respond_to?(:succ)</code>.</p>
+
+<p>With no block given, returns an enumerator.</p>
             </div>
           
 
@@ -1135,7 +1433,7 @@ range_cover(VALUE range, VALUE val)
 range_each(VALUE range)
 {
     VALUE beg, end;
-    long i, lim;
+    long i;
 
     RETURN_SIZED_ENUMERATOR(range, 0, 0, range_enum_size);
 
@@ -1143,24 +1441,10 @@ range_each(VALUE range)
     end = RANGE_END(range);
 
     if (FIXNUM_P(beg) &amp;&amp; NIL_P(end)) {
-      fixnum_endless:
-        i = FIX2LONG(beg);
-        while (FIXABLE(i)) {
-            rb_yield(LONG2FIX(i++));
-        }
-        beg = LONG2NUM(i);
-      bignum_endless:
-        for (;; beg = rb_big_plus(beg, INT2FIX(1)))
-            rb_yield(beg);
+        range_each_fixnum_endless(beg);
     }
     else if (FIXNUM_P(beg) &amp;&amp; FIXNUM_P(end)) { /* fixnums are special */
-      fixnum_loop:
-        lim = FIX2LONG(end);
-        if (!EXCL(range))
-            lim += 1;
-        for (i = FIX2LONG(beg); i &lt; lim; i++) {
-            rb_yield(LONG2FIX(i));
-        }
+        return range_each_fixnum_loop(beg, end, range);
     }
     else if (RB_INTEGER_TYPE_P(beg) &amp;&amp; (NIL_P(end) || RB_INTEGER_TYPE_P(end))) {
         if (SPECIAL_CONST_P(end) || RBIGNUM_POSITIVE_P(end)) { /* end &gt;= FIXNUM_MIN */
@@ -1169,11 +1453,11 @@ range_each(VALUE range)
                     do {
                         rb_yield(beg);
                     } while (!FIXNUM_P(beg = rb_big_plus(beg, INT2FIX(1))));
-                    if (NIL_P(end)) goto fixnum_endless;
-                    if (FIXNUM_P(end)) goto fixnum_loop;
+                    if (NIL_P(end)) range_each_fixnum_endless(beg);
+                    if (FIXNUM_P(end)) return range_each_fixnum_loop(beg, end, range);
                 }
                 else {
-                    if (NIL_P(end)) goto bignum_endless;
+                    if (NIL_P(end)) range_each_bignum_endless(beg);
                     if (FIXNUM_P(end)) return range;
                 }
             }
@@ -1246,7 +1530,7 @@ range_each(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-end">
             
-              <b>rng.end    &rarr; obj
+              <b>self.end &rarr; object
 </b>
             
             <a href="../classes/Range.html#method-i-end" name="method-i-end" class="permalink">Link</a>
@@ -1254,11 +1538,14 @@ range_each(VALUE range)
 
           
             <div class="description">
-              <p>Returns the object that defines the end of the range.</p>
+              <p>Returns the object that defines the end of <code>self</code>.</p>
 
-<pre><code>(1..10).end    #=&gt; 10
-(1...10).end   #=&gt; 10
+<pre><code>(1..4).end  # =&gt; 4
+(1...4).end # =&gt; 4
+(1..).end   # =&gt; nil
 </code></pre>
+
+<p>Related: <a href="Range.html#method-i-begin"><code>Range#begin</code></a>, <a href="Range.html#method-i-last"><code>Range#last</code></a>.</p>
             </div>
           
 
@@ -1289,18 +1576,21 @@ range_end(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-entries">
             
-              <b>rng.entries                &rarr; array</b>
+              <b>entries</b>()
             
             <a href="../classes/Range.html#method-i-entries" name="method-i-entries" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns an array containing the items in the range.</p>
+              <p>Returns an array containing the elements in <code>self</code>, if a finite collection; raises an exception otherwise.</p>
 
-<pre><code>(1..7).to_a  #=&gt; [1, 2, 3, 4, 5, 6, 7]
-(1..).to_a   #=&gt; RangeError: cannot convert endless range to an array
+<pre><code>(1..4).to_a     # =&gt; [1, 2, 3, 4]
+(1...4).to_a    # =&gt; [1, 2, 3]
+(&#39;a&#39;..&#39;d&#39;).to_a # =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;]
 </code></pre>
+
+<p><a href="Range.html#method-i-entries"><code>Range#entries</code></a> is an alias for <a href="Range.html#method-i-to_a"><code>Range#to_a</code></a>.</p>
             </div>
           
 
@@ -1318,7 +1608,7 @@ range_end(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-eql-3F">
             
-              <b>rng.eql?(obj)    &rarr; true or false
+              <b>eql?(other) &rarr; true or false
 </b>
             
             <a href="../classes/Range.html#method-i-eql-3F" name="method-i-eql-3F" class="permalink">Link</a>
@@ -1326,12 +1616,36 @@ range_end(VALUE range)
 
           
             <div class="description">
-              <p>Returns <code>true</code> only if <code>obj</code> is a <a href="Range.html"><code>Range</code></a>, has equivalent begin and end items (by comparing them with <code>eql?</code>), and has the same <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> setting as the range.</p>
+              <p>Returns <code>true</code> if and only if:</p>
+<ul><li>
+<p><code>other</code> is a range.</p>
+</li><li>
+<p><code>other.begin eql? self.begin</code>.</p>
+</li><li>
+<p><code>other.end eql? self.end</code>.</p>
+</li><li>
+<p><code>other.exclude_end? == self.exclude_end?</code>.</p>
+</li></ul>
 
-<pre><code>(0..2).eql?(0..2)            #=&gt; true
-(0..2).eql?(Range.new(0,2))  #=&gt; true
-(0..2).eql?(0...2)           #=&gt; false
+<p>Otherwise returns <code>false</code>.</p>
+
+<pre><code>r = (1..5)
+r.eql?(1..5)                  # =&gt; true
+r = Range.new(1, 5)
+r.eql?(&#39;foo&#39;)                 # =&gt; false
+r.eql?(2..5)                  # =&gt; false
+r.eql?(1..4)                  # =&gt; false
+r.eql?(1...5)                 # =&gt; false
+r.eql?(Range.new(1, 5, true)) # =&gt; false
 </code></pre>
+
+<p>Note that even with the same argument, the return values of <a href="Range.html#method-i-3D-3D"><code>==</code></a> and <a href="Range.html#method-i-eql-3F"><code>eql?</code></a> can differ:</p>
+
+<pre><code>(1..2) == (1..2.0)   # =&gt; true
+(1..2).eql? (1..2.0) # =&gt; false
+</code></pre>
+
+<p>Related: <a href="Range.html#method-i-3D-3D"><code>Range#==</code></a>.</p>
             </div>
           
 
@@ -1366,7 +1680,7 @@ range_eql(VALUE range, VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-exclude_end-3F">
             
-              <b>rng.exclude_end?    &rarr; true or false
+              <b>exclude_end? &rarr; true or false
 </b>
             
             <a href="../classes/Range.html#method-i-exclude_end-3F" name="method-i-exclude_end-3F" class="permalink">Link</a>
@@ -1374,10 +1688,12 @@ range_eql(VALUE range, VALUE obj)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if the range excludes its end value.</p>
+              <p>Returns <code>true</code> if <code>self</code> excludes its end value; <code>false</code> otherwise:</p>
 
-<pre><code>(1..5).exclude_end?     #=&gt; false
-(1...5).exclude_end?    #=&gt; true
+<pre><code>Range.new(2, 5).exclude_end?       # =&gt; false
+Range.new(2, 5, true).exclude_end? # =&gt; true
+(2..5).exclude_end?                # =&gt; false
+(2...5).exclude_end?               # =&gt; true
 </code></pre>
             </div>
           
@@ -1399,7 +1715,7 @@ range_eql(VALUE range, VALUE obj)
                 <pre>static VALUE
 range_exclude_end_p(VALUE range)
 {
-    return EXCL(range) ? Qtrue : Qfalse;
+    return RBOOL(EXCL(range));
 }</pre>
               </div>
             </div>
@@ -1409,7 +1725,7 @@ range_exclude_end_p(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-first">
             
-              <b>rng.first    &rarr; obj<br />rng.first(n) &rarr; an_array
+              <b>first &rarr; object<br />first(n) &rarr; array
 </b>
             
             <a href="../classes/Range.html#method-i-first" name="method-i-first" class="permalink">Link</a>
@@ -1417,10 +1733,22 @@ range_exclude_end_p(VALUE range)
 
           
             <div class="description">
-              <p>Returns the first object in the range, or an array of the first <code>n</code> elements.</p>
+              <p>With no argument, returns the first element of <code>self</code>, if it exists:</p>
 
-<pre><code>(10..20).first     #=&gt; 10
-(10..20).first(3)  #=&gt; [10, 11, 12]
+<pre><code>(1..4).first     # =&gt; 1
+(&#39;a&#39;..&#39;d&#39;).first # =&gt; &quot;a&quot;
+</code></pre>
+
+<p>With non-negative integer argument <code>n</code> given, returns the first <code>n</code> elements in an array:</p>
+
+<pre><code>(1..10).first(3) # =&gt; [1, 2, 3]
+(1..10).first(0) # =&gt; []
+(1..4).first(50) # =&gt; [1, 2, 3, 4]
+</code></pre>
+
+<p>Raises an exception if there is no first element:</p>
+
+<pre><code>(..4).first # Raises RangeError
 </code></pre>
             </div>
           
@@ -1464,7 +1792,7 @@ range_first(int argc, VALUE *argv, VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-hash">
             
-              <b>rng.hash    &rarr; integer
+              <b>hash &rarr; integer
 </b>
             
             <a href="../classes/Range.html#method-i-hash" name="method-i-hash" class="permalink">Link</a>
@@ -1472,9 +1800,9 @@ range_first(int argc, VALUE *argv, VALUE range)
 
           
             <div class="description">
-              <p>Compute a hash-code for this range. Two ranges with equal begin and end points (using <code>eql?</code>), and the same <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> value will generate the same hash-code.</p>
+              <p>Returns the integer hash value for <code>self</code>. Two range objects <code>r0</code> and <code>r1</code> have the same hash value if and only if <code>r0.eql?(r1)</code>.</p>
 
-<p>See also <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
+<p>Related: <a href="Range.html#method-i-eql-3F"><code>Range#eql?</code></a>, <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
             </div>
           
 
@@ -1516,29 +1844,41 @@ range_hash(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-include-3F">
             
-              <b>rng.include?(obj) &rarr;  true or false</b>
+              <b>include?(object) &rarr; true or false</b>
             
             <a href="../classes/Range.html#method-i-include-3F" name="method-i-include-3F" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>obj</code> is an element of the range, <code>false</code> otherwise.</p>
+              <p>Returns <code>true</code> if <code>object</code> is an element of <code>self</code>, <code>false</code> otherwise:</p>
 
-<pre><code>(&quot;a&quot;..&quot;z&quot;).include?(&quot;g&quot;)   #=&gt; true
-(&quot;a&quot;..&quot;z&quot;).include?(&quot;A&quot;)   #=&gt; false
-(&quot;a&quot;..&quot;z&quot;).include?(&quot;cc&quot;)  #=&gt; false
-</code></pre>
-
-<p>If you need to ensure <code>obj</code> is between <code>begin</code> and <code>end</code>, use <a href="Range.html#method-i-cover-3F"><code>cover?</code></a></p>
-
-<pre><code>(&quot;a&quot;..&quot;z&quot;).cover?(&quot;cc&quot;)  #=&gt; true
+<pre><code>(1..4).include?(2)        # =&gt; true
+(1..4).include?(5)        # =&gt; false
+(1..4).include?(4)        # =&gt; true
+(1...4).include?(4)       # =&gt; false
+(&#39;a&#39;..&#39;d&#39;).include?(&#39;b&#39;)  # =&gt; true
+(&#39;a&#39;..&#39;d&#39;).include?(&#39;e&#39;)  # =&gt; false
+(&#39;a&#39;..&#39;d&#39;).include?(&#39;B&#39;)  # =&gt; false
+(&#39;a&#39;..&#39;d&#39;).include?(&#39;d&#39;)  # =&gt; true
+(&#39;a&#39;...&#39;d&#39;).include?(&#39;d&#39;) # =&gt; false
 </code></pre>
 
 <p>If begin and end are numeric, <a href="Range.html#method-i-include-3F"><code>include?</code></a> behaves like <a href="Range.html#method-i-cover-3F"><code>cover?</code></a></p>
 
 <pre><code>(1..3).include?(1.5) # =&gt; true
+(1..3).cover?(1.5) # =&gt; true
 </code></pre>
+
+<p>But when not numeric, the two methods may differ:</p>
+
+<pre><code>(&#39;a&#39;..&#39;d&#39;).include?(&#39;cc&#39;) # =&gt; false
+(&#39;a&#39;..&#39;d&#39;).cover?(&#39;cc&#39;)   # =&gt; true
+</code></pre>
+
+<p>Related: <a href="Range.html#method-i-cover-3F"><code>Range#cover?</code></a>.</p>
+
+<p><a href="Range.html#method-i-member-3F"><code>Range#member?</code></a> is an alias for <a href="Range.html#method-i-include-3F"><code>Range#include?</code></a>.</p>
             </div>
           
 
@@ -1556,7 +1896,7 @@ range_hash(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-inspect">
             
-              <b>rng.inspect  &rarr; string
+              <b>inspect &rarr; string
 </b>
             
             <a href="../classes/Range.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
@@ -1564,7 +1904,21 @@ range_hash(VALUE range)
 
           
             <div class="description">
-              <p>Convert this range object to a printable form (using <a href="Range.html#method-i-inspect"><code>inspect</code></a> to convert the begin and end objects).</p>
+              <p>Returns a string representation of <code>self</code>, including <code>begin.inspect</code> and <code>end.inspect</code>:</p>
+
+<pre><code>(1..4).inspect  # =&gt; &quot;1..4&quot;
+(1...4).inspect # =&gt; &quot;1...4&quot;
+(1..).inspect   # =&gt; &quot;1..&quot;
+(..4).inspect   # =&gt; &quot;..4&quot;
+</code></pre>
+
+<p>Note that returns from <a href="Range.html#method-i-to_s"><code>to_s</code></a> and <a href="Range.html#method-i-inspect"><code>inspect</code></a> may differ:</p>
+
+<pre><code>(&#39;a&#39;..&#39;d&#39;).to_s    # =&gt; &quot;a..d&quot;
+(&#39;a&#39;..&#39;d&#39;).inspect # =&gt; &quot;\&quot;a\&quot;..\&quot;d\&quot;&quot;
+</code></pre>
+
+<p>Related: <a href="Range.html#method-i-to_s"><code>Range#to_s</code></a>.</p>
             </div>
           
 
@@ -1595,7 +1949,7 @@ range_inspect(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-last">
             
-              <b>rng.last    &rarr; obj<br />rng.last(n) &rarr; an_array
+              <b>last &rarr; object<br />last(n) &rarr; array
 </b>
             
             <a href="../classes/Range.html#method-i-last" name="method-i-last" class="permalink">Link</a>
@@ -1603,14 +1957,34 @@ range_inspect(VALUE range)
 
           
             <div class="description">
-              <p>Returns the last object in the range, or an array of the last <code>n</code> elements.</p>
+              <p>With no argument, returns the last element of <code>self</code>, if it exists:</p>
 
-<p>Note that with no arguments <code>last</code> will return the object that defines the end of the range even if <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> is <code>true</code>.</p>
+<pre><code>(1..4).last     # =&gt; 4
+(&#39;a&#39;..&#39;d&#39;).last # =&gt; &quot;d&quot;
+</code></pre>
 
-<pre><code>(10..20).last      #=&gt; 20
-(10...20).last     #=&gt; 20
-(10..20).last(3)   #=&gt; [18, 19, 20]
-(10...20).last(3)  #=&gt; [17, 18, 19]
+<p>Note that <code>last</code> with no argument returns the end element of <code>self</code> even if <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> is <code>true</code>:</p>
+
+<pre><code>(1...4).last     # =&gt; 4
+(&#39;a&#39;...&#39;d&#39;).last # =&gt; &quot;d&quot;
+</code></pre>
+
+<p>With non-negative integer argument <code>n</code> given, returns the last <code>n</code> elements in an array:</p>
+
+<pre><code>(1..10).last(3) # =&gt; [8, 9, 10]
+(1..10).last(0) # =&gt; []
+(1..4).last(50) # =&gt; [1, 2, 3, 4]
+</code></pre>
+
+<p>Note that <code>last</code> with argument does not return the end element of <code>self</code> if <a href="Range.html#method-i-exclude_end-3F"><code>exclude_end?</code></a> it <code>true</code>:</p>
+
+<pre><code>(1...4).last(3)     # =&gt; [1, 2, 3]
+(&#39;a&#39;...&#39;d&#39;).last(3) # =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;]
+</code></pre>
+
+<p>Raises an exception if there is no last element:</p>
+
+<pre><code>(1..).last # Raises RangeError
 </code></pre>
             </div>
           
@@ -1655,7 +2029,7 @@ range_last(int argc, VALUE *argv, VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-max">
             
-              <b>rng.max                       &rarr; obj<br />rng.max {| a,b | block }      &rarr; obj<br />rng.max(n)                    &rarr; obj<br />rng.max(n) {| a,b | block }   &rarr; obj
+              <b>max &rarr; object<br />max(n) &rarr; array<br />max {|a, b| ... } &rarr; object<br />max(n) {|a, b| ... } &rarr; array
 </b>
             
             <a href="../classes/Range.html#method-i-max" name="method-i-max" class="permalink">Link</a>
@@ -1663,12 +2037,86 @@ range_last(int argc, VALUE *argv, VALUE range)
 
           
             <div class="description">
-              <p>Returns the maximum value in the range. Returns <code>nil</code> if the begin value of the range larger than the end value. Returns <code>nil</code> if the begin value of an exclusive range is equal to the end value.</p>
+              <p>Returns the maximum value in <code>self</code>, using method <code>&lt;=&gt;</code> or a given block for comparison.</p>
 
-<p>Can be given an optional block to override the default comparison method <code>a &lt;=&gt; b</code>.</p>
+<p>With no argument and no block given, returns the maximum-valued element of <code>self</code>.</p>
 
-<pre><code>(10..20).max    #=&gt; 20
+<pre><code>(1..4).max     # =&gt; 4
+(&#39;a&#39;..&#39;d&#39;).max # =&gt; &quot;d&quot;
+(-4..-1).max   # =&gt; -1
 </code></pre>
+
+<p>With non-negative integer argument <code>n</code> given, and no block given, returns the <code>n</code> maximum-valued elements of <code>self</code> in an array:</p>
+
+<pre><code>(1..4).max(2)     # =&gt; [4, 3]
+(&#39;a&#39;..&#39;d&#39;).max(2) # =&gt; [&quot;d&quot;, &quot;c&quot;]
+(-4..-1).max(2)   # =&gt; [-1, -2]
+(1..4).max(50)    # =&gt; [4, 3, 2, 1]
+</code></pre>
+
+<p>If a block is given, it is called:</p>
+<ul><li>
+<p>First, with the first two element of <code>self</code>.</p>
+</li><li>
+<p>Then, sequentially, with the so-far maximum value and the next element of <code>self</code>.</p>
+</li></ul>
+
+<p>To illustrate:</p>
+
+<pre><code>(1..4).max {|a, b| p [a, b]; a &lt;=&gt; b } # =&gt; 4
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[2, 1]
+[3, 2]
+[4, 3]
+</code></pre>
+
+<p>With no argument and a block given, returns the return value of the last call to the block:</p>
+
+<pre><code>(1..4).max {|a, b| -(a &lt;=&gt; b) } # =&gt; 1
+</code></pre>
+
+<p>With non-negative integer argument <code>n</code> given, and a block given, returns the return values of the last <code>n</code> calls to the block in an array:</p>
+
+<pre><code>(1..4).max(2) {|a, b| -(a &lt;=&gt; b) }  # =&gt; [1, 2]
+(1..4).max(50) {|a, b| -(a &lt;=&gt; b) } # =&gt; [1, 2, 3, 4]
+</code></pre>
+
+<p>Returns an empty array if <code>n</code> is zero:</p>
+
+<pre><code>(1..4).max(0)                      # =&gt; []
+(1..4).max(0) {|a, b| -(a &lt;=&gt; b) } # =&gt; []
+</code></pre>
+
+<p>Returns <code>nil</code> or an empty array if:</p>
+<ul><li>
+<p>The begin value of the range is larger than the end value:</p>
+
+<pre><code>(4..1).max                         # =&gt; nil
+(4..1).max(2)                      # =&gt; []
+(4..1).max {|a, b| -(a &lt;=&gt; b) }    # =&gt; nil
+(4..1).max(2) {|a, b| -(a &lt;=&gt; b) } # =&gt; []
+</code></pre>
+</li><li>
+<p>The begin value of an exclusive range is equal to the end value:</p>
+
+<pre><code>(1...1).max                          # =&gt; nil
+(1...1).max(2)                       # =&gt; []
+(1...1).max  {|a, b| -(a &lt;=&gt; b) }    # =&gt; nil
+(1...1).max(2)  {|a, b| -(a &lt;=&gt; b) } # =&gt; []
+</code></pre>
+</li></ul>
+
+<p>Raises an exception if either:</p>
+<ul><li>
+<p><code>self</code> is a endless range: <code>(1..)</code>.</p>
+</li><li>
+<p>A block is given and <code>self</code> is a beginless range.</p>
+</li></ul>
+
+<p>Related: <a href="Range.html#method-i-min"><code>Range#min</code></a>, <a href="Range.html#method-i-minmax"><code>Range#minmax</code></a>.</p>
             </div>
           
 
@@ -1696,16 +2144,17 @@ range_max(int argc, VALUE *argv, VALUE range)
         rb_raise(rb_eRangeError, &quot;cannot get the maximum of endless range&quot;);
     }
 
+    VALUE b = RANGE_BEG(range);
+
     if (rb_block_given_p() || (EXCL(range) &amp;&amp; !nm) || argc) {
-        if (NIL_P(RANGE_BEG(range))) {
+        if (NIL_P(b)) {
             rb_raise(rb_eRangeError, &quot;cannot get the maximum of beginless range with custom comparison method&quot;);
         }
         return rb_call_super(argc, argv);
     }
     else {
         struct cmp_opt_data cmp_opt = { 0, 0 };
-        VALUE b = RANGE_BEG(range);
-        int c = OPTIMIZED_CMP(b, e, cmp_opt);
+        int c = NIL_P(b) ? -1 : OPTIMIZED_CMP(b, e, cmp_opt);
 
         if (c &gt; 0)
             return Qnil;
@@ -1733,29 +2182,41 @@ range_max(int argc, VALUE *argv, VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-member-3F">
             
-              <b>rng.member?(obj)  &rarr;  true or false</b>
+              <b>member?</b>(p1)
             
             <a href="../classes/Range.html#method-i-member-3F" name="method-i-member-3F" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>obj</code> is an element of the range, <code>false</code> otherwise.</p>
+              <p>Returns <code>true</code> if <code>object</code> is an element of <code>self</code>, <code>false</code> otherwise:</p>
 
-<pre><code>(&quot;a&quot;..&quot;z&quot;).include?(&quot;g&quot;)   #=&gt; true
-(&quot;a&quot;..&quot;z&quot;).include?(&quot;A&quot;)   #=&gt; false
-(&quot;a&quot;..&quot;z&quot;).include?(&quot;cc&quot;)  #=&gt; false
-</code></pre>
-
-<p>If you need to ensure <code>obj</code> is between <code>begin</code> and <code>end</code>, use <a href="Range.html#method-i-cover-3F"><code>cover?</code></a></p>
-
-<pre><code>(&quot;a&quot;..&quot;z&quot;).cover?(&quot;cc&quot;)  #=&gt; true
+<pre><code>(1..4).include?(2)        # =&gt; true
+(1..4).include?(5)        # =&gt; false
+(1..4).include?(4)        # =&gt; true
+(1...4).include?(4)       # =&gt; false
+(&#39;a&#39;..&#39;d&#39;).include?(&#39;b&#39;)  # =&gt; true
+(&#39;a&#39;..&#39;d&#39;).include?(&#39;e&#39;)  # =&gt; false
+(&#39;a&#39;..&#39;d&#39;).include?(&#39;B&#39;)  # =&gt; false
+(&#39;a&#39;..&#39;d&#39;).include?(&#39;d&#39;)  # =&gt; true
+(&#39;a&#39;...&#39;d&#39;).include?(&#39;d&#39;) # =&gt; false
 </code></pre>
 
 <p>If begin and end are numeric, <a href="Range.html#method-i-include-3F"><code>include?</code></a> behaves like <a href="Range.html#method-i-cover-3F"><code>cover?</code></a></p>
 
 <pre><code>(1..3).include?(1.5) # =&gt; true
+(1..3).cover?(1.5) # =&gt; true
 </code></pre>
+
+<p>But when not numeric, the two methods may differ:</p>
+
+<pre><code>(&#39;a&#39;..&#39;d&#39;).include?(&#39;cc&#39;) # =&gt; false
+(&#39;a&#39;..&#39;d&#39;).cover?(&#39;cc&#39;)   # =&gt; true
+</code></pre>
+
+<p>Related: <a href="Range.html#method-i-cover-3F"><code>Range#cover?</code></a>.</p>
+
+<p><a href="Range.html#method-i-member-3F"><code>Range#member?</code></a> is an alias for <a href="Range.html#method-i-include-3F"><code>Range#include?</code></a>.</p>
             </div>
           
 
@@ -1792,7 +2253,7 @@ range_include(VALUE range, VALUE val)
         <div class="method">
           <h3 class="title method-title" id="method-i-min">
             
-              <b>rng.min                       &rarr; obj<br />rng.min {| a,b | block }      &rarr; obj<br />rng.min(n)                    &rarr; array<br />rng.min(n) {| a,b | block }   &rarr; array
+              <b>min &rarr; object<br />min(n) &rarr; array<br />min {|a, b| ... } &rarr; object<br />min(n) {|a, b| ... } &rarr; array
 </b>
             
             <a href="../classes/Range.html#method-i-min" name="method-i-min" class="permalink">Link</a>
@@ -1800,12 +2261,86 @@ range_include(VALUE range, VALUE val)
 
           
             <div class="description">
-              <p>Returns the minimum value in the range. Returns <code>nil</code> if the begin value of the range is larger than the end value. Returns <code>nil</code> if the begin value of an exclusive range is equal to the end value.</p>
+              <p>Returns the minimum value in <code>self</code>, using method <code>&lt;=&gt;</code> or a given block for comparison.</p>
 
-<p>Can be given an optional block to override the default comparison method <code>a &lt;=&gt; b</code>.</p>
+<p>With no argument and no block given, returns the minimum-valued element of <code>self</code>.</p>
 
-<pre><code>(10..20).min    #=&gt; 10
+<pre><code>(1..4).min     # =&gt; 1
+(&#39;a&#39;..&#39;d&#39;).min # =&gt; &quot;a&quot;
+(-4..-1).min   # =&gt; -4
 </code></pre>
+
+<p>With non-negative integer argument <code>n</code> given, and no block given, returns the <code>n</code> minimum-valued elements of <code>self</code> in an array:</p>
+
+<pre><code>(1..4).min(2)     # =&gt; [1, 2]
+(&#39;a&#39;..&#39;d&#39;).min(2) # =&gt; [&quot;a&quot;, &quot;b&quot;]
+(-4..-1).min(2)   # =&gt; [-4, -3]
+(1..4).min(50)    # =&gt; [1, 2, 3, 4]
+</code></pre>
+
+<p>If a block is given, it is called:</p>
+<ul><li>
+<p>First, with the first two element of <code>self</code>.</p>
+</li><li>
+<p>Then, sequentially, with the so-far minimum value and the next element of <code>self</code>.</p>
+</li></ul>
+
+<p>To illustrate:</p>
+
+<pre><code>(1..4).min {|a, b| p [a, b]; a &lt;=&gt; b } # =&gt; 1
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[2, 1]
+[3, 1]
+[4, 1]
+</code></pre>
+
+<p>With no argument and a block given, returns the return value of the last call to the block:</p>
+
+<pre><code>(1..4).min {|a, b| -(a &lt;=&gt; b) } # =&gt; 4
+</code></pre>
+
+<p>With non-negative integer argument <code>n</code> given, and a block given, returns the return values of the last <code>n</code> calls to the block in an array:</p>
+
+<pre><code>(1..4).min(2) {|a, b| -(a &lt;=&gt; b) }  # =&gt; [4, 3]
+(1..4).min(50) {|a, b| -(a &lt;=&gt; b) } # =&gt; [4, 3, 2, 1]
+</code></pre>
+
+<p>Returns an empty array if <code>n</code> is zero:</p>
+
+<pre><code>(1..4).min(0)                      # =&gt; []
+(1..4).min(0) {|a, b| -(a &lt;=&gt; b) } # =&gt; []
+</code></pre>
+
+<p>Returns <code>nil</code> or an empty array if:</p>
+<ul><li>
+<p>The begin value of the range is larger than the end value:</p>
+
+<pre><code>(4..1).min                         # =&gt; nil
+(4..1).min(2)                      # =&gt; []
+(4..1).min {|a, b| -(a &lt;=&gt; b) }    # =&gt; nil
+(4..1).min(2) {|a, b| -(a &lt;=&gt; b) } # =&gt; []
+</code></pre>
+</li><li>
+<p>The begin value of an exclusive range is equal to the end value:</p>
+
+<pre><code>(1...1).min                          # =&gt; nil
+(1...1).min(2)                       # =&gt; []
+(1...1).min  {|a, b| -(a &lt;=&gt; b) }    # =&gt; nil
+(1...1).min(2)  {|a, b| -(a &lt;=&gt; b) } # =&gt; []
+</code></pre>
+</li></ul>
+
+<p>Raises an exception if either:</p>
+<ul><li>
+<p><code>self</code> is a beginless range: <code>(..4)</code>.</p>
+</li><li>
+<p>A block is given and <code>self</code> is an endless range.</p>
+</li></ul>
+
+<p>Related: <a href="Range.html#method-i-max"><code>Range#max</code></a>, <a href="Range.html#method-i-minmax"><code>Range#minmax</code></a>.</p>
             </div>
           
 
@@ -1858,7 +2393,7 @@ range_min(int argc, VALUE *argv, VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-minmax">
             
-              <b>rng.minmax                       &rarr; [obj, obj]<br />rng.minmax {| a,b | block }      &rarr; [obj, obj]
+              <b>minmax &rarr; [object, object]<br />minmax {|a, b| ... } &rarr; [object, object]
 </b>
             
             <a href="../classes/Range.html#method-i-minmax" name="method-i-minmax" class="permalink">Link</a>
@@ -1866,9 +2401,48 @@ range_min(int argc, VALUE *argv, VALUE range)
 
           
             <div class="description">
-              <p>Returns a two element array which contains the minimum and the maximum value in the range.</p>
+              <p>Returns a 2-element array containing the minimum and maximum value in <code>self</code>, either according to comparison method <code>&lt;=&gt;</code> or a given block.</p>
 
-<p>Can be given an optional block to override the default comparison method <code>a &lt;=&gt; b</code>.</p>
+<p>With no block given, returns the minimum and maximum values, using <code>&lt;=&gt;</code> for comparison:</p>
+
+<pre><code>(1..4).minmax     # =&gt; [1, 4]
+(1...4).minmax    # =&gt; [1, 3]
+(&#39;a&#39;..&#39;d&#39;).minmax # =&gt; [&quot;a&quot;, &quot;d&quot;]
+(-4..-1).minmax   # =&gt; [-4, -1]
+</code></pre>
+
+<p>With a block given, the block must return an integer:</p>
+<ul><li>
+<p>Negative if <code>a</code> is smaller than <code>b</code>.</p>
+</li><li>
+<p>Zero if <code>a</code> and <code>b</code> are equal.</p>
+</li><li>
+<p>Positive if <code>a</code> is larger than <code>b</code>.</p>
+</li></ul>
+
+<p>The block is called <code>self.size</code> times to compare elements; returns a 2-element <a href="Array.html"><code>Array</code></a> containing the minimum and maximum values from <code>self</code>, per the block:</p>
+
+<pre><code>(1..4).minmax {|a, b| -(a &lt;=&gt; b) } # =&gt; [4, 1]
+</code></pre>
+
+<p>Returns <code>[nil, nil]</code> if:</p>
+<ul><li>
+<p>The begin value of the range is larger than the end value:</p>
+
+<pre><code>(4..1).minmax                      # =&gt; [nil, nil]
+(4..1).minmax {|a, b| -(a &lt;=&gt; b) } # =&gt; [nil, nil]
+</code></pre>
+</li><li>
+<p>The begin value of an exclusive range is equal to the end value:</p>
+
+<pre><code>(1...1).minmax                          # =&gt; [nil, nil]
+(1...1).minmax  {|a, b| -(a &lt;=&gt; b) }    # =&gt; [nil, nil]
+</code></pre>
+</li></ul>
+
+<p>Raises an exception if <code>self</code> is a beginless or an endless range.</p>
+
+<p>Related: <a href="Range.html#method-i-min"><code>Range#min</code></a>, <a href="Range.html#method-i-max"><code>Range#max</code></a>.</p>
             </div>
           
 
@@ -1905,7 +2479,7 @@ range_minmax(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-size">
             
-              <b>rng.size                   &rarr; num
+              <b>size &rarr; non_negative_integer or Infinity or nil
 </b>
             
             <a href="../classes/Range.html#method-i-size" name="method-i-size" class="permalink">Link</a>
@@ -1913,12 +2487,15 @@ range_minmax(VALUE range)
 
           
             <div class="description">
-              <p>Returns the number of elements in the range. Both the begin and the end of the <a href="Range.html"><code>Range</code></a> must be <a href="Numeric.html"><code>Numeric</code></a>, otherwise nil is returned.</p>
+              <p>Returns the count of elements in <code>self</code> if both begin and end values are numeric; otherwise, returns <code>nil</code>:</p>
 
-<pre><code>(10..20).size    #=&gt; 11
+<pre><code>(1..4).size      # =&gt; 4
+(1...4).size     # =&gt; 3
+(1..).size       # =&gt; Infinity
 (&#39;a&#39;..&#39;z&#39;).size  #=&gt; nil
-(-Float::INFINITY..Float::INFINITY).size #=&gt; Infinity
 </code></pre>
+
+<p>Related: <a href="Range.html#method-i-count"><code>Range#count</code></a>.</p>
             </div>
           
 
@@ -1962,7 +2539,7 @@ range_size(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-step">
             
-              <b>rng.step(n=1) {| obj | block }    &rarr; rng<br />rng.step(n=1)                     &rarr; an_enumerator<br />rng.step(n=1)                     &rarr; an_arithmetic_sequence<br />rng % n                           &rarr; an_enumerator<br />rng % n                           &rarr; an_arithmetic_sequence
+              <b>step(n = 1) {|element| ... } &rarr; self<br />step(n = 1)                  &rarr; enumerator
 </b>
             
             <a href="../classes/Range.html#method-i-step" name="method-i-step" class="permalink">Link</a>
@@ -1970,31 +2547,36 @@ range_size(VALUE range)
 
           
             <div class="description">
-              <p>Iterates over the range, passing each <code>n</code>th element to the block. If begin and end are numeric, <code>n</code> is added for each iteration. Otherwise <a href="Range.html#method-i-step"><code>step</code></a> invokes succ to iterate through range elements.</p>
+              <p>Iterates over the elements of <code>self</code>.</p>
 
-<p>If no block is given, an enumerator is returned instead. Especially, the enumerator is an <a href="Enumerator/ArithmeticSequence.html"><code>Enumerator::ArithmeticSequence</code></a> if begin and end of the range are numeric.</p>
+<p>With a block given and no argument, calls the block each element of the range; returns <code>self</code>:</p>
 
-<pre><code>range = Xs.new(1)..Xs.new(10)
-range.step(2) {|x| puts x}
-puts
-range.step(3) {|x| puts x}
+<pre><code>a = []
+(1..5).step {|element| a.push(element) } # =&gt; 1..5
+a # =&gt; [1, 2, 3, 4, 5]
+a = []
+(&#39;a&#39;..&#39;e&#39;).step {|element| a.push(element) } # =&gt; &quot;a&quot;..&quot;e&quot;
+a # =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;, &quot;e&quot;]
 </code></pre>
 
-<p><em>produces:</em></p>
+<p>With a block given and a positive integer argument <code>n</code> given, calls the block with element <code>0</code>, element <code>n</code>, element <code>2n</code>, and so on:</p>
 
-<pre><code> 1 x
- 3 xxx
- 5 xxxxx
- 7 xxxxxxx
- 9 xxxxxxxxx
-
- 1 x
- 4 xxxx
- 7 xxxxxxx
-10 xxxxxxxxxx
+<pre><code>a = []
+(1..5).step(2) {|element| a.push(element) } # =&gt; 1..5
+a # =&gt; [1, 3, 5]
+a = []
+(&#39;a&#39;..&#39;e&#39;).step(2) {|element| a.push(element) } # =&gt; &quot;a&quot;..&quot;e&quot;
+a # =&gt; [&quot;a&quot;, &quot;c&quot;, &quot;e&quot;]
 </code></pre>
 
-<p>See <a href="Range.html"><code>Range</code></a> for the definition of class Xs.</p>
+<p>With no block given, returns an enumerator, which will be of class <a href="Enumerator/ArithmeticSequence.html"><code>Enumerator::ArithmeticSequence</code></a> if <code>self</code> is numeric; otherwise of class Enumerator:</p>
+
+<pre><code>e = (1..5).step(2) # =&gt; ((1..5).step(2))
+e.class            # =&gt; Enumerator::ArithmeticSequence
+(&#39;a&#39;..&#39;e&#39;).step # =&gt; #&lt;Enumerator: ...&gt;
+</code></pre>
+
+<p>Related: <a href="Range.html#method-i-25"><code>Range#%</code></a>.</p>
             </div>
           
 
@@ -2022,6 +2604,13 @@ range_step(int argc, VALUE *argv, VALUE range)
     step = (!rb_check_arity(argc, 0, 1) ? INT2FIX(1) : argv[0]);
 
     if (!rb_block_given_p()) {
+        if (!rb_obj_is_kind_of(step, rb_cNumeric)) {
+            step = rb_to_int(step);
+        }
+        if (rb_equal(step, INT2FIX(0))) {
+            rb_raise(rb_eArgError, &quot;step can&#39;t be 0&quot;);
+        }
+
         const VALUE b_num_p = rb_obj_is_kind_of(b, rb_cNumeric);
         const VALUE e_num_p = rb_obj_is_kind_of(e, rb_cNumeric);
         if ((b_num_p &amp;&amp; (NIL_P(e) || e_num_p)) || (NIL_P(b) &amp;&amp; e_num_p)) {
@@ -2033,6 +2622,7 @@ range_step(int argc, VALUE *argv, VALUE range)
     }
 
     step = check_step_domain(step);
+    VALUE iter[2] = {INT2FIX(1), step};
 
     if (FIXNUM_P(b) &amp;&amp; NIL_P(e) &amp;&amp; FIXNUM_P(step)) {
         long i = FIX2LONG(b), unit = FIX2LONG(step);
@@ -2060,10 +2650,6 @@ range_step(int argc, VALUE *argv, VALUE range)
 
     }
     else if (SYMBOL_P(b) &amp;&amp; (NIL_P(e) || SYMBOL_P(e))) { /* symbols are special */
-        VALUE iter[2];
-        iter[0] = INT2FIX(1);
-        iter[1] = step;
-
         b = rb_sym2str(b);
         if (NIL_P(e)) {
             rb_str_upto_endless_each(b, sym_step_i, (VALUE)iter);
@@ -2092,12 +2678,7 @@ range_step(int argc, VALUE *argv, VALUE range)
         tmp = rb_check_string_type(b);
 
         if (!NIL_P(tmp)) {
-            VALUE iter[2];
-
             b = tmp;
-            iter[0] = INT2FIX(1);
-            iter[1] = step;
-
             if (NIL_P(e)) {
                 rb_str_upto_endless_each(b, step_i, (VALUE)iter);
             }
@@ -2106,15 +2687,11 @@ range_step(int argc, VALUE *argv, VALUE range)
             }
         }
         else {
-            VALUE args[2];
-
             if (!discrete_object_p(b)) {
                 rb_raise(rb_eTypeError, &quot;can&#39;t iterate from %s&quot;,
                          rb_obj_classname(b));
             }
-            args[0] = INT2FIX(1);
-            args[1] = step;
-            range_each_func(range, step_i, (VALUE)args);
+            range_each_func(range, step_i, (VALUE)iter);
         }
     }
     return range;
@@ -2127,18 +2704,21 @@ range_step(int argc, VALUE *argv, VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_a">
             
-              <b>rng.to_a                   &rarr; array</b>
+              <b>to_a &rarr; array</b>
             
             <a href="../classes/Range.html#method-i-to_a" name="method-i-to_a" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns an array containing the items in the range.</p>
+              <p>Returns an array containing the elements in <code>self</code>, if a finite collection; raises an exception otherwise.</p>
 
-<pre><code>(1..7).to_a  #=&gt; [1, 2, 3, 4, 5, 6, 7]
-(1..).to_a   #=&gt; RangeError: cannot convert endless range to an array
+<pre><code>(1..4).to_a     # =&gt; [1, 2, 3, 4]
+(1...4).to_a    # =&gt; [1, 2, 3]
+(&#39;a&#39;..&#39;d&#39;).to_a # =&gt; [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;]
 </code></pre>
+
+<p><a href="Range.html#method-i-entries"><code>Range#entries</code></a> is an alias for <a href="Range.html#method-i-to_a"><code>Range#to_a</code></a>.</p>
             </div>
           
 
@@ -2199,7 +2779,7 @@ range_to_a(VALUE range)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_json_source')" id="l_method-i-to_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/range.rb#L26" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/range.rb#L26" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_json_source" class="dyn-source">
@@ -2215,7 +2795,7 @@ range_to_a(VALUE range)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_s">
             
-              <b>rng.to_s   &rarr; string
+              <b>to_s &rarr; string
 </b>
             
             <a href="../classes/Range.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
@@ -2223,7 +2803,21 @@ range_to_a(VALUE range)
 
           
             <div class="description">
-              <p>Convert this range object to a printable form (using <a href="Range.html#method-i-to_s"><code>to_s</code></a> to convert the begin and end objects).</p>
+              <p>Returns a string representation of <code>self</code>, including <code>begin.to_s</code> and <code>end.to_s</code>:</p>
+
+<pre><code>(1..4).to_s  # =&gt; &quot;1..4&quot;
+(1...4).to_s # =&gt; &quot;1...4&quot;
+(1..).to_s   # =&gt; &quot;1..&quot;
+(..4).to_s   # =&gt; &quot;..4&quot;
+</code></pre>
+
+<p>Note that returns from <a href="Range.html#method-i-to_s"><code>to_s</code></a> and <a href="Range.html#method-i-inspect"><code>inspect</code></a> may differ:</p>
+
+<pre><code>(&#39;a&#39;..&#39;d&#39;).to_s    # =&gt; &quot;a..d&quot;
+(&#39;a&#39;..&#39;d&#39;).inspect # =&gt; &quot;\&quot;a\&quot;..\&quot;d\&quot;&quot;
+</code></pre>
+
+<p>Related: <a href="Range.html#method-i-inspect"><code>Range#inspect</code></a>.</p>
             </div>
           
 

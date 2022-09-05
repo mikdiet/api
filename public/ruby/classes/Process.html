@@ -30,7 +30,7 @@
     <meta property="og:description" content="The module contains several groups of functionality for handling OS processes:  Low-level property introspection and management of the current process, like Process.argv0, Process.">
   
 
-    <meta name="keywords" content="Process class, exec, fork, spawn, exit!, exit, abort, last_status, kill, wait, wait2, waitpid, waitpid2, waitall, detach, pid, ppid, getpgrp, setpgrp, getpgid, setpgid, getsid, setsid, getpriority, setpriority, getrlimit, setrlimit, uid, uid=, gid, gid=, euid, euid=, egid, egid=, initgroups, groups, groups=, maxgroups, maxgroups=, daemon, times, clock_gettime, clock_getres, argv0, setproctitle">
+    <meta name="keywords" content="Process class, exec, fork, spawn, exit!, exit, abort, last_status, _fork, kill, wait, wait2, waitpid, waitpid2, waitall, detach, pid, ppid, getpgrp, setpgrp, getpgid, setpgid, getsid, setsid, getpriority, setpriority, getrlimit, setrlimit, uid, uid=, gid, gid=, euid, euid=, egid, egid=, initgroups, groups, groups=, maxgroups, maxgroups=, daemon, times, clock_gettime, clock_getres, argv0, setproctitle">
 </head>
 
 <body>
@@ -134,6 +134,18 @@
     <!-- Method ref -->
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
+      
+        <dt>#</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-_fork">_fork</a>
+              </li>
+            
+          </ul>
+        </dd>
       
         <dt>A</dt>
         <dd>
@@ -1101,16 +1113,64 @@
       <h2 class="sectiontitle">Class Public methods</h2>
       
         <div class="method">
+          <h3 class="title method-title" id="method-c-_fork">
+            
+              <b>Process._fork   &rarr; integer
+</b>
+            
+            <a href="../classes/Process.html#method-c-_fork" name="method-c-_fork" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>An internal API for fork. Do not call this method directly. Currently, this is called via <a href="Kernel.html#method-i-fork"><code>Kernel#fork</code></a>, <a href="Process.html#method-c-fork"><code>Process.fork</code></a>, and <a href="IO.html#method-c-popen"><code>IO.popen</code></a> with <code>&quot;-&quot;</code>.</p>
+
+<p>This method is not for casual code but for application monitoring libraries. You can add custom code before and after fork events by overriding this method.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-_fork_source')" id="l_method-c-_fork_source">show</a>
+                
+              </p>
+              <div id="method-c-_fork_source" class="dyn-source">
+                <pre>VALUE
+rb_proc__fork(VALUE _obj)
+{
+    rb_pid_t pid = rb_fork_ruby(NULL);
+
+    if (pid == -1) {
+        rb_sys_fail(&quot;fork(2)&quot;);
+    }
+
+    return PIDT2NUM(pid);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-c-abort">
             
-              <b>abort</b>(*args)
+              <b>abort<br />Kernel::abort([msg])<br />Process.abort([msg])
+</b>
             
             <a href="../classes/Process.html#method-c-abort" name="method-c-abort" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Terminate execution immediately, effectively by calling <code>Kernel.exit(false)</code>. If <em>msg</em> is given, it is written to STDERR prior to terminating.</p>
             </div>
           
 
@@ -1131,7 +1191,8 @@
                 <pre>static VALUE
 f_abort(int c, const VALUE *a, VALUE _)
 {
-    return rb_f_abort(c, a);
+    rb_f_abort(c, a);
+    UNREACHABLE_RETURN(Qnil);
 }</pre>
               </div>
             </div>
@@ -1190,19 +1251,19 @@ proc_argv0(VALUE process)
 
           
             <div class="description">
-              <p>Returns the time resolution returned by POSIX <a href="Process.html#method-c-clock_getres"><code>clock_getres</code></a>() function.</p>
+              <p>Returns an estimate of the resolution of a <code>clock_id</code> using the POSIX <code>clock_getres()</code> function.</p>
 
-<p><code>clock_id</code> specifies a kind of clock. See the document of <code>Process.clock_gettime</code> for details.</p>
+<p>Note the reported resolution is often inaccurate on most platforms due to underlying bugs for this function and therefore the reported resolution often differs from the actual resolution of the clock in practice. Inaccurate reported resolutions have been observed for various clocks including <a href="Process.html#CLOCK_MONOTONIC"><code>CLOCK_MONOTONIC</code></a> and <a href="Process.html#CLOCK_MONOTONIC_RAW"><code>CLOCK_MONOTONIC_RAW</code></a> when using Linux, macOS, BSD or AIX platforms, when using ARM processors, or when using virtualization.</p>
 
-<p><code>clock_id</code> can be a symbol as <code>Process.clock_gettime</code>. However the result may not be accurate. For example, <code>Process.clock_getres(:GETTIMEOFDAY_BASED_CLOCK_REALTIME)</code> returns 1.0e-06 which means 1 microsecond, but actual resolution can be more coarse.</p>
+<p><code>clock_id</code> specifies a kind of clock. See the document of <code>Process.clock_gettime</code> for details. <code>clock_id</code> can be a symbol as for <code>Process.clock_gettime</code>.</p>
 
 <p>If the given <code>clock_id</code> is not supported, Errno::EINVAL is raised.</p>
 
-<p><code>unit</code> specifies a type of the return value. <code>Process.clock_getres</code> accepts <code>unit</code> as <code>Process.clock_gettime</code>. The default value, <code>:float_second</code>, is also same as <code>Process.clock_gettime</code>.</p>
+<p><code>unit</code> specifies the type of the return value. <code>Process.clock_getres</code> accepts <code>unit</code> as <code>Process.clock_gettime</code>. The default value, <code>:float_second</code>, is also the same as <code>Process.clock_gettime</code>.</p>
 
-<p><code>Process.clock_getres</code> also accepts <code>:hertz</code> as <code>unit</code>. <code>:hertz</code> means a the reciprocal of <code>:float_second</code>.</p>
+<p><code>Process.clock_getres</code> also accepts <code>:hertz</code> as <code>unit</code>. <code>:hertz</code> means the reciprocal of <code>:float_second</code>.</p>
 
-<p><code>:hertz</code> can be used to obtain the exact value of the clock ticks per second for times() function and CLOCKS_PER_SEC for clock() function.</p>
+<p><code>:hertz</code> can be used to obtain the exact value of the clock ticks per second for the times() function and CLOCKS_PER_SEC for the clock() function.</p>
 
 <p><code>Process.clock_getres(:TIMES_BASED_CLOCK_PROCESS_CPUTIME_ID, :hertz)</code> returns the clock ticks per second.</p>
 
@@ -1358,10 +1419,10 @@ rb_clock_getres(int argc, VALUE *argv, VALUE _)
 <p>The supported constants depends on OS and version. Ruby provides following types of <code>clock_id</code> if available.</p>
 <dl class="rdoc-list label-list"><dt><a href="Process.html#CLOCK_REALTIME"><code>CLOCK_REALTIME</code></a>
 <dd>
-<p>SUSv2 to 4, Linux 2.5.63, FreeBSD 3.0, NetBSD 2.0, OpenBSD 2.1, macOS 10.12</p>
+<p>SUSv2 to 4, Linux 2.5.63, FreeBSD 3.0, NetBSD 2.0, OpenBSD 2.1, macOS 10.12, Windows-8/Server-2012</p>
 </dd><dt><a href="Process.html#CLOCK_MONOTONIC"><code>CLOCK_MONOTONIC</code></a>
 <dd>
-<p>SUSv3 to 4, Linux 2.5.63, FreeBSD 3.0, NetBSD 2.0, OpenBSD 3.4, macOS 10.12</p>
+<p>SUSv3 to 4, Linux 2.5.63, FreeBSD 3.0, NetBSD 2.0, OpenBSD 3.4, macOS 10.12, Windows-2000</p>
 </dd><dt><a href="Process.html#CLOCK_PROCESS_CPUTIME_ID"><code>CLOCK_PROCESS_CPUTIME_ID</code></a>
 <dd>
 <p>SUSv3 to 4, Linux 2.5.63, FreeBSD 9.3, OpenBSD 5.4, macOS 10.12</p>
@@ -2013,13 +2074,13 @@ proc_seteuid_m(VALUE mod, VALUE euid)
 
 <p>In the first form, the string is taken as a command line that is subject to shell expansion before being executed.</p>
 
-<p>The standard shell always means <code>&quot;/bin/sh&quot;</code> on Unix-like systems, same as <code>ENV[&quot;RUBYSHELL&quot;]</code> (or <code>ENV[&quot;COMSPEC&quot;]</code> on Windows NT series), and similar.</p>
+<p>The standard shell always means <code>&quot;/bin/sh&quot;</code> on Unix-like systems, otherwise, <code>ENV[&quot;RUBYSHELL&quot;]</code> or <code>ENV[&quot;COMSPEC&quot;]</code> on Windows and similar.  The command is passed as an argument to the <code>&quot;-c&quot;</code> switch to the shell, except in the case of <code>COMSPEC</code>.</p>
 
 <p>If the string from the first form (<code>exec(&quot;command&quot;)</code>) follows these simple rules:</p>
 <ul><li>
 <p>no meta characters</p>
 </li><li>
-<p>no shell reserved word and no special built-in</p>
+<p>not starting with shell reserved word or special built-in</p>
 </li><li>
 <p>Ruby invokes the command directly without shell</p>
 </li></ul>
@@ -2072,7 +2133,8 @@ exec &quot;echo&quot;, &quot;*&quot;    # echoes an asterisk
                 <pre>static VALUE
 f_exec(int c, const VALUE *a, VALUE _)
 {
-    return rb_f_exec(c, a);
+    rb_f_exec(c, a);
+    UNREACHABLE_RETURN(Qnil);
 }</pre>
               </div>
             </div>
@@ -2139,7 +2201,8 @@ in finalizer
                 <pre>static VALUE
 f_exit(int c, const VALUE *a, VALUE _)
 {
-    return rb_f_exit(c, a);
+    rb_f_exit(c, a);
+    UNREACHABLE_RETURN(Qnil);
 }</pre>
               </div>
             </div>
@@ -2238,23 +2301,18 @@ rb_f_fork(VALUE obj)
 {
     rb_pid_t pid;
 
-    switch (pid = rb_fork_ruby(NULL)) {
-      case 0:
-        rb_thread_atfork();
+    pid = rb_call_proc__fork();
+
+    if (pid == 0) {
         if (rb_block_given_p()) {
             int status;
             rb_protect(rb_yield, Qundef, &amp;status);
             ruby_stop(status);
         }
         return Qnil;
-
-      case -1:
-        rb_sys_fail(&quot;fork(2)&quot;);
-        return Qnil;
-
-      default:
-        return PIDT2NUM(pid);
     }
+
+    return PIDT2NUM(pid);
 }</pre>
               </div>
             </div>
@@ -3335,7 +3393,7 @@ proc_setproctitle(VALUE process, VALUE title)
 </dd><dt>NPROC
 <dd>
 <p>number of processes for the user (number) (4.4BSD, GNU/Linux)</p>
-</dd><dt><a href="RSS.html"><code>RSS</code></a>
+</dd><dt>RSS
 <dd>
 <p>resident memory size (bytes) (4.2BSD, GNU/Linux)</p>
 </dd><dt>RTPRIO

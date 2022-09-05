@@ -30,7 +30,7 @@
     <meta property="og:description" content="Fibers are primitives for implementing light weight cooperative concurrency in Ruby. Basically they are a means of creating code blocks that can be paused and resumed, much like threads.">
   
 
-    <meta name="keywords" content="Fiber class, yield, resume, raise, to_s, transfer, alive?, current, inspect">
+    <meta name="keywords" content="Fiber class, yield, current, new, blocking?, resume, raise, backtrace, backtrace_locations, to_s, transfer, alive?, blocking?, scheduler, set_scheduler, current_scheduler, schedule, inspect">
 </head>
 
 <body>
@@ -128,6 +128,16 @@ puts fiber.resume &quot;The fiber will be dead before I can cause trouble&quot;
 FiberError: dead fiber called
 </code></pre>
 
+<h2 id="class-Fiber-label-Non-blocking+Fibers">Non-blocking Fibers</h2>
+
+<p>The concept of <em>non-blocking fiber</em> was introduced in Ruby 3.0. A non-blocking fiber, when reaching a operation that would normally block the fiber (like <code>sleep</code>, or wait for another process or I/O) will yield control to other fibers and allow the <em>scheduler</em> to handle blocking and waking up (resuming) this fiber when it can proceed.</p>
+
+<p>For a <a href="Fiber.html"><code>Fiber</code></a> to behave as non-blocking, it need to be created in <a href="Fiber.html#method-c-new"><code>Fiber.new</code></a> with <code>blocking: false</code> (which is the default), and <a href="Fiber.html#method-c-scheduler"><code>Fiber.scheduler</code></a> should be set with <a href="Fiber.html#method-c-set_scheduler"><code>Fiber.set_scheduler</code></a>. If <a href="Fiber.html#method-c-scheduler"><code>Fiber.scheduler</code></a> is not set in the current thread, blocking and non-blocking fibers’ behavior is identical.</p>
+
+<p>Ruby doesn’t provide a scheduler class: it is expected to be implemented by the user and correspond to <a href="Fiber/SchedulerInterface.html"><code>Fiber::SchedulerInterface</code></a>.</p>
+
+<p>There is also <a href="Fiber.html#method-c-schedule"><code>Fiber.schedule</code></a> method, which is expected to immediately perform the given block in a non-blocking manner. Its actual implementation is up to the scheduler.</p>
+
     </div>
   
 
@@ -139,6 +149,17 @@ FiberError: dead fiber called
   
 
 
+  
+    <!-- Namespace -->
+    <div class="sectiontitle">Namespace</div>
+    <ul>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Fiber/SchedulerInterface.html">Fiber::SchedulerInterface</a>
+        </li>
+      
+    </ul>
   
 
 
@@ -159,13 +180,45 @@ FiberError: dead fiber called
           </ul>
         </dd>
       
+        <dt>B</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-backtrace">backtrace</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-backtrace_locations">backtrace_locations</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-blocking-3F">blocking?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-blocking-3F">blocking?</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>C</dt>
         <dd>
           <ul>
             
               
               <li>
-                <a href="#method-c-current">current</a>
+                <a href="#method-c-current">current</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-current_scheduler">current_scheduler</a>
               </li>
             
           </ul>
@@ -183,6 +236,18 @@ FiberError: dead fiber called
           </ul>
         </dd>
       
+        <dt>N</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-new">new</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>R</dt>
         <dd>
           <ul>
@@ -195,6 +260,28 @@ FiberError: dead fiber called
               
               <li>
                 <a href="#method-i-resume">resume</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>S</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-schedule">schedule</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-scheduler">scheduler</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-set_scheduler">set_scheduler</a>
               </li>
             
           </ul>
@@ -253,9 +340,60 @@ FiberError: dead fiber called
       <h2 class="sectiontitle">Class Public methods</h2>
       
         <div class="method">
+          <h3 class="title method-title" id="method-c-blocking-3F">
+            
+              <b>Fiber.blocking? &rarr; false or 1
+</b>
+            
+            <a href="../classes/Fiber.html#method-c-blocking-3F" name="method-c-blocking-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns <code>false</code> if the current fiber is non-blocking. <a href="Fiber.html"><code>Fiber</code></a> is non-blocking if it was created via passing <code>blocking: false</code> to <a href="Fiber.html#method-c-new"><code>Fiber.new</code></a>, or via <a href="Fiber.html#method-c-schedule"><code>Fiber.schedule</code></a>.</p>
+
+<p>If the current <a href="Fiber.html"><code>Fiber</code></a> is blocking, the method returns 1. Future developments may allow for situations where larger integers could be returned.</p>
+
+<p>Note that, even if the method returns <code>false</code>, <a href="Fiber.html"><code>Fiber</code></a> behaves differently only if <a href="Fiber.html#method-c-scheduler"><code>Fiber.scheduler</code></a> is set in the current thread.</p>
+
+<p>See the “Non-blocking fibers” section in class docs for details.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-blocking-3F_source')" id="l_method-c-blocking-3F_source">show</a>
+                
+              </p>
+              <div id="method-c-blocking-3F_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_s_blocking_p(VALUE klass)
+{
+    rb_thread_t *thread = GET_THREAD();
+    unsigned blocking = thread-&gt;blocking;
+
+    if (blocking == 0)
+        return Qfalse;
+
+    return INT2NUM(blocking);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-c-current">
             
-              <b>Fiber.current() &rarr; fiber
+              <b>Fiber.current &rarr; fiber
 </b>
             
             <a href="../classes/Fiber.html#method-c-current" name="method-c-current" class="permalink">Link</a>
@@ -263,7 +401,7 @@ FiberError: dead fiber called
 
           
             <div class="description">
-              <p>Returns the current fiber. You need to <code>require &#39;fiber&#39;</code> before using this method. If you are not running in the context of a fiber this method will return the root fiber.</p>
+              <p>Returns the current fiber. If you are not running in the context of a fiber this method will return the root fiber.</p>
             </div>
           
 
@@ -285,6 +423,255 @@ FiberError: dead fiber called
 rb_fiber_s_current(VALUE klass)
 {
     return rb_fiber_current();
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-current_scheduler">
+            
+              <b>Fiber.current_scheduler &rarr; obj or nil
+</b>
+            
+            <a href="../classes/Fiber.html#method-c-current_scheduler" name="method-c-current_scheduler" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the <a href="Fiber.html"><code>Fiber</code></a> scheduler, that was last set for the current thread with <a href="Fiber.html#method-c-set_scheduler"><code>Fiber.set_scheduler</code></a> if and only if the current fiber is non-blocking.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-current_scheduler_source')" id="l_method-c-current_scheduler_source">show</a>
+                
+              </p>
+              <div id="method-c-current_scheduler_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_current_scheduler(VALUE klass)
+{
+    return rb_fiber_scheduler_current();
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-new">
+            
+              <b>Fiber.new(blocking: false) { |*args| ... } &rarr; fiber
+</b>
+            
+            <a href="../classes/Fiber.html#method-c-new" name="method-c-new" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Creates new <a href="Fiber.html"><code>Fiber</code></a>. Initially, the fiber is not running and can be resumed with <a href="Fiber.html#method-i-resume"><code>resume</code></a>. Arguments to the first <a href="Fiber.html#method-i-resume"><code>resume</code></a> call will be passed to the block:</p>
+
+<pre><code>f = Fiber.new do |initial|
+   current = initial
+   loop do
+     puts &quot;current: #{current.inspect}&quot;
+     current = Fiber.yield
+   end
+end
+f.resume(100)     # prints: current: 100
+f.resume(1, 2, 3) # prints: current: [1, 2, 3]
+f.resume          # prints: current: nil
+# ... and so on ...
+</code></pre>
+
+<p>If <code>blocking: false</code> is passed to <code>Fiber.new</code>, <em>and</em> current thread has a <a href="Fiber.html#method-c-scheduler"><code>Fiber.scheduler</code></a> defined, the <a href="Fiber.html"><code>Fiber</code></a> becomes non-blocking (see “Non-blocking Fibers” section in class docs).</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+                
+              </p>
+              <div id="method-c-new_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_initialize(int argc, VALUE* argv, VALUE self)
+{
+    return rb_fiber_initialize_kw(argc, argv, self, rb_keyword_given_p());
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-schedule">
+            
+              <b>Fiber.schedule { |*args| ... } &rarr; fiber
+</b>
+            
+            <a href="../classes/Fiber.html#method-c-schedule" name="method-c-schedule" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>The method is <em>expected</em> to immediately run the provided block of code in a separate non-blocking fiber.</p>
+
+<pre><code>puts &quot;Go to sleep!&quot;
+
+Fiber.set_scheduler(MyScheduler.new)
+
+Fiber.schedule do
+  puts &quot;Going to sleep&quot;
+  sleep(1)
+  puts &quot;I slept well&quot;
+end
+
+puts &quot;Wakey-wakey, sleepyhead&quot;
+</code></pre>
+
+<p>Assuming MyScheduler is properly implemented, this program will produce:</p>
+
+<pre><code>Go to sleep!
+Going to sleep
+Wakey-wakey, sleepyhead
+...1 sec pause here...
+I slept well
+</code></pre>
+
+<p>…e.g. on the first blocking operation inside the <a href="Fiber.html"><code>Fiber</code></a> (<code>sleep(1)</code>), the control is yielded to the outside code (main fiber), and <em>at the end of that execution</em>, the scheduler takes care of properly resuming all the blocked fibers.</p>
+
+<p>Note that the behavior described above is how the method is <em>expected</em> to behave, actual behavior is up to the current scheduler’s implementation of <a href="Fiber/SchedulerInterface.html#method-i-fiber"><code>Fiber::SchedulerInterface#fiber</code></a> method. Ruby doesn’t enforce this method to behave in any particular way.</p>
+
+<p>If the scheduler is not set, the method raises <code>RuntimeError (No scheduler is available!)</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-schedule_source')" id="l_method-c-schedule_source">show</a>
+                
+              </p>
+              <div id="method-c-schedule_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_s_schedule(int argc, VALUE *argv, VALUE obj)
+{
+    return rb_fiber_s_schedule_kw(argc, argv, rb_keyword_given_p());
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-scheduler">
+            
+              <b>Fiber.scheduler &rarr; obj or nil
+</b>
+            
+            <a href="../classes/Fiber.html#method-c-scheduler" name="method-c-scheduler" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <pre><code>Returns the Fiber scheduler, that was last set for the current thread with Fiber.set_scheduler.
+Returns +nil+ if no scheduler is set (which is the default), and non-blocking fibers&#39;
+</code></pre>
+
+<p>#  behavior is the same as blocking.</p>
+
+<pre><code>(see &quot;Non-blocking fibers&quot; section in class docs for details about the scheduler concept).
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-scheduler_source')" id="l_method-c-scheduler_source">show</a>
+                
+              </p>
+              <div id="method-c-scheduler_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_s_scheduler(VALUE klass)
+{
+    return rb_fiber_scheduler_get();
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-set_scheduler">
+            
+              <b>Fiber.set_scheduler(scheduler) &rarr; scheduler
+</b>
+            
+            <a href="../classes/Fiber.html#method-c-set_scheduler" name="method-c-set_scheduler" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Sets the <a href="Fiber.html"><code>Fiber</code></a> scheduler for the current thread. If the scheduler is set, non-blocking fibers (created by <a href="Fiber.html#method-c-new"><code>Fiber.new</code></a> with <code>blocking: false</code>, or by <a href="Fiber.html#method-c-schedule"><code>Fiber.schedule</code></a>) call that scheduler’s hook methods on potentially blocking operations, and the current thread will call scheduler’s <code>close</code> method on finalization (allowing the scheduler to properly manage all non-finished fibers).</p>
+
+<p><code>scheduler</code> can be an object of any class corresponding to <a href="Fiber/SchedulerInterface.html"><code>Fiber::SchedulerInterface</code></a>. Its implementation is up to the user.</p>
+
+<p>See also the “Non-blocking fibers” section in class docs.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-set_scheduler_source')" id="l_method-c-set_scheduler_source">show</a>
+                
+              </p>
+              <div id="method-c-set_scheduler_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_set_scheduler(VALUE klass, VALUE scheduler)
+{
+    return rb_fiber_scheduler_set(scheduler);
 }</pre>
               </div>
             </div>
@@ -323,7 +710,7 @@ rb_fiber_s_current(VALUE klass)
                 <pre>static VALUE
 rb_fiber_s_yield(int argc, VALUE *argv, VALUE klass)
 {
-    return rb_fiber_yield_kw(argc, argv, PASS_KW_SPLAT);
+    return rb_fiber_yield_kw(argc, argv, rb_keyword_given_p());
 }</pre>
               </div>
             </div>
@@ -345,7 +732,7 @@ rb_fiber_s_yield(int argc, VALUE *argv, VALUE klass)
 
           
             <div class="description">
-              <p>Returns true if the fiber can still be resumed (or transferred to). After finishing execution of the fiber block this method will always return false. You need to <code>require &#39;fiber&#39;</code> before using this method.</p>
+              <p>Returns true if the fiber can still be resumed (or transferred to). After finishing execution of the fiber block this method will always return <code>false</code>.</p>
             </div>
           
 
@@ -374,6 +761,171 @@ rb_fiber_alive_p(VALUE fiber_value)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-backtrace">
+            
+              <b>fiber.backtrace &rarr; array<br />fiber.backtrace(start) &rarr; array<br />fiber.backtrace(start, count) &rarr; array<br />fiber.backtrace(start..end) &rarr; array
+</b>
+            
+            <a href="../classes/Fiber.html#method-i-backtrace" name="method-i-backtrace" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the current execution stack of the fiber. <code>start</code>, <code>count</code> and <code>end</code> allow to select only parts of the backtrace.</p>
+
+<pre><code>def level3
+  Fiber.yield
+end
+
+def level2
+  level3
+end
+
+def level1
+  level2
+end
+
+f = Fiber.new { level1 }
+
+# It is empty before the fiber started
+f.backtrace
+#=&gt; []
+
+f.resume
+
+f.backtrace
+#=&gt; [&quot;test.rb:2:in `yield&#39;&quot;, &quot;test.rb:2:in `level3&#39;&quot;, &quot;test.rb:6:in `level2&#39;&quot;, &quot;test.rb:10:in `level1&#39;&quot;, &quot;test.rb:13:in `block in &lt;main&gt;&#39;&quot;]
+p f.backtrace(1) # start from the item 1
+#=&gt; [&quot;test.rb:2:in `level3&#39;&quot;, &quot;test.rb:6:in `level2&#39;&quot;, &quot;test.rb:10:in `level1&#39;&quot;, &quot;test.rb:13:in `block in &lt;main&gt;&#39;&quot;]
+p f.backtrace(2, 2) # start from item 2, take 2
+#=&gt; [&quot;test.rb:6:in `level2&#39;&quot;, &quot;test.rb:10:in `level1&#39;&quot;]
+p f.backtrace(1..3) # take items from 1 to 3
+#=&gt; [&quot;test.rb:2:in `level3&#39;&quot;, &quot;test.rb:6:in `level2&#39;&quot;, &quot;test.rb:10:in `level1&#39;&quot;]
+
+f.resume
+
+# It is nil after the fiber is finished
+f.backtrace
+#=&gt; nil
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-backtrace_source')" id="l_method-i-backtrace_source">show</a>
+                
+              </p>
+              <div id="method-i-backtrace_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_backtrace(int argc, VALUE *argv, VALUE fiber)
+{
+    return rb_vm_backtrace(argc, argv, &amp;fiber_ptr(fiber)-&gt;cont.saved_ec);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-backtrace_locations">
+            
+              <b>fiber.backtrace_locations &rarr; array<br />fiber.backtrace_locations(start) &rarr; array<br />fiber.backtrace_locations(start, count) &rarr; array<br />fiber.backtrace_locations(start..end) &rarr; array
+</b>
+            
+            <a href="../classes/Fiber.html#method-i-backtrace_locations" name="method-i-backtrace_locations" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Like <a href="Fiber.html#method-i-backtrace"><code>backtrace</code></a>, but returns each line of the execution stack as a <a href="Thread/Backtrace/Location.html"><code>Thread::Backtrace::Location</code></a>. Accepts the same arguments as <a href="Fiber.html#method-i-backtrace"><code>backtrace</code></a>.</p>
+
+<pre><code>f = Fiber.new { Fiber.yield }
+f.resume
+loc = f.backtrace_locations.first
+loc.label  #=&gt; &quot;yield&quot;
+loc.path   #=&gt; &quot;test.rb&quot;
+loc.lineno #=&gt; 1
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-backtrace_locations_source')" id="l_method-i-backtrace_locations_source">show</a>
+                
+              </p>
+              <div id="method-i-backtrace_locations_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_backtrace_locations(int argc, VALUE *argv, VALUE fiber)
+{
+    return rb_vm_backtrace_locations(argc, argv, &amp;fiber_ptr(fiber)-&gt;cont.saved_ec);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-blocking-3F">
+            
+              <b>fiber.blocking? &rarr; true or false
+</b>
+            
+            <a href="../classes/Fiber.html#method-i-blocking-3F" name="method-i-blocking-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns <code>true</code> if <code>fiber</code> is blocking and <code>false</code> otherwise. <a href="Fiber.html"><code>Fiber</code></a> is non-blocking if it was created via passing <code>blocking: false</code> to <a href="Fiber.html#method-c-new"><code>Fiber.new</code></a>, or via <a href="Fiber.html#method-c-schedule"><code>Fiber.schedule</code></a>.</p>
+
+<p>Note that, even if the method returns <code>false</code>, the fiber behaves differently only if <a href="Fiber.html#method-c-scheduler"><code>Fiber.scheduler</code></a> is set in the current thread.</p>
+
+<p>See the “Non-blocking fibers” section in class docs for details.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-blocking-3F_source')" id="l_method-i-blocking-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-blocking-3F_source" class="dyn-source">
+                <pre>VALUE
+rb_fiber_blocking_p(VALUE fiber)
+{
+    return RBOOL(fiber_ptr(fiber)-&gt;blocking != 0);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-inspect">
             
               <b>inspect</b>()
@@ -383,7 +935,7 @@ rb_fiber_alive_p(VALUE fiber_value)
 
           
             <div class="description">
-              <p>Returns fiber information string.</p>
+              
             </div>
           
 
@@ -409,7 +961,7 @@ rb_fiber_alive_p(VALUE fiber_value)
 
           
             <div class="description">
-              <p>Raises an exception in the fiber at the point at which the last <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a> was called, or at the start if neither <code>resume</code> nor <code>raise</code> were called before.</p>
+              <p>Raises an exception in the fiber at the point at which the last <code>Fiber.yield</code> was called. If the fiber has not been started or has already run to completion, raises <code>FiberError</code>. If the fiber is yielding, it is resumed. If it is transferring, it is transferred into. But if it is resuming, raises <code>FiberError</code>.</p>
 
 <p>With no arguments, raises a <code>RuntimeError</code>. With a single <code>String</code> argument, raises a <code>RuntimeError</code> with the string as a message.  Otherwise, the first parameter should be the name of an <code>Exception</code> class (or an object that returns an <code>Exception</code> object when sent an <code>exception</code> message). The optional second parameter sets the message associated with the exception, and the third parameter is an array of callback information. Exceptions are caught by the <code>rescue</code> clause of <code>begin...end</code> blocks.</p>
             </div>
@@ -430,10 +982,9 @@ rb_fiber_alive_p(VALUE fiber_value)
               </p>
               <div id="method-i-raise_source" class="dyn-source">
                 <pre>static VALUE
-rb_fiber_raise(int argc, VALUE *argv, VALUE fiber)
+rb_fiber_m_raise(int argc, VALUE *argv, VALUE self)
 {
-    VALUE exc = rb_make_exception(argc, argv);
-    return rb_fiber_resume_kw(fiber, -1, &amp;exc, RB_NO_KEYWORDS);
+    return rb_fiber_raise(self, argc, argv);
 }</pre>
               </div>
             </div>
@@ -474,7 +1025,7 @@ rb_fiber_raise(int argc, VALUE *argv, VALUE fiber)
                 <pre>static VALUE
 rb_fiber_m_resume(int argc, VALUE *argv, VALUE fiber)
 {
-    return rb_fiber_resume_kw(fiber, argc, argv, PASS_KW_SPLAT);
+    return rb_fiber_resume_kw(fiber, argc, argv, rb_keyword_given_p());
 }</pre>
               </div>
             </div>
@@ -484,14 +1035,14 @@ rb_fiber_m_resume(int argc, VALUE *argv, VALUE fiber)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_s">
             
-              <b>fiber.to_s   &rarr; string</b>
+              <b>to_s</b>()
             
             <a href="../classes/Fiber.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns fiber information string.</p>
+              
             </div>
           
 
@@ -520,8 +1071,8 @@ fiber_to_s(VALUE fiber_value)
     const rb_proc_t *proc;
     char status_info[0x20];
 
-    if (fiber-&gt;transferred) {
-        snprintf(status_info, 0x20, &quot; (%s, transferred)&quot;, fiber_status_name(fiber-&gt;status));
+    if (fiber-&gt;resuming_fiber) {
+        snprintf(status_info, 0x20, &quot; (%s by resuming)&quot;, fiber_status_name(fiber-&gt;status));
     }
     else {
         snprintf(status_info, 0x20, &quot; (%s)&quot;, fiber_status_name(fiber-&gt;status));
@@ -553,43 +1104,65 @@ fiber_to_s(VALUE fiber_value)
 
           
             <div class="description">
-              <p>Transfer control to another fiber, resuming it from where it last stopped or starting it if it was not resumed before. The calling fiber will be suspended much like in a call to <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a>. You need to <code>require &#39;fiber&#39;</code> before using this method.</p>
+              <p>Transfer control to another fiber, resuming it from where it last stopped or starting it if it was not resumed before. The calling fiber will be suspended much like in a call to <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a>.</p>
 
-<p>The fiber which receives the transfer call is treats it much like a resume call. Arguments passed to transfer are treated like those passed to resume.</p>
+<p>The fiber which receives the transfer call treats it much like a resume call. Arguments passed to transfer are treated like those passed to resume.</p>
 
-<p>You cannot call <code>resume</code> on a fiber that has been transferred to. If you call <code>transfer</code> on a fiber, and later call <code>resume</code> on the the fiber, a <code>FiberError</code> will be raised. Once you call <code>transfer</code> on a fiber, the only way to resume processing the fiber is to call <code>transfer</code> on it again.</p>
+<p>The two style of control passing to and from fiber (one is <a href="Fiber.html#method-i-resume"><code>resume</code></a> and <a href="Fiber.html#method-c-yield"><code>Fiber::yield</code></a>, another is <a href="Fiber.html#method-i-transfer"><code>transfer</code></a> to and from fiber) can’t be freely mixed.</p>
+<ul><li>
+<p>If the Fiber’s lifecycle had started with transfer, it will never be able to yield or be resumed control passing, only finish or transfer back. (It still can resume other fibers that are allowed to be resumed.)</p>
+</li><li>
+<p>If the Fiber’s lifecycle had started with resume, it can yield or transfer to another <a href="Fiber.html"><code>Fiber</code></a>, but can receive control back only the way compatible with the way it was given away: if it had transferred, it only can be transferred back, and if it had yielded, it only can be resumed back. After that, it again can transfer or yield.</p>
+</li></ul>
+
+<p>If those rules are broken <a href="FiberError.html"><code>FiberError</code></a> is raised.</p>
+
+<p>For an individual <a href="Fiber.html"><code>Fiber</code></a> design, yield/resume is easier to use (the <a href="Fiber.html"><code>Fiber</code></a> just gives away control, it doesn’t need to think about who the control is given to), while transfer is more flexible for complex cases, allowing to build arbitrary graphs of Fibers dependent on each other.</p>
 
 <p>Example:</p>
 
-<pre><code>fiber1 = Fiber.new do
-  puts &quot;In Fiber 1&quot;
-  Fiber.yield
-  puts &quot;In Fiber 1 again&quot;
-end
+<pre><code>manager = nil # For local var to be visible inside worker block
 
-fiber2 = Fiber.new do
-  puts &quot;In Fiber 2&quot;
-  fiber1.transfer
-  puts &quot;Never see this message&quot;
-end
+# This fiber would be started with transfer
+# It can&#39;t yield, and can&#39;t be resumed
+worker = Fiber.new { |work|
+  puts &quot;Worker: starts&quot;
+  puts &quot;Worker: Performed #{work.inspect}, transferring back&quot;
+  # Fiber.yield     # this would raise FiberError: attempt to yield on a not resumed fiber
+  # manager.resume  # this would raise FiberError: attempt to resume a resumed fiber (double resume)
+  manager.transfer(work.capitalize)
+}
 
-fiber3 = Fiber.new do
-  puts &quot;In Fiber 3&quot;
-end
+# This fiber would be started with resume
+# It can yield or transfer, and can be transferred
+# back or resumed
+manager = Fiber.new {
+  puts &quot;Manager: starts&quot;
+  puts &quot;Manager: transferring &#39;something&#39; to worker&quot;
+  result = worker.transfer(&#39;something&#39;)
+  puts &quot;Manager: worker returned #{result.inspect}&quot;
+  # worker.resume    # this would raise FiberError: attempt to resume a transferring fiber
+  Fiber.yield        # this is OK, the fiber transferred from and to, now it can yield
+  puts &quot;Manager: finished&quot;
+}
 
-fiber2.resume
-fiber3.resume
-fiber1.resume rescue (p $!)
-fiber1.transfer
+puts &quot;Starting the manager&quot;
+manager.resume
+puts &quot;Resuming the manager&quot;
+# manager.transfer  # this would raise FiberError: attempt to transfer to a yielding fiber
+manager.resume
 </code></pre>
 
 <p><em>produces</em></p>
 
-<pre><code>In Fiber 2
-In Fiber 1
-In Fiber 3
-#&lt;FiberError: cannot resume transferred Fiber&gt;
-In Fiber 1 again
+<pre><code>Starting the manager
+Manager: starts
+Manager: transferring &#39;something&#39; to worker
+Worker: starts
+Worker: Performed &quot;something&quot;, transferring back
+Manager: worker returned &quot;Something&quot;
+Resuming the manager
+Manager: finished
 </code></pre>
             </div>
           
@@ -609,11 +1182,9 @@ In Fiber 1 again
               </p>
               <div id="method-i-transfer_source" class="dyn-source">
                 <pre>static VALUE
-rb_fiber_m_transfer(int argc, VALUE *argv, VALUE fiber_value)
+rb_fiber_m_transfer(int argc, VALUE *argv, VALUE self)
 {
-    rb_fiber_t *fiber = fiber_ptr(fiber_value);
-    fiber-&gt;transferred = 1;
-    return fiber_switch(fiber, argc, argv, 0, PASS_KW_SPLAT);
+    return rb_fiber_transfer_kw(self, argc, argv, rb_keyword_given_p());
 }</pre>
               </div>
             </div>

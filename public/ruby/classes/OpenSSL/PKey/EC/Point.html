@@ -26,7 +26,7 @@
 
   
 
-    <meta name="keywords" content="OpenSSL::PKey::EC::Point class, to_bn, new, initialize_copy, eql?, infinity?, on_curve?, make_affine!, invert!, set_to_infinity!, to_octet_string, mul, ==">
+    <meta name="keywords" content="OpenSSL::PKey::EC::Point class, to_bn, new, initialize_copy, eql?, infinity?, on_curve?, make_affine!, invert!, set_to_infinity!, to_octet_string, add, mul, ==">
 </head>
 
 <body>
@@ -112,6 +112,18 @@
               
               <li>
                 <a href="#method-i-3D-3D">==</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>A</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-add">add</a>
               </li>
             
           </ul>
@@ -372,6 +384,61 @@
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-add">
+            
+              <b>point.add(point) => point
+</b>
+            
+            <a href="../../../../classes/OpenSSL/PKey/EC/Point.html#method-i-add" name="method-i-add" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Performs elliptic curve point addition.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-add_source')" id="l_method-i-add_source">show</a>
+                
+              </p>
+              <div id="method-i-add_source" class="dyn-source">
+                <pre>static VALUE ossl_ec_point_add(VALUE self, VALUE other)
+{
+    EC_POINT *point_self, *point_other, *point_result;
+    const EC_GROUP *group;
+    VALUE group_v = rb_attr_get(self, id_i_group);
+    VALUE result;
+
+    GetECPoint(self, point_self);
+    GetECPoint(other, point_other);
+    GetECGroup(group_v, group);
+
+    result = rb_obj_alloc(cEC_POINT);
+    ossl_ec_point_initialize(1, &amp;group_v, result);
+    GetECPoint(result, point_result);
+
+    if (EC_POINT_add(group, point_result, point_self, point_other, ossl_bn_ctx) != 1) {
+        ossl_raise(eEC_POINT, &quot;EC_POINT_add&quot;);
+    }
+
+    return result;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-eql-3F">
             
               <b>point1.eql?(point2) => true | false</b>
@@ -581,14 +648,15 @@ ossl_ec_point_initialize_copy(VALUE self, VALUE other)
         <div class="method">
           <h3 class="title method-title" id="method-i-make_affine-21">
             
-              <b>point.make_affine! => self</b>
+              <b>point.make_affine! => self
+</b>
             
             <a href="../../../../classes/OpenSSL/PKey/EC/Point.html#method-i-make_affine-21" name="method-i-make_affine-21" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>This method is deprecated and should not be used. This is a no-op.</p>
             </div>
           
 
@@ -614,8 +682,11 @@ ossl_ec_point_initialize_copy(VALUE self, VALUE other)
     GetECPoint(self, point);
     GetECPointGroup(self, group);
 
+    rb_warn(&quot;OpenSSL::PKey::EC::Point#make_affine! is deprecated&quot;);
+#if !OSSL_OPENSSL_PREREQ(3, 0, 0)
     if (EC_POINT_make_affine(group, point, ossl_bn_ctx) != 1)
         ossl_raise(cEC_POINT, &quot;EC_POINT_make_affine&quot;);
+#endif
 
     return self;
 }</pre>
@@ -681,6 +752,10 @@ ossl_ec_point_initialize_copy(VALUE self, VALUE other)
         if (EC_POINT_mul(group, point_result, bn_g, point_self, bn, ossl_bn_ctx) != 1)
             ossl_raise(eEC_POINT, NULL);
     } else {
+#if (defined(OPENSSL_VERSION_MAJOR) &amp;&amp; OPENSSL_VERSION_MAJOR &gt;= 3) || defined(LIBRESSL_VERSION_NUMBER)
+        rb_raise(rb_eNotImpError, &quot;calling #mul with arrays is not&quot; \
+                 &quot;supported by this OpenSSL version&quot;);
+#else
         /*
          * bignums | arg1[0] | arg1[1] | arg1[2] | ...
          * points  | self    | arg2[0] | arg2[1] | ...
@@ -694,6 +769,9 @@ ossl_ec_point_initialize_copy(VALUE self, VALUE other)
         Check_Type(arg2, T_ARRAY);
         if (RARRAY_LEN(arg1) != RARRAY_LEN(arg2) + 1) /* arg2 must be 1 larger */
             ossl_raise(rb_eArgError, &quot;bns must be 1 longer than points; see the documentation&quot;);
+
+        rb_warning(&quot;OpenSSL::PKey::EC::Point#mul(ary, ary) is deprecated; &quot; \
+                   &quot;use #mul(bn) form instead&quot;);
 
         num = RARRAY_LEN(arg1);
         bns_tmp = rb_ary_tmp_new(num);
@@ -720,6 +798,7 @@ ossl_ec_point_initialize_copy(VALUE self, VALUE other)
 
         ALLOCV_END(tmp_b);
         ALLOCV_END(tmp_p);
+#endif
     }
 
     return result;
@@ -855,11 +934,11 @@ ossl_ec_point_initialize_copy(VALUE self, VALUE other)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_bn_source')" id="l_method-i-to_bn_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/pkey.rb#L20" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L299" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_bn_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 20</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 299</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_bn</span>(<span class="ruby-identifier">conversion_form</span> = <span class="ruby-identifier">group</span>.<span class="ruby-identifier">point_conversion_form</span>)
   <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">BN</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">to_octet_string</span>(<span class="ruby-identifier">conversion_form</span>), <span class="ruby-value">2</span>)
 <span class="ruby-keyword">end</span></pre>

@@ -30,7 +30,7 @@
     <meta property="og:description" content="Zlib::GzipReader is the class for reading a gzipped file.  GzipReader should be used as an IO, or -IO-like, object.  Zlib::GzipReader.open(&#39;hoge.gz&#39;) {|gz|   print gz.read }  File.">
   
 
-    <meta name="keywords" content="Zlib::GzipReader class, lineno, lineno=, eof, eof?, pos, tell, open, new, rewind, unused, read, readpartial, getc, getbyte, readchar, readbyte, each_byte, each_char, bytes, ungetc, ungetbyte, gets, readline, each, each_line, lines, readlines, external_encoding">
+    <meta name="keywords" content="Zlib::GzipReader class, lineno, lineno=, eof, eof?, pos, tell, open, zcat, new, rewind, unused, read, readpartial, getc, getbyte, readchar, readbyte, each_byte, each_char, ungetc, ungetbyte, gets, readline, each, each_line, readlines, external_encoding">
 </head>
 
 <body>
@@ -153,18 +153,6 @@ end
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
       
-        <dt>B</dt>
-        <dd>
-          <ul>
-            
-              
-              <li>
-                <a href="#method-i-bytes">bytes</a>
-              </li>
-            
-          </ul>
-        </dd>
-      
         <dt>E</dt>
         <dd>
           <ul>
@@ -240,12 +228,7 @@ end
             
               
               <li>
-                <a href="#method-i-lineno-3D">lineno=</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-lines">lines</a>
+                <a href="#method-i-lineno-3D">lineno=</a>
               </li>
             
           </ul>
@@ -363,6 +346,18 @@ end
           </ul>
         </dd>
       
+        <dt>Z</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-zcat">zcat</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
     </dl>
   
 
@@ -454,8 +449,8 @@ rb_gzreader_initialize(int argc, VALUE *argv, VALUE obj)
     rb_gzfile_ecopts(gz, opt);
 
     if (rb_respond_to(io, id_path)) {
-        gz-&gt;path = rb_funcall(gz-&gt;io, id_path, 0);
-        rb_define_singleton_method(obj, &quot;path&quot;, rb_gzfile_path, 0);
+        /* File#path may raise IOError in case when a path is unavailable */
+        rb_rescue2(gzfile_initialize_path_partial, obj, NULL, Qnil, rb_eIOError, (VALUE)0);
     }
 
     return obj;
@@ -504,21 +499,20 @@ rb_gzreader_s_open(int argc, VALUE *argv, VALUE klass)
             
           </div>
         
-      
-    
-      <h2 class="sectiontitle">Instance Public methods</h2>
-      
         <div class="method">
-          <h3 class="title method-title" id="method-i-bytes">
+          <h3 class="title method-title" id="method-c-zcat">
             
-              <b>bytes</b>()
+              <b>Zlib::GzipReader.zcat(io, options = {}, &block) => nil<br />Zlib::GzipReader.zcat(io, options = {}) => string
+</b>
             
-            <a href="../../classes/Zlib/GzipReader.html#method-i-bytes" name="method-i-bytes" class="permalink">Link</a>
+            <a href="../../classes/Zlib/GzipReader.html#method-c-zcat" name="method-c-zcat" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>This is a deprecated alias for <code>each_byte</code>.</p>
+              <p>Decompresses all gzip data in the <code>io</code>, handling multiple gzip streams until the end of the <code>io</code>.  There should not be any non-gzip data after the gzip streams.</p>
+
+<p>If a block is given, it is yielded strings of uncompressed data, and the method returns <code>nil</code>. If a block is not given, the method returns the concatenation of all uncompressed data in all gzip streams.</p>
             </div>
           
 
@@ -532,23 +526,56 @@ rb_gzreader_s_open(int argc, VALUE *argv, VALUE klass)
               
               <p class="source-link">
                 Source:
-                <a href="javascript:toggleSource('method-i-bytes_source')" id="l_method-i-bytes_source">show</a>
+                <a href="javascript:toggleSource('method-c-zcat_source')" id="l_method-c-zcat_source">show</a>
                 
               </p>
-              <div id="method-i-bytes_source" class="dyn-source">
+              <div id="method-c-zcat_source" class="dyn-source">
                 <pre>static VALUE
-rb_gzreader_bytes(VALUE obj)
+rb_gzreader_s_zcat(int argc, VALUE *argv, VALUE klass)
 {
-    rb_warn(&quot;Zlib::GzipReader#bytes is deprecated; use #each_byte instead&quot;);
-    if (!rb_block_given_p())
-        return rb_enumeratorize(obj, ID2SYM(rb_intern(&quot;each_byte&quot;)), 0, 0);
-    return rb_gzreader_each_byte(obj);
+    VALUE io, unused, obj, buf=0, tmpbuf;
+    long pos;
+
+    rb_check_arity(argc, 1, 2);
+    io = argv[0];
+
+    do {
+        obj = rb_funcallv(klass, rb_intern(&quot;new&quot;), argc, argv);
+        if (rb_block_given_p()) {
+           rb_gzreader_each(0, 0, obj);
+        }
+        else {
+            if (!buf) {
+                buf = rb_str_new(0, 0);
+            }
+            tmpbuf = gzfile_read_all(get_gzfile(obj));
+            rb_str_cat(buf, RSTRING_PTR(tmpbuf), RSTRING_LEN(tmpbuf));
+        }
+
+        rb_gzreader_read(0, 0, obj);
+        pos = NUM2LONG(rb_funcall(io, rb_intern(&quot;pos&quot;), 0));
+        unused = rb_gzreader_unused(obj);
+        rb_gzfile_finish(obj);
+        if (!NIL_P(unused)) {
+            pos -= NUM2LONG(rb_funcall(unused, rb_intern(&quot;length&quot;), 0));
+            rb_funcall(io, rb_intern(&quot;pos=&quot;), 1, LONG2NUM(pos));
+        }
+    } while (pos &lt; NUM2LONG(rb_funcall(io, rb_intern(&quot;size&quot;), 0)));
+
+    if (rb_block_given_p()) {
+        return Qnil;
+    }
+    return buf;
 }</pre>
               </div>
             </div>
             
           </div>
         
+      
+    
+      <h2 class="sectiontitle">Instance Public methods</h2>
+      
         <div class="method">
           <h3 class="title method-title" id="method-i-each">
             
@@ -914,7 +941,7 @@ rb_gzreader_getc(VALUE obj)
 
           
             <div class="description">
-              <p>See <a href="GzipReader.html"><code>Zlib::GzipReader</code></a> documentation for a description.</p>
+              <p>See <a href="GzipReader.html"><code>Zlib::GzipReader</code></a> documentation for a description. However, note that this method can return <code>nil</code> even if <a href="GzipReader.html#method-i-eof-3F"><code>eof?</code></a> returns false, unlike the behavior of <a href="../IO.html#method-i-gets"><code>File#gets</code></a>.</p>
             </div>
           
 
@@ -1019,47 +1046,6 @@ rb_gzfile_set_lineno(VALUE obj, VALUE lineno)
     struct gzfile *gz = get_gzfile(obj);
     gz-&gt;lineno = NUM2INT(lineno);
     return lineno;
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-lines">
-            
-              <b>lines</b>(*args)
-            
-            <a href="../../classes/Zlib/GzipReader.html#method-i-lines" name="method-i-lines" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>This is a deprecated alias for <code>each_line</code>.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-lines_source')" id="l_method-i-lines_source">show</a>
-                
-              </p>
-              <div id="method-i-lines_source" class="dyn-source">
-                <pre>static VALUE
-rb_gzreader_lines(int argc, VALUE *argv, VALUE obj)
-{
-    rb_warn(&quot;Zlib::GzipReader#lines is deprecated; use #each_line instead&quot;);
-    if (!rb_block_given_p())
-        return rb_enumeratorize(obj, ID2SYM(rb_intern(&quot;each_line&quot;)), argc, argv);
-    return rb_gzreader_each(argc, argv, obj);
 }</pre>
               </div>
             </div>

@@ -87,7 +87,7 @@
 
 <p>You can create a <a href="Name.html"><code>Name</code></a> by parsing a distinguished name <a href="../../String.html"><code>String</code></a> or by supplying the distinguished name as an <a href="../../Array.html"><code>Array</code></a>.</p>
 
-<pre><code>name = OpenSSL::X509::Name.parse &#39;CN=nobody/DC=example&#39;
+<pre><code>name = OpenSSL::X509::Name.parse_rfc2253 &#39;DC=example,CN=nobody&#39;
 
 name = OpenSSL::X509::Name.new [[&#39;CN&#39;, &#39;nobody&#39;], [&#39;DC&#39;, &#39;example&#39;]]
 </code></pre>
@@ -272,6 +272,14 @@ name = OpenSSL::X509::Name.new [[&#39;CN&#39;, &#39;nobody&#39;], [&#39;DC&#39;,
     <!-- Includes -->
     <div class="sectiontitle">Included Modules</div>
     <ul>
+      
+        <li>
+          
+            <a href="../Marshal.html">
+              OpenSSL::Marshal
+            </a>
+          
+        </li>
       
         <li>
           
@@ -500,7 +508,16 @@ ossl_x509name_initialize(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              
+              <p>Parses the string representation of a distinguished name. Two different forms are supported:</p>
+<ul><li>
+<p>OpenSSL format (<code>X509_NAME_oneline()</code>) used by <code>#to_s</code>. For example: <code>/DC=com/DC=example/CN=nobody</code></p>
+</li><li>
+<p>OpenSSL format (<code>X509_NAME_print()</code>) used by <code>#to_s(OpenSSL::X509::Name::COMPAT)</code>. For example: <code>DC=com, DC=example, CN=nobody</code></p>
+</li></ul>
+
+<p>Neither of them is standardized and has quirks and inconsistencies in handling of escaped characters or multi-valued RDNs.</p>
+
+<p>Use of this method is discouraged in new applications. See <a href="Name.html#method-c-parse_rfc2253"><code>Name.parse_rfc2253</code></a> and <a href="Name.html#method-i-to_utf8"><code>to_utf8</code></a> for the alternative.</p>
             </div>
           
 
@@ -520,11 +537,11 @@ ossl_x509name_initialize(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-parse_openssl_source')" id="l_method-c-parse_openssl_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/x509.rb#L146" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/x509.rb#L305" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-parse_openssl_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 146</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 305</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_openssl</span>(<span class="ruby-identifier">str</span>, <span class="ruby-identifier">template</span>=<span class="ruby-constant">OBJECT_TYPE_TEMPLATE</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">str</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-string">&quot;/&quot;</span>)
     <span class="ruby-comment"># /A=B/C=D format</span>
@@ -550,7 +567,9 @@ ossl_x509name_initialize(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              
+              <p>Parses the UTF-8 string representation of a distinguished name, according to RFC 2253.</p>
+
+<p>See also <a href="Name.html#method-i-to_utf8"><code>to_utf8</code></a> for the opposite operation.</p>
             </div>
           
 
@@ -566,11 +585,11 @@ ossl_x509name_initialize(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-parse_rfc2253_source')" id="l_method-c-parse_rfc2253_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/x509.rb#L141" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/x509.rb#L286" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-parse_rfc2253_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 141</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 286</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_rfc2253</span>(<span class="ruby-identifier">str</span>, <span class="ruby-identifier">template</span>=<span class="ruby-constant">OBJECT_TYPE_TEMPLATE</span>)
   <span class="ruby-identifier">ary</span> = <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">X509</span><span class="ruby-operator">::</span><span class="ruby-constant">Name</span><span class="ruby-operator">::</span><span class="ruby-constant">RFC2253DN</span>.<span class="ruby-identifier">scan</span>(<span class="ruby-identifier">str</span>)
   <span class="ruby-keyword">self</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">ary</span>, <span class="ruby-identifier">template</span>)
@@ -587,14 +606,14 @@ ossl_x509name_initialize(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-3C-3D-3E">
             
-              <b>name <=> other  &rarr; -1 | 0 | 1</b>
+              <b>name <=> other  &rarr; -1 | 0 | 1 | nil</b>
             
             <a href="../../../classes/OpenSSL/X509/Name.html#method-i-3C-3D-3E" name="method-i-3C-3D-3E" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Compares this <a href="Name.html"><code>Name</code></a> with <em>other</em> and returns <code>0</code> if they are the same and <code>-1</code> or <code>+1</code> if they are greater or less than each other respectively.</p>
+              <p>Compares this <a href="Name.html"><code>Name</code></a> with <em>other</em> and returns <code>0</code> if they are the same and <code>-1</code> or <code>+1</code> if they are greater or less than each other respectively. Returns <code>nil</code> if they are not comparable (i.e. different types).</p>
             </div>
           
 
@@ -696,14 +715,14 @@ VALUE ossl_x509name_add_entry(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-cmp">
             
-              <b>name.cmp(other) &rarr; -1 | 0 | 1</b>
+              <b>name.cmp(other) &rarr; -1 | 0 | 1 | nil</b>
             
             <a href="../../../classes/OpenSSL/X509/Name.html#method-i-cmp" name="method-i-cmp" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Compares this <a href="Name.html"><code>Name</code></a> with <em>other</em> and returns <code>0</code> if they are the same and <code>-1</code> or <code>+1</code> if they are greater or less than each other respectively.</p>
+              <p>Compares this <a href="Name.html"><code>Name</code></a> with <em>other</em> and returns <code>0</code> if they are the same and <code>-1</code> or <code>+1</code> if they are greater or less than each other respectively. Returns <code>nil</code> if they are not comparable (i.e. different types).</p>
             </div>
           
 
@@ -729,6 +748,9 @@ VALUE ossl_x509name_add_entry(int argc, VALUE *argv, VALUE self)
 ossl_x509name_cmp(VALUE self, VALUE other)
 {
     int result;
+
+    if (!rb_obj_is_kind_of(other, cX509Name))
+        return Qnil;
 
     result = ossl_x509name_cmp0(self, other);
     if (result &lt; 0) return INT2FIX(-1);
@@ -952,11 +974,11 @@ ossl_x509name_initialize_copy(VALUE self, VALUE other)
                 Source:
                 <a href="javascript:toggleSource('method-i-pretty_print_source')" id="l_method-i-pretty_print_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/x509.rb#L160" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/x509.rb#L319" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-pretty_print_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 160</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/x509.rb, line 319</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">pretty_print</span>(<span class="ruby-identifier">q</span>)
   <span class="ruby-identifier">q</span>.<span class="ruby-identifier">object_group</span>(<span class="ruby-keyword">self</span>) {
     <span class="ruby-identifier">q</span>.<span class="ruby-identifier">text</span> <span class="ruby-string">&#39; &#39;</span>
@@ -1116,7 +1138,11 @@ ossl_x509name_to_der(VALUE self)
 <p><a href="Name.html#MULTILINE"><code>OpenSSL::X509::Name::MULTILINE</code></a></p>
 </li></ul>
 
-<p>If <em>format</em> is omitted, the largely broken and traditional <a href="../../OpenSSL.html"><code>OpenSSL</code></a> format is used.</p>
+<p>If <em>format</em> is omitted, the largely broken and traditional <a href="../../OpenSSL.html"><code>OpenSSL</code></a> format (<code>X509_NAME_oneline()</code> format) is chosen.</p>
+
+<p><strong>Use of this method is discouraged.</strong> None of the formats other than <a href="Name.html#RFC2253"><code>OpenSSL::X509::Name::RFC2253</code></a> is standardized and may show an inconsistent behavior through OpenSSL versions.</p>
+
+<p>It is recommended to use <a href="Name.html#method-i-to_utf8"><code>to_utf8</code></a> instead, which is equivalent to calling <code>name.to_s(OpenSSL::X509::Name::RFC2253).force_encoding(&quot;UTF-8&quot;)</code>.</p>
             </div>
           
 

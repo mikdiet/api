@@ -209,62 +209,104 @@ parse_ctype(&#39;const char* const argv[]&#39;)
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_ctype_source')" id="l_method-i-parse_ctype_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/fiddle/lib/fiddle/cparser.rb#L124" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/fiddle/lib/fiddle/cparser.rb#L149" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_ctype_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/cparser.rb, line 124</span>
+                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/cparser.rb, line 149</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_ctype</span>(<span class="ruby-identifier">ty</span>, <span class="ruby-identifier">tymap</span>=<span class="ruby-keyword">nil</span>)
   <span class="ruby-identifier">tymap</span> <span class="ruby-operator">||=</span> {}
-  <span class="ruby-keyword">case</span> <span class="ruby-identifier">ty</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-constant">Array</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">ty</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Array</span>)
     <span class="ruby-keyword">return</span> [<span class="ruby-identifier">parse_ctype</span>(<span class="ruby-identifier">ty</span>[<span class="ruby-value">0</span>], <span class="ruby-identifier">tymap</span>), <span class="ruby-identifier">ty</span>[<span class="ruby-value">1</span>]]
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">ty</span> = <span class="ruby-identifier">ty</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/\Aconst\s+/</span>, <span class="ruby-string">&quot;&quot;</span>)
+  <span class="ruby-keyword">case</span> <span class="ruby-identifier">ty</span>
   <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;void&#39;</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_VOID</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^(?:(?:signed\s+)?long\s+long(?:\s+int\s+)?|int64_t)(?:\s+\w+)?$/</span>
-    <span class="ruby-keyword">if</span>( <span class="ruby-keyword">defined?</span>(<span class="ruby-constant">TYPE_LONG_LONG</span>) )
-      <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_LONG_LONG</span>
-    <span class="ruby-keyword">else</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\A(?:(?:signed\s+)?long\s+long(?:\s+int\s+)?|int64_t)(?:\s+\w+)?\z/</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-constant">Fiddle</span>.<span class="ruby-identifier">const_defined?</span>(<span class="ruby-value">:TYPE_LONG_LONG</span>)
       <span class="ruby-identifier">raise</span>(<span class="ruby-constant">RuntimeError</span>, <span class="ruby-node">&quot;unsupported type: #{ty}&quot;</span>)
     <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^(?:unsigned\s+long\s+long(?:\s+int\s+)?|uint64_t)(?:\s+\w+)?$/</span>
-    <span class="ruby-keyword">if</span>( <span class="ruby-keyword">defined?</span>(<span class="ruby-constant">TYPE_LONG_LONG</span>) )
-      <span class="ruby-keyword">return</span> <span class="ruby-operator">-</span><span class="ruby-constant">TYPE_LONG_LONG</span>
-    <span class="ruby-keyword">else</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_LONG_LONG</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\A(?:unsigned\s+long\s+long(?:\s+int\s+)?|uint64_t)(?:\s+\w+)?\z/</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-constant">Fiddle</span>.<span class="ruby-identifier">const_defined?</span>(<span class="ruby-value">:TYPE_LONG_LONG</span>)
       <span class="ruby-identifier">raise</span>(<span class="ruby-constant">RuntimeError</span>, <span class="ruby-node">&quot;unsupported type: #{ty}&quot;</span>)
     <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^(?:signed\s+)?long(?:\s+int\s+)?(?:\s+\w+)?$/</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-operator">-</span><span class="ruby-constant">TYPE_LONG_LONG</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\A(?:signed\s+)?long(?:\s+int\s+)?(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_LONG</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^unsigned\s+long(?:\s+int\s+)?(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Aunsigned\s+long(?:\s+int\s+)?(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-operator">-</span><span class="ruby-constant">TYPE_LONG</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^(?:signed\s+)?int(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\A(?:signed\s+)?int(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_INT</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^(?:unsigned\s+int|uint)(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\A(?:unsigned\s+int|uint)(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-operator">-</span><span class="ruby-constant">TYPE_INT</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^(?:signed\s+)?short(?:\s+int\s+)?(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\A(?:signed\s+)?short(?:\s+int\s+)?(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_SHORT</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^unsigned\s+short(?:\s+int\s+)?(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Aunsigned\s+short(?:\s+int\s+)?(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-operator">-</span><span class="ruby-constant">TYPE_SHORT</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^(?:signed\s+)?char(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\A(?:signed\s+)?char(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_CHAR</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^unsigned\s+char(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Aunsigned\s+char(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span>  <span class="ruby-operator">-</span><span class="ruby-constant">TYPE_CHAR</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^float(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Aint8_t(?:\s+\w+)?\z/</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-constant">Fiddle</span>.<span class="ruby-identifier">const_defined?</span>(<span class="ruby-value">:TYPE_INT8_T</span>)
+      <span class="ruby-identifier">raise</span>(<span class="ruby-constant">RuntimeError</span>, <span class="ruby-node">&quot;unsupported type: #{ty}&quot;</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_INT8_T</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Auint8_t(?:\s+\w+)?\z/</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-constant">Fiddle</span>.<span class="ruby-identifier">const_defined?</span>(<span class="ruby-value">:TYPE_INT8_T</span>)
+      <span class="ruby-identifier">raise</span>(<span class="ruby-constant">RuntimeError</span>, <span class="ruby-node">&quot;unsupported type: #{ty}&quot;</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-operator">-</span><span class="ruby-constant">TYPE_INT8_T</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Aint16_t(?:\s+\w+)?\z/</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-constant">Fiddle</span>.<span class="ruby-identifier">const_defined?</span>(<span class="ruby-value">:TYPE_INT16_T</span>)
+      <span class="ruby-identifier">raise</span>(<span class="ruby-constant">RuntimeError</span>, <span class="ruby-node">&quot;unsupported type: #{ty}&quot;</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_INT16_T</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Auint16_t(?:\s+\w+)?\z/</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-constant">Fiddle</span>.<span class="ruby-identifier">const_defined?</span>(<span class="ruby-value">:TYPE_INT16_T</span>)
+      <span class="ruby-identifier">raise</span>(<span class="ruby-constant">RuntimeError</span>, <span class="ruby-node">&quot;unsupported type: #{ty}&quot;</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-operator">-</span><span class="ruby-constant">TYPE_INT16_T</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Aint32_t(?:\s+\w+)?\z/</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-constant">Fiddle</span>.<span class="ruby-identifier">const_defined?</span>(<span class="ruby-value">:TYPE_INT32_T</span>)
+      <span class="ruby-identifier">raise</span>(<span class="ruby-constant">RuntimeError</span>, <span class="ruby-node">&quot;unsupported type: #{ty}&quot;</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_INT32_T</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Auint32_t(?:\s+\w+)?\z/</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-constant">Fiddle</span>.<span class="ruby-identifier">const_defined?</span>(<span class="ruby-value">:TYPE_INT32_T</span>)
+      <span class="ruby-identifier">raise</span>(<span class="ruby-constant">RuntimeError</span>, <span class="ruby-node">&quot;unsupported type: #{ty}&quot;</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-operator">-</span><span class="ruby-constant">TYPE_INT32_T</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Aint64_t(?:\s+\w+)?\z/</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-constant">Fiddle</span>.<span class="ruby-identifier">const_defined?</span>(<span class="ruby-value">:TYPE_INT64_T</span>)
+      <span class="ruby-identifier">raise</span>(<span class="ruby-constant">RuntimeError</span>, <span class="ruby-node">&quot;unsupported type: #{ty}&quot;</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_INT64_T</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Auint64_t(?:\s+\w+)?\z/</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-constant">Fiddle</span>.<span class="ruby-identifier">const_defined?</span>(<span class="ruby-value">:TYPE_INT64_T</span>)
+      <span class="ruby-identifier">raise</span>(<span class="ruby-constant">RuntimeError</span>, <span class="ruby-node">&quot;unsupported type: #{ty}&quot;</span>)
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-operator">-</span><span class="ruby-constant">TYPE_INT64_T</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Afloat(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_FLOAT</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^double(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Adouble(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_DOUBLE</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^size_t(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Asize_t(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_SIZE_T</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^ssize_t(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Assize_t(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_SSIZE_T</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^ptrdiff_t(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Aptrdiff_t(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_PTRDIFF_T</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^intptr_t(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Aintptr_t(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_INTPTR_T</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^uintptr_t(?:\s+\w+)?$/</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\Auintptr_t(?:\s+\w+)?\z/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_UINTPTR_T</span>
   <span class="ruby-keyword">when</span> <span class="ruby-regexp">/\*/</span>, <span class="ruby-regexp">/\[[\s\d]*\]/</span>
     <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_VOIDP</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-string">&quot;...&quot;</span>
+    <span class="ruby-keyword">return</span> <span class="ruby-constant">TYPE_VARIADIC</span>
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">ty</span> = <span class="ruby-identifier">ty</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&#39; &#39;</span>, <span class="ruby-value">2</span>)[<span class="ruby-value">0</span>]
     <span class="ruby-keyword">if</span>( <span class="ruby-identifier">tymap</span>[<span class="ruby-identifier">ty</span>] )
@@ -324,11 +366,11 @@ parse_signature(&#39;char (*getbuffer(void))[80]&#39;)
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_signature_source')" id="l_method-i-parse_signature_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/fiddle/lib/fiddle/cparser.rb#L84" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/fiddle/lib/fiddle/cparser.rb#L109" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_signature_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/cparser.rb, line 84</span>
+                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/cparser.rb, line 109</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_signature</span>(<span class="ruby-identifier">signature</span>, <span class="ruby-identifier">tymap</span>=<span class="ruby-keyword">nil</span>)
   <span class="ruby-identifier">tymap</span> <span class="ruby-operator">||=</span> {}
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">compact</span>(<span class="ruby-identifier">signature</span>)
@@ -387,7 +429,7 @@ parse_struct_signature([&#39;char buffer[80]&#39;])
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_struct_signature_source')" id="l_method-i-parse_struct_signature_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/fiddle/lib/fiddle/cparser.rb#L35" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/fiddle/lib/fiddle/cparser.rb#L35" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_struct_signature_source" class="dyn-source">
@@ -395,12 +437,37 @@ parse_struct_signature([&#39;char buffer[80]&#39;])
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_struct_signature</span>(<span class="ruby-identifier">signature</span>, <span class="ruby-identifier">tymap</span>=<span class="ruby-keyword">nil</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">signature</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>)
     <span class="ruby-identifier">signature</span> = <span class="ruby-identifier">split_arguments</span>(<span class="ruby-identifier">signature</span>, <span class="ruby-regexp">/[,;]/</span>)
+  <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">signature</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Hash</span>)
+    <span class="ruby-identifier">signature</span> = [<span class="ruby-identifier">signature</span>]
   <span class="ruby-keyword">end</span>
   <span class="ruby-identifier">mems</span> = []
   <span class="ruby-identifier">tys</span>  = []
   <span class="ruby-identifier">signature</span>.<span class="ruby-identifier">each</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">msig</span><span class="ruby-operator">|</span>
-    <span class="ruby-identifier">msig</span> = <span class="ruby-identifier">compact</span>(<span class="ruby-identifier">msig</span>)
+    <span class="ruby-identifier">msig</span> = <span class="ruby-identifier">compact</span>(<span class="ruby-identifier">msig</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">msig</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>)
     <span class="ruby-keyword">case</span> <span class="ruby-identifier">msig</span>
+    <span class="ruby-keyword">when</span> <span class="ruby-constant">Hash</span>
+      <span class="ruby-identifier">msig</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">struct_name</span>, <span class="ruby-identifier">struct_signature</span><span class="ruby-operator">|</span>
+        <span class="ruby-identifier">struct_name</span> = <span class="ruby-identifier">struct_name</span>.<span class="ruby-identifier">to_s</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">struct_name</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Symbol</span>)
+        <span class="ruby-identifier">struct_name</span> = <span class="ruby-identifier">compact</span>(<span class="ruby-identifier">struct_name</span>)
+        <span class="ruby-identifier">struct_count</span> = <span class="ruby-keyword">nil</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">struct_name</span> <span class="ruby-operator">=~</span> <span class="ruby-regexp">/^([\w\*\s]+)\[(\d+)\]$/</span>
+          <span class="ruby-identifier">struct_count</span> = <span class="ruby-node">$2</span>.<span class="ruby-identifier">to_i</span>
+          <span class="ruby-identifier">struct_name</span> = <span class="ruby-node">$1</span>
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">struct_signature</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:entity_class</span>)
+          <span class="ruby-identifier">struct_type</span> = <span class="ruby-identifier">struct_signature</span>
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-identifier">parsed_struct</span> = <span class="ruby-identifier">parse_struct_signature</span>(<span class="ruby-identifier">struct_signature</span>, <span class="ruby-identifier">tymap</span>)
+          <span class="ruby-identifier">struct_type</span> = <span class="ruby-constant">CStructBuilder</span>.<span class="ruby-identifier">create</span>(<span class="ruby-constant">CStruct</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">parsed_struct</span>)
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-keyword">if</span> <span class="ruby-identifier">struct_count</span>
+          <span class="ruby-identifier">ty</span> = [<span class="ruby-identifier">struct_type</span>, <span class="ruby-identifier">struct_count</span>]
+        <span class="ruby-keyword">else</span>
+          <span class="ruby-identifier">ty</span> = <span class="ruby-identifier">struct_type</span>
+        <span class="ruby-keyword">end</span>
+        <span class="ruby-identifier">mems</span>.<span class="ruby-identifier">push</span>([<span class="ruby-identifier">struct_name</span>, <span class="ruby-identifier">struct_type</span>.<span class="ruby-identifier">members</span>])
+        <span class="ruby-identifier">tys</span>.<span class="ruby-identifier">push</span>(<span class="ruby-identifier">ty</span>)
+      <span class="ruby-keyword">end</span>
     <span class="ruby-keyword">when</span> <span class="ruby-regexp">/^[\w\*\s]+[\*\s](\w+)$/</span>
       <span class="ruby-identifier">mems</span>.<span class="ruby-identifier">push</span>(<span class="ruby-node">$1</span>)
       <span class="ruby-identifier">tys</span>.<span class="ruby-identifier">push</span>(<span class="ruby-identifier">parse_ctype</span>(<span class="ruby-identifier">msig</span>, <span class="ruby-identifier">tymap</span>))

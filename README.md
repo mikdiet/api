@@ -2,11 +2,11 @@
 
 ```bash
 rm -rf public rubydoc railsdoc ruby rails
-git clone --depth=1 --branch v6.1.5 https://github.com/rails/rails.git
-git clone --depth=1 --branch v2_7_6 https://github.com/ruby/ruby.git
+git clone --depth=1 --branch v6.1.6.1 https://github.com/rails/rails.git
+git clone --depth=1 --branch v3_1_2 https://github.com/ruby/ruby.git
 bundle exec sdoc --template=rails -o rubydoc -g --debug -m 'ruby/README.md' ruby
 bundle exec sdoc --template=rails -o railsdoc -g --exclude=test --debug -m "rails/README.md" rails
-bundle exec sdoc-merge --title "Rails v6.0.1.5, Ruby v2.7.6" --op public --names "rails, ruby" railsdoc rubydoc
+bundle exec sdoc-merge --title "Rails v6.1.6.1, Ruby v3.1.2" --op public --names "rails, ruby" railsdoc rubydoc
 ```
 
 # Testing

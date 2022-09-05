@@ -292,7 +292,7 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
         infinite = isinf(flo);
         nan = isnan(flo);
         if (!infinite &amp;&amp; !nan) {
-            vx = GetVpValueWithPrec(x, DBL_DIG+1, 0);
+            vx = GetVpValueWithPrec(x, 0, 0);
         }
         break;
 
@@ -305,29 +305,29 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
     }
     if (infinite) {
         if (negative) {
-            return ToValue(GetVpValueWithPrec(INT2FIX(0), prec, 1));
+            return VpCheckGetValue(GetVpValueWithPrec(INT2FIX(0), prec, 1));
         }
         else {
             Real* vy;
-            vy = VpCreateRbObject(prec, &quot;#0&quot;);
+            vy = VpCreateRbObject(prec, &quot;#0&quot;, true);
             VpSetInf(vy, VP_SIGN_POSITIVE_INFINITE);
             RB_GC_GUARD(vy-&gt;obj);
-            return ToValue(vy);
+            return VpCheckGetValue(vy);
         }
     }
     else if (nan) {
         Real* vy;
-        vy = VpCreateRbObject(prec, &quot;#0&quot;);
+        vy = VpCreateRbObject(prec, &quot;#0&quot;, true);
         VpSetNaN(vy);
         RB_GC_GUARD(vy-&gt;obj);
-        return ToValue(vy);
+        return VpCheckGetValue(vy);
     }
     else if (vx == NULL) {
         cannot_be_coerced_into_BigDecimal(rb_eArgError, x);
     }
     x = vx-&gt;obj;
 
-    n = prec + rmpd_double_figures();
+    n = prec + BIGDECIMAL_DOUBLE_FIGURES;
     negative = BIGDECIMAL_NEGATIVE_P(vx);
     if (negative) {
         VALUE x_zero = INT2NUM(1);
@@ -337,7 +337,7 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
         VpSetSign(vx, 1);
     }
 
-    one = ToValue(VpCreateRbObject(1, &quot;1&quot;));
+    one = VpCheckGetValue(VpCreateRbObject(1, &quot;1&quot;, true));
     y   = one;
     d   = y;
     i   = 1;
@@ -352,8 +352,8 @@ BigMath_s_exp(VALUE klass, VALUE x, VALUE vprec)
         if (m &lt;= 0) {
             break;
         }
-        else if ((size_t)m &lt; rmpd_double_figures()) {
-            m = rmpd_double_figures();
+        else if ((size_t)m &lt; BIGDECIMAL_DOUBLE_FIGURES) {
+            m = BIGDECIMAL_DOUBLE_FIGURES;
         }
 
         d = BigDecimal_mult(d, x);                             /* d &lt;- d * x */
@@ -472,7 +472,7 @@ get_vp_value:
         infinite = isinf(flo);
         nan = isnan(flo);
         if (!zero &amp;&amp; !negative &amp;&amp; !infinite &amp;&amp; !nan) {
-            vx = GetVpValueWithPrec(x, DBL_DIG+1, 1);
+            vx = GetVpValueWithPrec(x, 0, 1);
         }
         break;
 
@@ -492,17 +492,17 @@ get_vp_value:
     }
     if (infinite &amp;&amp; !negative) {
         Real* vy;
-        vy = VpCreateRbObject(prec, &quot;#0&quot;);
+        vy = VpCreateRbObject(prec, &quot;#0&quot;, true);
         RB_GC_GUARD(vy-&gt;obj);
         VpSetInf(vy, VP_SIGN_POSITIVE_INFINITE);
-        return ToValue(vy);
+        return VpCheckGetValue(vy);
     }
     else if (nan) {
         Real* vy;
-        vy = VpCreateRbObject(prec, &quot;#0&quot;);
+        vy = VpCreateRbObject(prec, &quot;#0&quot;, true);
         RB_GC_GUARD(vy-&gt;obj);
         VpSetNaN(vy);
-        return ToValue(vy);
+        return VpCheckGetValue(vy);
     }
     else if (zero || negative) {
         rb_raise(rb_eMathDomainError,
@@ -511,18 +511,18 @@ get_vp_value:
     else if (vx == NULL) {
         cannot_be_coerced_into_BigDecimal(rb_eArgError, x);
     }
-    x = ToValue(vx);
+    x = VpCheckGetValue(vx);
 
-    RB_GC_GUARD(one) = ToValue(VpCreateRbObject(1, &quot;1&quot;));
-    RB_GC_GUARD(two) = ToValue(VpCreateRbObject(1, &quot;2&quot;));
+    RB_GC_GUARD(one) = VpCheckGetValue(VpCreateRbObject(1, &quot;1&quot;, true));
+    RB_GC_GUARD(two) = VpCheckGetValue(VpCreateRbObject(1, &quot;2&quot;, true));
 
-    n = prec + rmpd_double_figures();
+    n = prec + BIGDECIMAL_DOUBLE_FIGURES;
     RB_GC_GUARD(vn) = SSIZET2NUM(n);
     expo = VpExponent10(vx);
     if (expo &lt; 0 || expo &gt;= 3) {
         char buf[DECIMAL_SIZE_OF_BITS(SIZEOF_VALUE * CHAR_BIT) + 4];
         snprintf(buf, sizeof(buf), &quot;1E%&quot;PRIdVALUE, -expo);
-        x = BigDecimal_mult2(x, ToValue(VpCreateRbObject(1, buf)), vn);
+        x = BigDecimal_mult2(x, VpCheckGetValue(VpCreateRbObject(1, buf, true)), vn);
     }
     else {
         expo = 0;
@@ -540,8 +540,8 @@ get_vp_value:
         if (m &lt;= 0) {
             break;
         }
-        else if ((size_t)m &lt; rmpd_double_figures()) {
-            m = rmpd_double_figures();
+        else if ((size_t)m &lt; BIGDECIMAL_DOUBLE_FIGURES) {
+            m = BIGDECIMAL_DOUBLE_FIGURES;
         }
 
         x = BigDecimal_mult2(x2, x, vn);
@@ -554,7 +554,7 @@ get_vp_value:
     if (expo != 0) {
         VALUE log10, vexpo, dy;
         log10 = BigMath_s_log(klass, INT2FIX(10), vprec);
-        vexpo = ToValue(GetVpValue(SSIZET2NUM(expo), 1));
+        vexpo = VpCheckGetValue(GetVpValue(SSIZET2NUM(expo), 1));
         dy = BigDecimal_mult(log10, vexpo);
         y = BigDecimal_add(y, dy);
     }
@@ -601,7 +601,7 @@ get_vp_value:
                 Source:
                 <a href="javascript:toggleSource('method-i-E_source')" id="l_method-i-E_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/bigdecimal/lib/bigdecimal/math.rb#L228" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/bigdecimal/lib/bigdecimal/math.rb#L228" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-E_source" class="dyn-source">
@@ -646,7 +646,7 @@ get_vp_value:
                 Source:
                 <a href="javascript:toggleSource('method-i-PI_source')" id="l_method-i-PI_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/bigdecimal/lib/bigdecimal/math.rb#L183" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/bigdecimal/lib/bigdecimal/math.rb#L183" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-PI_source" class="dyn-source">
@@ -724,7 +724,7 @@ get_vp_value:
                 Source:
                 <a href="javascript:toggleSource('method-i-atan_source')" id="l_method-i-atan_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/bigdecimal/lib/bigdecimal/math.rb#L146" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/bigdecimal/lib/bigdecimal/math.rb#L146" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-atan_source" class="dyn-source">
@@ -794,7 +794,7 @@ get_vp_value:
                 Source:
                 <a href="javascript:toggleSource('method-i-cos_source')" id="l_method-i-cos_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/bigdecimal/lib/bigdecimal/math.rb#L102" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/bigdecimal/lib/bigdecimal/math.rb#L102" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-cos_source" class="dyn-source">
@@ -869,7 +869,7 @@ get_vp_value:
                 Source:
                 <a href="javascript:toggleSource('method-i-sin_source')" id="l_method-i-sin_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/bigdecimal/lib/bigdecimal/math.rb#L58" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/bigdecimal/lib/bigdecimal/math.rb#L58" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-sin_source" class="dyn-source">
@@ -942,7 +942,7 @@ get_vp_value:
                 Source:
                 <a href="javascript:toggleSource('method-i-sqrt_source')" id="l_method-i-sqrt_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/bigdecimal/lib/bigdecimal/math.rb#L43" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/bigdecimal/lib/bigdecimal/math.rb#L43" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-sqrt_source" class="dyn-source">

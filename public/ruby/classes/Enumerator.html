@@ -132,6 +132,10 @@ puts e.next   # =&gt; 3
 puts e.next   # raises StopIteration
 </code></pre>
 
+<p>Note that enumeration sequence by <code>next</code>, <code>next_values</code>, <code>peek</code> and <code>peek_values</code> do not affect other non-external enumeration methods, unless the underlying iteration method itself has side-effect, e.g. <a href="IO.html#method-i-each_line"><code>IO#each_line</code></a>.</p>
+
+<p>Moreover, implementation typically uses fibers so performance could be slower and exception stacktraces different than expected.</p>
+
 <p>You can use this to implement an internal iterator as follows:</p>
 
 <pre><code>def ext_each(e)
@@ -403,7 +407,7 @@ puts ext_each(o.to_enum) {|*x| puts x; [:b, *x] }
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>Enumerator.new(size = nil) { |yielder| ... }<br />Enumerator.new(obj, method = :each, *args)
+              <b>Enumerator.new(size = nil) { |yielder| ... }
 </b>
             
             <a href="../classes/Enumerator.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -413,7 +417,7 @@ puts ext_each(o.to_enum) {|*x| puts x; [:b, *x] }
             <div class="description">
               <p>Creates a new <a href="Enumerator.html"><code>Enumerator</code></a> object, which can be used as an <a href="Enumerable.html"><code>Enumerable</code></a>.</p>
 
-<p>In the first form, iteration is defined by the given block, in which a “yielder” object, given as block parameter, can be used to yield a value by calling the <code>yield</code> method (aliased as <code>&lt;&lt;</code>):</p>
+<p>Iteration is defined by the given block, in which a “yielder” object, given as block parameter, can be used to yield a value by calling the <code>yield</code> method (aliased as <code>&lt;&lt;</code>):</p>
 
 <pre><code>fib = Enumerator.new do |y|
   a = b = 1
@@ -427,16 +431,6 @@ fib.take(10) # =&gt; [1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
 </code></pre>
 
 <p>The optional parameter can be used to specify how to calculate the size in a lazy fashion (see <a href="Enumerator.html#method-i-size"><code>Enumerator#size</code></a>). It can either be a value or a callable object.</p>
-
-<p>In the deprecated second form, a generated <a href="Enumerator.html"><code>Enumerator</code></a> iterates over the given object using the given method with the given arguments passed.</p>
-
-<p>Use of this form is discouraged.  Use <a href="Object.html#method-i-enum_for"><code>Object#enum_for</code></a> or <a href="Object.html#method-i-to_enum"><code>Object#to_enum</code></a> instead.</p>
-
-<pre><code>e = Enumerator.new(ObjectSpace, :each_object)
-    #-&gt; ObjectSpace.enum_for(:each_object)
-
-e.select { |obj| obj.is_a?(Class) }  # =&gt; array of all classes
-</code></pre>
             </div>
           
 
@@ -457,36 +451,12 @@ e.select { |obj| obj.is_a?(Class) }  # =&gt; array of all classes
                 <pre>static VALUE
 enumerator_initialize(int argc, VALUE *argv, VALUE obj)
 {
-    VALUE recv, meth = sym_each;
-    VALUE size = Qnil;
-    int kw_splat = 0;
+    VALUE iter = rb_block_proc();
+    VALUE recv = generator_init(generator_allocate(rb_cGenerator), iter);
+    VALUE arg0 = rb_check_arity(argc, 0, 1) ? argv[0] : Qnil;
+    VALUE size = convert_to_feasible_size_value(arg0);
 
-    if (rb_block_given_p()) {
-        rb_check_arity(argc, 0, 1);
-        recv = generator_init(generator_allocate(rb_cGenerator), rb_block_proc());
-        if (argc) {
-            if (NIL_P(argv[0]) || rb_respond_to(argv[0], id_call) ||
-                (RB_TYPE_P(argv[0], T_FLOAT) &amp;&amp; RFLOAT_VALUE(argv[0]) == HUGE_VAL)) {
-                size = argv[0];
-            }
-            else {
-                size = rb_to_int(argv[0]);
-            }
-            argc = 0;
-        }
-    }
-    else {
-        rb_check_arity(argc, 1, UNLIMITED_ARGUMENTS);
-        rb_warn_deprecated(&quot;Enumerator.new without a block&quot;, &quot;Object#to_enum&quot;);
-        recv = *argv++;
-        if (--argc) {
-            meth = *argv++;
-            --argc;
-        }
-        kw_splat = PASS_KW_SPLAT;
-    }
-
-    return enumerator_init(obj, recv, meth, argc, argv, 0, size, kw_splat);
+    return enumerator_init(obj, recv, sym_each, 0, 0, 0, size, false);
 }</pre>
               </div>
             </div>
@@ -516,7 +486,7 @@ ancestors = Enumerator.produce(node) { |prev| node = prev.parent or raise StopIt
 enclosing_section = ancestors.find { |n| n.type == :section }
 </code></pre>
 
-<p>Using <a href="Enumerator.html#method-c-produce"><code>::produce</code></a> together with <a href="Enumerable.html"><code>Enumerable</code></a> methods like <a href="Enumerable.html#method-i-detect"><code>Enumerable#detect</code></a>, Enumerable#slice, <a href="Enumerable.html#method-i-take_while"><code>Enumerable#take_while</code></a> can provide Enumerator-based alternatives for <code>while</code> and <code>until</code> cycles:</p>
+<p>Using <a href="Enumerator.html#method-c-produce"><code>::produce</code></a> together with <a href="Enumerable.html"><code>Enumerable</code></a> methods like <a href="Enumerable.html#method-i-detect"><code>Enumerable#detect</code></a>, <a href="Enumerable.html#method-i-slice_after"><code>Enumerable#slice_after</code></a>, <a href="Enumerable.html#method-i-take_while"><code>Enumerable#take_while</code></a> can provide Enumerator-based alternatives for <code>while</code> and <code>until</code> cycles:</p>
 
 <pre><code># Find next Tuesday
 require &quot;date&quot;
@@ -606,9 +576,7 @@ e.to_a #=&gt; [1, 2, 3, 4, 5]
                 <pre>static VALUE
 enumerator_plus(VALUE obj, VALUE eobj)
 {
-    VALUE enums = rb_ary_new_from_args(2, obj, eobj);
-
-    return enum_chain_initialize(enum_chain_allocate(rb_cEnumChain), enums);
+    return new_enum_chain(rb_ary_new_from_args(2, obj, eobj));
 }</pre>
               </div>
             </div>
@@ -767,9 +735,9 @@ to_three_with_string.each do |x,string|
   puts &quot;#{string}: #{x}&quot;
 end
 
-# =&gt; foo:0
-# =&gt; foo:1
-# =&gt; foo:2
+# =&gt; foo: 0
+# =&gt; foo: 1
+# =&gt; foo: 2
 </code></pre>
             </div>
           
@@ -953,7 +921,7 @@ p e.next   #=&gt; 3
 p e.next   #raises StopIteration
 </code></pre>
 
-<p>Note that enumeration sequence by <code>next</code> does not affect other non-external enumeration methods, unless the underlying iteration methods itself has side-effect, e.g. <a href="IO.html#method-i-each_line"><code>IO#each_line</code></a>.</p>
+<p>See class-level notes about external iterators.</p>
             </div>
           
 
@@ -995,6 +963,8 @@ enumerator_next(VALUE obj)
             <div class="description">
               <p>Returns the next object as an array in the enumerator, and move the internal position forward.  When the position reached at the end, <a href="StopIteration.html"><code>StopIteration</code></a> is raised.</p>
 
+<p>See class-level notes about external iterators.</p>
+
 <p>This method can be used to distinguish <code>yield</code> and <code>yield nil</code>.</p>
 
 <h3 id="method-i-next_values-label-Example">Example</h3>
@@ -1027,8 +997,6 @@ p e.next
 #  yield nil        [nil]            nil
 #  yield [1, 2]     [[1, 2]]         [1, 2]
 </code></pre>
-
-<p>Note that <code>next_values</code> does not affect other non-external enumeration methods unless underlying iteration method itself has side-effect, e.g. <a href="IO.html#method-i-each_line"><code>IO#each_line</code></a>.</p>
             </div>
           
 
@@ -1077,6 +1045,8 @@ enumerator_next_values(VALUE obj)
           
             <div class="description">
               <p>Returns the next object in the enumerator, but doesn’t move the internal position forward.  If the position is already at the end, <a href="StopIteration.html"><code>StopIteration</code></a> is raised.</p>
+
+<p>See class-level notes about external iterators.</p>
 
 <h3 id="method-i-peek-label-Example">Example</h3>
 
@@ -1130,6 +1100,8 @@ enumerator_peek(VALUE obj)
           
             <div class="description">
               <p>Returns the next object as an array, similar to <a href="Enumerator.html#method-i-next_values"><code>Enumerator#next_values</code></a>, but doesn’t move the internal position forward.  If the position is already at the end, <a href="StopIteration.html"><code>StopIteration</code></a> is raised.</p>
+
+<p>See class-level notes about external iterators.</p>
 
 <h3 id="method-i-peek_values-label-Example">Example</h3>
 
@@ -1376,9 +1348,9 @@ to_three_with_string.each do |x,string|
   puts &quot;#{string}: #{x}&quot;
 end
 
-# =&gt; foo:0
-# =&gt; foo:1
-# =&gt; foo:2
+# =&gt; foo: 0
+# =&gt; foo: 1
+# =&gt; foo: 2
 </code></pre>
             </div>
           

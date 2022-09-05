@@ -30,7 +30,7 @@
     <meta property="og:description" content="A complex number can be represented as a paired real number with imaginary unit; a+bi.  Where a is real part, b is imaginary part and i is imaginary unit.  Real a equals complex a+0i mathematically.">
   
 
-    <meta name="keywords" content="Complex class, rectangular, rect, polar, real, imaginary, imag, -@, +, -, *, /, quo, fdiv, **, ==, <=>, abs, magnitude, abs2, arg, angle, phase, rectangular, rect, polar, conjugate, conj, real?, numerator, denominator, to_s, inspect, finite?, infinite?, to_i, to_f, to_r, rationalize, to_c, json_create, as_json, to_json">
+    <meta name="keywords" content="Complex class, rectangular, rect, polar, real, imaginary, imag, -@, +, -, *, /, quo, fdiv, **, ==, <=>, abs, magnitude, abs2, arg, angle, phase, rectangular, rect, polar, conjugate, conj, real?, numerator, denominator, hash, to_s, inspect, finite?, infinite?, to_i, to_f, to_r, rationalize, to_c, to_d, json_create, as_json, to_json">
 </head>
 
 <body>
@@ -73,6 +73,8 @@
             
             <li><a href="../files/ruby/complex_c.html">ruby/complex.c</a></li>
             
+            <li><a href="../files/ruby/ext/bigdecimal/lib/bigdecimal/util_rb.html">ruby/ext/bigdecimal/lib/bigdecimal/util.rb</a></li>
+            
             <li><a href="../files/ruby/ext/json/lib/json/add/complex_rb.html">ruby/ext/json/lib/json/add/complex.rb</a></li>
             
         </ul>
@@ -84,6 +86,16 @@
     <div class="description">
       
 <p>A complex number can be represented as a paired real number with imaginary unit; a+bi.  Where a is real part, b is imaginary part and i is imaginary unit.  Real a equals complex a+0i mathematically.</p>
+
+<p>You can create a Complex object explicitly with:</p>
+<ul><li>
+<p>A <a href="doc/syntax/literals_rdoc.html#label-Complex+Literals">complex literal</a>.</p>
+</li></ul>
+
+<p>You can convert certain objects to Complex objects with:</p>
+<ul><li>
+<p>Method <a href="Kernel.html#method-i-Complex">Complex</a>.</p>
+</li></ul>
 
 <p><a href="Complex.html"><code>Complex</code></a> object can be created as literal, and also by using <a href="Kernel.html#method-i-Complex"><code>Kernel#Complex</code></a>, <a href="Complex.html#method-c-rect"><code>Complex::rect</code></a>, <a href="Complex.html#method-c-polar"><code>Complex::polar</code></a> or <a href="Complex.html#method-i-to_c"><code>to_c</code></a> method.</p>
 
@@ -257,6 +269,18 @@ Complex(1, 1) / 2.0  #=&gt; (0.5+0.5i)
           </ul>
         </dd>
       
+        <dt>H</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-hash">hash</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>I</dt>
         <dd>
           <ul>
@@ -407,6 +431,11 @@ Complex(1, 1) / 2.0  #=&gt; (0.5+0.5i)
             
               
               <li>
+                <a href="#method-i-to_d">to_d</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-to_f">to_f</a>,
               </li>
             
@@ -500,11 +529,11 @@ Complex(1, 1) / 2.0  #=&gt; (0.5+0.5i)
                 Source:
                 <a href="javascript:toggleSource('method-c-json_create_source')" id="l_method-c-json_create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/complex.rb#L11" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/complex.rb#L10" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-json_create_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/complex.rb, line 11</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/complex.rb, line 10</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">json_create</span>(<span class="ruby-identifier">object</span>)
   <span class="ruby-constant">Complex</span>(<span class="ruby-identifier">object</span>[<span class="ruby-string">&#39;r&#39;</span>], <span class="ruby-identifier">object</span>[<span class="ruby-string">&#39;i&#39;</span>])
 <span class="ruby-keyword">end</span></pre>
@@ -556,12 +585,19 @@ nucomp_s_polar(int argc, VALUE *argv, VALUE klass)
     switch (rb_scan_args(argc, argv, &quot;11&quot;, &amp;abs, &amp;arg)) {
       case 1:
         nucomp_real_check(abs);
-        if (canonicalization) return abs;
         return nucomp_s_new_internal(klass, abs, ZERO);
       default:
         nucomp_real_check(abs);
         nucomp_real_check(arg);
         break;
+    }
+    if (RB_TYPE_P(abs, T_COMPLEX)) {
+        get_dat1(abs);
+        abs = dat-&gt;real;
+    }
+    if (RB_TYPE_P(arg, T_COMPLEX)) {
+        get_dat1(arg);
+        arg = dat-&gt;real;
     }
     return f_complex_polar(klass, abs, arg);
 }</pre>
@@ -852,7 +888,7 @@ rb_complex_pow(VALUE self, VALUE other)
     if (k_numeric_p(other) &amp;&amp; f_real_p(other)) {
         VALUE r, theta;
 
-        if (RB_TYPE_P(other, T_BIGNUM))
+        if (RB_BIGNUM_TYPE_P(other))
             rb_warn(&quot;in a**b, b may be too big&quot;);
 
         r = f_abs(self);
@@ -1180,15 +1216,15 @@ nucomp_eqeq_p(VALUE self, VALUE other)
     if (RB_TYPE_P(other, T_COMPLEX)) {
         get_dat2(self, other);
 
-        return f_boolcast(f_eqeq_p(adat-&gt;real, bdat-&gt;real) &amp;&amp;
+        return RBOOL(f_eqeq_p(adat-&gt;real, bdat-&gt;real) &amp;&amp;
                           f_eqeq_p(adat-&gt;imag, bdat-&gt;imag));
     }
     if (k_numeric_p(other) &amp;&amp; f_real_p(other)) {
         get_dat1(self);
 
-        return f_boolcast(f_eqeq_p(dat-&gt;real, other) &amp;&amp; f_zero_p(dat-&gt;imag));
+        return RBOOL(f_eqeq_p(dat-&gt;real, other) &amp;&amp; f_zero_p(dat-&gt;imag));
     }
-    return f_boolcast(f_eqeq_p(other, self));
+    return RBOOL(f_eqeq_p(other, self));
 }</pre>
               </div>
             </div>
@@ -1400,11 +1436,11 @@ rb_complex_arg(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/complex.rb#L17" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/complex.rb#L16" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-as_json_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/complex.rb, line 17</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/complex.rb, line 16</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">as_json</span>(<span class="ruby-operator">*</span>)
   {
     <span class="ruby-constant">JSON</span>.<span class="ruby-identifier">create_id</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">name</span>,
@@ -1609,10 +1645,45 @@ rb_complex_finite_p(VALUE self)
 {
     get_dat1(self);
 
-    if (f_finite_p(dat-&gt;real) &amp;&amp; f_finite_p(dat-&gt;imag)) {
-        return Qtrue;
-    }
-    return Qfalse;
+    return RBOOL(f_finite_p(dat-&gt;real) &amp;&amp; f_finite_p(dat-&gt;imag));
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-hash">
+            
+              <b>hash</b>()
+            
+            <a href="../classes/Complex.html#method-i-hash" name="method-i-hash" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-hash_source')" id="l_method-i-hash_source">show</a>
+                
+              </p>
+              <div id="method-i-hash_source" class="dyn-source">
+                <pre>static VALUE
+nucomp_hash(VALUE self)
+{
+    return ST2FIX(rb_complex_hash(self));
 }</pre>
               </div>
             </div>
@@ -1735,7 +1806,7 @@ rb_complex_infinite_p(VALUE self)
 {
     get_dat1(self);
 
-    if (NIL_P(f_infinite_p(dat-&gt;real)) &amp;&amp; NIL_P(f_infinite_p(dat-&gt;imag))) {
+    if (!f_infinite_p(dat-&gt;real) &amp;&amp; !f_infinite_p(dat-&gt;imag)) {
         return Qnil;
     }
     return ONE;
@@ -2132,7 +2203,7 @@ rb_complex_real(VALUE self)
               </p>
               <div id="method-i-real-3F_source" class="dyn-source">
                 <pre>static VALUE
-nucomp_false(VALUE self)
+nucomp_real_p_m(VALUE self)
 {
     return Qfalse;
 }</pre>
@@ -2253,6 +2324,65 @@ nucomp_to_c(VALUE self)
 {
     return self;
 }</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-to_d">
+            
+              <b>cmp.to_d             &rarr; bigdecimal<br />cmp.to_d(precision)  &rarr; bigdecimal
+</b>
+            
+            <a href="../classes/Complex.html#method-i-to_d" name="method-i-to_d" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the value as a <a href="BigDecimal.html"><code>BigDecimal</code></a>.</p>
+
+<p>The <code>precision</code> parameter is required for a rational complex number. This parameter is used to determine the number of significant digits for the result.</p>
+
+<pre><code>require &#39;bigdecimal&#39;
+require &#39;bigdecimal/util&#39;
+
+Complex(0.1234567, 0).to_d(4)   # =&gt; 0.1235e0
+Complex(Rational(22, 7), 0).to_d(3)   # =&gt; 0.314e1
+</code></pre>
+
+<p>See also <a href="BasicObject.html#method-c-new"><code>BigDecimal::new</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-to_d_source')" id="l_method-i-to_d_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/bigdecimal/lib/bigdecimal/util.rb#L153" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-to_d_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/ext/bigdecimal/lib/bigdecimal/util.rb, line 153</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_d</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-constant">BigDecimal</span>(<span class="ruby-keyword">self</span>) <span class="ruby-keyword">unless</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">imag</span>.<span class="ruby-identifier">zero?</span> <span class="ruby-comment"># to raise eerror</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">==</span> <span class="ruby-value">0</span>
+    <span class="ruby-keyword">case</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">real</span>
+    <span class="ruby-keyword">when</span> <span class="ruby-constant">Rational</span>
+      <span class="ruby-constant">BigDecimal</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">real</span>) <span class="ruby-comment"># to raise error</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">self</span>.<span class="ruby-identifier">real</span>.<span class="ruby-identifier">to_d</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -2384,11 +2514,11 @@ nucomp_to_i(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_json_source')" id="l_method-i-to_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/complex.rb#L26" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/complex.rb#L25" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_json_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/complex.rb, line 26</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/complex.rb, line 25</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_json</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
   <span class="ruby-identifier">as_json</span>.<span class="ruby-identifier">to_json</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
 <span class="ruby-keyword">end</span></pre>

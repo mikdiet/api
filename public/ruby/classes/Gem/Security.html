@@ -30,7 +30,7 @@
     <meta property="og:description" content="Signing gems  The Gem::Security implements cryptographic signatures for gems.  The section below is a step-by-step guide to using signed gems and generating your own.">
   
 
-    <meta name="keywords" content="Gem::Security class, alt_name_or_x509_entry, create_cert, create_cert_email, create_cert_self_signed, create_key, email_to_name, re_sign, reset, sign, trust_dir, trusted_certificates, write">
+    <meta name="keywords" content="Gem::Security class, alt_name_or_x509_entry, create_cert, get_public_key, create_cert_email, create_cert_self_signed, create_digest, create_key, email_to_name, re_sign, reset, sign, trust_dir, trusted_certificates, write">
 </head>
 
 <body>
@@ -121,11 +121,11 @@ $ gem cert --build you@example.com
 
 <pre><code>$ tar tf your-gem-1.0.gem
 metadata.gz
-metadata.gz.sum
 metadata.gz.sig # metadata signature
 data.tar.gz
-data.tar.gz.sum
 data.tar.gz.sig # data signature
+checksums.yaml.gz
+checksums.yaml.gz.sig # checksums signature
 </code></pre>
 
 <h3 id="module-Gem::Security-label-Manually+signing+gems">Manually signing gems</h3>
@@ -193,8 +193,11 @@ Successfully installed your-gem-1.0
                                    certificate for EMAIL_ADDR
   -C, --certificate CERT           Signing certificate for --sign
   -K, --private-key KEY            Key for --sign or --build
+  -A, --key-algorithm ALGORITHM    Select key algorithm for --build from RSA, DSA, or EC. Defaults to RSA.
   -s, --sign CERT                  Signs CERT with the key from -K
                                    and the certificate from -C
+  -d, --days NUMBER_OF_DAYS        Days before the certificate expires
+  -R, --re-sign                    Re-signs the certificate from -C with the key from -K
 </code></pre>
 
 <p>We’ve already covered the <code>--build</code> option, and the <code>--add</code>, <code>--list</code>, and <code>--remove</code> commands seem fairly straightforward; they allow you to add, list, and remove the certificates in your trusted certificate list.  But what’s with this <code>--sign</code> option?</p>
@@ -266,7 +269,7 @@ tar -xf some_signed_gem-1.0.gem
 <p>Grab the public key from the gemspec</p>
 
 <pre><code>gem spec some_signed_gem-1.0.gem cert_chain | \
-  ruby -ryaml -e &#39;puts YAML.load_documents($stdin)&#39; &gt; public_key.crt
+  ruby -rpsych -e &#39;puts Psych.load($stdin)&#39; &gt; public_key.crt
 </code></pre>
 </li><li>
 <p>Generate a SHA1 hash of the data.tar.gz</p>
@@ -313,7 +316,7 @@ $ openssl rsa -in input_key.pem -noout -text
 <ul><li>
 <p>There’s no way to define a system-wide trust list.</p>
 </li><li>
-<p>custom security policies (from a YAML file, etc)</p>
+<p>custom security policies (from a <a href="../YAML.html"><code>YAML</code></a> file, etc)</p>
 </li><li>
 <p>Simple method to generate a signed certificate request</p>
 </li><li>
@@ -332,8 +335,6 @@ $ openssl rsa -in input_key.pem -noout -text
 <p>Honor extension restrictions</p>
 </li><li>
 <p>Might be better to store the certificate chain as a PKCS#7 or PKCS#12 file, instead of an array embedded in the metadata.</p>
-</li><li>
-<p>Flexible signature and key algorithms, not hard-coded to RSA and SHA1.</p>
 </li></ul>
 
 <h2 id="module-Gem::Security-label-Original+author">Original author</h2>
@@ -418,6 +419,11 @@ $ openssl rsa -in input_key.pem -noout -text
             
               
               <li>
+                <a href="#method-c-create_digest">create_digest</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-c-create_key">create_key</a>
               </li>
             
@@ -431,6 +437,18 @@ $ openssl rsa -in input_key.pem -noout -text
               
               <li>
                 <a href="#method-c-email_to_name">email_to_name</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>G</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-get_public_key">get_public_key</a>
               </li>
             
           </ul>
@@ -535,21 +553,26 @@ $ openssl rsa -in input_key.pem -noout -text
           
         
           <tr valign='top'>
-            <td class="attr-name">DIGEST_ALGORITHM</td>
+            <td class="attr-name">DEFAULT_KEY_ALGORITHM</td>
             <td>=</td>
-            <td class="attr-value">if defined?(OpenSSL::Digest::SHA256)
-OpenSSL::Digest::SHA256
-elsif defined?(OpenSSL::Digest::SHA1)
-OpenSSL::Digest::SHA1
-else
-require &#39;digest&#39;
-Digest::SHA512
-end</td>
+            <td class="attr-value">&#39;RSA&#39;</td>
           </tr>
           
             <tr valign='top'>
               <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"><p><a href="../Digest.html"><code>Digest</code></a> algorithm used to sign gems</p></td>
+              <td colspan="2" class="attr-desc"><p>Default algorithm to use when building a key pair</p></td>
+            </tr>
+          
+        
+          <tr valign='top'>
+            <td class="attr-name">EC_NAME</td>
+            <td>=</td>
+            <td class="attr-value">&#39;secp384r1&#39;</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"><p>Named curve used for Elliptic Curve</p></td>
             </tr>
           
         
@@ -600,20 +623,6 @@ end</td>
           
         
           <tr valign='top'>
-            <td class="attr-name">KEY_ALGORITHM</td>
-            <td>=</td>
-            <td class="attr-value">if defined?(OpenSSL::PKey::RSA)
-OpenSSL::PKey::RSA
-end</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"><p>Algorithm for creating the key pair used to sign gems</p></td>
-            </tr>
-          
-        
-          <tr valign='top'>
             <td class="attr-name">KEY_CIPHER</td>
             <td>=</td>
             <td class="attr-value">OpenSSL::Cipher.new(&#39;AES-256-CBC&#39;) if defined?(OpenSSL::Cipher)</td>
@@ -622,18 +631,6 @@ end</td>
             <tr valign='top'>
               <td>&nbsp;</td>
               <td colspan="2" class="attr-desc"><p>Cipher used to encrypt the key pair used to sign gems. Must be in the list returned by <a href="../OpenSSL/Cipher.html#method-c-ciphers"><code>OpenSSL::Cipher.ciphers</code></a></p></td>
-            </tr>
-          
-        
-          <tr valign='top'>
-            <td class="attr-name">KEY_LENGTH</td>
-            <td>=</td>
-            <td class="attr-value">3072</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"><p>Length of keys created by <a href="Security.html#KEY_ALGORITHM"><code>KEY_ALGORITHM</code></a></p></td>
             </tr>
           
         
@@ -745,6 +742,18 @@ end</td>
           
         
           <tr valign='top'>
+            <td class="attr-name">RSA_DSA_KEY_LENGTH</td>
+            <td>=</td>
+            <td class="attr-value">3072</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"><p>Length of keys created by RSA and DSA keys</p></td>
+            </tr>
+          
+        
+          <tr valign='top'>
             <td class="attr-name">SigningPolicy</td>
             <td>=</td>
             <td class="attr-value">Policy.new(
@@ -801,11 +810,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-alt_name_or_x509_entry_source')" id="l_method-c-alt_name_or_x509_entry_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L406" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L385" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-alt_name_or_x509_entry_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 406</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 385</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">alt_name_or_x509_entry</span>(<span class="ruby-identifier">certificate</span>, <span class="ruby-identifier">x509_entry</span>)
   <span class="ruby-identifier">alt_name</span> = <span class="ruby-identifier">certificate</span>.<span class="ruby-identifier">extensions</span>.<span class="ruby-identifier">find</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">extension</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">extension</span>.<span class="ruby-identifier">oid</span> <span class="ruby-operator">==</span> <span class="ruby-node">&quot;#{x509_entry}AltName&quot;</span>
@@ -848,16 +857,16 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-create_cert_source')" id="l_method-c-create_cert_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L422" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L401" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-create_cert_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 422</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 401</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">create_cert</span>(<span class="ruby-identifier">subject</span>, <span class="ruby-identifier">key</span>, <span class="ruby-identifier">age</span> = <span class="ruby-constant">ONE_YEAR</span>, <span class="ruby-identifier">extensions</span> = <span class="ruby-constant">EXTENSIONS</span>,
                      <span class="ruby-identifier">serial</span> = <span class="ruby-value">1</span>)
   <span class="ruby-identifier">cert</span> = <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">X509</span><span class="ruby-operator">::</span><span class="ruby-constant">Certificate</span>.<span class="ruby-identifier">new</span>
 
-  <span class="ruby-identifier">cert</span>.<span class="ruby-identifier">public_key</span> = <span class="ruby-identifier">key</span>.<span class="ruby-identifier">public_key</span>
+  <span class="ruby-identifier">cert</span>.<span class="ruby-identifier">public_key</span> = <span class="ruby-identifier">get_public_key</span>(<span class="ruby-identifier">key</span>)
   <span class="ruby-identifier">cert</span>.<span class="ruby-identifier">version</span>    = <span class="ruby-value">2</span>
   <span class="ruby-identifier">cert</span>.<span class="ruby-identifier">serial</span>     = <span class="ruby-identifier">serial</span>
 
@@ -905,11 +914,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-create_cert_email_source')" id="l_method-c-create_cert_email_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L449" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L448" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-create_cert_email_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 449</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 448</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">create_cert_email</span>(<span class="ruby-identifier">email</span>, <span class="ruby-identifier">key</span>, <span class="ruby-identifier">age</span> = <span class="ruby-constant">ONE_YEAR</span>, <span class="ruby-identifier">extensions</span> = <span class="ruby-constant">EXTENSIONS</span>)
   <span class="ruby-identifier">subject</span> = <span class="ruby-identifier">email_to_name</span> <span class="ruby-identifier">email</span>
 
@@ -948,11 +957,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-create_cert_self_signed_source')" id="l_method-c-create_cert_self_signed_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L461" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L460" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-create_cert_self_signed_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 461</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 460</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">create_cert_self_signed</span>(<span class="ruby-identifier">subject</span>, <span class="ruby-identifier">key</span>, <span class="ruby-identifier">age</span> = <span class="ruby-constant">ONE_YEAR</span>,
                                  <span class="ruby-identifier">extensions</span> = <span class="ruby-constant">EXTENSIONS</span>, <span class="ruby-identifier">serial</span> = <span class="ruby-value">1</span>)
   <span class="ruby-identifier">certificate</span> = <span class="ruby-identifier">create_cert</span> <span class="ruby-identifier">subject</span>, <span class="ruby-identifier">key</span>, <span class="ruby-identifier">age</span>, <span class="ruby-identifier">extensions</span>
@@ -965,16 +974,55 @@ end</td>
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-c-create_digest">
+            
+              <b>create_digest</b>(algorithm = DIGEST_NAME)
+            
+            <a href="../../classes/Gem/Security.html#method-c-create_digest" name="method-c-create_digest" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-create_digest_source')" id="l_method-c-create_digest_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L472" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-create_digest_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 472</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">create_digest</span>(<span class="ruby-identifier">algorithm</span> = <span class="ruby-constant">DIGEST_NAME</span>)
+  <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">Digest</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">algorithm</span>)
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-c-create_key">
             
-              <b>create_key</b>(length = KEY_LENGTH, algorithm = KEY_ALGORITHM)
+              <b>create_key</b>(algorithm)
             
             <a href="../../classes/Gem/Security.html#method-c-create_key" name="method-c-create_key" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Creates a new key pair of the specified <code>length</code> and <code>algorithm</code>.  The default is a 3072 bit RSA key.</p>
+              <p>Creates a new key pair of the specified <code>algorithm</code>. RSA, DSA, and EC are supported.</p>
             </div>
           
 
@@ -990,13 +1038,31 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-create_key_source')" id="l_method-c-create_key_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L472" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L487" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-create_key_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 472</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">create_key</span>(<span class="ruby-identifier">length</span> = <span class="ruby-constant">KEY_LENGTH</span>, <span class="ruby-identifier">algorithm</span> = <span class="ruby-constant">KEY_ALGORITHM</span>)
-  <span class="ruby-identifier">algorithm</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">length</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 487</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">create_key</span>(<span class="ruby-identifier">algorithm</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-keyword">defined?</span>(<span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span>)
+    <span class="ruby-keyword">case</span> <span class="ruby-identifier">algorithm</span>.<span class="ruby-identifier">downcase</span>
+    <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;dsa&#39;</span>
+      <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">DSA</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">RSA_DSA_KEY_LENGTH</span>)
+    <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;rsa&#39;</span>
+      <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">RSA</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">RSA_DSA_KEY_LENGTH</span>)
+    <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;ec&#39;</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-constant">RUBY_VERSION</span> <span class="ruby-operator">&gt;=</span> <span class="ruby-string">&quot;2.4.0&quot;</span>
+        <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">EC</span>.<span class="ruby-identifier">generate</span>(<span class="ruby-constant">EC_NAME</span>)
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-identifier">domain_key</span> = <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">EC</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">EC_NAME</span>)
+        <span class="ruby-identifier">domain_key</span>.<span class="ruby-identifier">generate_key</span>
+        <span class="ruby-identifier">domain_key</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-identifier">raise</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Security</span><span class="ruby-operator">::</span><span class="ruby-constant">Exception</span>,
+      <span class="ruby-node">&quot;#{algorithm} algorithm not found. RSA, DSA, and EC algorithms are supported.&quot;</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1029,11 +1095,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-email_to_name_source')" id="l_method-c-email_to_name_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L479" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L512" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-email_to_name_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 479</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 512</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">email_to_name</span>(<span class="ruby-identifier">email_address</span>)
   <span class="ruby-identifier">email_address</span> = <span class="ruby-identifier">email_address</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/[^\w@.-]+/i</span>, <span class="ruby-string">&#39;_&#39;</span>)
 
@@ -1041,9 +1107,55 @@ end</td>
 
   <span class="ruby-identifier">dcs</span> = <span class="ruby-identifier">dcs</span>.<span class="ruby-identifier">split</span> <span class="ruby-string">&#39;.&#39;</span>
 
-  <span class="ruby-identifier">name</span> = <span class="ruby-node">&quot;CN=#{cn}/#{dcs.map { |dc| &quot;DC=#{dc}&quot; }.join &#39;/&#39;}&quot;</span>
+  <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">X509</span><span class="ruby-operator">::</span><span class="ruby-constant">Name</span>.<span class="ruby-identifier">new</span>([
+    [<span class="ruby-string">&quot;CN&quot;</span>, <span class="ruby-identifier">cn</span>],
+    <span class="ruby-operator">*</span><span class="ruby-identifier">dcs</span>.<span class="ruby-identifier">map</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">dc</span><span class="ruby-operator">|</span> [<span class="ruby-string">&quot;DC&quot;</span>, <span class="ruby-identifier">dc</span>] },
+  ])
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-get_public_key">
+            
+              <b>get_public_key</b>(key)
+            
+            <a href="../../classes/Gem/Security.html#method-c-get_public_key" name="method-c-get_public_key" class="permalink">Link</a>
+          </h3>
 
-  <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">X509</span><span class="ruby-operator">::</span><span class="ruby-constant">Name</span>.<span class="ruby-identifier">parse</span> <span class="ruby-identifier">name</span>
+          
+            <div class="description">
+              <p>Gets the right public key from a PKey instance</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-get_public_key_source')" id="l_method-c-get_public_key_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L426" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-get_public_key_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 426</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">get_public_key</span>(<span class="ruby-identifier">key</span>)
+  <span class="ruby-comment"># Ruby 3.0 (Ruby/OpenSSL 2.2) or later</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span>.<span class="ruby-identifier">read</span>(<span class="ruby-identifier">key</span>.<span class="ruby-identifier">public_to_der</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">key</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:public_to_der</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-identifier">key</span>.<span class="ruby-identifier">public_key</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">key</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">EC</span>)
+
+  <span class="ruby-identifier">ec_key</span> = <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">EC</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">key</span>.<span class="ruby-identifier">group</span>.<span class="ruby-identifier">curve_name</span>)
+  <span class="ruby-identifier">ec_key</span>.<span class="ruby-identifier">public_key</span> = <span class="ruby-identifier">key</span>.<span class="ruby-identifier">public_key</span>
+  <span class="ruby-identifier">ec_key</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1076,17 +1188,17 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-re_sign_source')" id="l_method-c-re_sign_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L497" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L531" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-re_sign_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 497</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 531</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">re_sign</span>(<span class="ruby-identifier">expired_certificate</span>, <span class="ruby-identifier">private_key</span>, <span class="ruby-identifier">age</span> = <span class="ruby-constant">ONE_YEAR</span>,
                  <span class="ruby-identifier">extensions</span> = <span class="ruby-constant">EXTENSIONS</span>)
   <span class="ruby-identifier">raise</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Security</span><span class="ruby-operator">::</span><span class="ruby-constant">Exception</span>,
         <span class="ruby-string">&quot;incorrect signing key for re-signing &quot;</span> <span class="ruby-operator">+</span>
         <span class="ruby-node">&quot;#{expired_certificate.subject}&quot;</span> <span class="ruby-keyword">unless</span>
-    <span class="ruby-identifier">expired_certificate</span>.<span class="ruby-identifier">public_key</span>.<span class="ruby-identifier">to_pem</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">private_key</span>.<span class="ruby-identifier">public_key</span>.<span class="ruby-identifier">to_pem</span>
+    <span class="ruby-identifier">expired_certificate</span>.<span class="ruby-identifier">check_private_key</span>(<span class="ruby-identifier">private_key</span>)
 
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">expired_certificate</span>.<span class="ruby-identifier">subject</span>.<span class="ruby-identifier">to_s</span> <span class="ruby-operator">==</span>
          <span class="ruby-identifier">expired_certificate</span>.<span class="ruby-identifier">issuer</span>.<span class="ruby-identifier">to_s</span>
@@ -1134,11 +1246,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-reset_source')" id="l_method-c-reset_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L523" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L557" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-reset_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 523</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 557</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">reset</span>
   <span class="ruby-ivar">@trust_dir</span> = <span class="ruby-keyword">nil</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1157,7 +1269,7 @@ end</td>
 
           
             <div class="description">
-              <p>Sign the public key from <code>certificate</code> with the <code>signing_key</code> and <code>signing_cert</code>, using the <a href="Security.html#DIGEST_ALGORITHM"><code>Gem::Security::DIGEST_ALGORITHM</code></a>.  Uses the default certificate validity range and extensions.</p>
+              <p>Sign the public key from <code>certificate</code> with the <code>signing_key</code> and <code>signing_cert</code>, using the Gem::Security::DIGEST_NAME.  Uses the default certificate validity range and extensions.</p>
 
 <p>Returns the newly signed certificate.</p>
             </div>
@@ -1175,11 +1287,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-sign_source')" id="l_method-c-sign_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L534" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L568" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-sign_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 534</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 568</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">sign</span>(<span class="ruby-identifier">certificate</span>, <span class="ruby-identifier">signing_key</span>, <span class="ruby-identifier">signing_cert</span>,
               <span class="ruby-identifier">age</span> = <span class="ruby-constant">ONE_YEAR</span>, <span class="ruby-identifier">extensions</span> = <span class="ruby-constant">EXTENSIONS</span>, <span class="ruby-identifier">serial</span> = <span class="ruby-value">1</span>)
   <span class="ruby-identifier">signee_subject</span> = <span class="ruby-identifier">certificate</span>.<span class="ruby-identifier">subject</span>
@@ -1202,7 +1314,7 @@ end</td>
   <span class="ruby-identifier">signed</span> = <span class="ruby-identifier">create_cert</span> <span class="ruby-identifier">signee_subject</span>, <span class="ruby-identifier">signee_key</span>, <span class="ruby-identifier">age</span>, <span class="ruby-identifier">extensions</span>, <span class="ruby-identifier">serial</span>
   <span class="ruby-identifier">signed</span>.<span class="ruby-identifier">issuer</span> = <span class="ruby-identifier">signing_cert</span>.<span class="ruby-identifier">subject</span>
 
-  <span class="ruby-identifier">signed</span>.<span class="ruby-identifier">sign</span> <span class="ruby-identifier">signing_key</span>, <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Security</span><span class="ruby-operator">::</span><span class="ruby-constant">DIGEST_ALGORITHM</span>.<span class="ruby-identifier">new</span>
+  <span class="ruby-identifier">signed</span>.<span class="ruby-identifier">sign</span> <span class="ruby-identifier">signing_key</span>, <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Security</span><span class="ruby-operator">::</span><span class="ruby-constant">DIGEST_NAME</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1235,11 +1347,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-trust_dir_source')" id="l_method-c-trust_dir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L563" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L597" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-trust_dir_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 563</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 597</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">trust_dir</span>
   <span class="ruby-keyword">return</span> <span class="ruby-ivar">@trust_dir</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@trust_dir</span>
 
@@ -1278,11 +1390,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-trusted_certificates_source')" id="l_method-c-trusted_certificates_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L574" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L608" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-trusted_certificates_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 574</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 608</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">trusted_certificates</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-identifier">trust_dir</span>.<span class="ruby-identifier">each_certificate</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1317,11 +1429,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-write_source')" id="l_method-c-write_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/security.rb#L583" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/security.rb#L617" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-write_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 583</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/security.rb, line 617</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">write</span>(<span class="ruby-identifier">pemmable</span>, <span class="ruby-identifier">path</span>, <span class="ruby-identifier">permissions</span> = <span class="ruby-value">0600</span>, <span class="ruby-identifier">passphrase</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">cipher</span> = <span class="ruby-constant">KEY_CIPHER</span>)
   <span class="ruby-identifier">path</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">expand_path</span> <span class="ruby-identifier">path</span>
 

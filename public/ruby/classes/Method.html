@@ -30,7 +30,7 @@
     <meta property="og:description" content="Method objects are created by Object#method, and are associated with a particular object (not just with a class).">
   
 
-    <meta name="keywords" content="Method class, ==, eql?, hash, clone, call, ===, curry, <<, >>, [], arity, inspect, to_s, to_proc, receiver, name, original_name, owner, unbind, source_location, parameters, super_method">
+    <meta name="keywords" content="Method class, ==, eql?, hash, clone, call, ===, curry, <<, >>, [], arity, inspect, to_s, to_proc, receiver, name, original_name, owner, unbind, source_location, parameters, super_method, public?, protected?, private?">
 </head>
 
 <body>
@@ -257,7 +257,22 @@ require &#39;date&#39;
             
               
               <li>
-                <a href="#method-i-parameters">parameters</a>
+                <a href="#method-i-parameters">parameters</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-private-3F">private?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-protected-3F">protected?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-public-3F">public?</a>
               </li>
             
           </ul>
@@ -405,7 +420,7 @@ rb_method_compose_to_left(VALUE self, VALUE g)
 
           
             <div class="description">
-              <p>Two method objects are equal if they are bound to the same object and refer to the same method definition and their owners are the same class or module.</p>
+              <p>Two method objects are equal if they are bound to the same object and refer to the same method definition and the classes defining the methods are the same class or module.</p>
             </div>
           
 
@@ -817,7 +832,7 @@ rb_method_curry(int argc, const VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Two method objects are equal if they are bound to the same object and refer to the same method definition and their owners are the same class or module.</p>
+              <p>Two method objects are equal if they are bound to the same object and refer to the same method definition and the classes defining the methods are the same class or module.</p>
             </div>
           
 
@@ -946,7 +961,8 @@ method_inspect(VALUE method)
     TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
     str = rb_sprintf(&quot;#&lt;% &quot;PRIsVALUE&quot;: &quot;, rb_obj_class(method));
 
-    mklass = data-&gt;klass;
+    mklass = data-&gt;iclass;
+    if (!mklass) mklass = data-&gt;klass;
 
     if (RB_TYPE_P(mklass, T_ICLASS)) {
         /* TODO: I&#39;m not sure why mklass is T_ICLASS.
@@ -986,6 +1002,15 @@ method_inspect(VALUE method)
         }
     }
     else {
+        mklass = data-&gt;klass;
+        if (FL_TEST(mklass, FL_SINGLETON)) {
+            VALUE v = rb_ivar_get(mklass, attached);
+            if (!(RB_TYPE_P(v, T_CLASS) || RB_TYPE_P(v, T_MODULE))) {
+                do {
+                   mklass = RCLASS_SUPER(mklass);
+                } while (RB_TYPE_P(mklass, T_ICLASS));
+            }
+        }
         rb_str_buf_append(str, rb_inspect(mklass));
         if (defined_class != mklass) {
             rb_str_catf(str, &quot;(% &quot;PRIsVALUE&quot;)&quot;, defined_class);
@@ -1060,7 +1085,12 @@ method_inspect(VALUE method)
                 }
             }
             else if (kind == keyrest) {
-                rb_str_catf(str, &quot;**%&quot;PRIsVALUE, name);
+                if (name != ID2SYM(idPow)) {
+                    rb_str_catf(str, &quot;**%&quot;PRIsVALUE, name);
+                }
+                else if (i &gt; 0) {
+                    rb_str_set_len(str, RSTRING_LEN(str) - 2);
+                }
             }
             else if (kind == block) {
                 if (name == ID2SYM(&#39;&amp;&#39;)) {
@@ -1283,11 +1313,130 @@ method(:foo).parameters #=&gt; [[:req, :bar], [:req, :baz], [:rest, :args], [:bl
                 <pre>static VALUE
 rb_method_parameters(VALUE method)
 {
-    const rb_iseq_t *iseq = rb_method_iseq(method);
-    if (!iseq) {
-        return rb_unnamed_parameters(method_arity(method));
-    }
-    return rb_iseq_parameters(iseq, 0);
+    return method_def_parameters(rb_method_def(method));
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-private-3F">
+            
+              <b>meth.private? &rarr; true or false
+</b>
+            
+            <a href="../classes/Method.html#method-i-private-3F" name="method-i-private-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns whether the method is private.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-private-3F_source')" id="l_method-i-private-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-private-3F_source" class="dyn-source">
+                <pre>static VALUE
+method_private_p(VALUE method)
+{
+    const struct METHOD *data;
+    TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
+    return RBOOL(METHOD_ENTRY_VISI(data-&gt;me) == METHOD_VISI_PRIVATE);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-protected-3F">
+            
+              <b>meth.protected? &rarr; true or false
+</b>
+            
+            <a href="../classes/Method.html#method-i-protected-3F" name="method-i-protected-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns whether the method is protected.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-protected-3F_source')" id="l_method-i-protected-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-protected-3F_source" class="dyn-source">
+                <pre>static VALUE
+method_protected_p(VALUE method)
+{
+    const struct METHOD *data;
+    TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
+    return RBOOL(METHOD_ENTRY_VISI(data-&gt;me) == METHOD_VISI_PROTECTED);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-public-3F">
+            
+              <b>meth.public? &rarr; true or false
+</b>
+            
+            <a href="../classes/Method.html#method-i-public-3F" name="method-i-public-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns whether the method is public.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-public-3F_source')" id="l_method-i-public-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-public-3F_source" class="dyn-source">
+                <pre>static VALUE
+method_public_p(VALUE method)
+{
+    const struct METHOD *data;
+    TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
+    return RBOOL(METHOD_ENTRY_VISI(data-&gt;me) == METHOD_VISI_PUBLIC);
 }</pre>
               </div>
             </div>
@@ -1481,7 +1630,7 @@ method_to_proc(VALUE method)
      *   end
      * end
      */
-    procval = rb_iterate(mlambda, 0, bmcall, method);
+    procval = rb_block_call(rb_mRubyVMFrozenCore, idLambda, 0, 0, bmcall, method);
     GetProcPtr(procval, proc);
     proc-&gt;is_from_method = 1;
     return procval;

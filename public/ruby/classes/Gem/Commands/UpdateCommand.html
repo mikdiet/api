@@ -26,7 +26,7 @@
 
   
 
-    <meta name="keywords" content="Gem::Commands::UpdateCommand class, new, execute, rubygems_target_version, update_gem, update_gems, update_rubygems, which_to_update">
+    <meta name="keywords" content="Gem::Commands::UpdateCommand class, new, execute, preparing_gem_layout_for, rubygems_target_version, update_gem, update_gems, update_rubygems, which_to_update">
 </head>
 
 <body>
@@ -111,6 +111,18 @@
               
               <li>
                 <a href="#method-c-new">new</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>P</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-preparing_gem_layout_for">preparing_gem_layout_for</a>
               </li>
             
           </ul>
@@ -241,19 +253,23 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/commands/update_command.rb#L22" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/commands/update_command.rb#L21" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 22</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 21</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>
-  <span class="ruby-keyword">super</span> <span class="ruby-string">&#39;update&#39;</span>, <span class="ruby-string">&#39;Update installed gems to the latest version&#39;</span>,
-    <span class="ruby-value">:document</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-node">%w[rdoc ri]</span>,
-    <span class="ruby-value">:force</span>    <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">false</span>
+  <span class="ruby-identifier">options</span> = {
+    <span class="ruby-value">:force</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">false</span>,
+  }
+
+  <span class="ruby-identifier">options</span>.<span class="ruby-identifier">merge!</span>(<span class="ruby-identifier">install_update_options</span>)
+
+  <span class="ruby-keyword">super</span> <span class="ruby-string">&#39;update&#39;</span>, <span class="ruby-string">&#39;Update installed gems to the latest version&#39;</span>, <span class="ruby-identifier">options</span>
 
   <span class="ruby-identifier">add_install_update_options</span>
 
-  <span class="ruby-constant">OptionParser</span>.<span class="ruby-identifier">accept</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Version</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span><span class="ruby-operator">|</span>
+  <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">OptionParser</span>.<span class="ruby-identifier">accept</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Version</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span><span class="ruby-operator">|</span>
     <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Version</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">value</span>
 
     <span class="ruby-identifier">value</span>
@@ -308,20 +324,21 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-execute_source')" id="l_method-i-execute_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/commands/update_command.rb#L87" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/commands/update_command.rb#L96" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-execute_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 87</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 96</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">execute</span>
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:system</span>]
     <span class="ruby-identifier">update_rubygems</span>
     <span class="ruby-keyword">return</span>
   <span class="ruby-keyword">end</span>
 
-  <span class="ruby-identifier">hig</span> = <span class="ruby-identifier">highest_installed_gems</span>
-
-  <span class="ruby-identifier">gems_to_update</span> = <span class="ruby-identifier">which_to_update</span> <span class="ruby-identifier">hig</span>, <span class="ruby-identifier">options</span>[<span class="ruby-value">:args</span>].<span class="ruby-identifier">uniq</span>
+  <span class="ruby-identifier">gems_to_update</span> = <span class="ruby-identifier">which_to_update</span>(
+    <span class="ruby-identifier">highest_installed_gems</span>,
+    <span class="ruby-identifier">options</span>[<span class="ruby-value">:args</span>].<span class="ruby-identifier">uniq</span>
+  )
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:explain</span>]
     <span class="ruby-identifier">say</span> <span class="ruby-string">&quot;Gems to update:&quot;</span>
@@ -337,7 +354,7 @@
 
   <span class="ruby-identifier">updated</span> = <span class="ruby-identifier">update_gems</span> <span class="ruby-identifier">gems_to_update</span>
 
-  <span class="ruby-identifier">updated_names</span> = <span class="ruby-identifier">updated</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">spec</span><span class="ruby-operator">|</span> <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">name</span> }
+  <span class="ruby-identifier">updated_names</span> = <span class="ruby-identifier">updated</span>.<span class="ruby-identifier">map</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">spec</span><span class="ruby-operator">|</span> <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">name</span> }
   <span class="ruby-identifier">not_updated_names</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:args</span>].<span class="ruby-identifier">uniq</span> <span class="ruby-operator">-</span> <span class="ruby-identifier">updated_names</span>
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">updated</span>.<span class="ruby-identifier">empty?</span>
@@ -345,6 +362,61 @@
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">say</span> <span class="ruby-node">&quot;Gems updated: #{updated_names.join(&#39; &#39;)}&quot;</span>
     <span class="ruby-identifier">say</span> <span class="ruby-node">&quot;Gems already up-to-date: #{not_updated_names.join(&#39; &#39;)}&quot;</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">not_updated_names</span>.<span class="ruby-identifier">empty?</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-preparing_gem_layout_for">
+            
+              <b>preparing_gem_layout_for</b>(version)
+            
+            <a href="../../../classes/Gem/Commands/UpdateCommand.html#method-i-preparing_gem_layout_for" name="method-i-preparing_gem_layout_for" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-preparing_gem_layout_for_source')" id="l_method-i-preparing_gem_layout_for_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/commands/update_command.rb#L192" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-preparing_gem_layout_for_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 192</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">preparing_gem_layout_for</span>(<span class="ruby-identifier">version</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Version</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">version</span>) <span class="ruby-operator">&gt;=</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Version</span>.<span class="ruby-identifier">new</span>(<span class="ruby-string">&quot;3.2.a&quot;</span>)
+    <span class="ruby-keyword">yield</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">require</span> <span class="ruby-string">&quot;tmpdir&quot;</span>
+    <span class="ruby-identifier">tmpdir</span> = <span class="ruby-constant">Dir</span>.<span class="ruby-identifier">mktmpdir</span>
+    <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mv</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">plugindir</span>, <span class="ruby-identifier">tmpdir</span>
+
+    <span class="ruby-identifier">status</span> = <span class="ruby-keyword">yield</span>
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">status</span>
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">rm_rf</span> <span class="ruby-identifier">tmpdir</span>
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mv</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span>(<span class="ruby-identifier">tmpdir</span>, <span class="ruby-string">&quot;plugins&quot;</span>), <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">plugindir</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">status</span>
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -378,11 +450,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-rubygems_target_version_source')" id="l_method-i-rubygems_target_version_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/commands/update_command.rb#L176" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/commands/update_command.rb#L212" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-rubygems_target_version_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 176</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 212</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">rubygems_target_version</span>
   <span class="ruby-identifier">version</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:system</span>]
   <span class="ruby-identifier">update_latest</span> = <span class="ruby-identifier">version</span> <span class="ruby-operator">==</span> <span class="ruby-keyword">true</span>
@@ -400,17 +472,17 @@
   <span class="ruby-identifier">rubygems_update</span>.<span class="ruby-identifier">version</span> = <span class="ruby-identifier">version</span>
 
   <span class="ruby-identifier">hig</span> = {
-    <span class="ruby-string">&#39;rubygems-update&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">rubygems_update</span>
+    <span class="ruby-string">&#39;rubygems-update&#39;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">rubygems_update</span>,
   }
 
   <span class="ruby-identifier">gems_to_update</span> = <span class="ruby-identifier">which_to_update</span> <span class="ruby-identifier">hig</span>, <span class="ruby-identifier">options</span>[<span class="ruby-value">:args</span>], <span class="ruby-value">:system</span>
   <span class="ruby-identifier">up_ver</span> = <span class="ruby-identifier">gems_to_update</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">version</span>
 
   <span class="ruby-identifier">target</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">update_latest</span>
-             <span class="ruby-identifier">up_ver</span>
-           <span class="ruby-keyword">else</span>
-             <span class="ruby-identifier">version</span>
-           <span class="ruby-keyword">end</span>
+    <span class="ruby-identifier">up_ver</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">version</span>
+  <span class="ruby-keyword">end</span>
 
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">target</span>, <span class="ruby-identifier">requirement</span>
 <span class="ruby-keyword">end</span></pre>
@@ -445,20 +517,20 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-update_gem_source')" id="l_method-i-update_gem_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/commands/update_command.rb#L208" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/commands/update_command.rb#L244" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-update_gem_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 208</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 244</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">update_gem</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">version</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Requirement</span>.<span class="ruby-identifier">default</span>)
-  <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@updated</span>.<span class="ruby-identifier">any?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">spec</span><span class="ruby-operator">|</span> <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">name</span> }
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@updated</span>.<span class="ruby-identifier">any?</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">spec</span><span class="ruby-operator">|</span> <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">name</span> }
 
   <span class="ruby-identifier">update_options</span> = <span class="ruby-identifier">options</span>.<span class="ruby-identifier">dup</span>
   <span class="ruby-identifier">update_options</span>[<span class="ruby-value">:prerelease</span>] = <span class="ruby-identifier">version</span>.<span class="ruby-identifier">prerelease?</span>
 
   <span class="ruby-ivar">@installer</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">DependencyInstaller</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">update_options</span>
 
-  <span class="ruby-identifier">say</span> <span class="ruby-node">&quot;Updating #{name}&quot;</span>
+  <span class="ruby-identifier">say</span> <span class="ruby-node">&quot;Updating #{name}&quot;</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:system</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:silent</span>]
   <span class="ruby-keyword">begin</span>
     <span class="ruby-ivar">@installer</span>.<span class="ruby-identifier">install</span> <span class="ruby-identifier">name</span>, <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Requirement</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">version</span>)
   <span class="ruby-keyword">rescue</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">InstallError</span>, <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">DependencyError</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">e</span>
@@ -500,11 +572,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-update_gems_source')" id="l_method-i-update_gems_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/commands/update_command.rb#L228" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/commands/update_command.rb#L264" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-update_gems_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 228</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 264</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">update_gems</span>(<span class="ruby-identifier">gems_to_update</span>)
   <span class="ruby-identifier">gems_to_update</span>.<span class="ruby-identifier">uniq</span>.<span class="ruby-identifier">sort</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name_tuple</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">update_gem</span> <span class="ruby-identifier">name_tuple</span>.<span class="ruby-identifier">name</span>, <span class="ruby-identifier">name_tuple</span>.<span class="ruby-identifier">version</span>
@@ -543,22 +615,30 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-update_rubygems_source')" id="l_method-i-update_rubygems_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/commands/update_command.rb#L239" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/commands/update_command.rb#L275" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-update_rubygems_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 239</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 275</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">update_rubygems</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">disable_system_update_message</span>
+    <span class="ruby-identifier">alert_error</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">disable_system_update_message</span>
+    <span class="ruby-identifier">terminate_interaction</span> <span class="ruby-value">1</span>
+  <span class="ruby-keyword">end</span>
+
   <span class="ruby-identifier">check_update_arguments</span>
 
   <span class="ruby-identifier">version</span>, <span class="ruby-identifier">requirement</span> = <span class="ruby-identifier">rubygems_target_version</span>
 
   <span class="ruby-identifier">check_latest_rubygems</span> <span class="ruby-identifier">version</span>
 
-  <span class="ruby-identifier">update_gem</span> <span class="ruby-string">&#39;rubygems-update&#39;</span>, <span class="ruby-identifier">version</span>
+  <span class="ruby-identifier">check_oldest_rubygems</span> <span class="ruby-identifier">version</span>
 
   <span class="ruby-identifier">installed_gems</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Specification</span>.<span class="ruby-identifier">find_all_by_name</span> <span class="ruby-string">&#39;rubygems-update&#39;</span>, <span class="ruby-identifier">requirement</span>
-  <span class="ruby-identifier">version</span>        = <span class="ruby-identifier">installed_gems</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">version</span>
+  <span class="ruby-identifier">installed_gems</span> = <span class="ruby-identifier">update_gem</span>(<span class="ruby-string">&#39;rubygems-update&#39;</span>, <span class="ruby-identifier">version</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">installed_gems</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">installed_gems</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">version</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">version</span>
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">installed_gems</span>.<span class="ruby-identifier">empty?</span>
+
+  <span class="ruby-identifier">version</span> = <span class="ruby-identifier">installed_gems</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">version</span>
 
   <span class="ruby-identifier">install_rubygems</span> <span class="ruby-identifier">version</span>
 <span class="ruby-keyword">end</span></pre>
@@ -593,17 +673,17 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-which_to_update_source')" id="l_method-i-which_to_update_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/lib/rubygems/commands/update_command.rb#L265" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/commands/update_command.rb#L310" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-which_to_update_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 265</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/commands/update_command.rb, line 310</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">which_to_update</span>(<span class="ruby-identifier">highest_installed_gems</span>, <span class="ruby-identifier">gem_names</span>, <span class="ruby-identifier">system</span> = <span class="ruby-keyword">false</span>)
   <span class="ruby-identifier">result</span> = []
 
   <span class="ruby-identifier">highest_installed_gems</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">l_name</span>, <span class="ruby-identifier">l_spec</span><span class="ruby-operator">|</span>
     <span class="ruby-keyword">next</span> <span class="ruby-keyword">if</span> <span class="ruby-keyword">not</span> <span class="ruby-identifier">gem_names</span>.<span class="ruby-identifier">empty?</span> <span class="ruby-keyword">and</span>
-            <span class="ruby-identifier">gem_names</span>.<span class="ruby-identifier">none?</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">l_spec</span>.<span class="ruby-identifier">name</span> }
+            <span class="ruby-identifier">gem_names</span>.<span class="ruby-identifier">none?</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-identifier">name</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">l_spec</span>.<span class="ruby-identifier">name</span> }
 
     <span class="ruby-identifier">highest_remote_tup</span> = <span class="ruby-identifier">highest_remote_name_tuple</span> <span class="ruby-identifier">l_spec</span>
     <span class="ruby-identifier">highest_remote_ver</span> = <span class="ruby-identifier">highest_remote_tup</span>.<span class="ruby-identifier">version</span>

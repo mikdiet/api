@@ -30,7 +30,7 @@
     <meta property="og:description" content="Random provides an interface to Ruby’s pseudo-random number generator, or PRNG.  The PRNG produces a deterministic sequence of bits which approximate true randomness.">
   
 
-    <meta name="keywords" content="Random class, new, rand, bytes, seed, ==, srand, rand, bytes, new_seed, urandom">
+    <meta name="keywords" content="Random class, ==, new, rand, bytes, seed, srand, rand, bytes, seed, new_seed, urandom">
 </head>
 
 <body>
@@ -64,14 +64,14 @@
             
                 <span class="parent">&lt;
                     
-                    <a href="Object.html">Object</a>
+                    base
                     
                 </span>
             
         </h2>
         <ul class="files">
             
-            <li><a href="../files/ruby/lib/securerandom_rb.html">ruby/lib/securerandom.rb</a></li>
+            <li><a href="../files/ruby/lib/random/formatter_rb.html">ruby/lib/random/formatter.rb</a></li>
             
             <li><a href="../files/ruby/random_c.html">ruby/random.c</a></li>
             
@@ -87,11 +87,11 @@
 
 <p>The generator may be initialized with either a system-generated or user-supplied seed value by using <a href="Random.html#method-c-srand"><code>Random.srand</code></a>.</p>
 
-<p>The class method <a href="Random.html#method-c-rand"><code>Random.rand</code></a> provides the base functionality of <a href="Kernel.html#method-i-rand"><code>Kernel.rand</code></a> along with better handling of floating point values. These are both interfaces to <a href="Random.html#DEFAULT"><code>Random::DEFAULT</code></a>, the Ruby system PRNG.</p>
+<p>The class method <a href="Random.html#method-c-rand"><code>Random.rand</code></a> provides the base functionality of <a href="Kernel.html#method-i-rand"><code>Kernel.rand</code></a> along with better handling of floating point values. These are both interfaces to the Ruby system PRNG.</p>
 
-<p><a href="Random.html#method-c-new"><code>Random.new</code></a> will create a new PRNG with a state independent of <a href="Random.html#DEFAULT"><code>Random::DEFAULT</code></a>, allowing multiple generators with different seed values or sequence positions to exist simultaneously. <a href="Random.html"><code>Random</code></a> objects can be marshaled, allowing sequences to be saved and resumed.</p>
+<p><a href="Random.html#method-c-new"><code>Random.new</code></a> will create a new PRNG with a state independent of the Ruby system PRNG, allowing multiple generators with different seed values or sequence positions to exist simultaneously. <a href="Random.html"><code>Random</code></a> objects can be marshaled, allowing sequences to be saved and resumed.</p>
 
-<p>PRNGs are currently implemented as a modified Mersenne Twister with a period of 2**19937-1.</p>
+<p>PRNGs are currently implemented as a modified Mersenne Twister with a period of 2**19937-1.  As this algorithm is <em>not</em> for cryptographical use, you must use <a href="SecureRandom.html"><code>SecureRandom</code></a> for security purpose, instead of this PRNG.</p>
 
     </div>
   
@@ -141,12 +141,12 @@
             
               
               <li>
-                <a href="#method-i-bytes">bytes</a>,
+                <a href="#method-c-bytes">bytes</a>,
               </li>
             
               
               <li>
-                <a href="#method-c-bytes">bytes</a>
+                <a href="#method-i-bytes">bytes</a>
               </li>
             
           </ul>
@@ -192,6 +192,11 @@
             
               
               <li>
+                <a href="#method-c-seed">seed</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-seed">seed</a>,
               </li>
             
@@ -219,20 +224,6 @@
   
 
   
-    <!-- Includes -->
-    <div class="sectiontitle">Included Modules</div>
-    <ul>
-      
-        <li>
-          
-            <a href="Random/Formatter.html">
-              Random::Formatter
-            </a>
-          
-        </li>
-      
-    </ul>
-  
 
 
 
@@ -250,12 +241,12 @@
           <tr valign='top'>
             <td class="attr-name">DEFAULT</td>
             <td>=</td>
-            <td class="attr-value">rand_default</td>
+            <td class="attr-value">rb_cRandom</td>
           </tr>
           
             <tr valign='top'>
               <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"><p>The default Pseudorandom number generator.  Used by class methods of <a href="Random.html"><code>Random</code></a>.</p></td>
+              <td colspan="2" class="attr-desc"></td>
             </tr>
           
         
@@ -302,8 +293,8 @@
                 <pre>static VALUE
 random_s_bytes(VALUE obj, VALUE len)
 {
-    rb_random_t *rnd = rand_start(&amp;default_rand);
-    return genrand_bytes(rnd, NUM2LONG(rb_to_int(len)));
+    rb_random_t *rnd = rand_start(default_rand());
+    return rand_bytes(&amp;random_mt_if, rnd, NUM2LONG(rb_to_int(len)));
 }</pre>
               </div>
             </div>
@@ -344,19 +335,21 @@ random_s_bytes(VALUE obj, VALUE len)
                 <pre>static VALUE
 random_init(int argc, VALUE *argv, VALUE obj)
 {
-    VALUE vseed;
-    rb_random_t *rnd = get_rnd(obj);
+    rb_random_t *rnd = try_get_rnd(obj);
+    const rb_random_interface_t *rng = rb_rand_if(obj);
 
-    if (rb_check_arity(argc, 0, 1) == 0) {
-        rb_check_frozen(obj);
-        vseed = random_seed(obj);
+    if (!rng) {
+        rb_raise(rb_eTypeError, &quot;undefined random interface: %s&quot;,
+                 RTYPEDDATA_TYPE(obj)-&gt;wrap_struct_name);
+    }
+    argc = rb_check_arity(argc, 0, 1);
+    rb_check_frozen(obj);
+    if (argc == 0) {
+        rnd-&gt;seed = rand_init_default(rng, rnd);
     }
     else {
-        vseed = argv[0];
-        rb_check_copyable(obj, vseed);
-        vseed = rb_to_int(vseed);
+        rnd-&gt;seed = rand_init(rng, rnd, rb_to_int(argv[0]));
     }
-    rnd-&gt;seed = rand_init(&amp;rnd-&gt;mt, vseed);
     return obj;
 }</pre>
               </div>
@@ -400,10 +393,9 @@ random_init(int argc, VALUE *argv, VALUE obj)
 random_seed(VALUE _)
 {
     VALUE v;
-    uint32_t buf[DEFAULT_SEED_CNT+1];
-    fill_random_seed(buf, DEFAULT_SEED_CNT);
-    v = make_seed_value(buf, DEFAULT_SEED_CNT);
-    explicit_bzero(buf, DEFAULT_SEED_LEN);
+    with_random_seed(DEFAULT_SEED_CNT, 1) {
+        v = make_seed_value(seedbuf, DEFAULT_SEED_CNT);
+    }
     return v;
 }</pre>
               </div>
@@ -414,7 +406,7 @@ random_seed(VALUE _)
         <div class="method">
           <h3 class="title method-title" id="method-c-rand">
             
-              <b>Random.rand &rarr; float<br />Random.rand(max) &rarr; number
+              <b>Random.rand &rarr; float<br />Random.rand(max) &rarr; number<br />Random.rand(range) &rarr; number
 </b>
             
             <a href="../classes/Random.html#method-c-rand" name="method-c-rand" class="permalink">Link</a>
@@ -422,7 +414,9 @@ random_seed(VALUE _)
 
           
             <div class="description">
-              <p>Alias of Random::DEFAULT.rand.</p>
+              <p>Returns a random number using the Ruby system PRNG.</p>
+
+<p>See also <a href="Random.html#method-i-rand"><code>Random#rand</code></a>.</p>
             </div>
           
 
@@ -443,9 +437,57 @@ random_seed(VALUE _)
                 <pre>static VALUE
 random_s_rand(int argc, VALUE *argv, VALUE obj)
 {
-    VALUE v = rand_random(argc, argv, Qnil, rand_start(&amp;default_rand));
+    VALUE v = rand_random(argc, argv, Qnil, rand_start(default_rand()));
     check_random_number(v, argv);
     return v;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-seed">
+            
+              <b>Random.seed &rarr; integer
+</b>
+            
+            <a href="../classes/Random.html#method-c-seed" name="method-c-seed" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the seed value used to initialize the Ruby system PRNG. This may be used to initialize another generator with the same state at a later time, causing it to produce the same sequence of numbers.</p>
+
+<pre><code>Random.seed      #=&gt; 1234
+prng1 = Random.new(Random.seed)
+prng1.seed       #=&gt; 1234
+prng1.rand(100)  #=&gt; 47
+Random.seed      #=&gt; 1234
+Random.rand(100) #=&gt; 47
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-seed_source')" id="l_method-c-seed_source">show</a>
+                
+              </p>
+              <div id="method-c-seed_source" class="dyn-source">
+                <pre>static VALUE
+random_s_seed(VALUE obj)
+{
+    rb_random_mt_t *rnd = rand_mt_start(default_rand());
+    return rnd-&gt;base.seed;
 }</pre>
               </div>
             </div>
@@ -463,7 +505,7 @@ random_s_rand(int argc, VALUE *argv, VALUE obj)
 
           
             <div class="description">
-              <p>Seeds the system pseudo-random number generator, <a href="Random.html#DEFAULT"><code>Random::DEFAULT</code></a>, with <code>number</code>.  The previous seed value is returned.</p>
+              <p>Seeds the system pseudo-random number generator, with <code>number</code>. The previous seed value is returned.</p>
 
 <p>If <code>number</code> is omitted, seeds the generator using a source of entropy provided by the operating system, if available (/dev/urandom on Unix systems or the RSA cryptographic provider on Windows), which is then combined with the time, the process id, and a sequence number.</p>
 
@@ -496,7 +538,7 @@ srand 1234               # =&gt; 1234
 rb_f_srand(int argc, VALUE *argv, VALUE obj)
 {
     VALUE seed, old;
-    rb_random_t *r = &amp;default_rand;
+    rb_random_mt_t *r = rand_mt_start(default_rand());
 
     if (rb_check_arity(argc, 0, 1) == 0) {
         seed = random_seed(obj);
@@ -504,8 +546,9 @@ rb_f_srand(int argc, VALUE *argv, VALUE obj)
     else {
         seed = rb_to_int(argv[0]);
     }
-    old = r-&gt;seed;
-    r-&gt;seed = rand_init(&amp;r-&gt;mt, seed);
+    old = r-&gt;base.seed;
+    rand_init(&amp;random_mt_if, &amp;r-&gt;base, seed);
+    r-&gt;base.seed = seed;
 
     return old;
 }</pre>
@@ -614,16 +657,16 @@ prng1 == prng2 # =&gt; true
               </p>
               <div id="method-i-3D-3D_source" class="dyn-source">
                 <pre>static VALUE
-random_equal(VALUE self, VALUE other)
+rand_mt_equal(VALUE self, VALUE other)
 {
-    rb_random_t *r1, *r2;
+    rb_random_mt_t *r1, *r2;
     if (rb_obj_class(self) != rb_obj_class(other)) return Qfalse;
-    r1 = get_rnd(self);
-    r2 = get_rnd(other);
+    r1 = get_rnd_mt(self);
+    r2 = get_rnd_mt(other);
     if (memcmp(r1-&gt;mt.state, r2-&gt;mt.state, sizeof(r1-&gt;mt.state))) return Qfalse;
     if ((r1-&gt;mt.next - r1-&gt;mt.state) != (r2-&gt;mt.next - r2-&gt;mt.state)) return Qfalse;
     if (r1-&gt;mt.left != r2-&gt;mt.left) return Qfalse;
-    return rb_equal(r1-&gt;seed, r2-&gt;seed);
+    return rb_equal(r1-&gt;base.seed, r2-&gt;base.seed);
 }</pre>
               </div>
             </div>
@@ -666,7 +709,8 @@ random_string.size                   # =&gt; 10
                 <pre>static VALUE
 random_bytes(VALUE obj, VALUE len)
 {
-    return genrand_bytes(get_rnd(obj), NUM2LONG(rb_to_int(len)));
+    rb_random_t *rnd = try_get_rnd(obj);
+    return rand_bytes(rb_rand_if(obj), rnd, NUM2LONG(rb_to_int(len)));
 }</pre>
               </div>
             </div>
@@ -676,7 +720,7 @@ random_bytes(VALUE obj, VALUE len)
         <div class="method">
           <h3 class="title method-title" id="method-i-rand">
             
-              <b>prng.rand &rarr; float<br />prng.rand(max) &rarr; number
+              <b>prng.rand &rarr; float<br />prng.rand(max) &rarr; number<br />prng.rand(range) &rarr; number
 </b>
             
             <a href="../classes/Random.html#method-i-rand" name="method-i-rand" class="permalink">Link</a>
@@ -695,7 +739,7 @@ prng.rand(100)       # =&gt; 42
 <pre><code>prng.rand(1.5)       # =&gt; 1.4600282860034115
 </code></pre>
 
-<p>When <code>max</code> is a <a href="Range.html"><code>Range</code></a>, <code>rand</code> returns a random number where range.member?(number) == true.</p>
+<p>When <code>range</code> is a <a href="Range.html"><code>Range</code></a>, <code>rand</code> returns a random number where <code>range.member?(number) == true</code>.</p>
 
 <pre><code>prng.rand(5..9)      # =&gt; one of [5, 6, 7, 8, 9]
 prng.rand(5...9)     # =&gt; one of [5, 6, 7, 8]
@@ -724,7 +768,7 @@ prng.rand(5.0...9.0) # =&gt; between 5.0 and 9.0, excluding 9.0
                 <pre>static VALUE
 random_rand(int argc, VALUE *argv, VALUE obj)
 {
-    VALUE v = rand_random(argc, argv, obj, get_rnd(obj));
+    VALUE v = rand_random(argc, argv, obj, try_get_rnd(obj));
     check_random_number(v, argv);
     return v;
 }</pre>

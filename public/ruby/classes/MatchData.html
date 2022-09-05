@@ -30,7 +30,7 @@
     <meta property="og:description" content="MatchData encapsulates the result of matching a Regexp against string. It is returned by Regexp#match and String#match, and also stored in a global variable returned by Regexp.last_match.">
   
 
-    <meta name="keywords" content="MatchData class, regexp, names, size, length, offset, begin, end, to_a, [], captures, named_captures, values_at, pre_match, post_match, to_s, inspect, string, hash, eql?, ==">
+    <meta name="keywords" content="MatchData class, regexp, names, size, length, offset, begin, end, match, match_length, to_a, [], captures, named_captures, values_at, pre_match, post_match, to_s, inspect, string, hash, eql?, ==">
 </head>
 
 <body>
@@ -118,15 +118,15 @@ m.values_at(1, 2)           # =&gt; [&quot;2.5.0&quot;, &quot;MatchData&quot;]
 <ul><li>
 <p><code>$~</code> is <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a>;</p>
 </li><li>
-<p><code>$&amp;</code> is <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a><code>[0]</code>;</p>
+<p><code>$&amp;</code> is <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a><code>[ 0 ]</code>;</p>
 </li><li>
-<p><code>$1</code>, <code>$2</code>, and so on are <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a><code>[i]</code> (captures by number);</p>
+<p><code>$1</code>, <code>$2</code>, and so on are <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a><code>[ i ]</code> (captures by number);</p>
 </li><li>
 <p><code>$`</code> is <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a><code>.pre_match</code>;</p>
 </li><li>
 <p><code>$&#39;</code> is <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a><code>.post_match</code>;</p>
 </li><li>
-<p><code>$+</code> is <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a><code>[-1]</code> (the last capture).</p>
+<p><code>$+</code> is <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a><code>[ -1 ]</code> (the last capture).</p>
 </li></ul>
 
 <p>See also “Special global variables” section in <a href="Regexp.html"><code>Regexp</code></a> documentation.</p>
@@ -239,6 +239,23 @@ m.values_at(1, 2)           # =&gt; [&quot;2.5.0&quot;, &quot;MatchData&quot;]
               
               <li>
                 <a href="#method-i-length">length</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>M</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-match">match</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-match_length">match_length</a>
               </li>
             
           </ul>
@@ -531,8 +548,7 @@ match_begin(VALUE match, VALUE n)
     struct re_registers *regs = RMATCH_REGS(match);
 
     match_check(match);
-    if (i &lt; 0 || regs-&gt;num_regs &lt;= i)
-        rb_raise(rb_eIndexError, &quot;index %d out of matches&quot;, i);
+    backref_number_check(regs, i);
 
     if (BEG(i) &lt; 0)
         return Qnil;
@@ -636,8 +652,7 @@ match_end(VALUE match, VALUE n)
     struct re_registers *regs = RMATCH_REGS(match);
 
     match_check(match);
-    if (i &lt; 0 || regs-&gt;num_regs &lt;= i)
-        rb_raise(rb_eIndexError, &quot;index %d out of matches&quot;, i);
+    backref_number_check(regs, i);
 
     if (BEG(i) &lt; 0)
         return Qnil;
@@ -838,7 +853,7 @@ match_inspect(VALUE match)
             rb_str_buf_cat2(str, &quot;:&quot;);
         }
         v = rb_reg_nth_match(i, match);
-        if (v == Qnil)
+        if (NIL_P(v))
             rb_str_buf_cat2(str, &quot;nil&quot;);
         else
             rb_str_buf_append(str, rb_str_inspect(v));
@@ -880,6 +895,125 @@ m.size     #=&gt; 5
           
 
           
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-match">
+            
+              <b>mtch.match(n)   &rarr; string or nil
+</b>
+            
+            <a href="../classes/MatchData.html#method-i-match" name="method-i-match" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the captured substring corresponding to the argument. <em>n</em> can be a string or symbol to reference a named capture.</p>
+
+<pre><code>m = /(.)(.)(\d+)(\d)(\w)?/.match(&quot;THX1138.&quot;)
+m.match(0)       #=&gt; &quot;HX1138&quot;
+m.match(4)       #=&gt; &quot;8&quot;
+m.match(5)       #=&gt; nil
+
+m = /(?&lt;foo&gt;.)(.)(?&lt;bar&gt;.+)/.match(&quot;hoge&quot;)
+m.match(:foo)    #=&gt; &quot;h&quot;
+m.match(:bar)    #=&gt; &quot;ge&quot;
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-match_source')" id="l_method-i-match_source">show</a>
+                
+              </p>
+              <div id="method-i-match_source" class="dyn-source">
+                <pre>static VALUE
+match_nth(VALUE match, VALUE n)
+{
+    int i = match_backref_number(match, n);
+    struct re_registers *regs = RMATCH_REGS(match);
+
+    backref_number_check(regs, i);
+
+    long start = BEG(i), end = END(i);
+    if (start &lt; 0)
+        return Qnil;
+
+    return rb_str_subseq(RMATCH(match)-&gt;str, start, end - start);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-match_length">
+            
+              <b>mtch.match_length(n)   &rarr; array
+</b>
+            
+            <a href="../classes/MatchData.html#method-i-match_length" name="method-i-match_length" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the length of the captured substring corresponding to the argument. <em>n</em> can be a string or symbol to reference a named capture.</p>
+
+<pre><code>m = /(.)(.)(\d+)(\d)(\w)?/.match(&quot;THX1138.&quot;)
+m.match_length(0)       #=&gt; 6
+m.match_length(4)       #=&gt; 1
+m.match_length(5)       #=&gt; nil
+
+m = /(?&lt;foo&gt;.)(.)(?&lt;bar&gt;.+)/.match(&quot;hoge&quot;)
+m.match_length(:foo)    #=&gt; 1
+m.match_length(:bar)    #=&gt; 2
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-match_length_source')" id="l_method-i-match_length_source">show</a>
+                
+              </p>
+              <div id="method-i-match_length_source" class="dyn-source">
+                <pre>static VALUE
+match_nth_length(VALUE match, VALUE n)
+{
+    int i = match_backref_number(match, n);
+    struct re_registers *regs = RMATCH_REGS(match);
+
+    match_check(match);
+    backref_number_check(regs, i);
+
+    if (BEG(i) &lt; 0)
+        return Qnil;
+
+    update_char_offset(match);
+    const struct rmatch_offset *const ofs =
+        &amp;RMATCH(match)-&gt;rmatch-&gt;char_offset[i];
+    return LONG2NUM(ofs-&gt;end - ofs-&gt;beg);
+}</pre>
+              </div>
+            </div>
+            
           </div>
         
         <div class="method">
@@ -959,7 +1093,7 @@ match_named_captures(VALUE match)
 
           
             <div class="description">
-              <p>Returns a list of names of captures as an array of strings. It is same as mtch.regexp.names.</p>
+              <p>Returns a list of names of captures as an array of strings. This is the same as mtch.regexp.names.</p>
 
 <pre><code>/(?&lt;foo&gt;.)(?&lt;bar&gt;.)(?&lt;baz&gt;.)/.match(&quot;hoge&quot;).names
 #=&gt; [&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;]
@@ -1042,8 +1176,7 @@ match_offset(VALUE match, VALUE n)
     struct re_registers *regs = RMATCH_REGS(match);
 
     match_check(match);
-    if (i &lt; 0 || regs-&gt;num_regs &lt;= i)
-        rb_raise(rb_eIndexError, &quot;index %d out of matches&quot;, i);
+    backref_number_check(regs, i);
 
     if (BEG(i) &lt; 0)
         return rb_assoc_new(Qnil, Qnil);
@@ -1420,6 +1553,7 @@ match_to_s(VALUE match)
 <pre><code>m = /(.)(.)(\d+)(\d)/.match(&quot;THX1138: The Movie&quot;)
 m.to_a               #=&gt; [&quot;HX1138&quot;, &quot;H&quot;, &quot;X&quot;, &quot;113&quot;, &quot;8&quot;]
 m.values_at(0, 2, -2)   #=&gt; [&quot;HX1138&quot;, &quot;X&quot;, &quot;113&quot;]
+m.values_at(1..2, -1)   #=&gt; [&quot;H&quot;, &quot;X&quot;, &quot;8&quot;]
 
 m = /(?&lt;a&gt;\d+) *(?&lt;op&gt;[+\-*\/]) *(?&lt;b&gt;\d+)/.match(&quot;1 + 2&quot;)
 m.to_a               #=&gt; [&quot;1 + 2&quot;, &quot;1&quot;, &quot;+&quot;, &quot;2&quot;]

@@ -75,8 +75,6 @@
             
             <li><a href="../files/ruby/ext/psych/lib/psych/visitors/to_ruby_rb.html">ruby/ext/psych/lib/psych/visitors/to_ruby.rb</a></li>
             
-            <li><a href="../files/ruby/lib/bundler/vendor/uri/lib/uri/rfc2396_parser_rb.html">ruby/lib/bundler/vendor/uri/lib/uri/rfc2396_parser.rb</a></li>
-            
             <li><a href="../files/ruby/lib/optparse_rb.html">ruby/lib/optparse.rb</a></li>
             
             <li><a href="../files/ruby/lib/rubygems/commands/dependency_command_rb.html">ruby/lib/rubygems/commands/dependency_command.rb</a></li>
@@ -94,6 +92,11 @@
     <div class="description">
       
 <p>A <a href="Regexp.html"><code>Regexp</code></a> holds a regular expression, used to match a pattern against strings. Regexps are created using the <code>/.../</code> and <code>%r{...}</code> literals, and by the <a href="Regexp.html#method-c-new"><code>Regexp::new</code></a> constructor.</p>
+
+<p>You can create a Regexp object explicitly with:</p>
+<ul><li>
+<p>A <a href="doc/syntax/literals_rdoc.html#label-Regexp+Literals">regexp literal</a>.</p>
+</li></ul>
 
 <p>Regular expressions (<em>regexp</em>s) are patterns which describe the contents of a string. They’re used for testing whether a string contains a given pattern, or extracting the portions that match. They are created with the <code>/</code><em>pat</em><code>/</code> and <code>%r{</code><em>pat</em><code>}</code> literals or the <code>Regexp.new</code> constructor.</p>
 
@@ -278,6 +281,8 @@
 <pre><code>&quot;Hello&quot;.match(/[[:upper:]]+[[:lower:]]+l{2}o/) #=&gt; #&lt;MatchData &quot;Hello&quot;&gt;
 </code></pre>
 
+<h3 id="class-Regexp-label-Greedy+match">Greedy match</h3>
+
 <p>Repetition is <em>greedy</em> by default: as many occurrences as possible are matched while still allowing the overall match to succeed. By contrast, <em>lazy</em> matching makes the minimal amount of matches necessary for overall success. Most greedy metacharacters can be made lazy by following them with <code>?</code>. For the <code>{n}</code> pattern, because it specifies an exact number of characters to match and not a variable number of characters, the <code>?</code> metacharacter instead makes the repeated pattern optional.</p>
 
 <p>Both patterns below match the string. The first uses a greedy quantifier so ‘.+’ matches ‘&lt;a&gt;&lt;b&gt;’; the second uses a lazy quantifier so ‘.+?’ matches ‘&lt;a&gt;’:</p>
@@ -286,13 +291,20 @@
 /&lt;.+?&gt;/.match(&quot;&lt;a&gt;&lt;b&gt;&quot;) #=&gt; #&lt;MatchData &quot;&lt;a&gt;&quot;&gt;
 </code></pre>
 
+<h3 id="class-Regexp-label-Possessive+match">Possessive match</h3>
+
 <p>A quantifier followed by <code>+</code> matches <em>possessively</em>: once it has matched it does not backtrack. They behave like greedy quantifiers, but having matched they refuse to “give up” their match even if this jeopardises the overall match.</p>
+
+<pre><code>/&lt;.*&gt;&lt;.+&gt;/.match(&quot;&lt;a&gt;&lt;b&gt;&quot;) #=&gt; #&lt;MatchData &quot;&lt;a&gt;&lt;b&gt;&quot;&gt;
+/&lt;.*+&gt;&lt;.+&gt;/.match(&quot;&lt;a&gt;&lt;b&gt;&quot;) #=&gt; nil
+/&lt;.*&gt;&lt;.++&gt;/.match(&quot;&lt;a&gt;&lt;b&gt;&quot;) #=&gt; nil
+</code></pre>
 
 <h2 id="class-Regexp-label-Capturing">Capturing</h2>
 
-<p>Parentheses can be used for <em>capturing</em>. The text enclosed by the <em>n</em>&lt;sup&gt;th&lt;/sup&gt; group of parentheses can be subsequently referred to with <em>n</em>. Within a pattern use the <em>backreference</em> <code>\n</code>; outside of the pattern use <code>MatchData[</code><em>n</em><code>]</code>.</p>
+<p>Parentheses can be used for <em>capturing</em>. The text enclosed by the <em>n</em>th group of parentheses can be subsequently referred to with <em>n</em>. Within a pattern use the <em>backreference</em> <code>\n</code> (e.g. <code>\1</code>); outside of the pattern use <code>MatchData[n]</code> (e.g. <code>MatchData[1]</code>).</p>
 
-<p>‘at’ is captured by the first group of parentheses, then referred to later with <code>\1</code>:</p>
+<p>In this example, <code>&#39;at&#39;</code> is captured by the first group of parentheses, then referred to later with <code>\1</code>:</p>
 
 <pre><code>/[csh](..) [csh]\1 in/.match(&quot;The cat sat in the hat&quot;)
     #=&gt; #&lt;MatchData &quot;cat sat in&quot; 1:&quot;at&quot;&gt;
@@ -302,6 +314,16 @@
 
 <pre><code>/[csh](..) [csh]\1 in/.match(&quot;The cat sat in the hat&quot;)[1] #=&gt; &#39;at&#39;
 </code></pre>
+
+<p>While Ruby supports an arbitrary number of numbered captured groups, only groups 1-9 are supported using the <code>\n</code> backreference syntax.</p>
+
+<p>Ruby also supports <code>\0</code> as a special backreference, which references the entire matched string.  This is also available at <code>MatchData[0]</code>.  Note that the <code>\0</code> backreference cannot be used inside the regexp, as backreferences can only be used after the end of the capture group, and the <code>\0</code> backreference uses the implicit capture group of the entire match.  However, you can use this backreference when doing substitution:</p>
+
+<pre><code>&quot;The cat sat in the hat&quot;.gsub(/[csh]at/, &#39;\0s&#39;)
+  # =&gt; &quot;The cats sats in the hats&quot;
+</code></pre>
+
+<h3 id="class-Regexp-label-Named+captures">Named captures</h3>
 
 <p>Capture groups can be referred to by name when defined with the <code>(?&lt;</code><em>name</em><code>&gt;)</code> or <code>(?&#39;</code><em>name</em><code>&#39;)</code> constructs.</p>
 
@@ -418,7 +440,7 @@ dollars #=&gt; &quot;3&quot;
 
 <h2 id="class-Regexp-label-Alternation">Alternation</h2>
 
-<p>The vertical bar metacharacter (<code>|</code>) combines two expressions into a single one that matches either of the expressions. Each expression is an <em>alternative</em>.</p>
+<p>The vertical bar metacharacter (<code>|</code>) combines several expressions into a single one that matches any of the expressions. Each expression is an <em>alternative</em>.</p>
 
 <pre><code>/\w(and|or)\w/.match(&quot;Feliformia&quot;) #=&gt; #&lt;MatchData &quot;form&quot; 1:&quot;or&quot;&gt;
 /\w(and|or)\w/.match(&quot;furandi&quot;)    #=&gt; #&lt;MatchData &quot;randi&quot; 1:&quot;and&quot;&gt;
@@ -596,6 +618,18 @@ dollars #=&gt; &quot;3&quot;
 <p><code>(?&lt;=</code><em>pat</em><code>)</code> - <em>Positive lookbehind</em> assertion: ensures that the preceding characters match <em>pat</em>, but doesn’t include those characters in the matched text</p>
 </li><li>
 <p><code>(?&lt;!</code><em>pat</em><code>)</code> - <em>Negative lookbehind</em> assertion: ensures that the preceding characters do not match <em>pat</em>, but doesn’t include those characters in the matched text</p>
+</li><li>
+<p><code>\K</code> - Uses an positive lookbehind of the content preceding <code>\K</code> in the regexp.  For example, the following two regexps are almost equivalent:</p>
+
+<pre><code>/ab\Kc/
+/(?&lt;=ab)c/
+</code></pre>
+
+<p>As are the following two regexps:</p>
+
+<pre><code>/(a)\K(b)\Kc/
+/(?&lt;=(?&lt;=(a))(b))c/
+</code></pre>
 </li></ul>
 
 <p>If a pattern isn’t anchored it can begin at any point in the string:</p>
@@ -1245,7 +1279,7 @@ rb_reg_s_quote(VALUE c, VALUE str)
                 Source:
                 <a href="javascript:toggleSource('method-c-json_create_source')" id="l_method-c-json_create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/regexp.rb#L11" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/regexp.rb#L11" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-json_create_source" class="dyn-source">
@@ -1387,7 +1421,7 @@ rb_reg_initialize_m(int argc, VALUE *argv, VALUE self)
                 flags |= ARG_ENCODING_NONE;
             }
             else {
-                rb_warn(&quot;encoding option is ignored - %s&quot;, kcode);
+                rb_category_warn(RB_WARN_CATEGORY_DEPRECATED, &quot;encoding option is ignored - %s&quot;, kcode);
             }
         }
         str = StringValue(argv[0]);
@@ -1626,7 +1660,7 @@ end
                 
               </p>
               <div id="method-i-3D-3D-3D_source" class="dyn-source">
-                <pre>VALUE
+                <pre>static VALUE
 rb_reg_eqq(VALUE re, VALUE str)
 {
     long start;
@@ -1720,7 +1754,7 @@ p lhs, rhs # undefined local variable
                 <pre>VALUE
 rb_reg_match(VALUE re, VALUE str)
 {
-    long pos = reg_match_pos(re, &amp;str, 0);
+    long pos = reg_match_pos(re, &amp;str, 0, NULL);
     if (pos &lt; 0) return Qnil;
     pos = rb_str_sublen(str, pos);
     return LONG2FIX(pos);
@@ -1756,7 +1790,7 @@ rb_reg_match(VALUE re, VALUE str)
                 Source:
                 <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/regexp.rb#L17" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/regexp.rb#L17" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-as_json_source" class="dyn-source">
@@ -1811,8 +1845,7 @@ rb_reg_match(VALUE re, VALUE str)
 rb_reg_casefold_p(VALUE re)
 {
     rb_reg_check(re);
-    if (RREGEXP_PTR(re)-&gt;options &amp; ONIG_OPTION_IGNORECASE) return Qtrue;
-    return Qfalse;
+    return RBOOL(RREGEXP_PTR(re)-&gt;options &amp; ONIG_OPTION_IGNORECASE);
 }</pre>
               </div>
             </div>
@@ -1900,7 +1933,7 @@ rb_obj_encoding(VALUE obj)
                 
               </p>
               <div id="method-i-eql-3F_source" class="dyn-source">
-                <pre>static VALUE
+                <pre>VALUE
 rb_reg_equal(VALUE re1, VALUE re2)
 {
     if (re1 == re2) return Qtrue;
@@ -1910,10 +1943,7 @@ rb_reg_equal(VALUE re1, VALUE re2)
     if (RREGEXP_PTR(re1)-&gt;options != RREGEXP_PTR(re2)-&gt;options) return Qfalse;
     if (RREGEXP_SRC_LEN(re1) != RREGEXP_SRC_LEN(re2)) return Qfalse;
     if (ENCODING_GET(re1) != ENCODING_GET(re2)) return Qfalse;
-    if (memcmp(RREGEXP_SRC_PTR(re1), RREGEXP_SRC_PTR(re2), RREGEXP_SRC_LEN(re1)) == 0) {
-        return Qtrue;
-    }
-    return Qfalse;
+    return RBOOL(memcmp(RREGEXP_SRC_PTR(re1), RREGEXP_SRC_PTR(re2), RREGEXP_SRC_LEN(re1)) == 0);
 }</pre>
               </div>
             </div>
@@ -1973,10 +2003,7 @@ r =~ &quot;abc&quot;.force_encoding(&quot;euc-jp&quot;)             #=&gt; nil
                 <pre>static VALUE
 rb_reg_fixed_encoding_p(VALUE re)
 {
-    if (FL_TEST(re, KCODE_FIXED))
-        return Qtrue;
-    else
-        return Qfalse;
+    return RBOOL(FL_TEST(re, KCODE_FIXED));
 }</pre>
               </div>
             </div>
@@ -2014,7 +2041,7 @@ rb_reg_fixed_encoding_p(VALUE re)
                 
               </p>
               <div id="method-i-hash_source" class="dyn-source">
-                <pre>static VALUE
+                <pre>VALUE
 rb_reg_hash(VALUE re)
 {
     st_index_t hashval = reg_hash(re);
@@ -2073,7 +2100,7 @@ rb_reg_inspect(VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-match">
             
-              <b>rxp.match(str)       &rarr; matchdata or nil<br />rxp.match(str,pos)   &rarr; matchdata or nil
+              <b>rxp.match(str, pos=0)                   &rarr; matchdata or nil<br />rxp.match(str, pos=0) {|match| block }  &rarr; obj
 </b>
             
             <a href="../classes/Regexp.html#method-i-match" name="method-i-match" class="permalink">Link</a>
@@ -2124,7 +2151,7 @@ end
                 <pre>static VALUE
 rb_reg_match_m(int argc, VALUE *argv, VALUE re)
 {
-    VALUE result, str, initpos;
+    VALUE result = Qnil, str, initpos;
     long pos;
 
     if (rb_scan_args(argc, argv, &quot;11&quot;, &amp;str, &amp;initpos) == 2) {
@@ -2134,12 +2161,11 @@ rb_reg_match_m(int argc, VALUE *argv, VALUE re)
         pos = 0;
     }
 
-    pos = reg_match_pos(re, &amp;str, pos);
+    pos = reg_match_pos(re, &amp;str, pos, &amp;result);
     if (pos &lt; 0) {
         rb_backref_set(Qnil);
         return Qnil;
     }
-    result = rb_backref_get();
     rb_match_busy(result);
     if (!NIL_P(result) &amp;&amp; rb_block_given_p()) {
         return rb_yield(result);
@@ -2154,7 +2180,7 @@ rb_reg_match_m(int argc, VALUE *argv, VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-match-3F">
             
-              <b>rxp.match?(str)       &rarr; true or false<br />rxp.match?(str,pos)   &rarr; true or false
+              <b>rxp.match?(str)          &rarr; true or false<br />rxp.match?(str, pos=0)   &rarr; true or false
 </b>
             
             <a href="../classes/Regexp.html#method-i-match-3F" name="method-i-match-3F" class="permalink">Link</a>
@@ -2162,7 +2188,7 @@ rb_reg_match_m(int argc, VALUE *argv, VALUE re)
 
           
             <div class="description">
-              <p>Returns a <code>true</code> or <code>false</code> indicates whether the regexp is matched or not without updating $~ and other related variables. If the second parameter is present, it specifies the position in the string to begin the search.</p>
+              <p>Returns <code>true</code> or <code>false</code> to indicate whether the regexp is matched or not without updating $~ and other related variables. If the second parameter is present, it specifies the position in the string to begin the search.</p>
 
 <pre><code>/R.../.match?(&quot;Ruby&quot;)    #=&gt; true
 /R.../.match?(&quot;Ruby&quot;, 1) #=&gt; false
@@ -2437,7 +2463,7 @@ rb_reg_source(VALUE re)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_json_source')" id="l_method-i-to_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/json/lib/json/add/regexp.rb#L27" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/regexp.rb#L27" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_json_source" class="dyn-source">

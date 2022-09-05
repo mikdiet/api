@@ -965,7 +965,13 @@ rb_stat_ctime(VALUE self)
                 <pre>static VALUE
 rb_stat_dev(VALUE self)
 {
+#if SIZEOF_STRUCT_STAT_ST_DEV &lt;= SIZEOF_DEV_T
     return DEVT2NUM(get_stat(self)-&gt;st_dev);
+#elif SIZEOF_STRUCT_STAT_ST_DEV &lt;= SIZEOF_LONG
+    return ULONG2NUM(get_stat(self)-&gt;st_dev);
+#else
+    return ULL2NUM(get_stat(self)-&gt;st_dev);
+#endif
 }</pre>
               </div>
             </div>
@@ -1150,16 +1156,16 @@ rb_stat_x(VALUE obj)
 
 #ifdef USE_GETEUID
     if (geteuid() == 0) {
-        return st-&gt;st_mode &amp; S_IXUGO ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IXUGO);
     }
 #endif
 #ifdef S_IXUSR
     if (rb_stat_owned(obj))
-        return st-&gt;st_mode &amp; S_IXUSR ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IXUSR);
 #endif
 #ifdef S_IXGRP
     if (rb_stat_grpowned(obj))
-        return st-&gt;st_mode &amp; S_IXGRP ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IXGRP);
 #endif
 #ifdef S_IXOTH
     if (!(st-&gt;st_mode &amp; S_IXOTH)) return Qfalse;
@@ -1207,16 +1213,16 @@ rb_stat_X(VALUE obj)
 
 #ifdef USE_GETEUID
     if (getuid() == 0) {
-        return st-&gt;st_mode &amp; S_IXUGO ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IXUGO);
     }
 #endif
 #ifdef S_IXUSR
     if (rb_stat_rowned(obj))
-        return st-&gt;st_mode &amp; S_IXUSR ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IXUSR);
 #endif
 #ifdef S_IXGRP
     if (rb_group_member(get_stat(obj)-&gt;st_gid))
-        return st-&gt;st_mode &amp; S_IXGRP ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IXGRP);
 #endif
 #ifdef S_IXOTH
     if (!(st-&gt;st_mode &amp; S_IXOTH)) return Qfalse;
@@ -1679,7 +1685,21 @@ File.stat(&quot;testfile&quot;).nlink             #=&gt; 2
                 <pre>static VALUE
 rb_stat_nlink(VALUE self)
 {
-    return UINT2NUM(get_stat(self)-&gt;st_nlink);
+    /* struct stat::st_nlink is nlink_t in POSIX.  Not the case for Windows. */
+    const struct stat *ptr = get_stat(self);
+
+    if (sizeof(ptr-&gt;st_nlink) &lt;= sizeof(int)) {
+        return UINT2NUM((unsigned)ptr-&gt;st_nlink);
+    }
+    else if (sizeof(ptr-&gt;st_nlink) == sizeof(long)) {
+        return ULONG2NUM((unsigned long)ptr-&gt;st_nlink);
+    }
+    else if (sizeof(ptr-&gt;st_nlink) == sizeof(LONG_LONG)) {
+        return ULL2NUM((unsigned LONG_LONG)ptr-&gt;st_nlink);
+    }
+    else {
+        rb_bug(&quot;:FIXME: don&#39;t know what to do&quot;);
+    }
 }</pre>
               </div>
             </div>
@@ -1810,7 +1830,13 @@ File.stat(&quot;/dev/tty&quot;).rdev   #=&gt; 1280
 rb_stat_rdev(VALUE self)
 {
 #ifdef HAVE_STRUCT_STAT_ST_RDEV
+# if SIZEOF_STRUCT_STAT_ST_RDEV &lt;= SIZEOF_DEV_T
     return DEVT2NUM(get_stat(self)-&gt;st_rdev);
+# elif SIZEOF_STRUCT_STAT_ST_RDEV &lt;= SIZEOF_LONG
+    return ULONG2NUM(get_stat(self)-&gt;st_rdev);
+# else
+    return ULL2NUM(get_stat(self)-&gt;st_rdev);
+# endif
 #else
     return Qnil;
 #endif
@@ -1956,11 +1982,11 @@ rb_stat_r(VALUE obj)
 #endif
 #ifdef S_IRUSR
     if (rb_stat_owned(obj))
-        return st-&gt;st_mode &amp; S_IRUSR ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IRUSR);
 #endif
 #ifdef S_IRGRP
     if (rb_stat_grpowned(obj))
-        return st-&gt;st_mode &amp; S_IRGRP ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IRGRP);
 #endif
 #ifdef S_IROTH
     if (!(st-&gt;st_mode &amp; S_IROTH)) return Qfalse;
@@ -2014,11 +2040,11 @@ rb_stat_R(VALUE obj)
 #endif
 #ifdef S_IRUSR
     if (rb_stat_rowned(obj))
-        return st-&gt;st_mode &amp; S_IRUSR ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IRUSR);
 #endif
 #ifdef S_IRGRP
     if (rb_group_member(get_stat(obj)-&gt;st_gid))
-        return st-&gt;st_mode &amp; S_IRGRP ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IRGRP);
 #endif
 #ifdef S_IROTH
     if (!(st-&gt;st_mode &amp; S_IROTH)) return Qfalse;
@@ -2165,7 +2191,7 @@ rb_stat_size(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-size-3F">
             
-              <b>state.size    &rarr; integer
+              <b>stat.size?    &rarr; Integer or nil
 </b>
             
             <a href="../../classes/File/Stat.html#method-i-size-3F" name="method-i-size-3F" class="permalink">Link</a>
@@ -2173,9 +2199,10 @@ rb_stat_size(VALUE self)
 
           
             <div class="description">
-              <p>Returns the size of <em>stat</em> in bytes.</p>
+              <p>Returns <code>nil</code> if <em>stat</em> is a zero-length file, the size of the file otherwise.</p>
 
-<pre><code>File.stat(&quot;testfile&quot;).size   #=&gt; 66
+<pre><code>File.stat(&quot;testfile&quot;).size?   #=&gt; 66
+File.stat(&quot;/dev/null&quot;).size?  #=&gt; nil
 </code></pre>
             </div>
           
@@ -2531,11 +2558,11 @@ rb_stat_w(VALUE obj)
 #endif
 #ifdef S_IWUSR
     if (rb_stat_owned(obj))
-        return st-&gt;st_mode &amp; S_IWUSR ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IWUSR);
 #endif
 #ifdef S_IWGRP
     if (rb_stat_grpowned(obj))
-        return st-&gt;st_mode &amp; S_IWGRP ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IWGRP);
 #endif
 #ifdef S_IWOTH
     if (!(st-&gt;st_mode &amp; S_IWOTH)) return Qfalse;
@@ -2589,11 +2616,11 @@ rb_stat_W(VALUE obj)
 #endif
 #ifdef S_IWUSR
     if (rb_stat_rowned(obj))
-        return st-&gt;st_mode &amp; S_IWUSR ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IWUSR);
 #endif
 #ifdef S_IWGRP
     if (rb_group_member(get_stat(obj)-&gt;st_gid))
-        return st-&gt;st_mode &amp; S_IWGRP ? Qtrue : Qfalse;
+        return RBOOL(st-&gt;st_mode &amp; S_IWGRP);
 #endif
 #ifdef S_IWOTH
     if (!(st-&gt;st_mode &amp; S_IWOTH)) return Qfalse;

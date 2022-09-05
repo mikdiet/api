@@ -30,7 +30,7 @@
     <meta property="og:description" content="A Module is a collection of methods and constants. The methods in a module may be instance methods or module methods.">
   
 
-    <meta name="keywords" content="Module class, include, prepend, used_modules, nesting, constants, autoload, autoload?, extended, prepended, method_added, method_removed, method_undefined, freeze, ===, ==, <=>, <, <=, >, >=, to_s, included_modules, include?, name, ancestors, attr, attr_reader, attr_writer, attr_accessor, new, instance_methods, public_instance_methods, protected_instance_methods, private_instance_methods, constants, const_get, const_set, const_defined?, const_source_location, const_missing, class_variables, remove_class_variable, class_variable_get, class_variable_set, class_variable_defined?, public_constant, private_constant, deprecate_constant, singleton_class?, inspect, instance_method, public_instance_method, define_method, module_exec, class_exec, module_eval, class_eval, remove_method, undef_method, alias_method, method_defined?, public_method_defined?, private_method_defined?, protected_method_defined?, public_class_method, private_class_method">
+    <meta name="keywords" content="Module class, include, prepend, used_modules, nesting, constants, autoload, autoload?, freeze, ===, ==, <=>, <, <=, >, >=, to_s, included_modules, include?, name, ancestors, attr, attr_reader, attr_writer, attr_accessor, new, instance_methods, public_instance_methods, protected_instance_methods, private_instance_methods, constants, const_get, const_set, const_defined?, const_source_location, const_missing, class_variables, remove_class_variable, class_variable_get, class_variable_set, class_variable_defined?, public_constant, private_constant, deprecate_constant, singleton_class?, inspect, instance_method, public_instance_method, define_method, module_exec, class_exec, module_eval, class_eval, remove_method, undef_method, alias_method, method_defined?, public_method_defined?, private_method_defined?, protected_method_defined?, public_class_method, private_class_method">
 </head>
 
 <body>
@@ -276,12 +276,12 @@ Mod.instance_methods   #=&gt; [:meth]
             
               
               <li>
-                <a href="#method-c-constants">constants</a>,
+                <a href="#method-i-constants">constants</a>,
               </li>
             
               
               <li>
-                <a href="#method-i-constants">constants</a>
+                <a href="#method-c-constants">constants</a>
               </li>
             
           </ul>
@@ -299,18 +299,6 @@ Mod.instance_methods   #=&gt; [:meth]
               
               <li>
                 <a href="#method-i-deprecate_constant">deprecate_constant</a>
-              </li>
-            
-          </ul>
-        </dd>
-      
-        <dt>E</dt>
-        <dd>
-          <ul>
-            
-              
-              <li>
-                <a href="#method-i-extended">extended</a>
               </li>
             
           </ul>
@@ -371,22 +359,7 @@ Mod.instance_methods   #=&gt; [:meth]
             
               
               <li>
-                <a href="#method-i-method_added">method_added</a>,
-              </li>
-            
-              
-              <li>
                 <a href="#method-i-method_defined-3F">method_defined?</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-method_removed">method_removed</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-method_undefined">method_undefined</a>,
               </li>
             
               
@@ -431,11 +404,6 @@ Mod.instance_methods   #=&gt; [:meth]
               
               <li>
                 <a href="#method-i-prepend">prepend</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-prepended">prepended</a>,
               </li>
             
               
@@ -759,10 +727,7 @@ a.meth2          #=&gt; &quot;bye&quot;
                 <pre>static VALUE
 rb_mod_initialize(VALUE module)
 {
-    if (rb_block_given_p()) {
-        rb_mod_module_exec(1, &amp;module, module);
-    }
-    return Qnil;
+    return rb_mod_initialize_exec(module);
 }</pre>
               </div>
             </div>
@@ -1035,8 +1000,7 @@ obj.equal? obj    #=&gt; true
                 <pre>MJIT_FUNC_EXPORTED VALUE
 rb_obj_equal(VALUE obj1, VALUE obj2)
 {
-    if (obj1 == obj2) return Qtrue;
-    return Qfalse;
+    return RBOOL(obj1 == obj2);
 }</pre>
               </div>
             </div>
@@ -1168,7 +1132,7 @@ rb_mod_ge(VALUE mod, VALUE arg)
         <div class="method">
           <h3 class="title method-title" id="method-i-alias_method">
             
-              <b>alias_method(new_name, old_name)   &rarr; self
+              <b>alias_method(new_name, old_name)   &rarr; symbol
 </b>
             
             <a href="../classes/Module.html#method-i-alias_method" name="method-i-alias_method" class="permalink">Link</a>
@@ -1179,7 +1143,7 @@ rb_mod_ge(VALUE mod, VALUE arg)
               <p>Makes <em>new_name</em> a new copy of the method <em>old_name</em>. This can be used to retain access to methods that are overridden.</p>
 
 <pre><code>module Mod
-  alias_method :orig_exit, :exit
+  alias_method :orig_exit, :exit #=&gt; :orig_exit
   def exit(code=0)
     puts &quot;Exiting with code #{code}&quot;
     orig_exit(code)
@@ -1217,8 +1181,9 @@ rb_mod_alias_method(VALUE mod, VALUE newname, VALUE oldname)
     if (!oldid) {
         rb_print_undef_str(mod, oldname);
     }
-    rb_alias(mod, rb_to_id(newname), oldid);
-    return mod;
+    VALUE id = rb_to_id(newname);
+    rb_alias(mod, id, oldid);
+    return ID2SYM(id);
 }</pre>
               </div>
             </div>
@@ -1269,8 +1234,13 @@ Enumerable.ancestors #=&gt; [Enumerable]
 rb_mod_ancestors(VALUE mod)
 {
     VALUE p, ary = rb_ary_new();
+    VALUE refined_class = Qnil;
+    if (FL_TEST(mod, RMODULE_IS_REFINEMENT)) {
+        refined_class = rb_refinement_module_get_refined_class(mod);
+    }
 
     for (p = mod; p; p = RCLASS_SUPER(p)) {
+        if (p == refined_class) break;
         if (p != RCLASS_ORIGIN(p)) continue;
 	if (BUILTIN_TYPE(p) == T_ICLASS) {
 	    rb_ary_push(ary, RBASIC(p)-&gt;klass);
@@ -1289,7 +1259,7 @@ rb_mod_ancestors(VALUE mod)
         <div class="method">
           <h3 class="title method-title" id="method-i-attr">
             
-              <b>attr(name, ...) &rarr; nil<br />attr(name, true) &rarr; nil<br />attr(name, false) &rarr; nil
+              <b>attr(name, ...) &rarr; array<br />attr(name, true) &rarr; array<br />attr(name, false) &rarr; array
 </b>
             
             <a href="../classes/Module.html#method-i-attr" name="method-i-attr" class="permalink">Link</a>
@@ -1297,7 +1267,7 @@ rb_mod_ancestors(VALUE mod)
 
           
             <div class="description">
-              <p>The first form is equivalent to <a href="Module.html#method-i-attr_reader"><code>attr_reader</code></a>. The second form is equivalent to <code>attr_accessor(name)</code> but deprecated. The last form is equivalent to <code>attr_reader(name)</code> but deprecated.</p>
+              <p>The first form is equivalent to <a href="Module.html#method-i-attr_reader"><code>attr_reader</code></a>. The second form is equivalent to <code>attr_accessor(name)</code> but deprecated. The last form is equivalent to <code>attr_reader(name)</code> but deprecated. Returns an array of defined method names as symbols.</p>
             </div>
           
 
@@ -1319,9 +1289,14 @@ rb_mod_ancestors(VALUE mod)
 rb_mod_attr(int argc, VALUE *argv, VALUE klass)
 {
     if (argc == 2 &amp;&amp; (argv[1] == Qtrue || argv[1] == Qfalse)) {
-        rb_warning(&quot;optional boolean argument is obsoleted&quot;);
-        rb_attr(klass, id_for_attr(klass, argv[0]), 1, RTEST(argv[1]), TRUE);
-        return Qnil;
+        ID id = id_for_attr(klass, argv[0]);
+        VALUE names = rb_ary_new();
+
+        rb_category_warning(RB_WARN_CATEGORY_DEPRECATED, &quot;optional boolean argument is obsoleted&quot;);
+        rb_attr(klass, id, 1, RTEST(argv[1]), TRUE);
+        rb_ary_push(names, ID2SYM(id));
+        if (argv[1] == Qtrue) rb_ary_push(names, ID2SYM(rb_id_attrset(id)));
+        return names;
     }
     return rb_mod_attr_reader(argc, argv, klass);
 }</pre>
@@ -1333,7 +1308,7 @@ rb_mod_attr(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-i-attr_accessor">
             
-              <b>attr_accessor(symbol, ...)    &rarr; nil<br />attr_accessor(string, ...)    &rarr; nil
+              <b>attr_accessor(symbol, ...)    &rarr; array<br />attr_accessor(string, ...)    &rarr; array
 </b>
             
             <a href="../classes/Module.html#method-i-attr_accessor" name="method-i-attr_accessor" class="permalink">Link</a>
@@ -1341,10 +1316,10 @@ rb_mod_attr(int argc, VALUE *argv, VALUE klass)
 
           
             <div class="description">
-              <p>Defines a named attribute for this module, where the name is <em>symbol.</em><code>id2name</code>, creating an instance variable (<code>@name</code>) and a corresponding access method to read it. Also creates a method called <code>name=</code> to set the attribute. <a href="String.html"><code>String</code></a> arguments are converted to symbols.</p>
+              <p>Defines a named attribute for this module, where the name is <em>symbol.</em><code>id2name</code>, creating an instance variable (<code>@name</code>) and a corresponding access method to read it. Also creates a method called <code>name=</code> to set the attribute. <a href="String.html"><code>String</code></a> arguments are converted to symbols. Returns an array of defined method names as symbols.</p>
 
 <pre><code>module Mod
-  attr_accessor(:one, :two)
+  attr_accessor(:one, :two) #=&gt; [:one, :one=, :two, :two=]
 end
 Mod.instance_methods.sort   #=&gt; [:one, :one=, :two, :two=]
 </code></pre>
@@ -1369,11 +1344,16 @@ Mod.instance_methods.sort   #=&gt; [:one, :one=, :two, :two=]
 rb_mod_attr_accessor(int argc, VALUE *argv, VALUE klass)
 {
     int i;
+    VALUE names = rb_ary_new2(argc * 2);
 
     for (i=0; i&lt;argc; i++) {
-        rb_attr(klass, id_for_attr(klass, argv[i]), TRUE, TRUE, TRUE);
+        ID id = id_for_attr(klass, argv[i]);
+
+        rb_attr(klass, id, TRUE, TRUE, TRUE);
+        rb_ary_push(names, ID2SYM(id));
+        rb_ary_push(names, ID2SYM(rb_id_attrset(id)));
     }
-    return Qnil;
+    return names;
 }</pre>
               </div>
             </div>
@@ -1383,7 +1363,7 @@ rb_mod_attr_accessor(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-i-attr_reader">
             
-              <b>attr_reader(symbol, ...)  &rarr; nil<br />attr(symbol, ...)         &rarr; nil<br />attr_reader(string, ...)  &rarr; nil<br />attr(string, ...)         &rarr; nil
+              <b>attr_reader(symbol, ...)  &rarr; array<br />attr(symbol, ...)         &rarr; array<br />attr_reader(string, ...)  &rarr; array<br />attr(string, ...)         &rarr; array
 </b>
             
             <a href="../classes/Module.html#method-i-attr_reader" name="method-i-attr_reader" class="permalink">Link</a>
@@ -1391,7 +1371,7 @@ rb_mod_attr_accessor(int argc, VALUE *argv, VALUE klass)
 
           
             <div class="description">
-              <p>Creates instance variables and corresponding methods that return the value of each instance variable. Equivalent to calling “<code>attr</code><em>:name</em>” on each name in turn. <a href="String.html"><code>String</code></a> arguments are converted to symbols.</p>
+              <p>Creates instance variables and corresponding methods that return the value of each instance variable. Equivalent to calling “<code>attr</code><em>:name</em>” on each name in turn. <a href="String.html"><code>String</code></a> arguments are converted to symbols. Returns an array of defined method names as symbols.</p>
             </div>
           
 
@@ -1413,11 +1393,14 @@ rb_mod_attr_accessor(int argc, VALUE *argv, VALUE klass)
 rb_mod_attr_reader(int argc, VALUE *argv, VALUE klass)
 {
     int i;
+    VALUE names = rb_ary_new2(argc);
 
     for (i=0; i&lt;argc; i++) {
-        rb_attr(klass, id_for_attr(klass, argv[i]), TRUE, FALSE, TRUE);
+        ID id = id_for_attr(klass, argv[i]);
+        rb_attr(klass, id, TRUE, FALSE, TRUE);
+        rb_ary_push(names, ID2SYM(id));
     }
-    return Qnil;
+    return names;
 }</pre>
               </div>
             </div>
@@ -1427,7 +1410,7 @@ rb_mod_attr_reader(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-i-attr_writer">
             
-              <b>attr_writer(symbol, ...)    &rarr; nil<br />attr_writer(string, ...)    &rarr; nil
+              <b>attr_writer(symbol, ...)    &rarr; array<br />attr_writer(string, ...)    &rarr; array
 </b>
             
             <a href="../classes/Module.html#method-i-attr_writer" name="method-i-attr_writer" class="permalink">Link</a>
@@ -1435,7 +1418,7 @@ rb_mod_attr_reader(int argc, VALUE *argv, VALUE klass)
 
           
             <div class="description">
-              <p>Creates an accessor method to allow assignment to the attribute <em>symbol</em><code>.id2name</code>. <a href="String.html"><code>String</code></a> arguments are converted to symbols.</p>
+              <p>Creates an accessor method to allow assignment to the attribute <em>symbol</em><code>.id2name</code>. <a href="String.html"><code>String</code></a> arguments are converted to symbols. Returns an array of defined method names as symbols.</p>
             </div>
           
 
@@ -1457,11 +1440,14 @@ rb_mod_attr_reader(int argc, VALUE *argv, VALUE klass)
 rb_mod_attr_writer(int argc, VALUE *argv, VALUE klass)
 {
     int i;
+    VALUE names = rb_ary_new2(argc);
 
     for (i=0; i&lt;argc; i++) {
-        rb_attr(klass, id_for_attr(klass, argv[i]), FALSE, TRUE, TRUE);
+        ID id = id_for_attr(klass, argv[i]);
+        rb_attr(klass, id, FALSE, TRUE, TRUE);
+        rb_ary_push(names, ID2SYM(rb_id_attrset(id)));
     }
-    return Qnil;
+    return names;
 }</pre>
               </div>
             </div>
@@ -1966,8 +1952,7 @@ rb_mod_const_defined(int argc, VALUE *argv, VALUE mod)
     pend = path + RSTRING_LEN(name);
 
     if (p &gt;= pend || !*p) {
-      wrong_name:
-        rb_name_err_raise(wrong_constant_name, mod, name);
+        goto wrong_name;
     }
 
     if (p + 2 &lt; pend &amp;&amp; p[0] == &#39;:&#39; &amp;&amp; p[1] == &#39;:&#39;) {
@@ -2040,6 +2025,10 @@ rb_mod_const_defined(int argc, VALUE *argv, VALUE mod)
     }
 
     return Qtrue;
+
+  wrong_name:
+    rb_name_err_raise(wrong_constant_name, mod, name);
+    UNREACHABLE_RETURN(Qundef);
 }</pre>
               </div>
             </div>
@@ -2135,8 +2124,7 @@ rb_mod_const_get(int argc, VALUE *argv, VALUE mod)
     pend = path + RSTRING_LEN(name);
 
     if (p &gt;= pend || !*p) {
-      wrong_name:
-        rb_name_err_raise(wrong_constant_name, mod, name);
+        goto wrong_name;
     }
 
     if (p + 2 &lt; pend &amp;&amp; p[0] == &#39;:&#39; &amp;&amp; p[1] == &#39;:&#39;) {
@@ -2203,6 +2191,10 @@ rb_mod_const_get(int argc, VALUE *argv, VALUE mod)
     }
 
     return mod;
+
+  wrong_name:
+    rb_name_err_raise(wrong_constant_name, mod, name);
+    UNREACHABLE_RETURN(Qundef);
 }</pre>
               </div>
             </div>
@@ -2341,35 +2333,39 @@ rb_mod_const_set(VALUE mod, VALUE name, VALUE value)
 
           
             <div class="description">
-              <p>Returns the Ruby source filename and line number containing first definition of constant specified. If the named constant is not found, <code>nil</code> is returned. If the constant is found, but its source location can not be extracted (constant is defined in C code), empty array is returned.</p>
+              <p>Returns the Ruby source filename and line number containing the definition of the constant specified. If the named constant is not found, <code>nil</code> is returned. If the constant is found, but its source location can not be extracted (constant is defined in C code), empty array is returned.</p>
 
 <p><em>inherit</em> specifies whether to lookup in <code>mod.ancestors</code> (<code>true</code> by default).</p>
 
 <pre><code># test.rb:
-class A
+class A         # line 1
   C1 = 1
-end
-
-module M
   C2 = 2
 end
 
-class B &lt; A
-  include M
+module M        # line 6
   C3 = 3
 end
 
-class A # continuation of A definition
+class B &lt; A     # line 10
+  include M
+  C4 = 4
 end
 
-p B.const_source_location(&#39;C3&#39;)           # =&gt; [&quot;test.rb&quot;, 11]
-p B.const_source_location(&#39;C2&#39;)           # =&gt; [&quot;test.rb&quot;, 6]
+class A # continuation of A definition
+  C2 = 8 # constant redefinition; warned yet allowed
+end
+
+p B.const_source_location(&#39;C4&#39;)           # =&gt; [&quot;test.rb&quot;, 12]
+p B.const_source_location(&#39;C3&#39;)           # =&gt; [&quot;test.rb&quot;, 7]
 p B.const_source_location(&#39;C1&#39;)           # =&gt; [&quot;test.rb&quot;, 2]
 
-p B.const_source_location(&#39;C2&#39;, false)    # =&gt; nil  -- don&#39;t lookup in ancestors
+p B.const_source_location(&#39;C3&#39;, false)    # =&gt; nil  -- don&#39;t lookup in ancestors
 
-p Object.const_source_location(&#39;B&#39;)       # =&gt; [&quot;test.rb&quot;, 9]
-p Object.const_source_location(&#39;A&#39;)       # =&gt; [&quot;test.rb&quot;, 1]  -- note it is first entry, not &quot;continuation&quot;
+p A.const_source_location(&#39;C2&#39;)           # =&gt; [&quot;test.rb&quot;, 16] -- actual (last) definition place
+
+p Object.const_source_location(&#39;B&#39;)       # =&gt; [&quot;test.rb&quot;, 10] -- top-level constant could be looked through Object
+p Object.const_source_location(&#39;A&#39;)       # =&gt; [&quot;test.rb&quot;, 1] -- class reopening is NOT considered new definition
 
 p B.const_source_location(&#39;A&#39;)            # =&gt; [&quot;test.rb&quot;, 1]  -- because Object is in ancestors
 p M.const_source_location(&#39;A&#39;)            # =&gt; [&quot;test.rb&quot;, 1]  -- Object is not ancestor, but additionally checked for modules
@@ -2424,8 +2420,7 @@ rb_mod_const_source_location(int argc, VALUE *argv, VALUE mod)
     pend = path + RSTRING_LEN(name);
 
     if (p &gt;= pend || !*p) {
-      wrong_name:
-        rb_name_err_raise(wrong_constant_name, mod, name);
+        goto wrong_name;
     }
 
     if (p + 2 &lt; pend &amp;&amp; p[0] == &#39;:&#39; &amp;&amp; p[1] == &#39;:&#39;) {
@@ -2491,6 +2486,10 @@ rb_mod_const_source_location(int argc, VALUE *argv, VALUE mod)
     }
 
     return loc;
+
+  wrong_name:
+    rb_name_err_raise(wrong_constant_name, mod, name);
+    UNREACHABLE_RETURN(Qundef);
 }</pre>
               </div>
             </div>
@@ -2630,25 +2629,7 @@ rb_mod_define_method(int argc, VALUE *argv, VALUE mod)
     name = argv[0];
     id = rb_check_id(&amp;name);
     if (argc == 1) {
-#if PROC_NEW_REQUIRES_BLOCK
         body = rb_block_lambda();
-#else
-        const rb_execution_context_t *ec = GET_EC();
-        VALUE block_handler = rb_vm_frame_block_handler(ec-&gt;cfp);
-        if (block_handler == VM_BLOCK_HANDLER_NONE) rb_raise(rb_eArgError, proc_without_block);
-
-        switch (vm_block_handler_type(block_handler)) {
-          case block_handler_type_proc:
-            body = VM_BH_TO_PROC(block_handler);
-            break;
-          case block_handler_type_symbol:
-            body = rb_sym_to_proc(VM_BH_TO_SYMBOL(block_handler));
-            break;
-          case block_handler_type_iseq:
-          case block_handler_type_ifunc:
-            body = rb_vm_make_lambda(ec, VM_BH_TO_CAPT_BLOCK(block_handler), rb_cProc);
-        }
-#endif
     }
     else {
         body = argv[1];
@@ -2760,42 +2741,6 @@ rb_mod_deprecate_constant(int argc, const VALUE *argv, VALUE obj)
           </div>
         
         <div class="method">
-          <h3 class="title method-title" id="method-i-extended">
-            
-              <b>extended</b>(p1)
-            
-            <a href="../classes/Module.html#method-i-extended" name="method-i-extended" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Callback invoked whenever the receiver is included in another module or class. This should be used in preference to <code>Module.append_features</code> if your code wants to perform some action when a module is included in another.</p>
-
-<pre><code>module A
-  def A.included(mod)
-    puts &quot;#{self} included in #{mod}&quot;
-  end
-end
-module Enumerable
-  include A
-end
- # =&gt; prints &quot;A included in Enumerable&quot;
-</code></pre>
-            </div>
-          
-
-          
-
-          
-            <div class="aka">
-              Alias for: <a href="Module.html#method-i-included">included</a>
-            </div>
-          
-
-          
-          </div>
-        
-        <div class="method">
           <h3 class="title method-title" id="method-i-freeze">
             
               <b>mod.freeze       &rarr; mod
@@ -2875,6 +2820,10 @@ rb_mod_include(int argc, VALUE *argv, VALUE module)
     CONST_ID(id_append_features, &quot;append_features&quot;);
     CONST_ID(id_included, &quot;included&quot;);
 
+    if (FL_TEST(module, RMODULE_IS_REFINEMENT)) {
+        rb_warn_deprecated_to_remove_at(3.2, &quot;Refinement#include&quot;, NULL);
+    }
+
     rb_check_arity(argc, 1, UNLIMITED_ARGUMENTS);
     for (i = 0; i &lt; argc; i++)
         Check_Type(argv[i], T_MODULE);
@@ -2900,7 +2849,7 @@ rb_mod_include(int argc, VALUE *argv, VALUE module)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>module</em> is included in <em>mod</em> or one of <em>mod</em>’s ancestors.</p>
+              <p>Returns <code>true</code> if <em>module</em> is included or prepended in <em>mod</em> or one of <em>mod</em>’s ancestors.</p>
 
 <pre><code>module A
 end
@@ -2937,7 +2886,7 @@ rb_mod_include_p(VALUE mod, VALUE mod2)
 
     Check_Type(mod2, T_MODULE);
     for (p = RCLASS_SUPER(mod); p; p = RCLASS_SUPER(p)) {
-	if (BUILTIN_TYPE(p) == T_ICLASS) {
+        if (BUILTIN_TYPE(p) == T_ICLASS &amp;&amp; !FL_TEST(p, RICLASS_IS_ORIGIN)) {
 	    if (RBASIC(p)-&gt;klass == mod2) return Qtrue;
 	}
     }
@@ -2959,17 +2908,21 @@ rb_mod_include_p(VALUE mod, VALUE mod2)
 
           
             <div class="description">
-              <p>Returns the list of modules included in <em>mod</em>.</p>
+              <p>Returns the list of modules included or prepended in <em>mod</em> or one of <em>mod</em>’s ancestors.</p>
 
-<pre><code>module Mixin
+<pre><code>module Sub
+end
+
+module Mixin
+  prepend Sub
 end
 
 module Outer
   include Mixin
 end
 
-Mixin.included_modules   #=&gt; []
-Outer.included_modules   #=&gt; [Mixin]
+Mixin.included_modules   #=&gt; [Sub]
+Outer.included_modules   #=&gt; [Sub, Mixin]
 </code></pre>
             </div>
           
@@ -2996,7 +2949,7 @@ rb_mod_included_modules(VALUE mod)
     VALUE origin = RCLASS_ORIGIN(mod);
 
     for (p = RCLASS_SUPER(mod); p; p = RCLASS_SUPER(p)) {
-	if (p != origin &amp;&amp; BUILTIN_TYPE(p) == T_ICLASS) {
+        if (p != origin &amp;&amp; RCLASS_ORIGIN(p) == p &amp;&amp; BUILTIN_TYPE(p) == T_ICLASS) {
 	    VALUE m = RBASIC(p)-&gt;klass;
 	    if (RB_TYPE_P(m, T_MODULE))
 		rb_ary_push(ary, m);
@@ -3095,7 +3048,7 @@ rb_mod_instance_method(VALUE mod, VALUE vid)
     if (!id) {
         rb_method_name_error(mod, vid);
     }
-    return mnew(mod, Qundef, id, rb_cUnboundMethod, FALSE);
+    return mnew_unbound(mod, id, rb_cUnboundMethod, FALSE);
 }</pre>
               </div>
             </div>
@@ -3160,42 +3113,6 @@ rb_class_instance_methods(int argc, const VALUE *argv, VALUE mod)
           </div>
         
         <div class="method">
-          <h3 class="title method-title" id="method-i-method_added">
-            
-              <b>method_added</b>(p1)
-            
-            <a href="../classes/Module.html#method-i-method_added" name="method-i-method_added" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Callback invoked whenever the receiver is included in another module or class. This should be used in preference to <code>Module.append_features</code> if your code wants to perform some action when a module is included in another.</p>
-
-<pre><code>module A
-  def A.included(mod)
-    puts &quot;#{self} included in #{mod}&quot;
-  end
-end
-module Enumerable
-  include A
-end
- # =&gt; prints &quot;A included in Enumerable&quot;
-</code></pre>
-            </div>
-          
-
-          
-
-          
-            <div class="aka">
-              Alias for: <a href="Module.html#method-i-included">included</a>
-            </div>
-          
-
-          
-          </div>
-        
-        <div class="method">
           <h3 class="title method-title" id="method-i-method_defined-3F">
             
               <b>mod.method_defined?(symbol, inherit=true)    &rarr; true or false<br />mod.method_defined?(string, inherit=true)    &rarr; true or false
@@ -3254,83 +3171,11 @@ C.method_defined? &quot;private_method2&quot;     #=&gt; false
 rb_mod_method_defined(int argc, VALUE *argv, VALUE mod)
 {
     rb_method_visibility_t visi = check_definition_visibility(mod, argc, argv);
-    return (visi == METHOD_VISI_PUBLIC || visi == METHOD_VISI_PROTECTED) ? Qtrue : Qfalse;
+    return RBOOL(visi == METHOD_VISI_PUBLIC || visi == METHOD_VISI_PROTECTED);
 }</pre>
               </div>
             </div>
             
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-method_removed">
-            
-              <b>method_removed</b>(p1)
-            
-            <a href="../classes/Module.html#method-i-method_removed" name="method-i-method_removed" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Callback invoked whenever the receiver is included in another module or class. This should be used in preference to <code>Module.append_features</code> if your code wants to perform some action when a module is included in another.</p>
-
-<pre><code>module A
-  def A.included(mod)
-    puts &quot;#{self} included in #{mod}&quot;
-  end
-end
-module Enumerable
-  include A
-end
- # =&gt; prints &quot;A included in Enumerable&quot;
-</code></pre>
-            </div>
-          
-
-          
-
-          
-            <div class="aka">
-              Alias for: <a href="Module.html#method-i-included">included</a>
-            </div>
-          
-
-          
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-method_undefined">
-            
-              <b>method_undefined</b>(p1)
-            
-            <a href="../classes/Module.html#method-i-method_undefined" name="method-i-method_undefined" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Callback invoked whenever the receiver is included in another module or class. This should be used in preference to <code>Module.append_features</code> if your code wants to perform some action when a module is included in another.</p>
-
-<pre><code>module A
-  def A.included(mod)
-    puts &quot;#{self} included in #{mod}&quot;
-  end
-end
-module Enumerable
-  include A
-end
- # =&gt; prints &quot;A included in Enumerable&quot;
-</code></pre>
-            </div>
-          
-
-          
-
-          
-            <div class="aka">
-              Alias for: <a href="Module.html#method-i-included">included</a>
-            </div>
-          
-
-          
           </div>
         
         <div class="method">
@@ -3383,7 +3228,7 @@ dummy:123:in `module_eval&#39;: undefined local variable
                 <pre>static VALUE
 rb_mod_module_eval_internal(int argc, const VALUE *argv, VALUE mod)
 {
-    return specific_eval(argc, argv, mod, mod, RB_PASS_CALLED_KEYWORDS);
+    return specific_eval(argc, argv, mod, FALSE, RB_PASS_CALLED_KEYWORDS);
 }</pre>
               </div>
             </div>
@@ -3438,7 +3283,7 @@ puts Thing.new.hello()
                 <pre>static VALUE
 rb_mod_module_exec_internal(int argc, const VALUE *argv, VALUE mod)
 {
-    return yield_under(mod, mod, argc, argv, RB_PASS_CALLED_KEYWORDS);
+    return yield_under(mod, FALSE, argc, argv, RB_PASS_CALLED_KEYWORDS);
 }</pre>
               </div>
             </div>
@@ -3520,6 +3365,10 @@ rb_mod_prepend(int argc, VALUE *argv, VALUE module)
     int i;
     ID id_prepend_features, id_prepended;
 
+    if (FL_TEST(module, RMODULE_IS_REFINEMENT)) {
+        rb_warn_deprecated_to_remove_at(3.2, &quot;Refinement#prepend&quot;, NULL);
+    }
+
     CONST_ID(id_prepend_features, &quot;prepend_features&quot;);
     CONST_ID(id_prepended, &quot;prepended&quot;);
 
@@ -3538,45 +3387,9 @@ rb_mod_prepend(int argc, VALUE *argv, VALUE module)
           </div>
         
         <div class="method">
-          <h3 class="title method-title" id="method-i-prepended">
-            
-              <b>prepended</b>(p1)
-            
-            <a href="../classes/Module.html#method-i-prepended" name="method-i-prepended" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Callback invoked whenever the receiver is included in another module or class. This should be used in preference to <code>Module.append_features</code> if your code wants to perform some action when a module is included in another.</p>
-
-<pre><code>module A
-  def A.included(mod)
-    puts &quot;#{self} included in #{mod}&quot;
-  end
-end
-module Enumerable
-  include A
-end
- # =&gt; prints &quot;A included in Enumerable&quot;
-</code></pre>
-            </div>
-          
-
-          
-
-          
-            <div class="aka">
-              Alias for: <a href="Module.html#method-i-included">included</a>
-            </div>
-          
-
-          
-          </div>
-        
-        <div class="method">
           <h3 class="title method-title" id="method-i-private_class_method">
             
-              <b>mod.private_class_method(symbol, ...)   &rarr; mod<br />mod.private_class_method(string, ...)   &rarr; mod
+              <b>mod.private_class_method(symbol, ...)   &rarr; mod<br />mod.private_class_method(string, ...)   &rarr; mod<br />mod.private_class_method(array)         &rarr; mod
 </b>
             
             <a href="../classes/Module.html#method-i-private_class_method" name="method-i-private_class_method" class="permalink">Link</a>
@@ -3586,7 +3399,7 @@ end
             <div class="description">
               <p>Makes existing class methods private. Often used to hide the default constructor <code>new</code>.</p>
 
-<p><a href="String.html"><code>String</code></a> arguments are converted to symbols.</p>
+<p><a href="String.html"><code>String</code></a> arguments are converted to symbols. An <a href="Array.html"><code>Array</code></a> of Symbols and/or Strings is also accepted.</p>
 
 <pre><code>class SimpleSingleton  # Not thread safe
   private_class_method :new
@@ -3872,7 +3685,7 @@ rb_mod_protected_method_defined(int argc, VALUE *argv, VALUE mod)
         <div class="method">
           <h3 class="title method-title" id="method-i-public_class_method">
             
-              <b>mod.public_class_method(symbol, ...)    &rarr; mod<br />mod.public_class_method(string, ...)    &rarr; mod
+              <b>mod.public_class_method(symbol, ...)    &rarr; mod<br />mod.public_class_method(string, ...)    &rarr; mod<br />mod.public_class_method(array)          &rarr; mod
 </b>
             
             <a href="../classes/Module.html#method-i-public_class_method" name="method-i-public_class_method" class="permalink">Link</a>
@@ -3882,7 +3695,7 @@ rb_mod_protected_method_defined(int argc, VALUE *argv, VALUE mod)
             <div class="description">
               <p>Makes a list of existing class methods public.</p>
 
-<p><a href="String.html"><code>String</code></a> arguments are converted to symbols.</p>
+<p><a href="String.html"><code>String</code></a> arguments are converted to symbols. An <a href="Array.html"><code>Array</code></a> of Symbols and/or Strings is also accepted.</p>
             </div>
           
 
@@ -3987,7 +3800,7 @@ rb_mod_public_instance_method(VALUE mod, VALUE vid)
     if (!id) {
         rb_method_name_error(mod, vid);
     }
-    return mnew(mod, Qundef, id, rb_cUnboundMethod, TRUE);
+    return mnew_unbound(mod, id, rb_cUnboundMethod, TRUE);
 }</pre>
               </div>
             </div>
@@ -4103,12 +3916,11 @@ rb_mod_public_method_defined(int argc, VALUE *argv, VALUE mod)
 
           
             <div class="description">
-              <p>Removes the definition of the <em>sym</em>, returning that constant’s value.</p>
+              <p>Removes the named class variable from the receiver, returning that variable’s value.</p>
 
-<pre><code>class Dummy
+<pre><code>class Example
   @@var = 99
-  puts @@var
-  remove_class_variable(:@@var)
+  puts remove_class_variable(:@@var)
   p(defined? @@var)
 end
 </code></pre>
@@ -4142,9 +3954,7 @@ rb_mod_remove_cvar(VALUE mod, VALUE name)
     st_data_t val, n = id;
 
     if (!id) {
-      not_defined:
-	rb_name_err_raise(&quot;class variable %1$s not defined for %2$s&quot;,
-			  mod, name);
+        goto not_defined;
     }
     rb_check_frozen(mod);
     if (RCLASS_IV_TBL(mod) &amp;&amp; st_delete(RCLASS_IV_TBL(mod), &amp;n, &amp;val)) {
@@ -4153,7 +3963,10 @@ rb_mod_remove_cvar(VALUE mod, VALUE name)
     if (rb_cvar_defined(mod, id)) {
 	rb_name_err_raise(&quot;cannot remove %1$s for %2$s&quot;, mod, ID2SYM(id));
     }
-    goto not_defined;
+  not_defined:
+    rb_name_err_raise(&quot;class variable %1$s not defined for %2$s&quot;,
+                      mod, name);
+    UNREACHABLE_RETURN(Qundef);
 }</pre>
               </div>
             </div>
@@ -4248,9 +4061,7 @@ C.singleton_class.singleton_class?  #=&gt; true
                 <pre>static VALUE
 rb_mod_singleton_p(VALUE klass)
 {
-    if (RB_TYPE_P(klass, T_CLASS) &amp;&amp; FL_TEST(klass, FL_SINGLETON))
-        return Qtrue;
-    return Qfalse;
+    return RBOOL(RB_TYPE_P(klass, T_CLASS) &amp;&amp; FL_TEST(klass, FL_SINGLETON));
 }</pre>
               </div>
             </div>
@@ -4289,7 +4100,7 @@ rb_mod_singleton_p(VALUE klass)
                 
               </p>
               <div id="method-i-to_s_source" class="dyn-source">
-                <pre>static VALUE
+                <pre>MJIT_FUNC_EXPORTED VALUE
 rb_mod_to_s(VALUE klass)
 {
     ID id_defined_at;

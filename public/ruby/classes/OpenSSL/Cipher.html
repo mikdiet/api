@@ -30,7 +30,7 @@
     <meta property="og:description" content="Provides symmetric algorithms for encryption and decryption. The algorithms that are available depend on the particular version of OpenSSL that is installed.">
   
 
-    <meta name="keywords" content="OpenSSL::Cipher class, random_key, random_iv, initialize_copy, ciphers, new, reset, encrypt, decrypt, pkcs5_keyivgen, update, final, name, key=, auth_data=, auth_tag=, auth_tag, auth_tag_len=, authenticated?, key_len=, key_len, iv=, iv_len=, iv_len, block_size, padding=">
+    <meta name="keywords" content="OpenSSL::Cipher class, random_key, random_iv, initialize_copy, ciphers, new, reset, encrypt, decrypt, pkcs5_keyivgen, update, final, name, key=, auth_data=, auth_tag=, auth_tag, auth_tag_len=, authenticated?, key_len=, key_len, iv=, iv_len=, iv_len, block_size, padding=, ccm_data_len=">
 </head>
 
 <body>
@@ -101,22 +101,7 @@
 
 <p>That is, a string consisting of the hyphenated concatenation of the individual components name, key length and mode. Either all uppercase or all lowercase strings may be used, for example:</p>
 
-<pre><code>cipher = OpenSSL::Cipher.new(&#39;AES-128-CBC&#39;)
-</code></pre>
-
-<p>For each algorithm supported, there is a class defined under the <a href="Cipher/Cipher.html"><code>Cipher</code></a> class that goes by the name of the cipher, e.g. to obtain an instance of AES, you could also use</p>
-
-<pre><code># these are equivalent
-cipher = OpenSSL::Cipher::AES.new(128, :CBC)
-cipher = OpenSSL::Cipher::AES.new(128, &#39;CBC&#39;)
-cipher = OpenSSL::Cipher::AES.new(&#39;128-CBC&#39;)
-</code></pre>
-
-<p>Finally, due to its wide-spread use, there are also extra classes defined for the different key sizes of AES</p>
-
-<pre><code>cipher = OpenSSL::Cipher::AES128.new(:CBC)
-cipher = OpenSSL::Cipher::AES192.new(:CBC)
-cipher = OpenSSL::Cipher::AES256.new(:CBC)
+<pre><code>cipher = OpenSSL::Cipher.new(&#39;aes-128-cbc&#39;)
 </code></pre>
 
 <h3 id="class-OpenSSL::Cipher-label-Choosing+either+encryption+or+decryption+mode">Choosing either encryption or decryption mode</h3>
@@ -137,7 +122,7 @@ cipher = OpenSSL::Cipher::AES256.new(:CBC)
 
 <p>Symmetric encryption requires a key that is the same for the encrypting and for the decrypting party and after initial key establishment should be kept as private information. There are a lot of ways to create insecure keys, the most notable is to simply take a password as the key without processing the password further. A simple and secure way to create a key for a particular <a href="Cipher/Cipher.html"><code>Cipher</code></a> is</p>
 
-<pre><code>cipher = OpenSSL::AES256.new(:CFB)
+<pre><code>cipher = OpenSSL::Cipher.new(&#39;aes-256-cfb&#39;)
 cipher.encrypt
 key = cipher.random_key # also sets the generated key on the Cipher
 </code></pre>
@@ -176,14 +161,14 @@ iv = cipher.random_iv # also sets the generated IV on the Cipher
 
 <pre><code>data = &quot;Very, very confidential data&quot;
 
-cipher = OpenSSL::Cipher::AES.new(128, :CBC)
+cipher = OpenSSL::Cipher.new(&#39;aes-128-cbc&#39;)
 cipher.encrypt
 key = cipher.random_key
 iv = cipher.random_iv
 
 encrypted = cipher.update(data) + cipher.final
 ...
-decipher = OpenSSL::Cipher::AES.new(128, :CBC)
+decipher = OpenSSL::Cipher.new(&#39;aes-128-cbc&#39;)
 decipher.decrypt
 decipher.key = key
 decipher.iv = iv
@@ -193,9 +178,9 @@ plain = decipher.update(encrypted) + decipher.final
 puts data == plain #=&gt; true
 </code></pre>
 
-<h3 id="class-OpenSSL::Cipher-label-Authenticated+Encryption+and+Associated+Data+-28AEAD-29">Authenticated Encryption and Associated <a href="../Data.html"><code>Data</code></a> (AEAD)</h3>
+<h3 id="class-OpenSSL::Cipher-label-Authenticated+Encryption+and+Associated+Data+-28AEAD-29">Authenticated Encryption and Associated Data (AEAD)</h3>
 
-<p>If the <a href="../OpenSSL.html"><code>OpenSSL</code></a> version used supports it, an Authenticated Encryption mode (such as GCM or CCM) should always be preferred over any unauthenticated mode. Currently, <a href="../OpenSSL.html"><code>OpenSSL</code></a> supports AE only in combination with Associated <a href="../Data.html"><code>Data</code></a> (AEAD) where additional associated data is included in the encryption process to compute a tag at the end of the encryption. This tag will also be used in the decryption process and by verifying its validity, the authenticity of a given ciphertext is established.</p>
+<p>If the <a href="../OpenSSL.html"><code>OpenSSL</code></a> version used supports it, an Authenticated Encryption mode (such as GCM or CCM) should always be preferred over any unauthenticated mode. Currently, <a href="../OpenSSL.html"><code>OpenSSL</code></a> supports AE only in combination with Associated Data (AEAD) where additional associated data is included in the encryption process to compute a tag at the end of the encryption. This tag will also be used in the decryption process and by verifying its validity, the authenticity of a given ciphertext is established.</p>
 
 <p>This is superior to unauthenticated modes in that it allows to detect if somebody effectively changed the ciphertext after it had been encrypted. This prevents malicious modifications of the ciphertext that could otherwise be exploited to modify ciphertexts in ways beneficial to potential attackers.</p>
 
@@ -203,7 +188,7 @@ puts data == plain #=&gt; true
 
 <p>An example using the GCM (Galois/Counter Mode). You have 16 bytes <em>key</em>, 12 bytes (96 bits) <em>nonce</em> and the associated data <em>auth_data</em>. Be sure not to reuse the <em>key</em> and <em>nonce</em> pair. Reusing an nonce ruins the security guarantees of GCM mode.</p>
 
-<pre><code>cipher = OpenSSL::Cipher::AES.new(128, :GCM).encrypt
+<pre><code>cipher = OpenSSL::Cipher.new(&#39;aes-128-gcm&#39;).encrypt
 cipher.key = key
 cipher.iv = nonce
 cipher.auth_data = auth_data
@@ -215,7 +200,7 @@ tag = cipher.auth_tag # produces 16 bytes tag by default
 <p>Now you are the receiver. You know the <em>key</em> and have received <em>nonce</em>, <em>auth_data</em>, <em>encrypted</em> and <em>tag</em> through an untrusted network. Note that GCM accepts an arbitrary length tag between 1 and 16 bytes. You may additionally need to check that the received tag has the correct length, or you allow attackers to forge a valid single byte tag for the tampered ciphertext with a probability of 1/256.</p>
 
 <pre><code>raise &quot;tag is truncated!&quot; unless tag.bytesize == 16
-decipher = OpenSSL::Cipher::AES.new(128, :GCM).decrypt
+decipher = OpenSSL::Cipher.new(&#39;aes-128-gcm&#39;).decrypt
 decipher.key = key
 decipher.iv = nonce
 decipher.auth_tag = tag
@@ -308,6 +293,11 @@ puts data == decrypted #=&gt; true
         <dt>C</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-ccm_data_len-3D">ccm_data_len=</a>,
+              </li>
             
               
               <li>
@@ -529,7 +519,7 @@ ossl_s_ciphers(VALUE self)
 
     ary = rb_ary_new();
     OBJ_NAME_do_all_sorted(OBJ_NAME_TYPE_CIPHER_METH,
-                    (void(*)(const OBJ_NAME*,void*))add_cipher_name_to_ary,
+                    add_cipher_name_to_ary,
                     (void*)ary);
 
     return ary;
@@ -550,7 +540,7 @@ ossl_s_ciphers(VALUE self)
 
           
             <div class="description">
-              <p>The string must be a valid cipher name like “AES-128-CBC” or “3DES”.</p>
+              <p>The string must contain a valid cipher name like “aes-256-cbc”.</p>
 
 <p>A list of cipher names is available by calling <a href="Cipher.html#method-c-ciphers"><code>OpenSSL::Cipher.ciphers</code></a>.</p>
             </div>
@@ -907,6 +897,56 @@ ossl_cipher_block_size(VALUE self)
     GetCipher(self, ctx);
 
     return INT2NUM(EVP_CIPHER_CTX_block_size(ctx));
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-ccm_data_len-3D">
+            
+              <b>cipher.ccm_data_len = integer &rarr; integer
+</b>
+            
+            <a href="../../classes/OpenSSL/Cipher.html#method-i-ccm_data_len-3D" name="method-i-ccm_data_len-3D" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Sets the length of the plaintext / ciphertext message that will be processed in CCM mode. Make sure to call this method after <a href="Cipher.html#method-i-key-3D"><code>key=</code></a> and <a href="Cipher.html#method-i-iv-3D"><code>iv=</code></a> have been set, and before <a href="Cipher.html#method-i-auth_data-3D"><code>auth_data=</code></a>.</p>
+
+<p>Only call this method after calling <a href="Cipher.html#method-i-encrypt"><code>Cipher#encrypt</code></a> or <a href="Cipher.html#method-i-decrypt"><code>Cipher#decrypt</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-ccm_data_len-3D_source')" id="l_method-i-ccm_data_len-3D_source">show</a>
+                
+              </p>
+              <div id="method-i-ccm_data_len-3D_source" class="dyn-source">
+                <pre>static VALUE
+ossl_cipher_set_ccm_data_len(VALUE self, VALUE data_len)
+{
+    int in_len, out_len;
+    EVP_CIPHER_CTX *ctx;
+
+    in_len = NUM2INT(data_len);
+
+    GetCipher(self, ctx);
+    if (EVP_CipherUpdate(ctx, NULL, &amp;out_len, NULL, in_len) != 1)
+        ossl_raise(eCipherError, NULL);
+
+    return data_len;
 }</pre>
               </div>
             </div>
@@ -1616,7 +1656,7 @@ ossl_cipher_pkcs5_keyivgen(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-random_iv_source')" id="l_method-i-random_iv_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/cipher.rb#L55" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/cipher.rb#L55" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-random_iv_source" class="dyn-source">
@@ -1659,7 +1699,7 @@ ossl_cipher_pkcs5_keyivgen(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-random_key_source')" id="l_method-i-random_key_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7ebc380bb431cce87a1b436d026cc8540008abf4/ext/openssl/lib/openssl/cipher.rb#L43" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/cipher.rb#L43" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-random_key_source" class="dyn-source">

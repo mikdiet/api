@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ractor.rb</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+
+<meta name="data-rel-prefix" content="/">
+<meta name="data-tree-keys" content='[]'>
+
+</head>
+
+<body>
+    <a class="sr-only sr-only-focusable" href="#content" data-turbolinks="false">Skip to Content</a>
+    <a class="sr-only sr-only-focusable" href="#search" data-turbolinks="false">Skip to Search</a>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<nav class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search (/) for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</nav>
+
+
+    <div class="banner">
+        
+        <h2>
+            ractor.rb
+        </h2>
+        <ul class="files">
+            
+            <li>
+                ruby/ractor.rb
+                
+                    <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ractor.rb" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2022-09-06 00:52:29 +0300</li>
+        </ul>
+    </div>
+
+    <main id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p><a href="../../classes/Ractor.html"><code>Ractor</code></a> is a Actor-model abstraction for Ruby that provides thread-safe parallel execution.</p>
+
+<p><a href="../../classes/Ractor.html#method-c-new"><code>Ractor.new</code></a> can make a new <a href="../../classes/Ractor.html"><code>Ractor</code></a>, and it will run in parallel.</p>
+
+<pre><code># The simplest ractor
+r = Ractor.new {puts &quot;I am in Ractor!&quot;}
+r.take # wait for it to finish
+# here &quot;I am in Ractor!&quot; would be printed
+</code></pre>
+
+<p>Ractors do not share usual objects, so the same kinds of thread-safety concerns such as data-race, race-conditions are not available on multi-ractor programming.</p>
+
+<p>To achieve this, ractors severely limit object sharing between different ractors. For example, unlike threads, ractors can’t access each other’s objects, nor any objects through variables of the outer scope.</p>
+
+<pre><code>a = 1
+r = Ractor.new {puts &quot;I am in Ractor! a=#{a}&quot;}
+# fails immediately with
+# ArgumentError (can not isolate a Proc because it accesses outer variables (a).)
+</code></pre>
+
+<p>On CRuby (the default implementation), Global Virtual Machine Lock (GVL) is held per ractor, so ractors are performed in parallel without locking each other.</p>
+
+<p>Instead of accessing the shared state, the objects should be passed to and from ractors via sending and receiving objects as messages.</p>
+
+<pre><code>a = 1
+r = Ractor.new do
+  a_in_ractor = receive # receive blocks till somebody will pass message
+  puts &quot;I am in Ractor! a=#{a_in_ractor}&quot;
+end
+r.send(a)  # pass it
+r.take
+# here &quot;I am in Ractor! a=1&quot; would be printed
+</code></pre>
+
+<p>There are two pairs of methods for sending/receiving messages:</p>
+<ul><li>
+<p><a href="../../classes/Ractor.html#method-i-send"><code>Ractor#send</code></a> and <a href="../../classes/Ractor.html#method-c-receive"><code>Ractor.receive</code></a> for when the <em>sender</em> knows the receiver (push);</p>
+</li><li>
+<p><a href="../../classes/Ractor.html#method-c-yield"><code>Ractor.yield</code></a> and <a href="../../classes/Ractor.html#method-i-take"><code>Ractor#take</code></a> for when the <em>receiver</em> knows the sender (pull);</p>
+</li></ul>
+
+<p>In addition to that, an argument to <a href="../../classes/Ractor.html#method-c-new"><code>Ractor.new</code></a> would be passed to block and available there as if received by <a href="../../classes/Ractor.html#method-c-receive"><code>Ractor.receive</code></a>, and the last block value would be sent outside of the ractor as if sent by <a href="../../classes/Ractor.html#method-c-yield"><code>Ractor.yield</code></a>.</p>
+
+<p>A little demonstration on a classic ping-pong:</p>
+
+<pre><code>server = Ractor.new do
+  puts &quot;Server starts: #{self.inspect}&quot;
+  puts &quot;Server sends: ping&quot;
+  Ractor.yield &#39;ping&#39;                       # The server doesn&#39;t know the receiver and sends to whoever interested
+  received = Ractor.receive                 # The server doesn&#39;t know the sender and receives from whoever sent
+  puts &quot;Server received: #{received}&quot;
+end
+
+client = Ractor.new(server) do |srv|        # The server is sent inside client, and available as srv
+  puts &quot;Client starts: #{self.inspect}&quot;
+  received = srv.take                       # The Client takes a message specifically from the server
+  puts &quot;Client received from &quot; \
+       &quot;#{srv.inspect}: #{received}&quot;
+  puts &quot;Client sends to &quot; \
+       &quot;#{srv.inspect}: pong&quot;
+  srv.send &#39;pong&#39;                           # The client sends a message specifically to the server
+end
+
+[client, server].each(&amp;:take)               # Wait till they both finish
+</code></pre>
+
+<p>This will output:</p>
+
+<pre><code>Server starts: #&lt;Ractor:#2 test.rb:1 running&gt;
+Server sends: ping
+Client starts: #&lt;Ractor:#3 test.rb:8 running&gt;
+Client received from #&lt;Ractor:#2 rac.rb:1 blocking&gt;: ping
+Client sends to #&lt;Ractor:#2 rac.rb:1 blocking&gt;: pong
+Server received: pong
+</code></pre>
+
+<p>It is said that <a href="../../classes/Ractor.html"><code>Ractor</code></a> receives messages via the <em>incoming port</em>, and sends them to the <em>outgoing port</em>. Either one can be disabled with <a href="../../classes/Ractor.html#method-i-close_incoming"><code>Ractor#close_incoming</code></a> and <a href="../../classes/Ractor.html#method-i-close_outgoing"><code>Ractor#close_outgoing</code></a> respectively. If a ractor terminated, its ports will be closed automatically.</p>
+
+<h2 id="label-Shareable+and+unshareable+objects">Shareable and unshareable objects</h2>
+
+<p>When the object is sent to and from the ractor, it is important to understand whether the object is shareable or unshareable. Most of objects are unshareable objects.</p>
+
+<p>Shareable objects are basically those which can be used by several threads without compromising thread-safety; e.g. immutable ones. <a href="../../classes/Ractor.html#method-c-shareable-3F"><code>Ractor.shareable?</code></a> allows to check this, and <a href="../../classes/Ractor.html#method-c-make_shareable"><code>Ractor.make_shareable</code></a> tries to make object shareable if it is not.</p>
+
+<pre><code>Ractor.shareable?(1)            #=&gt; true -- numbers and other immutable basic values are
+Ractor.shareable?(&#39;foo&#39;)        #=&gt; false, unless the string is frozen due to # freeze_string_literals: true
+Ractor.shareable?(&#39;foo&#39;.freeze) #=&gt; true
+
+ary = [&#39;hello&#39;, &#39;world&#39;]
+ary.frozen?                 #=&gt; false
+ary[0].frozen?              #=&gt; false
+Ractor.make_shareable(ary)
+ary.frozen?                 #=&gt; true
+ary[0].frozen?              #=&gt; true
+ary[1].frozen?              #=&gt; true
+</code></pre>
+
+<p>When a shareable object is sent (via send or <a href="../../classes/Ractor.html#method-c-yield"><code>Ractor.yield</code></a>), no additional processing happens, and it just becomes usable by both ractors. When an unshareable object is sent, it can be either <em>copied</em> or <em>moved</em>. The first is the default, and it makes the object’s full copy by deep cloning of non-shareable parts of its structure.</p>
+
+<pre><code>data = [&#39;foo&#39;, &#39;bar&#39;.freeze]
+r = Ractor.new do
+  data2 = Ractor.receive
+  puts &quot;In ractor: #{data2.object_id}, #{data2[0].object_id}, #{data2[1].object_id}&quot;
+end
+r.send(data)
+r.take
+puts &quot;Outside  : #{data.object_id}, #{data[0].object_id}, #{data[1].object_id}&quot;
+</code></pre>
+
+<p>This will output:</p>
+
+<pre><code>In ractor: 340, 360, 320
+Outside  : 380, 400, 320
+</code></pre>
+
+<p>(Note that object id of both array and non-frozen string inside array have changed inside the ractor, showing it is different objects. But the second array’s element, which is a shareable frozen string, has the same object_id.)</p>
+
+<p>Deep cloning of the objects may be slow, and sometimes impossible. Alternatively, <code>move: true</code> may be used on sending. This will <em>move</em> the object to the receiving ractor, making it inaccessible for a sending ractor.</p>
+
+<pre><code>data = [&#39;foo&#39;, &#39;bar&#39;]
+r = Ractor.new do
+  data_in_ractor = Ractor.receive
+  puts &quot;In ractor: #{data_in_ractor.object_id}, #{data_in_ractor[0].object_id}&quot;
+end
+r.send(data, move: true)
+r.take
+puts &quot;Outside: moved? #{Ractor::MovedObject === data}&quot;
+puts &quot;Outside: #{data.inspect}&quot;
+</code></pre>
+
+<p>This will output:</p>
+
+<pre><code>In ractor: 100, 120
+Outside: moved? true
+test.rb:9:in `method_missing&#39;: can not send any methods to a moved object (Ractor::MovedError)
+</code></pre>
+
+<p>Notice that even <code>inspect</code> (and more basic methods like <code>__id__</code>) is inaccessible on a moved object.</p>
+
+<p>Besides frozen objects, there are shareable objects. <a href="../../classes/Class.html"><code>Class</code></a> and <a href="../../classes/Module.html"><code>Module</code></a> objects are shareable so the Class/Module definitions are shared between ractors. <a href="../../classes/Ractor.html"><code>Ractor</code></a> objects are also shareable objects. All operations for the shareable mutable objects are thread-safe, so the thread-safety property will be kept. We can not define mutable shareable objects in Ruby, but C extensions can introduce them.</p>
+
+<p>It is prohibited to access instance variables of mutable shareable objects (especially Modules and classes) from ractors other than main:</p>
+
+<pre><code>class C
+  class &lt;&lt; self
+    attr_accessor :tricky
+  end
+end
+
+C.tricky = &#39;test&#39;
+
+r = Ractor.new(C) do |cls|
+  puts &quot;I see #{cls}&quot;
+  puts &quot;I can&#39;t see #{cls.tricky}&quot;
+end
+r.take
+# I see C
+# can not access instance variables of classes/modules from non-main Ractors (RuntimeError)
+</code></pre>
+
+<p>Ractors can access constants if they are shareable. The main <a href="../../classes/Ractor.html"><code>Ractor</code></a> is the only one that can access non-shareable constants.</p>
+
+<pre><code>GOOD = &#39;good&#39;.freeze
+BAD = &#39;bad&#39;
+
+r = Ractor.new do
+  puts &quot;GOOD=#{GOOD}&quot;
+  puts &quot;BAD=#{BAD}&quot;
+end
+r.take
+# GOOD=good
+# can not access non-shareable objects in constant Object::BAD by non-main Ractor. (NameError)
+
+# Consider the same C class from above
+
+r = Ractor.new do
+  puts &quot;I see #{C}&quot;
+  puts &quot;I can&#39;t see #{C.tricky}&quot;
+end
+r.take
+# I see C
+# can not access instance variables of classes/modules from non-main Ractors (RuntimeError)
+</code></pre>
+
+<p>See also the description of <code># shareable_constant_value</code> pragma in Comments syntax explanation.</p>
+
+<h2 id="label-Ractors+vs+threads">Ractors vs threads</h2>
+
+<p>Each ractor creates its own thread. New threads can be created from inside ractor (and, on CRuby, sharing GVL with other threads of this ractor).</p>
+
+<pre><code>r = Ractor.new do
+  a = 1
+  Thread.new {puts &quot;Thread in ractor: a=#{a}&quot;}.join
+end
+r.take
+# Here &quot;Thread in ractor: a=1&quot; will be printed
+</code></pre>
+
+<h2 id="label-Note+on+code+examples">Note on code examples</h2>
+
+<p>In examples below, sometimes we use the following method to wait till ractors that are not currently blocked will finish (or process till next blocking) method.</p>
+
+<pre><code>def wait
+  sleep(0.1)
+end
+</code></pre>
+
+<p>It is **only for demonstration purposes** and shouldn’t be used in a real code. Most of the times, just take is used to wait till ractor will finish.</p>
+
+<h2 id="label-Reference">Reference</h2>
+
+<p>See <a href="doc/ractor_md.html">Ractor design doc</a> for more details.</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+    <!-- Namespace -->
+    <div class="sectiontitle">Namespace</div>
+    <ul>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="../../classes/Ractor.html">Ractor</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="../../classes/Ractor/RemoteError.html">Ractor::RemoteError</a>
+        </li>
+      
+    </ul>
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </main>
+  </body>
+</html>
