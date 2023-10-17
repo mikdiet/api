@@ -7,6 +7,7 @@ git clone --depth=1 --branch v3_1_2 https://github.com/ruby/ruby.git
 bundle exec sdoc --template=rails -o rubydoc -g --debug -m 'ruby/README.md' ruby
 bundle exec sdoc --template=rails -o railsdoc -g --exclude=test --debug -m "rails/README.md" rails
 bundle exec sdoc-merge --title "Rails v6.1.6.1, Ruby v3.1.2" --op docs --names "rails, ruby" railsdoc rubydoc
+echo 'api.rusrails.ru' >> docs/CNAME
 ```
 
 # Testing
