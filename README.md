@@ -21,15 +21,4 @@ ruby -run -ehttpd docs -p8000
 
 # Deployment
 
-This is a part of [Rusrails][https://github.com/morsbox/rusrails] project. Full server setup is in the main project.
-Setup:
-
-```
-bundle exec cap production nginx:setup
-```
-
-Deployment:
-
-```
-bundle exec cap production deploy
-```
+`docs` folder is automatically deploying to Github Pages and available at http://api.rusrails.ru
