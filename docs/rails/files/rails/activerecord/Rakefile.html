@@ -56,10 +56,10 @@
             <li>
                 rails/activerecord/Rakefile
                 
-                    <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/Rakefile" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/Rakefile" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2022-09-06 00:52:05 +0300</li>
+            <li>Last modified: 2024-05-24 23:57:10 +0300</li>
         </ul>
     </div>
 
@@ -129,17 +129,17 @@ task drop: [&quot;db:mysql:drop&quot;, &quot;db:postgresql:drop&quot;]
 <p>%w( mysql2 postgresql sqlite3 sqlite3_mem oracle jdbcmysql jdbcpostgresql jdbcsqlite3 jdbcderby jdbch2 jdbchsqldb ).each do |adapter|</p>
 
 <pre><code>namespace :test do
-  Rake::TestTask.new(adapter =&gt; &quot;#{adapter}:env&quot;) { |t|
+  Rake::TestTask.new(adapter =&gt; &quot;#{adapter}:env&quot;) do |t|
     adapter_short = adapter[/^[a-z0-9]+/]
     t.libs &lt;&lt; &quot;test&quot;
     t.test_files = (FileList[&quot;test/cases/**/*_test.rb&quot;].reject {
-      |x| x.include?(&quot;/adapters/&quot;)
+      |x| x.include?(&quot;/adapters/&quot;) || x.include?(&quot;/encryption/performance&quot;)
     } + FileList[&quot;test/cases/adapters/#{adapter_short}/**/*_test.rb&quot;])
 
     t.warning = true
     t.verbose = true
     t.ruby_opts = [&quot;--dev&quot;] if defined?(JRUBY_VERSION)
-  }
+  end
 
   namespace :integration do
     # Active Job Integration Tests
@@ -192,14 +192,14 @@ task drop: [&quot;db:mysql:drop&quot;, &quot;db:postgresql:drop&quot;]
       test_options = ENV[&quot;TESTOPTS&quot;].to_s.split(/[\s]+/)
 
       test_files = (Dir[&quot;test/cases/**/*_test.rb&quot;].reject {
-        |x| x.include?(&quot;/adapters/&quot;)
+        |x| x.include?(&quot;/adapters/&quot;) || x.include?(&quot;/encryption/performance&quot;)
       } + Dir[&quot;test/cases/adapters/#{adapter_short}/**/*_test.rb&quot;]).sort
 
       if ENV[&quot;BUILDKITE_PARALLEL_JOB_COUNT&quot;]
         n = ENV[&quot;BUILDKITE_PARALLEL_JOB&quot;].to_i
         m = ENV[&quot;BUILDKITE_PARALLEL_JOB_COUNT&quot;].to_i
 
-        test_files = test_files.each_slice(m).map { |slice| slice[n] }.compact
+        test_files = test_files.each_slice(m).filter_map { |slice| slice[n] }
       end
 
       test_files.each do |file|
@@ -244,6 +244,20 @@ task drop: [&quot;db:mysql:drop&quot;, &quot;db:postgresql:drop&quot;]
       end
     end
   end
+
+  namespace :encryption do
+    namespace :performance do
+      Rake::TestTask.new(adapter =&gt; &quot;#{adapter}:env&quot;) do |t|
+        t.description = &quot;Encryption performance tests for #{adapter}&quot;
+        t.libs &lt;&lt; &quot;test&quot;
+        t.test_files = FileList[&quot;test/cases/encryption/performance/*_test.rb&quot;]
+
+        t.warning = true
+        t.verbose = true
+        t.ruby_opts = [&quot;--dev&quot;] if defined?(JRUBY_VERSION)
+      end
+    end
+  end
 end
 
 namespace adapter do
@@ -266,21 +280,40 @@ task &quot;isolated_test_#{adapter}&quot; =&gt; [&quot;#{adapter}:env&quot;, &qu
 <pre><code>namespace :mysql do
   connection_arguments = lambda do |connection_name|
     config = ARTest.config[&quot;connections&quot;][&quot;mysql2&quot;][connection_name]
-    [&quot;--user=#{config[&quot;username&quot;]}&quot;, &quot;--password=#{config[&quot;password&quot;]}&quot;, (&quot;--host=#{config[&quot;host&quot;]}&quot; if config[&quot;host&quot;])].join(&quot; &quot;)
+    [&quot;--user=#{config[&quot;username&quot;]}&quot;, (&quot;--password=#{config[&quot;password&quot;]}&quot; if config[&quot;password&quot;]), (&quot;--host=#{config[&quot;host&quot;]}&quot; if config[&quot;host&quot;]), (&quot;--socket=#{config[&quot;socket&quot;]}&quot; if config[&quot;socket&quot;])].join(&quot; &quot;)
+  end
+
+  desc &quot;Create the MySQL Rails User&quot;
+  task :build_user do
+    config = ARTest.config[&quot;connections&quot;][&quot;mysql2&quot;]
+
+    if ENV[&quot;MYSQL_CODESPACES&quot;]
+      mysql_command = &quot;mysql -uroot -proot -e&quot;
+    else
+      mysql_command = &quot;mysql -uroot -e&quot;
+    end
+
+    %x( #{mysql_command} &quot;CREATE USER IF NOT EXISTS &#39;#{config[&quot;arunit&quot;][&quot;username&quot;]}&#39;@&#39;%&#39;;&quot; )
+    %x( #{mysql_command} &quot;CREATE USER IF NOT EXISTS &#39;#{config[&quot;arunit2&quot;][&quot;username&quot;]}&#39;@&#39;%&#39;;&quot; )
+    %x( #{mysql_command} &quot;GRANT ALL PRIVILEGES ON #{config[&quot;arunit&quot;][&quot;database&quot;]}.* to &#39;#{config[&quot;arunit&quot;][&quot;username&quot;]}&#39;@&#39;%&#39;&quot; )
+    %x( #{mysql_command} &quot;GRANT ALL PRIVILEGES ON #{config[&quot;arunit2&quot;][&quot;database&quot;]}.* to &#39;#{config[&quot;arunit2&quot;][&quot;username&quot;]}&#39;@&#39;%&#39;&quot; )
+    %x( #{mysql_command} &quot;GRANT ALL PRIVILEGES ON inexistent_activerecord_unittest.* to &#39;#{config[&quot;arunit&quot;][&quot;username&quot;]}&#39;@&#39;%&#39;;&quot; )
   end
 
   desc &quot;Build the MySQL test databases&quot;
   task :build do
     config = ARTest.config[&quot;connections&quot;][&quot;mysql2&quot;]
+
     %x( mysql #{connection_arguments[&quot;arunit&quot;]} -e &quot;create DATABASE #{config[&quot;arunit&quot;][&quot;database&quot;]} DEFAULT CHARACTER SET utf8mb4&quot; )
     %x( mysql #{connection_arguments[&quot;arunit2&quot;]} -e &quot;create DATABASE #{config[&quot;arunit2&quot;][&quot;database&quot;]} DEFAULT CHARACTER SET utf8mb4&quot; )
   end
 
   desc &quot;Drop the MySQL test databases&quot;
-  task :drop do
+  task drop: [&quot;db:mysql:build_user&quot;] do
     config = ARTest.config[&quot;connections&quot;][&quot;mysql2&quot;]
-    %x( mysqladmin #{connection_arguments[&quot;arunit&quot;]} -f drop #{config[&quot;arunit&quot;][&quot;database&quot;]} )
-    %x( mysqladmin #{connection_arguments[&quot;arunit2&quot;]} -f drop #{config[&quot;arunit2&quot;][&quot;database&quot;]} )
+
+    %x( mysql #{connection_arguments[&quot;arunit&quot;]} -e &quot;drop database IF EXISTS #{config[&quot;arunit&quot;][&quot;database&quot;]}&quot; )
+    %x( mysql #{connection_arguments[&quot;arunit2&quot;]} -e &quot;drop database IF EXISTS #{config[&quot;arunit2&quot;][&quot;database&quot;]}&quot; )
   end
 
   desc &quot;Rebuild the MySQL test databases&quot;

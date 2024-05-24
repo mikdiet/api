@@ -298,14 +298,22 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-generate_source')" id="l_method-c-generate_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L169" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/pkey.rb#L169" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-generate_source" class="dyn-source">
                 <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 169</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">generate</span>(<span class="ruby-identifier">size</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">blk</span>)
+  <span class="ruby-comment"># FIPS 186-4 specifies four (L,N) pairs: (1024,160), (2048,224),</span>
+  <span class="ruby-comment"># (2048,256), and (3072,256).</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-comment"># q size is derived here with compatibility with</span>
+  <span class="ruby-comment"># DSA_generator_parameters_ex() which previous versions of ruby/openssl</span>
+  <span class="ruby-comment"># used to call.</span>
+  <span class="ruby-identifier">qsize</span> = <span class="ruby-identifier">size</span> <span class="ruby-operator">&gt;=</span> <span class="ruby-value">2048</span> <span class="ruby-operator">?</span> <span class="ruby-value">256</span> <span class="ruby-operator">:</span> <span class="ruby-value">160</span>
   <span class="ruby-identifier">dsaparams</span> = <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span>.<span class="ruby-identifier">generate_parameters</span>(<span class="ruby-string">&quot;DSA&quot;</span>, {
     <span class="ruby-string">&quot;dsa_paramgen_bits&quot;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">size</span>,
+    <span class="ruby-string">&quot;dsa_paramgen_q_bits&quot;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">qsize</span>,
   }, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">blk</span>)
   <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span>.<span class="ruby-identifier">generate_key</span>(<span class="ruby-identifier">dsaparams</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -448,20 +456,49 @@ ossl_dsa_initialize(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Encodes this <a href="DSA.html"><code>DSA</code></a> to its PEM encoding.</p>
+              <p>Serializes a private or public key to a PEM-encoding.</p>
+<dl class="rdoc-list label-list"><dt>When the key contains public components only
+<dd>
+<p>Serializes it into an X.509 SubjectPublicKeyInfo. The parameters <em>cipher</em> and <em>password</em> are ignored.</p>
 
-<h3 id="method-i-export-label-Parameters">Parameters</h3>
-<ul><li>
-<p><em>cipher</em> is an <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a>.</p>
-</li><li>
-<p><em>password</em> is a string containing your password.</p>
-</li></ul>
+<p>A PEM-encoded key will look like:</p>
 
-<h3 id="method-i-export-label-Examples">Examples</h3>
-
-<pre><code>DSA.to_pem -&gt; aString
-DSA.to_pem(cipher, &#39;mypassword&#39;) -&gt; aString
+<pre><code>-----BEGIN PUBLIC KEY-----
+[...]
+-----END PUBLIC KEY-----
 </code></pre>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> instead. This serializes the key into an X.509 SubjectPublicKeyInfo regardless of whether it is a public key or a private key.</p>
+</dd><dt>When the key contains private components, and no parameters are given
+<dd>
+<p>Serializes it into a traditional OpenSSL DSAPrivateKey.</p>
+
+<p>A PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN DSA PRIVATE KEY-----
+[...]
+-----END DSA PRIVATE KEY-----
+</code></pre>
+</dd><dt>When the key contains private components, and <em>cipher</em> and <em>password</em> are given
+<dd>
+<p>Serializes it into a traditional OpenSSL DSAPrivateKey and encrypts it in OpenSSL’s traditional PEM encryption format. <em>cipher</em> must be a cipher name understood by <a href="../Cipher.html#method-c-new"><code>OpenSSL::Cipher.new</code></a> or an instance of <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a>.</p>
+
+<p>An encrypted PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN DSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,733F5302505B34701FC41F5C0746E4C0
+
+[...]
+-----END DSA PRIVATE KEY-----
+</code></pre>
+
+<p>Note that this format uses MD5 to derive the encryption key, and hence will not be available on FIPS-compliant systems.</p>
+</dd></dl>
+
+<p><strong>This method is kept for compatibility.</strong> This should only be used when the traditional, non-standard OpenSSL format is required.</p>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> (X.509 SubjectPublicKeyInfo) or <a href="PKey.html#method-i-private_to_pem"><code>private_to_pem</code></a> (PKCS #8 PrivateKeyInfo or EncryptedPrivateKeyInfo) instead.</p>
             </div>
           
 
@@ -486,7 +523,7 @@ DSA.to_pem(cipher, &#39;mypassword&#39;) -&gt; aString
                 <pre>static VALUE
 ossl_dsa_export(int argc, VALUE *argv, VALUE self)
 {
-    DSA *dsa;
+    OSSL_3_const DSA *dsa;
 
     GetDSA(self, dsa);
     if (DSA_HAS_PRIVATE(dsa))
@@ -591,7 +628,7 @@ ossl_dsa_initialize_copy(VALUE self, VALUE other)
                 <pre>static VALUE
 ossl_dsa_get_params(VALUE self)
 {
-    DSA *dsa;
+    OSSL_3_const DSA *dsa;
     VALUE hash;
     const BIGNUM *p, *q, *g, *pub_key, *priv_key;
 
@@ -645,7 +682,7 @@ ossl_dsa_get_params(VALUE self)
                 <pre>static VALUE
 ossl_dsa_is_private(VALUE self)
 {
-    DSA *dsa;
+    OSSL_3_const DSA *dsa;
 
     GetDSA(self, dsa);
 
@@ -688,7 +725,7 @@ ossl_dsa_is_private(VALUE self)
                 <pre>static VALUE
 ossl_dsa_is_public(VALUE self)
 {
-    DSA *dsa;
+    const DSA *dsa;
     const BIGNUM *bn;
 
     GetDSA(self, dsa);
@@ -732,7 +769,7 @@ ossl_dsa_is_public(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-public_key_source')" id="l_method-i-public_key_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L153" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/pkey.rb#L153" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-public_key_source" class="dyn-source">
@@ -837,11 +874,11 @@ p dsa.verify_raw(nil, sig, digest) #=&gt; true
                 Source:
                 <a href="javascript:toggleSource('method-i-syssign_source')" id="l_method-i-syssign_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L212" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/pkey.rb#L220" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-syssign_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 212</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 220</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">syssign</span>(<span class="ruby-identifier">string</span>)
   <span class="ruby-identifier">q</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">raise</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">DSAError</span>, <span class="ruby-string">&quot;incomplete DSA&quot;</span>
   <span class="ruby-identifier">private?</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">raise</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">DSAError</span>, <span class="ruby-string">&quot;Private DSA key needed!&quot;</span>
@@ -892,11 +929,11 @@ p dsa.verify_raw(nil, sig, digest) #=&gt; true
                 Source:
                 <a href="javascript:toggleSource('method-i-sysverify_source')" id="l_method-i-sysverify_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L235" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/pkey.rb#L243" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-sysverify_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 235</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 243</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">sysverify</span>(<span class="ruby-identifier">digest</span>, <span class="ruby-identifier">sig</span>)
   <span class="ruby-identifier">verify_raw</span>(<span class="ruby-keyword">nil</span>, <span class="ruby-identifier">sig</span>, <span class="ruby-identifier">digest</span>)
 <span class="ruby-keyword">rescue</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">PKeyError</span>
@@ -918,7 +955,13 @@ p dsa.verify_raw(nil, sig, digest) #=&gt; true
 
           
             <div class="description">
-              <p>Encodes this <a href="DSA.html"><code>DSA</code></a> to its DER encoding.</p>
+              <p>Serializes a private or public key to a DER-encoding.</p>
+
+<p>See <a href="DSA.html#method-i-to_pem"><code>to_pem</code></a> for details.</p>
+
+<p><strong>This method is kept for compatibility.</strong> This should only be used when the traditional, non-standard OpenSSL format is required.</p>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_der"><code>public_to_der</code></a> or <a href="PKey.html#method-i-private_to_der"><code>private_to_der</code></a> instead.</p>
             </div>
           
 
@@ -939,7 +982,7 @@ p dsa.verify_raw(nil, sig, digest) #=&gt; true
                 <pre>static VALUE
 ossl_dsa_to_der(VALUE self)
 {
-    DSA *dsa;
+    OSSL_3_const DSA *dsa;
 
     GetDSA(self, dsa);
     if (DSA_HAS_PRIVATE(dsa))
@@ -962,20 +1005,49 @@ ossl_dsa_to_der(VALUE self)
 
           
             <div class="description">
-              <p>Encodes this <a href="DSA.html"><code>DSA</code></a> to its PEM encoding.</p>
+              <p>Serializes a private or public key to a PEM-encoding.</p>
+<dl class="rdoc-list label-list"><dt>When the key contains public components only
+<dd>
+<p>Serializes it into an X.509 SubjectPublicKeyInfo. The parameters <em>cipher</em> and <em>password</em> are ignored.</p>
 
-<h3 id="method-i-to_pem-label-Parameters">Parameters</h3>
-<ul><li>
-<p><em>cipher</em> is an <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a>.</p>
-</li><li>
-<p><em>password</em> is a string containing your password.</p>
-</li></ul>
+<p>A PEM-encoded key will look like:</p>
 
-<h3 id="method-i-to_pem-label-Examples">Examples</h3>
-
-<pre><code>DSA.to_pem -&gt; aString
-DSA.to_pem(cipher, &#39;mypassword&#39;) -&gt; aString
+<pre><code>-----BEGIN PUBLIC KEY-----
+[...]
+-----END PUBLIC KEY-----
 </code></pre>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> instead. This serializes the key into an X.509 SubjectPublicKeyInfo regardless of whether it is a public key or a private key.</p>
+</dd><dt>When the key contains private components, and no parameters are given
+<dd>
+<p>Serializes it into a traditional OpenSSL DSAPrivateKey.</p>
+
+<p>A PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN DSA PRIVATE KEY-----
+[...]
+-----END DSA PRIVATE KEY-----
+</code></pre>
+</dd><dt>When the key contains private components, and <em>cipher</em> and <em>password</em> are given
+<dd>
+<p>Serializes it into a traditional OpenSSL DSAPrivateKey and encrypts it in OpenSSL’s traditional PEM encryption format. <em>cipher</em> must be a cipher name understood by <a href="../Cipher.html#method-c-new"><code>OpenSSL::Cipher.new</code></a> or an instance of <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a>.</p>
+
+<p>An encrypted PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN DSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,733F5302505B34701FC41F5C0746E4C0
+
+[...]
+-----END DSA PRIVATE KEY-----
+</code></pre>
+
+<p>Note that this format uses MD5 to derive the encryption key, and hence will not be available on FIPS-compliant systems.</p>
+</dd></dl>
+
+<p><strong>This method is kept for compatibility.</strong> This should only be used when the traditional, non-standard OpenSSL format is required.</p>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> (X.509 SubjectPublicKeyInfo) or <a href="PKey.html#method-i-private_to_pem"><code>private_to_pem</code></a> (PKCS #8 PrivateKeyInfo or EncryptedPrivateKeyInfo) instead.</p>
             </div>
           
 
@@ -1000,20 +1072,49 @@ DSA.to_pem(cipher, &#39;mypassword&#39;) -&gt; aString
 
           
             <div class="description">
-              <p>Encodes this <a href="DSA.html"><code>DSA</code></a> to its PEM encoding.</p>
+              <p>Serializes a private or public key to a PEM-encoding.</p>
+<dl class="rdoc-list label-list"><dt>When the key contains public components only
+<dd>
+<p>Serializes it into an X.509 SubjectPublicKeyInfo. The parameters <em>cipher</em> and <em>password</em> are ignored.</p>
 
-<h3 id="method-i-to_s-label-Parameters">Parameters</h3>
-<ul><li>
-<p><em>cipher</em> is an <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a>.</p>
-</li><li>
-<p><em>password</em> is a string containing your password.</p>
-</li></ul>
+<p>A PEM-encoded key will look like:</p>
 
-<h3 id="method-i-to_s-label-Examples">Examples</h3>
-
-<pre><code>DSA.to_pem -&gt; aString
-DSA.to_pem(cipher, &#39;mypassword&#39;) -&gt; aString
+<pre><code>-----BEGIN PUBLIC KEY-----
+[...]
+-----END PUBLIC KEY-----
 </code></pre>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> instead. This serializes the key into an X.509 SubjectPublicKeyInfo regardless of whether it is a public key or a private key.</p>
+</dd><dt>When the key contains private components, and no parameters are given
+<dd>
+<p>Serializes it into a traditional OpenSSL DSAPrivateKey.</p>
+
+<p>A PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN DSA PRIVATE KEY-----
+[...]
+-----END DSA PRIVATE KEY-----
+</code></pre>
+</dd><dt>When the key contains private components, and <em>cipher</em> and <em>password</em> are given
+<dd>
+<p>Serializes it into a traditional OpenSSL DSAPrivateKey and encrypts it in OpenSSL’s traditional PEM encryption format. <em>cipher</em> must be a cipher name understood by <a href="../Cipher.html#method-c-new"><code>OpenSSL::Cipher.new</code></a> or an instance of <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a>.</p>
+
+<p>An encrypted PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN DSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,733F5302505B34701FC41F5C0746E4C0
+
+[...]
+-----END DSA PRIVATE KEY-----
+</code></pre>
+
+<p>Note that this format uses MD5 to derive the encryption key, and hence will not be available on FIPS-compliant systems.</p>
+</dd></dl>
+
+<p><strong>This method is kept for compatibility.</strong> This should only be used when the traditional, non-standard OpenSSL format is required.</p>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> (X.509 SubjectPublicKeyInfo) or <a href="PKey.html#method-i-private_to_pem"><code>private_to_pem</code></a> (PKCS #8 PrivateKeyInfo or EncryptedPrivateKeyInfo) instead.</p>
             </div>
           
 

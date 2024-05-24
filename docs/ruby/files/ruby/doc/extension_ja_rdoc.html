@@ -56,10 +56,10 @@
             <li>
                 ruby/doc/extension.ja.rdoc
                 
-                    <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/doc/extension.ja.rdoc" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/doc/extension.ja.rdoc" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2022-09-06 00:52:29 +0300</li>
+            <li>Last modified: 2024-05-24 23:57:53 +0300</li>
         </ul>
     </div>
 
@@ -237,18 +237,6 @@ NIL_P(obj)
 </dd></dl>
 
 <p>INT2NUM()は整数がFIXNUMの範囲に収まらない場合，Bignumに変換 してくれます(が，少し遅い)．</p>
-
-<p>Cの真偽値をRubyの <code>true</code> または <code>false</code> に変換する</p>
-<dl class="rdoc-list note-list"><dt>RBOOL() 
-<dd>
-<p><code>RBOOL(v)</code> は <em>v</em> が非0のとき <code>Qtrue</code> ，それ以外 の <em>v</em> が0のとき <code>Qfalse</code> を返します．</p>
-
-<p>注意: RBOOLは定義されているのはRuby 3.1以降なので，それより 古いバージョンをサポートするプログラム中で使いたいときは，以 下のような定義を追加しておく必要があるでしょう．</p>
-
-<pre><code>#ifndef RBOOL
-#define RBOOL(v) ((v) ? Qtrue : Qfalse)
-#endif
-</code></pre>
 
 <h3 id="label-Ruby-E3-81-AE-E3-83-87-E3-83-BC-E3-82-BF-E3-82-92-E6-93-8D-E4-BD-9C-E3-81-99-E3-82-8B">Rubyのデータを操作する</h3>
 
@@ -793,9 +781,9 @@ static const rb_data_type_t dbm_type = {
 obj = TypedData_Make_Struct(klass, struct dbmdata, &amp;dbm_type, dbmp);
 </code></pre>
 
-<p>ここではdbmdata構造体へのポインタをDataにカプセル化してい ます．DBM*を直接カプセル化しないのはclose()した時の処理を考 えてのことです．</p>
+<p>ここではdbmdata構造体へのポインタをRubyオブジェクトにカプセ ル化しています．DBM*を直接カプセル化しないのはclose()した時 の処理を考えてのことです．</p>
 
-<p>Dataオブジェクトからdbmstruct構造体のポインタを取り出すため に以下のマクロを使っています．</p>
+<p>Rubyオブジェクトからdbmdata構造体のポインタを取り出すために 以下のマクロを使っています．</p>
 
 <pre><code>#define GetDBM(obj, dbmp) do {\
     TypedData_Get_Struct((obj), struct dbmdata, &amp;dbm_type, (dbmp));\
@@ -932,6 +920,12 @@ $objs: リンクされるオブジェクトファイル名のリスト
 <h2 id="label-Appendix+A.+Ruby-E3-81-AE-E3-82-BD-E3-83-BC-E3-82-B9-E3-82-B3-E3-83-BC-E3-83-89-E3-81-AE-E5-88-86-E9-A1-9E">Appendix A. Rubyのソースコードの分類</h2>
 
 <p>Rubyのソースはいくつかに分類することが出来ます．このうちクラ スライブラリの部分は基本的に拡張ライブラリと同じ作り方になっ ています．これらのソースは今までの説明でほとんど理解できると 思います．</p>
+
+<h3 id="label-Ruby-E3-81-AE-E3-83-98-E3-83-83-E3-83-80-E3-83-95-E3-82-A1-E3-82-A4-E3-83-AB">Rubyのヘッダファイル</h3>
+
+<p><code>$repo_root/include/ruby</code>以下はすべて<code>make install</code>でインストールされます．拡張ライブラリからは， <code>#include &lt;ruby.h&gt;</code>でインクルードする必要があります． <code>rbimpl_</code>，<code>RBIMPL_</code>のプレフィックスが付いた実装の詳細のため のシンボルを除き，すべてのシンボルは公開APIです．</p>
+
+<p>拡張ライブラリで直接インクルードできるのは， <code>$repo_root/include/ruby/*.h</code>のうち，対応する <code>HAVE_RUBY_*_H</code>マクロが <code>$repo_root/include/ruby.h</code>ヘッダーで定義されているも のです．</p>
 
 <h3 id="label-Ruby-E8-A8-80-E8-AA-9E-E3-81-AE-E3-82-B3-E3-82-A2">Ruby言語のコア</h3>
 <dl class="rdoc-list note-list"><dt>class.c    
@@ -1492,6 +1486,8 @@ RUBY_EVENT_ALL
 </dd><dt>HAVE_RUBY_*_H 
 <dd>
 <p>ruby.h で定義されている．対応するヘッダが提供されていること を意味する．たとえば，HAVE_RUBY_ST_H が定義されている場合は 単なる st.h ではなく ruby/st.h を使用する．</p>
+
+<p>これらのマクロに対応するヘッダーファイルは，拡張ライブラリ から直接インクルードしてもよい．</p>
 </dd><dt>RB_EVENT_HOOKS_HAVE_CALLBACK_DATA 
 <dd>
 <p>rb_add_event_hook() がフック関数に渡す data を第3引数として 受け取ることを意味する．</p>
@@ -1530,7 +1526,15 @@ RUBY_EVENT_ALL
 </dd><dt>check_sizeof(type, header) 
 <dd>
 <p>ヘッダファイルheaderをインクルードして型typeのchar単位サイ ズを調べる．チェックに成功すると，プリプロセッサマクロ ‘SIZEOF_{TYPE}` を定義し，そのサイズを返す．定義されていな いときはnilを返す．</p>
-</dd><dt>create_makefile(target[, target_prefix]) 
+</dd></dl>
+
+<p>append_cppflags(array-of-flags[, opt]) append_cflags(array-of-flags[, opt]) append_ldflags(array-of-flags[, opt])</p>
+
+<pre><code>各flagが使用可能であれば，それぞれ$CPPFLAGS, $CFLAGS,
+$LDFLAGSに追加する．コンパイラのフラグには移植性がないので，
+変数に直接追加せずこれらを使うことが望ましい．
+</code></pre>
+<dl class="rdoc-list note-list"><dt>create_makefile(target[, target_prefix]) 
 <dd>
 <p>拡張ライブラリ用のMakefileを生成する．この関数を呼ばなけれ ばそのライブラリはコンパイルされない．targetはモジュール名 を表す．</p>
 </dd><dt>find_executable(command, path) 
@@ -1578,7 +1582,6 @@ RUBY_EVENT_ALL
 <p>Ruby 3.0 から、Ruby プログラムを並列に実行するための仕組みである <a href="../../../classes/Ractor.html"><code>Ractor</code></a> が導入されました。適切に並列に実行するためには、Ractor サポートが必要に なります。サポートしていないライブラリは、メイン <a href="../../../classes/Ractor.html"><code>Ractor</code></a> 以外で実行すると エラーになります（Ractor::UnsafeError）。</p>
 
 <p><a href="../../../classes/Ractor.html"><code>Ractor</code></a> をサポートするための詳細は、extension.rdoc の「Appendix F. <a href="../../../classes/Ractor.html"><code>Ractor</code></a> support」を参照してください。</p>
-</dd></dl>
 
     </div>
   

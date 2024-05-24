@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>actioncable.esm.js</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+
+<meta name="data-rel-prefix" content="/">
+<meta name="data-tree-keys" content='[]'>
+
+</head>
+
+<body>
+    <a class="sr-only sr-only-focusable" href="#content" data-turbolinks="false">Skip to Content</a>
+    <a class="sr-only sr-only-focusable" href="#search" data-turbolinks="false">Skip to Search</a>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<nav class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search (/) for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</nav>
+
+
+    <div class="banner">
+        
+        <h2>
+            actioncable.esm.js
+        </h2>
+        <ul class="files">
+            
+            <li>
+                rails/actioncable/app/assets/javascripts/actioncable.esm.js
+                
+                    <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actioncable/app/assets/javascripts/actioncable.esm.js" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2024-05-24 23:57:09 +0300</li>
+        </ul>
+    </div>
+
+    <main id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>var adapters = {</p>
+
+<pre><code>logger: self.console,
+WebSocket: self.WebSocket
+</code></pre>
+
+<p>};</p>
+
+<p>var logger = {</p>
+
+<pre><code>log(...messages) {
+  if (this.enabled) {
+    messages.push(Date.now());
+    adapters.logger.log(&quot;[ActionCable]&quot;, ...messages);
+  }
+}
+</code></pre>
+
+<p>};</p>
+
+<p>const now = () =&gt; (new <a href="../../../../../../classes/Date.html"><code>Date</code></a>).getTime();</p>
+
+<p>const secondsSince = time =&gt; (now() - time) / 1e3;</p>
+
+<p>class ConnectionMonitor {</p>
+
+<pre><code>constructor(connection) {
+  this.visibilityDidChange = this.visibilityDidChange.bind(this);
+  this.connection = connection;
+  this.reconnectAttempts = 0;
+}
+start() {
+  if (!this.isRunning()) {
+    this.startedAt = now();
+    delete this.stoppedAt;
+    this.startPolling();
+    addEventListener(&quot;visibilitychange&quot;, this.visibilityDidChange);
+    logger.log(`ConnectionMonitor started. stale threshold = ${this.constructor.staleThreshold} s`);
+  }
+}
+stop() {
+  if (this.isRunning()) {
+    this.stoppedAt = now();
+    this.stopPolling();
+    removeEventListener(&quot;visibilitychange&quot;, this.visibilityDidChange);
+    logger.log(&quot;ConnectionMonitor stopped&quot;);
+  }
+}
+isRunning() {
+  return this.startedAt &amp;&amp; !this.stoppedAt;
+}
+recordPing() {
+  this.pingedAt = now();
+}
+recordConnect() {
+  this.reconnectAttempts = 0;
+  this.recordPing();
+  delete this.disconnectedAt;
+  logger.log(&quot;ConnectionMonitor recorded connect&quot;);
+}
+recordDisconnect() {
+  this.disconnectedAt = now();
+  logger.log(&quot;ConnectionMonitor recorded disconnect&quot;);
+}
+startPolling() {
+  this.stopPolling();
+  this.poll();
+}
+stopPolling() {
+  clearTimeout(this.pollTimeout);
+}
+poll() {
+  this.pollTimeout = setTimeout((() =&gt; {
+    this.reconnectIfStale();
+    this.poll();
+  }), this.getPollInterval());
+}
+getPollInterval() {
+  const {staleThreshold: staleThreshold, reconnectionBackoffRate: reconnectionBackoffRate} = this.constructor;
+  const backoff = Math.pow(1 + reconnectionBackoffRate, Math.min(this.reconnectAttempts, 10));
+  const jitterMax = this.reconnectAttempts === 0 ? 1 : reconnectionBackoffRate;
+  const jitter = jitterMax * Math.random();
+  return staleThreshold * 1e3 * backoff * (1 + jitter);
+}
+reconnectIfStale() {
+  if (this.connectionIsStale()) {
+    logger.log(`ConnectionMonitor detected stale connection. reconnectAttempts = ${this.reconnectAttempts}, time stale = ${secondsSince(this.refreshedAt)} s, stale threshold = ${this.constructor.staleThreshold} s`);
+    this.reconnectAttempts++;
+    if (this.disconnectedRecently()) {
+      logger.log(`ConnectionMonitor skipping reopening recent disconnect. time disconnected = ${secondsSince(this.disconnectedAt)} s`);
+    } else {
+      logger.log(&quot;ConnectionMonitor reopening&quot;);
+      this.connection.reopen();
+    }
+  }
+}
+get refreshedAt() {
+  return this.pingedAt ? this.pingedAt : this.startedAt;
+}
+connectionIsStale() {
+  return secondsSince(this.refreshedAt) &gt; this.constructor.staleThreshold;
+}
+disconnectedRecently() {
+  return this.disconnectedAt &amp;&amp; secondsSince(this.disconnectedAt) &lt; this.constructor.staleThreshold;
+}
+visibilityDidChange() {
+  if (document.visibilityState === &quot;visible&quot;) {
+    setTimeout((() =&gt; {
+      if (this.connectionIsStale() || !this.connection.isOpen()) {
+        logger.log(`ConnectionMonitor reopening stale connection on visibilitychange. visibilityState = ${document.visibilityState}`);
+        this.connection.reopen();
+      }
+    }), 200);
+  }
+}
+</code></pre>
+
+<p>}</p>
+
+<p>ConnectionMonitor.staleThreshold = 6;</p>
+
+<p>ConnectionMonitor.reconnectionBackoffRate = .15;</p>
+
+<p>var INTERNAL = {</p>
+
+<pre><code>message_types: {
+  welcome: &quot;welcome&quot;,
+  disconnect: &quot;disconnect&quot;,
+  ping: &quot;ping&quot;,
+  confirmation: &quot;confirm_subscription&quot;,
+  rejection: &quot;reject_subscription&quot;
+},
+disconnect_reasons: {
+  unauthorized: &quot;unauthorized&quot;,
+  invalid_request: &quot;invalid_request&quot;,
+  server_restart: &quot;server_restart&quot;
+},
+default_mount_path: &quot;/cable&quot;,
+protocols: [ &quot;actioncable-v1-json&quot;, &quot;actioncable-unsupported&quot; ]
+</code></pre>
+
+<p>};</p>
+
+<p>const {message_types: message_types, protocols: protocols} = INTERNAL;</p>
+
+<p>const supportedProtocols = protocols.slice(0, protocols.length - 1);</p>
+
+<p>const indexOf = [].indexOf;</p>
+
+<p>class Connection {</p>
+
+<pre><code>constructor(consumer) {
+  this.open = this.open.bind(this);
+  this.consumer = consumer;
+  this.subscriptions = this.consumer.subscriptions;
+  this.monitor = new ConnectionMonitor(this);
+  this.disconnected = true;
+}
+send(data) {
+  if (this.isOpen()) {
+    this.webSocket.send(JSON.stringify(data));
+    return true;
+  } else {
+    return false;
+  }
+}
+open() {
+  if (this.isActive()) {
+    logger.log(`Attempted to open WebSocket, but existing socket is ${this.getState()}`);
+    return false;
+  } else {
+    logger.log(`Opening WebSocket, current state is ${this.getState()}, subprotocols: ${protocols}`);
+    if (this.webSocket) {
+      this.uninstallEventHandlers();
+    }
+    this.webSocket = new adapters.WebSocket(this.consumer.url, protocols);
+    this.installEventHandlers();
+    this.monitor.start();
+    return true;
+  }
+}
+close({allowReconnect: allowReconnect} = {
+  allowReconnect: true
+}) {
+  if (!allowReconnect) {
+    this.monitor.stop();
+  }
+  if (this.isOpen()) {
+    return this.webSocket.close();
+  }
+}
+reopen() {
+  logger.log(`Reopening WebSocket, current state is ${this.getState()}`);
+  if (this.isActive()) {
+    try {
+      return this.close();
+    } catch (error) {
+      logger.log(&quot;Failed to reopen WebSocket&quot;, error);
+    } finally {
+      logger.log(`Reopening WebSocket in ${this.constructor.reopenDelay}ms`);
+      setTimeout(this.open, this.constructor.reopenDelay);
+    }
+  } else {
+    return this.open();
+  }
+}
+getProtocol() {
+  if (this.webSocket) {
+    return this.webSocket.protocol;
+  }
+}
+isOpen() {
+  return this.isState(&quot;open&quot;);
+}
+isActive() {
+  return this.isState(&quot;open&quot;, &quot;connecting&quot;);
+}
+isProtocolSupported() {
+  return indexOf.call(supportedProtocols, this.getProtocol()) &gt;= 0;
+}
+isState(...states) {
+  return indexOf.call(states, this.getState()) &gt;= 0;
+}
+getState() {
+  if (this.webSocket) {
+    for (let state in adapters.WebSocket) {
+      if (adapters.WebSocket[state] === this.webSocket.readyState) {
+        return state.toLowerCase();
+      }
+    }
+  }
+  return null;
+}
+installEventHandlers() {
+  for (let eventName in this.events) {
+    const handler = this.events[eventName].bind(this);
+    this.webSocket[`on${eventName}`] = handler;
+  }
+}
+uninstallEventHandlers() {
+  for (let eventName in this.events) {
+    this.webSocket[`on${eventName}`] = function() {};
+  }
+}
+</code></pre>
+
+<p>}</p>
+
+<p>Connection.reopenDelay = 500;</p>
+
+<p>Connection.prototype.events = {</p>
+
+<pre><code>message(event) {
+  if (!this.isProtocolSupported()) {
+    return;
+  }
+  const {identifier: identifier, message: message, reason: reason, reconnect: reconnect, type: type} = JSON.parse(event.data);
+  switch (type) {
+   case message_types.welcome:
+    this.monitor.recordConnect();
+    return this.subscriptions.reload();
+
+   case message_types.disconnect:
+    logger.log(`Disconnecting. Reason: ${reason}`);
+    return this.close({
+      allowReconnect: reconnect
+    });
+
+   case message_types.ping:
+    return this.monitor.recordPing();
+
+   case message_types.confirmation:
+    this.subscriptions.confirmSubscription(identifier);
+    return this.subscriptions.notify(identifier, &quot;connected&quot;);
+
+   case message_types.rejection:
+    return this.subscriptions.reject(identifier);
+
+   default:
+    return this.subscriptions.notify(identifier, &quot;received&quot;, message);
+  }
+},
+open() {
+  logger.log(`WebSocket onopen event, using &#39;${this.getProtocol()}&#39; subprotocol`);
+  this.disconnected = false;
+  if (!this.isProtocolSupported()) {
+    logger.log(&quot;Protocol is unsupported. Stopping monitor and disconnecting.&quot;);
+    return this.close({
+      allowReconnect: false
+    });
+  }
+},
+close(event) {
+  logger.log(&quot;WebSocket onclose event&quot;);
+  if (this.disconnected) {
+    return;
+  }
+  this.disconnected = true;
+  this.monitor.recordDisconnect();
+  return this.subscriptions.notifyAll(&quot;disconnected&quot;, {
+    willAttemptReconnect: this.monitor.isRunning()
+  });
+},
+error() {
+  logger.log(&quot;WebSocket onerror event&quot;);
+}
+</code></pre>
+
+<p>};</p>
+
+<p>const extend = function(object, properties) {</p>
+
+<pre><code>if (properties != null) {
+  for (let key in properties) {
+    const value = properties[key];
+    object[key] = value;
+  }
+}
+return object;
+</code></pre>
+
+<p>};</p>
+
+<p>class Subscription {</p>
+
+<pre><code>constructor(consumer, params = {}, mixin) {
+  this.consumer = consumer;
+  this.identifier = JSON.stringify(params);
+  extend(this, mixin);
+}
+perform(action, data = {}) {
+  data.action = action;
+  return this.send(data);
+}
+send(data) {
+  return this.consumer.send({
+    command: &quot;message&quot;,
+    identifier: this.identifier,
+    data: JSON.stringify(data)
+  });
+}
+unsubscribe() {
+  return this.consumer.subscriptions.remove(this);
+}
+</code></pre>
+
+<p>}</p>
+
+<p>class SubscriptionGuarantor {</p>
+
+<pre><code>constructor(subscriptions) {
+  this.subscriptions = subscriptions;
+  this.pendingSubscriptions = [];
+}
+guarantee(subscription) {
+  if (this.pendingSubscriptions.indexOf(subscription) == -1) {
+    logger.log(`SubscriptionGuarantor guaranteeing ${subscription.identifier}`);
+    this.pendingSubscriptions.push(subscription);
+  } else {
+    logger.log(`SubscriptionGuarantor already guaranteeing ${subscription.identifier}`);
+  }
+  this.startGuaranteeing();
+}
+forget(subscription) {
+  logger.log(`SubscriptionGuarantor forgetting ${subscription.identifier}`);
+  this.pendingSubscriptions = this.pendingSubscriptions.filter((s =&gt; s !== subscription));
+}
+startGuaranteeing() {
+  this.stopGuaranteeing();
+  this.retrySubscribing();
+}
+stopGuaranteeing() {
+  clearTimeout(this.retryTimeout);
+}
+retrySubscribing() {
+  this.retryTimeout = setTimeout((() =&gt; {
+    if (this.subscriptions &amp;&amp; typeof this.subscriptions.subscribe === &quot;function&quot;) {
+      this.pendingSubscriptions.map((subscription =&gt; {
+        logger.log(`SubscriptionGuarantor resubscribing ${subscription.identifier}`);
+        this.subscriptions.subscribe(subscription);
+      }));
+    }
+  }), 500);
+}
+</code></pre>
+
+<p>}</p>
+
+<p>class Subscriptions {</p>
+
+<pre><code>constructor(consumer) {
+  this.consumer = consumer;
+  this.guarantor = new SubscriptionGuarantor(this);
+  this.subscriptions = [];
+}
+create(channelName, mixin) {
+  const channel = channelName;
+  const params = typeof channel === &quot;object&quot; ? channel : {
+    channel: channel
+  };
+  const subscription = new Subscription(this.consumer, params, mixin);
+  return this.add(subscription);
+}
+add(subscription) {
+  this.subscriptions.push(subscription);
+  this.consumer.ensureActiveConnection();
+  this.notify(subscription, &quot;initialized&quot;);
+  this.subscribe(subscription);
+  return subscription;
+}
+remove(subscription) {
+  this.forget(subscription);
+  if (!this.findAll(subscription.identifier).length) {
+    this.sendCommand(subscription, &quot;unsubscribe&quot;);
+  }
+  return subscription;
+}
+reject(identifier) {
+  return this.findAll(identifier).map((subscription =&gt; {
+    this.forget(subscription);
+    this.notify(subscription, &quot;rejected&quot;);
+    return subscription;
+  }));
+}
+forget(subscription) {
+  this.guarantor.forget(subscription);
+  this.subscriptions = this.subscriptions.filter((s =&gt; s !== subscription));
+  return subscription;
+}
+findAll(identifier) {
+  return this.subscriptions.filter((s =&gt; s.identifier === identifier));
+}
+reload() {
+  return this.subscriptions.map((subscription =&gt; this.subscribe(subscription)));
+}
+notifyAll(callbackName, ...args) {
+  return this.subscriptions.map((subscription =&gt; this.notify(subscription, callbackName, ...args)));
+}
+notify(subscription, callbackName, ...args) {
+  let subscriptions;
+  if (typeof subscription === &quot;string&quot;) {
+    subscriptions = this.findAll(subscription);
+  } else {
+    subscriptions = [ subscription ];
+  }
+  return subscriptions.map((subscription =&gt; typeof subscription[callbackName] === &quot;function&quot; ? subscription[callbackName](...args) : undefined));
+}
+subscribe(subscription) {
+  if (this.sendCommand(subscription, &quot;subscribe&quot;)) {
+    this.guarantor.guarantee(subscription);
+  }
+}
+confirmSubscription(identifier) {
+  logger.log(`Subscription confirmed ${identifier}`);
+  this.findAll(identifier).map((subscription =&gt; this.guarantor.forget(subscription)));
+}
+sendCommand(subscription, command) {
+  const {identifier: identifier} = subscription;
+  return this.consumer.send({
+    command: command,
+    identifier: identifier
+  });
+}
+</code></pre>
+
+<p>}</p>
+
+<p>class Consumer {</p>
+
+<pre><code>constructor(url) {
+  this._url = url;
+  this.subscriptions = new Subscriptions(this);
+  this.connection = new Connection(this);
+}
+get url() {
+  return createWebSocketURL(this._url);
+}
+send(data) {
+  return this.connection.send(data);
+}
+connect() {
+  return this.connection.open();
+}
+disconnect() {
+  return this.connection.close({
+    allowReconnect: false
+  });
+}
+ensureActiveConnection() {
+  if (!this.connection.isActive()) {
+    return this.connection.open();
+  }
+}
+</code></pre>
+
+<p>}</p>
+
+<p>function createWebSocketURL(url) {</p>
+
+<pre><code>if (typeof url === &quot;function&quot;) {
+  url = url();
+}
+if (url &amp;&amp; !/^wss?:/i.test(url)) {
+  const a = document.createElement(&quot;a&quot;);
+  a.href = url;
+  a.href = a.href;
+  a.protocol = a.protocol.replace(&quot;http&quot;, &quot;ws&quot;);
+  return a.href;
+} else {
+  return url;
+}
+</code></pre>
+
+<p>}</p>
+
+<p>function createConsumer(url = getConfig(“url”) || INTERNAL.default_mount_path) {</p>
+
+<pre><code>return new Consumer(url);
+</code></pre>
+
+<p>}</p>
+
+<p>function getConfig(name) {</p>
+
+<pre><code>const element = document.head.querySelector(`meta[name=&#39;action-cable-${name}&#39;]`);
+if (element) {
+  return element.getAttribute(&quot;content&quot;);
+}
+</code></pre>
+
+<p>}</p>
+
+<p>export { Connection, ConnectionMonitor, Consumer, INTERNAL, Subscription, SubscriptionGuarantor, Subscriptions, adapters, createConsumer, createWebSocketURL, getConfig, logger };</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </main>
+  </body>
+</html>

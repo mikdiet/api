@@ -30,7 +30,7 @@
     <meta property="og:description" content="Provides accurate date and time measurements using Date#advance and Time#advance, respectively. It mainly supports the methods on Numeric.  1.month.ago       # equivalent to Time.now.">
   
 
-    <meta name="keywords" content="ActiveSupport::Duration class, parse, build, <=>, +, -, *, /, %, ==, to_s, to_i, in_seconds, in_minutes, in_hours, in_days, in_weeks, in_months, in_years, eql?, hash, since, from_now, after, ago, until, before, iso8601">
+    <meta name="keywords" content="ActiveSupport::Duration class, parse, build, parts, <=>, +, -, *, /, %, ==, to_s, to_i, in_seconds, in_minutes, in_hours, in_days, in_weeks, in_months, in_years, eql?, hash, since, from_now, after, ago, until, before, iso8601">
 </head>
 
 <body>
@@ -285,7 +285,12 @@
             
               
               <li>
-                <a href="#method-c-parse">parse</a>
+                <a href="#method-c-parse">parse</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-parts">parts</a>
               </li>
             
           </ul>
@@ -454,6 +459,18 @@ years:   SECONDS_PER_YEAR
             </tr>
           
         
+          <tr valign='top'>
+            <td class="attr-name">VARIABLE_PARTS</td>
+            <td>=</td>
+            <td class="attr-value">[:years, :months, :weeks, :days].freeze</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
       </table>
     
 
@@ -465,15 +482,7 @@ years:   SECONDS_PER_YEAR
         
           <tr valign='top'>
             <td class='attr-rw'>
-              [RW]
-            </td>
-            <td class='attr-name'>parts</td>
-            <td class='attr-desc'></td>
-          </tr>
-        
-          <tr valign='top'>
-            <td class='attr-rw'>
-              [RW]
+              [R]
             </td>
             <td class='attr-name'>value</td>
             <td class='attr-desc'></td>
@@ -517,11 +526,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-c-build_source')" id="l_method-c-build_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L183" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L188" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-build_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 183</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 188</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">build</span>(<span class="ruby-identifier">value</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-operator">::</span><span class="ruby-constant">Numeric</span>)
     <span class="ruby-identifier">raise</span> <span class="ruby-constant">TypeError</span>, <span class="ruby-node">&quot;can&#39;t build an #{self.name} from a #{value.class.name}&quot;</span>
@@ -530,18 +539,23 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
   <span class="ruby-identifier">parts</span> = {}
   <span class="ruby-identifier">remainder_sign</span> = <span class="ruby-identifier">value</span> <span class="ruby-operator">&lt;=&gt;</span> <span class="ruby-value">0</span>
   <span class="ruby-identifier">remainder</span> = <span class="ruby-identifier">value</span>.<span class="ruby-identifier">round</span>(<span class="ruby-value">9</span>).<span class="ruby-identifier">abs</span>
+  <span class="ruby-identifier">variable</span> = <span class="ruby-keyword">false</span>
 
   <span class="ruby-constant">PARTS</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">part</span><span class="ruby-operator">|</span>
     <span class="ruby-keyword">unless</span> <span class="ruby-identifier">part</span> <span class="ruby-operator">==</span> <span class="ruby-value">:seconds</span>
       <span class="ruby-identifier">part_in_seconds</span> = <span class="ruby-constant">PARTS_IN_SECONDS</span>[<span class="ruby-identifier">part</span>]
       <span class="ruby-identifier">parts</span>[<span class="ruby-identifier">part</span>] = <span class="ruby-identifier">remainder</span>.<span class="ruby-identifier">div</span>(<span class="ruby-identifier">part_in_seconds</span>) <span class="ruby-operator">*</span> <span class="ruby-identifier">remainder_sign</span>
       <span class="ruby-identifier">remainder</span> <span class="ruby-operator">%=</span> <span class="ruby-identifier">part_in_seconds</span>
+
+      <span class="ruby-keyword">unless</span> <span class="ruby-identifier">parts</span>[<span class="ruby-identifier">part</span>].<span class="ruby-identifier">zero?</span>
+        <span class="ruby-identifier">variable</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">VARIABLE_PARTS</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">part</span>)
+      <span class="ruby-keyword">end</span>
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">value</span> <span class="ruby-operator">==</span> <span class="ruby-value">0</span>
 
   <span class="ruby-identifier">parts</span>[<span class="ruby-value">:seconds</span>] = <span class="ruby-identifier">remainder</span> <span class="ruby-operator">*</span> <span class="ruby-identifier">remainder_sign</span>
 
-  <span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span>, <span class="ruby-identifier">parts</span>)
+  <span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span>, <span class="ruby-identifier">parts</span>, <span class="ruby-identifier">variable</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -576,11 +590,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-c-parse_source')" id="l_method-c-parse_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L138" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L143" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-parse_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 138</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 143</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse</span>(<span class="ruby-identifier">iso8601duration</span>)
   <span class="ruby-identifier">parts</span> = <span class="ruby-constant">ISO8601Parser</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">iso8601duration</span>).<span class="ruby-identifier">parse!</span>
   <span class="ruby-identifier">new</span>(<span class="ruby-identifier">calculate_total_seconds</span>(<span class="ruby-identifier">parts</span>), <span class="ruby-identifier">parts</span>)
@@ -620,11 +634,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-25_source')" id="l_method-i-25_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L285" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L306" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-25_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 285</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 306</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">%</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-constant">Duration</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span> <span class="ruby-operator">||</span> <span class="ruby-constant">Scalar</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
     <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">build</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">%</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span>)
@@ -665,16 +679,16 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-2A_source')" id="l_method-i-2A_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L260" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L281" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-2A_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 260</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 281</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">*</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-constant">Scalar</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span> <span class="ruby-operator">||</span> <span class="ruby-constant">Duration</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
-    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">*</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span>, <span class="ruby-identifier">parts</span>.<span class="ruby-identifier">transform_values</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">number</span><span class="ruby-operator">|</span> <span class="ruby-identifier">number</span> <span class="ruby-operator">*</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span> })
+    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">*</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span>, <span class="ruby-ivar">@parts</span>.<span class="ruby-identifier">transform_values</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">number</span><span class="ruby-operator">|</span> <span class="ruby-identifier">number</span> <span class="ruby-operator">*</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span> }, <span class="ruby-ivar">@variable</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">variable?</span>)
   <span class="ruby-keyword">elsif</span> <span class="ruby-constant">Numeric</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
-    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">*</span> <span class="ruby-identifier">other</span>, <span class="ruby-identifier">parts</span>.<span class="ruby-identifier">transform_values</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">number</span><span class="ruby-operator">|</span> <span class="ruby-identifier">number</span> <span class="ruby-operator">*</span> <span class="ruby-identifier">other</span> })
+    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">*</span> <span class="ruby-identifier">other</span>, <span class="ruby-ivar">@parts</span>.<span class="ruby-identifier">transform_values</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">number</span><span class="ruby-operator">|</span> <span class="ruby-identifier">number</span> <span class="ruby-operator">*</span> <span class="ruby-identifier">other</span> }, <span class="ruby-ivar">@variable</span>)
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">raise_type_error</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">end</span>
@@ -710,20 +724,20 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-2B_source')" id="l_method-i-2B_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L241" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L262" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-2B_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 241</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 262</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">+</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-constant">Duration</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
-    <span class="ruby-identifier">parts</span> = <span class="ruby-ivar">@parts</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">other</span>.<span class="ruby-identifier">parts</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">_key</span>, <span class="ruby-identifier">value</span>, <span class="ruby-identifier">other_value</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">parts</span> = <span class="ruby-ivar">@parts</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">other</span>.<span class="ruby-identifier">_parts</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">_key</span>, <span class="ruby-identifier">value</span>, <span class="ruby-identifier">other_value</span><span class="ruby-operator">|</span>
       <span class="ruby-identifier">value</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">other_value</span>
     <span class="ruby-keyword">end</span>
-    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span>, <span class="ruby-identifier">parts</span>)
+    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span>, <span class="ruby-identifier">parts</span>, <span class="ruby-ivar">@variable</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">variable?</span>)
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">seconds</span> = <span class="ruby-ivar">@parts</span>.<span class="ruby-identifier">fetch</span>(<span class="ruby-value">:seconds</span>, <span class="ruby-value">0</span>) <span class="ruby-operator">+</span> <span class="ruby-identifier">other</span>
-    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">other</span>, <span class="ruby-ivar">@parts</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-value">seconds:</span> <span class="ruby-identifier">seconds</span>))
+    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">other</span>, <span class="ruby-ivar">@parts</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-value">seconds:</span> <span class="ruby-identifier">seconds</span>), <span class="ruby-ivar">@variable</span>)
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -757,11 +771,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-2D_source')" id="l_method-i-2D_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L255" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L276" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-2D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 255</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 276</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">-</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">self</span> <span class="ruby-operator">+</span> (<span class="ruby-operator">-</span><span class="ruby-identifier">other</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -796,18 +810,18 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-2F_source')" id="l_method-i-2F_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L271" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L292" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-2F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 271</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 292</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">/</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-constant">Scalar</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
-    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">/</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span>, <span class="ruby-identifier">parts</span>.<span class="ruby-identifier">transform_values</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">number</span><span class="ruby-operator">|</span> <span class="ruby-identifier">number</span> <span class="ruby-operator">/</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span> })
+    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">/</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span>, <span class="ruby-ivar">@parts</span>.<span class="ruby-identifier">transform_values</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">number</span><span class="ruby-operator">|</span> <span class="ruby-identifier">number</span> <span class="ruby-operator">/</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span> }, <span class="ruby-ivar">@variable</span>)
   <span class="ruby-keyword">elsif</span> <span class="ruby-constant">Duration</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
     <span class="ruby-identifier">value</span> <span class="ruby-operator">/</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span>
   <span class="ruby-keyword">elsif</span> <span class="ruby-constant">Numeric</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
-    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">/</span> <span class="ruby-identifier">other</span>, <span class="ruby-identifier">parts</span>.<span class="ruby-identifier">transform_values</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">number</span><span class="ruby-operator">|</span> <span class="ruby-identifier">number</span> <span class="ruby-operator">/</span> <span class="ruby-identifier">other</span> })
+    <span class="ruby-constant">Duration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">value</span> <span class="ruby-operator">/</span> <span class="ruby-identifier">other</span>, <span class="ruby-ivar">@parts</span>.<span class="ruby-identifier">transform_values</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">number</span><span class="ruby-operator">|</span> <span class="ruby-identifier">number</span> <span class="ruby-operator">/</span> <span class="ruby-identifier">other</span> }, <span class="ruby-ivar">@variable</span>)
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">raise_type_error</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">end</span>
@@ -843,11 +857,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-3C-3D-3E_source')" id="l_method-i-3C-3D-3E_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L231" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L252" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3C-3D-3E_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 231</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 252</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">&lt;=&gt;</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-constant">Duration</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
     <span class="ruby-identifier">value</span> <span class="ruby-operator">&lt;=&gt;</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span>
@@ -886,11 +900,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-3D-3D_source')" id="l_method-i-3D-3D_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L314" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L335" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3D-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 314</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 335</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">==</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-constant">Duration</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
     <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">value</span>
@@ -958,11 +972,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-ago_source')" id="l_method-i-ago_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L417" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L438" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ago_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 417</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 438</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ago</span>(<span class="ruby-identifier">time</span> = <span class="ruby-operator">::</span><span class="ruby-constant">Time</span>.<span class="ruby-identifier">current</span>)
   <span class="ruby-identifier">sum</span>(<span class="ruby-value">-1</span>, <span class="ruby-identifier">time</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1022,11 +1036,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-eql-3F_source')" id="l_method-i-eql-3F_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L399" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L420" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-eql-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 399</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 420</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">eql?</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-constant">Duration</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">value</span>.<span class="ruby-identifier">eql?</span>(<span class="ruby-identifier">value</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1086,11 +1100,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-hash_source')" id="l_method-i-hash_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L403" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L424" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-hash_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 403</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 424</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">hash</span>
   <span class="ruby-ivar">@value</span>.<span class="ruby-identifier">hash</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1128,11 +1142,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-in_days_source')" id="l_method-i-in_days_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L372" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L393" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-in_days_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 372</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 393</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">in_days</span>
   <span class="ruby-identifier">in_seconds</span> <span class="ruby-operator">/</span> <span class="ruby-constant">SECONDS_PER_DAY</span>.<span class="ruby-identifier">to_f</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1170,11 +1184,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-in_hours_source')" id="l_method-i-in_hours_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L365" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L386" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-in_hours_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 365</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 386</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">in_hours</span>
   <span class="ruby-identifier">in_seconds</span> <span class="ruby-operator">/</span> <span class="ruby-constant">SECONDS_PER_HOUR</span>.<span class="ruby-identifier">to_f</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1212,11 +1226,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-in_minutes_source')" id="l_method-i-in_minutes_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L358" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L379" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-in_minutes_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 358</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 379</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">in_minutes</span>
   <span class="ruby-identifier">in_seconds</span> <span class="ruby-operator">/</span> <span class="ruby-constant">SECONDS_PER_MINUTE</span>.<span class="ruby-identifier">to_f</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1254,11 +1268,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-in_months_source')" id="l_method-i-in_months_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L386" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L407" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-in_months_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 386</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 407</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">in_months</span>
   <span class="ruby-identifier">in_seconds</span> <span class="ruby-operator">/</span> <span class="ruby-constant">SECONDS_PER_MONTH</span>.<span class="ruby-identifier">to_f</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1321,11 +1335,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-in_weeks_source')" id="l_method-i-in_weeks_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L379" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L400" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-in_weeks_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 379</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 400</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">in_weeks</span>
   <span class="ruby-identifier">in_seconds</span> <span class="ruby-operator">/</span> <span class="ruby-constant">SECONDS_PER_WEEK</span>.<span class="ruby-identifier">to_f</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1363,11 +1377,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-in_years_source')" id="l_method-i-in_years_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L393" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L414" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-in_years_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 393</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 414</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">in_years</span>
   <span class="ruby-identifier">in_seconds</span> <span class="ruby-operator">/</span> <span class="ruby-constant">SECONDS_PER_YEAR</span>.<span class="ruby-identifier">to_f</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1402,13 +1416,52 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-iso8601_source')" id="l_method-i-iso8601_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L446" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L467" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-iso8601_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 446</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 467</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">iso8601</span>(<span class="ruby-value">precision:</span> <span class="ruby-keyword">nil</span>)
   <span class="ruby-constant">ISO8601Serializer</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>, <span class="ruby-value">precision:</span> <span class="ruby-identifier">precision</span>).<span class="ruby-identifier">serialize</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-parts">
+            
+              <b>parts</b>()
+            
+            <a href="../../classes/ActiveSupport/Duration.html#method-i-parts" name="method-i-parts" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a copy of the parts hash that defines the duration</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-parts_source')" id="l_method-i-parts_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L235" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-parts_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 235</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parts</span>
+  <span class="ruby-ivar">@parts</span>.<span class="ruby-identifier">dup</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1445,11 +1498,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-since_source')" id="l_method-i-since_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L409" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L430" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-since_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 409</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 430</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">since</span>(<span class="ruby-identifier">time</span> = <span class="ruby-operator">::</span><span class="ruby-constant">Time</span>.<span class="ruby-identifier">current</span>)
   <span class="ruby-identifier">sum</span>(<span class="ruby-value">1</span>, <span class="ruby-identifier">time</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1504,11 +1557,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-to_i_source')" id="l_method-i-to_i_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L350" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L371" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_i_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 350</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 371</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_i</span>
   <span class="ruby-ivar">@value</span>.<span class="ruby-identifier">to_i</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1546,11 +1599,11 @@ ActiveSupport::Duration.build(2716146).parts  # =&gt; {:months=&gt;1, :days=&gt;
                 Source:
                 <a href="javascript:toggleSource('method-i-to_s_source')" id="l_method-i-to_s_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/duration.rb#L326" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/duration.rb#L347" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_s_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 326</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/duration.rb, line 347</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_s</span>
   <span class="ruby-ivar">@value</span>.<span class="ruby-identifier">to_s</span>
 <span class="ruby-keyword">end</span></pre>

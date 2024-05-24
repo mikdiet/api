@@ -519,20 +519,19 @@
                 <pre>static VALUE
 rb_stat_init(VALUE obj, VALUE fname)
 {
-    struct stat st, *nst;
+    struct stat st;
 
     FilePathValue(fname);
     fname = rb_str_encode_ospath(fname);
     if (STAT(StringValueCStr(fname), &amp;st) == -1) {
         rb_sys_fail_path(fname);
     }
-    if (DATA_PTR(obj)) {
-        xfree(DATA_PTR(obj));
-        DATA_PTR(obj) = NULL;
-    }
-    nst = ALLOC(struct stat);
-    *nst = st;
-    DATA_PTR(obj) = nst;
+
+    struct rb_stat *rb_st;
+    TypedData_Get_Struct(obj, struct rb_stat, &amp;stat_data_type, rb_st);
+
+    rb_st-&gt;stat = st;
+    rb_st-&gt;initialized = true;
 
     return Qnil;
 }</pre>
@@ -648,7 +647,7 @@ rb_stat_atime(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-birthtime">
             
-              <b>stat.birthtime  &rarr;  aTime
+              <b>stat.birthtime  &rarr;  time
 </b>
             
             <a href="../../classes/File/Stat.html#method-i-birthtime" name="method-i-birthtime" class="permalink">Link</a>
@@ -889,7 +888,7 @@ rb_stat_c(VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-ctime">
             
-              <b>stat.ctime  &rarr;  aTime
+              <b>stat.ctime  &rarr;  time
 </b>
             
             <a href="../../classes/File/Stat.html#method-i-ctime" name="method-i-ctime" class="permalink">Link</a>
@@ -1075,7 +1074,7 @@ rb_stat_dev_minor(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-directory-3F">
             
-              <b>File.directory?(file_name)   &rarr;  true or false
+              <b>stat.directory?   &rarr; true or false
 </b>
             
             <a href="../../classes/File/Stat.html#method-i-directory-3F" name="method-i-directory-3F" class="permalink">Link</a>
@@ -1083,11 +1082,10 @@ rb_stat_dev_minor(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if the named file is a directory, or a symlink that points at a directory, and <code>false</code> otherwise.</p>
+              <p>Returns <code>true</code> if <em>stat</em> is a directory, <code>false</code> otherwise.</p>
 
-<p><em>file_name</em> can be an <a href="../IO.html"><code>IO</code></a> object.</p>
-
-<pre><code>File.directory?(&quot;.&quot;)
+<pre><code>File.stat(&quot;testfile&quot;).directory?   #=&gt; false
+File.stat(&quot;.&quot;).directory?          #=&gt; true
 </code></pre>
             </div>
           
@@ -1372,7 +1370,7 @@ rb_stat_gid(VALUE self)
 
           
             <div class="description">
-              <p>Returns true if the effective group id of the process is the same as the group id of <em>stat</em>. On Windows NT, returns <code>false</code>.</p>
+              <p>Returns true if the effective group id of the process is the same as the group id of <em>stat</em>. On Windows, returns <code>false</code>.</p>
 
 <pre><code>File.stat(&quot;testfile&quot;).grpowned?      #=&gt; true
 File.stat(&quot;/etc/passwd&quot;).grpowned?   #=&gt; false
@@ -1506,12 +1504,12 @@ rb_stat_inspect(VALUE self)
         const char *name;
         VALUE (*func)(VALUE);
     } member[] = {
-        {&quot;dev&quot;,            rb_stat_dev},
-        {&quot;ino&quot;,            rb_stat_ino},
+        {&quot;dev&quot;,     rb_stat_dev},
+        {&quot;ino&quot;,     rb_stat_ino},
         {&quot;mode&quot;,    rb_stat_mode},
         {&quot;nlink&quot;,   rb_stat_nlink},
-        {&quot;uid&quot;,            rb_stat_uid},
-        {&quot;gid&quot;,            rb_stat_gid},
+        {&quot;uid&quot;,     rb_stat_uid},
+        {&quot;gid&quot;,     rb_stat_gid},
         {&quot;rdev&quot;,    rb_stat_rdev},
         {&quot;size&quot;,    rb_stat_size},
         {&quot;blksize&quot;, rb_stat_blksize},
@@ -1524,9 +1522,9 @@ rb_stat_inspect(VALUE self)
 #endif
     };
 
-    struct stat* st;
-    TypedData_Get_Struct(self, struct stat, &amp;stat_data_type, st);
-    if (!st) {
+    struct rb_stat* rb_st;
+    TypedData_Get_Struct(self, struct rb_stat, &amp;stat_data_type, rb_st);
+    if (!rb_st-&gt;initialized) {
         return rb_sprintf(&quot;#&lt;%s: uninitialized&gt;&quot;, rb_obj_classname(self));
     }
 
@@ -1543,7 +1541,7 @@ rb_stat_inspect(VALUE self)
         rb_str_buf_cat2(str, member[i].name);
         rb_str_buf_cat2(str, &quot;=&quot;);
         v = (*member[i].func)(self);
-        if (i == 2) {          /* mode */
+        if (i == 2) {           /* mode */
             rb_str_catf(str, &quot;0%lo&quot;, (unsigned long)NUM2ULONG(v));
         }
         else if (i == 0 || i == 6) { /* dev/rdev */
@@ -1609,7 +1607,7 @@ rb_stat_mode(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-mtime">
             
-              <b>stat.mtime  &rarr;  aTime
+              <b>stat.mtime  &rarr;  time
 </b>
             
             <a href="../../classes/File/Stat.html#method-i-mtime" name="method-i-mtime" class="permalink">Link</a>
@@ -2202,7 +2200,7 @@ rb_stat_size(VALUE self)
               <p>Returns <code>nil</code> if <em>stat</em> is a zero-length file, the size of the file otherwise.</p>
 
 <pre><code>File.stat(&quot;testfile&quot;).size?   #=&gt; 66
-File.stat(&quot;/dev/null&quot;).size?  #=&gt; nil
+File.stat(File::NULL).size?   #=&gt; nil
 </code></pre>
             </div>
           
@@ -2224,7 +2222,7 @@ File.stat(&quot;/dev/null&quot;).size?  #=&gt; nil
                 <pre>static VALUE
 rb_stat_s(VALUE obj)
 {
-    off_t size = get_stat(obj)-&gt;st_size;
+    rb_off_t size = get_stat(obj)-&gt;st_size;
 
     if (size == 0) return Qnil;
     return OFFT2NUM(size);
@@ -2455,10 +2453,8 @@ rb_stat_wr(VALUE obj)
     if ((st-&gt;st_mode &amp; (S_IROTH)) == S_IROTH) {
         return UINT2NUM(st-&gt;st_mode &amp; (S_IRUGO|S_IWUGO|S_IXUGO));
     }
-    else {
-        return Qnil;
-    }
 #endif
+    return Qnil;
 }</pre>
               </div>
             </div>
@@ -2501,15 +2497,13 @@ sprintf(&quot;%o&quot;, m)                              #=&gt; &quot;777&quot;
                 <pre>static VALUE
 rb_stat_ww(VALUE obj)
 {
-#ifdef S_IROTH
+#ifdef S_IWOTH
     struct stat *st = get_stat(obj);
     if ((st-&gt;st_mode &amp; (S_IWOTH)) == S_IWOTH) {
         return UINT2NUM(st-&gt;st_mode &amp; (S_IRUGO|S_IWUGO|S_IXUGO));
     }
-    else {
-        return Qnil;
-    }
 #endif
+    return Qnil;
 }</pre>
               </div>
             </div>

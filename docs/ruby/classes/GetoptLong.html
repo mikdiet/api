@@ -26,8 +26,8 @@
 
   
     
-    <meta name="description" content="The GetoptLong class allows you to parse command line options similarly to the GNU getopt_long() C library call. Note, however, that GetoptLong is a pure Ruby implementation.">
-    <meta property="og:description" content="The GetoptLong class allows you to parse command line options similarly to the GNU getopt_long() C library call. Note, however, that GetoptLong is a pure Ruby implementation.">
+    <meta name="description" content="Class GetoptLong provides parsing both for options and for regular arguments.  Using GetoptLong, you can define options for your program.">
+    <meta property="og:description" content="Class GetoptLong provides parsing both for options and for regular arguments.  Using GetoptLong, you can define options for your program.">
   
 
     <meta name="keywords" content="GetoptLong class, new, ordering=, set_options, terminate, terminated?, set_error, error_message, get, get_option, each, each_option">
@@ -81,73 +81,522 @@
   
     <div class="description">
       
-<p>The <a href="GetoptLong.html"><code>GetoptLong</code></a> class allows you to parse command line options similarly to the GNU getopt_long() C library call. Note, however, that <a href="GetoptLong.html"><code>GetoptLong</code></a> is a pure Ruby implementation.</p>
+<p>Class GetoptLong provides parsing both for options and for regular arguments.</p>
 
-<p><a href="GetoptLong.html"><code>GetoptLong</code></a> allows for POSIX-style options like <code>--file</code> as well as single letter options like <code>-f</code></p>
+<p>Using GetoptLong, you can define options for your program. The program can then capture and respond to whatever options are included in the command that executes the program.</p>
 
-<p>The empty option <code>--</code> (two minus symbols) is used to end option processing. This can be particularly important if options have optional arguments.</p>
-
-<p>Here is a simple example of usage:</p>
+<p>A simple example: file <code>simple.rb</code>:</p>
 
 <pre><code>require &#39;getoptlong&#39;
 
-opts = GetoptLong.new(
-  [ &#39;--help&#39;, &#39;-h&#39;, GetoptLong::NO_ARGUMENT ],
-  [ &#39;--repeat&#39;, &#39;-n&#39;, GetoptLong::REQUIRED_ARGUMENT ],
-  [ &#39;--name&#39;, GetoptLong::OPTIONAL_ARGUMENT ]
+options = GetoptLong.new(
+  [&#39;--number&#39;, &#39;-n&#39;, GetoptLong::REQUIRED_ARGUMENT],
+  [&#39;--verbose&#39;, &#39;-v&#39;, GetoptLong::OPTIONAL_ARGUMENT],
+  [&#39;--help&#39;, &#39;-h&#39;, GetoptLong::NO_ARGUMENT]
 )
+</code></pre>
 
-dir = nil
-name = nil
-repetitions = 1
-opts.each do |opt, arg|
-  case opt
-    when &#39;--help&#39;
-      puts &lt;&lt;-EOF
-hello [OPTION] ... DIR
+<p>If you are somewhat familiar with options, you may want to skip to this <a href="#class-GetoptLong-label-Full+Example">full example</a>.</p>
 
--h, --help:
-   show help
+<h2 id="class-GetoptLong-label-Options">Options</h2>
 
---repeat x, -n x:
-   repeat x times
+<p>A GetoptLong option has:</p>
+<ul><li>
+<p>A string <em>option name</em>.</p>
+</li><li>
+<p>Zero or more string <em>aliases</em> for the name.</p>
+</li><li>
+<p>An <em>option type</em>.</p>
+</li></ul>
 
---name [name]:
-   greet user by name, if name not supplied default is John
+<p>Options may be defined by calling singleton method <a href="GetoptLong.html#method-c-new"><code>GetoptLong.new</code></a>, which returns a new GetoptLong object. Options may then be processed by calling other methods such as <a href="GetoptLong.html#method-i-each"><code>GetoptLong#each</code></a>.</p>
 
-DIR: The directory in which to issue the greeting.
-      EOF
-    when &#39;--repeat&#39;
-      repetitions = arg.to_i
-    when &#39;--name&#39;
-      if arg == &#39;&#39;
-        name = &#39;John&#39;
-      else
-        name = arg
-      end
-  end
-end
+<h3 id="class-GetoptLong-label-Option+Name+and+Aliases">Option Name and Aliases</h3>
 
-if ARGV.length != 1
-  puts &quot;Missing dir argument (try --help)&quot;
-  exit 0
-end
+<p>In the array that defines an option, the first element is the string option name. Often the name takes the ‘long’ form, beginning with two hyphens.</p>
 
-dir = ARGV.shift
+<p>The option name may have any number of aliases, which are defined by additional string elements.</p>
 
-Dir.chdir(dir)
-for i in (1..repetitions)
-  print &quot;Hello&quot;
-  if name
-    print &quot;, #{name}&quot;
-  end
-  puts
+<p>The name and each alias must be of one of two forms:</p>
+<ul><li>
+<p>Two hyphens, followed by one or more letters.</p>
+</li><li>
+<p>One hyphen, followed by a single letter.</p>
+</li></ul>
+
+<p><a href="File.html"><code>File</code></a> <code>aliases.rb</code>:</p>
+
+<pre><code>require &#39;getoptlong&#39;
+
+options = GetoptLong.new(
+  [&#39;--xxx&#39;, &#39;-x&#39;, &#39;--aaa&#39;, &#39;-a&#39;, &#39;-p&#39;, GetoptLong::NO_ARGUMENT]
+)
+options.each do |option, argument|
+  p [option, argument]
 end
 </code></pre>
 
-<p>Example command line:</p>
+<p>An option may be cited by its name, or by any of its aliases; the parsed option always reports the name, not an alias:</p>
 
-<pre><code>hello -n 6 --name -- /tmp
+<pre><code>$ ruby aliases.rb -a -p --xxx --aaa -x
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[&quot;--xxx&quot;, &quot;&quot;]
+[&quot;--xxx&quot;, &quot;&quot;]
+[&quot;--xxx&quot;, &quot;&quot;]
+[&quot;--xxx&quot;, &quot;&quot;]
+[&quot;--xxx&quot;, &quot;&quot;]
+</code></pre>
+
+<p>An option may also be cited by an abbreviation of its name or any alias, as long as that abbreviation is unique among the options.</p>
+
+<p><a href="File.html"><code>File</code></a> <code>abbrev.rb</code>:</p>
+
+<pre><code>require &#39;getoptlong&#39;
+
+options = GetoptLong.new(
+  [&#39;--xxx&#39;, GetoptLong::NO_ARGUMENT],
+  [&#39;--xyz&#39;, GetoptLong::NO_ARGUMENT]
+)
+options.each do |option, argument|
+  p [option, argument]
+end
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>$ ruby abbrev.rb --xxx --xx --xyz --xy
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[&quot;--xxx&quot;, &quot;&quot;]
+[&quot;--xxx&quot;, &quot;&quot;]
+[&quot;--xyz&quot;, &quot;&quot;]
+[&quot;--xyz&quot;, &quot;&quot;]
+</code></pre>
+
+<p>This command line raises <a href="GetoptLong/AmbiguousOption.html"><code>GetoptLong::AmbiguousOption</code></a>:</p>
+
+<pre><code>$ ruby abbrev.rb --x
+</code></pre>
+
+<h3 id="class-GetoptLong-label-Repetition">Repetition</h3>
+
+<p>An option may be cited more than once:</p>
+
+<pre><code>$ ruby abbrev.rb --xxx --xyz --xxx --xyz
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[&quot;--xxx&quot;, &quot;&quot;]
+[&quot;--xyz&quot;, &quot;&quot;]
+[&quot;--xxx&quot;, &quot;&quot;]
+[&quot;--xyz&quot;, &quot;&quot;]
+</code></pre>
+
+<h3 id="class-GetoptLong-label-Treating+Remaining+Options+as+Arguments">Treating Remaining Options as Arguments</h3>
+
+<p>A option-like token that appears anywhere after the token <code>--</code> is treated as an ordinary argument, and is not processed as an option:</p>
+
+<pre><code>$ ruby abbrev.rb --xxx --xyz -- --xxx --xyz
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[&quot;--xxx&quot;, &quot;&quot;]
+[&quot;--xyz&quot;, &quot;&quot;]
+</code></pre>
+
+<h3 id="class-GetoptLong-label-Option+Types">Option Types</h3>
+
+<p>Each option definition includes an option type, which controls whether the option takes an argument.</p>
+
+<p><a href="File.html"><code>File</code></a> <code>types.rb</code>:</p>
+
+<pre><code>require &#39;getoptlong&#39;
+
+options = GetoptLong.new(
+  [&#39;--xxx&#39;, GetoptLong::REQUIRED_ARGUMENT],
+  [&#39;--yyy&#39;, GetoptLong::OPTIONAL_ARGUMENT],
+  [&#39;--zzz&#39;, GetoptLong::NO_ARGUMENT]
+)
+options.each do |option, argument|
+  p [option, argument]
+end
+</code></pre>
+
+<p>Note that an option type has to do with the <em>option argument</em> (whether it is required, optional, or forbidden), not with whether the option itself is required.</p>
+
+<h4 id="class-GetoptLong-label-Option+with+Required+Argument">Option with Required Argument</h4>
+
+<p>An option of type <code>GetoptLong::REQUIRED_ARGUMENT</code> must be followed by an argument, which is associated with that option:</p>
+
+<pre><code>$ ruby types.rb --xxx foo
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[&quot;--xxx&quot;, &quot;foo&quot;]
+</code></pre>
+
+<p>If the option is not last, its argument is whatever follows it (even if the argument looks like another option):</p>
+
+<pre><code>$ ruby types.rb --xxx --yyy
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[&quot;--xxx&quot;, &quot;--yyy&quot;]
+</code></pre>
+
+<p>If the option is last, an exception is raised:</p>
+
+<pre><code>$ ruby types.rb
+# Raises GetoptLong::MissingArgument
+</code></pre>
+
+<h4 id="class-GetoptLong-label-Option+with+Optional+Argument">Option with Optional Argument</h4>
+
+<p>An option of type <code>GetoptLong::OPTIONAL_ARGUMENT</code> may be followed by an argument, which if given is associated with that option.</p>
+
+<p>If the option is last, it does not have an argument:</p>
+
+<pre><code>$ ruby types.rb --yyy
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[&quot;--yyy&quot;, &quot;&quot;]
+</code></pre>
+
+<p>If the option is followed by another option, it does not have an argument:</p>
+
+<pre><code>$ ruby types.rb --yyy --zzz
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[&quot;--yyy&quot;, &quot;&quot;]
+[&quot;--zzz&quot;, &quot;&quot;]
+</code></pre>
+
+<p>Otherwise the option is followed by its argument, which is associated with that option:</p>
+
+<pre><code>$ ruby types.rb --yyy foo
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[&quot;--yyy&quot;, &quot;foo&quot;]
+</code></pre>
+
+<h4 id="class-GetoptLong-label-Option+with+No+Argument">Option with No Argument</h4>
+
+<p>An option of type <code>GetoptLong::NO_ARGUMENT</code> takes no argument:</p>
+
+<pre><code>ruby types.rb --zzz foo
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>[&quot;--zzz&quot;, &quot;&quot;]
+</code></pre>
+
+<h3 id="class-GetoptLong-label-ARGV">ARGV</h3>
+
+<p>You can process options either with method <a href="GetoptLong.html#method-i-each"><code>each</code></a> and a block, or with method <a href="GetoptLong.html#method-i-get"><code>get</code></a>.</p>
+
+<p>During processing, each found option is removed, along with its argument if there is one. After processing, each remaining element was neither an option nor the argument for an option.</p>
+
+<p><a href="File.html"><code>File</code></a> <code>argv.rb</code>:</p>
+
+<pre><code>require &#39;getoptlong&#39;
+
+options = GetoptLong.new(
+  [&#39;--xxx&#39;, GetoptLong::REQUIRED_ARGUMENT],
+  [&#39;--yyy&#39;, GetoptLong::OPTIONAL_ARGUMENT],
+  [&#39;--zzz&#39;, GetoptLong::NO_ARGUMENT]
+)
+puts &quot;Original ARGV: #{ARGV}&quot;
+options.each do |option, argument|
+  p [option, argument]
+end
+puts &quot;Remaining ARGV: #{ARGV}&quot;
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>$ ruby argv.rb --xxx Foo --yyy Bar Baz --zzz Bat Bam
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>Original ARGV: [&quot;--xxx&quot;, &quot;Foo&quot;, &quot;--yyy&quot;, &quot;Bar&quot;, &quot;Baz&quot;, &quot;--zzz&quot;, &quot;Bat&quot;, &quot;Bam&quot;]
+[&quot;--xxx&quot;, &quot;Foo&quot;]
+[&quot;--yyy&quot;, &quot;Bar&quot;]
+[&quot;--zzz&quot;, &quot;&quot;]
+Remaining ARGV: [&quot;Baz&quot;, &quot;Bat&quot;, &quot;Bam&quot;]
+</code></pre>
+
+<h3 id="class-GetoptLong-label-Ordering">Ordering</h3>
+
+<p>There are three settings that control the way the options are interpreted:</p>
+<ul><li>
+<p><code>PERMUTE</code>.</p>
+</li><li>
+<p><code>REQUIRE_ORDER</code>.</p>
+</li><li>
+<p><code>RETURN_IN_ORDER</code>.</p>
+</li></ul>
+
+<p>The initial setting for a new GetoptLong object is <code>REQUIRE_ORDER</code> if environment variable <code>POSIXLY_CORRECT</code> is defined, <code>PERMUTE</code> otherwise.</p>
+
+<h4 id="class-GetoptLong-label-PERMUTE+Ordering">PERMUTE Ordering</h4>
+
+<p>In the <code>PERMUTE</code> ordering, options and other, non-option, arguments may appear in any order and any mixture.</p>
+
+<p><a href="File.html"><code>File</code></a> <code>permute.rb</code>:</p>
+
+<pre><code>require &#39;getoptlong&#39;
+
+options = GetoptLong.new(
+  [&#39;--xxx&#39;, GetoptLong::REQUIRED_ARGUMENT],
+  [&#39;--yyy&#39;, GetoptLong::OPTIONAL_ARGUMENT],
+  [&#39;--zzz&#39;, GetoptLong::NO_ARGUMENT]
+)
+puts &quot;Original ARGV: #{ARGV}&quot;
+options.each do |option, argument|
+  p [option, argument]
+end
+puts &quot;Remaining ARGV: #{ARGV}&quot;
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>$ ruby permute.rb Foo --zzz Bar --xxx Baz --yyy Bat Bam --xxx Bag Bah
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>Original ARGV: [&quot;Foo&quot;, &quot;--zzz&quot;, &quot;Bar&quot;, &quot;--xxx&quot;, &quot;Baz&quot;, &quot;--yyy&quot;, &quot;Bat&quot;, &quot;Bam&quot;, &quot;--xxx&quot;, &quot;Bag&quot;, &quot;Bah&quot;]
+[&quot;--zzz&quot;, &quot;&quot;]
+[&quot;--xxx&quot;, &quot;Baz&quot;]
+[&quot;--yyy&quot;, &quot;Bat&quot;]
+[&quot;--xxx&quot;, &quot;Bag&quot;]
+Remaining ARGV: [&quot;Foo&quot;, &quot;Bar&quot;, &quot;Bam&quot;, &quot;Bah&quot;]
+</code></pre>
+
+<h4 id="class-GetoptLong-label-REQUIRE_ORDER+Ordering">REQUIRE_ORDER Ordering</h4>
+
+<p>In the <code>REQUIRE_ORDER</code> ordering, all options precede all non-options; that is, each word after the first non-option word is treated as a non-option word (even if it begins with a hyphen).</p>
+
+<p><a href="File.html"><code>File</code></a> <code>require_order.rb</code>:</p>
+
+<pre><code>require &#39;getoptlong&#39;
+
+options = GetoptLong.new(
+  [&#39;--xxx&#39;, GetoptLong::REQUIRED_ARGUMENT],
+  [&#39;--yyy&#39;, GetoptLong::OPTIONAL_ARGUMENT],
+  [&#39;--zzz&#39;, GetoptLong::NO_ARGUMENT]
+)
+options.ordering = GetoptLong::REQUIRE_ORDER
+puts &quot;Original ARGV: #{ARGV}&quot;
+options.each do |option, argument|
+  p [option, argument]
+end
+puts &quot;Remaining ARGV: #{ARGV}&quot;
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>$ ruby require_order.rb --xxx Foo Bar --xxx Baz --yyy Bat -zzz
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>Original ARGV: [&quot;--xxx&quot;, &quot;Foo&quot;, &quot;Bar&quot;, &quot;--xxx&quot;, &quot;Baz&quot;, &quot;--yyy&quot;, &quot;Bat&quot;, &quot;-zzz&quot;]
+[&quot;--xxx&quot;, &quot;Foo&quot;]
+Remaining ARGV: [&quot;Bar&quot;, &quot;--xxx&quot;, &quot;Baz&quot;, &quot;--yyy&quot;, &quot;Bat&quot;, &quot;-zzz&quot;]
+</code></pre>
+
+<h4 id="class-GetoptLong-label-RETURN_IN_ORDER+Ordering">RETURN_IN_ORDER Ordering</h4>
+
+<p>In the <code>RETURN_IN_ORDER</code> ordering, every word is treated as an option. A word that begins with a hyphen (or two) is treated in the usual way; a word <code>word</code> that does not so begin is treated as an option whose name is an empty string, and whose value is <code>word</code>.</p>
+
+<p><a href="File.html"><code>File</code></a> <code>return_in_order.rb</code>:</p>
+
+<pre><code>require &#39;getoptlong&#39;
+
+options = GetoptLong.new(
+  [&#39;--xxx&#39;, GetoptLong::REQUIRED_ARGUMENT],
+  [&#39;--yyy&#39;, GetoptLong::OPTIONAL_ARGUMENT],
+  [&#39;--zzz&#39;, GetoptLong::NO_ARGUMENT]
+)
+options.ordering = GetoptLong::RETURN_IN_ORDER
+puts &quot;Original ARGV: #{ARGV}&quot;
+options.each do |option, argument|
+  p [option, argument]
+end
+puts &quot;Remaining ARGV: #{ARGV}&quot;
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>$ ruby return_in_order.rb Foo --xxx Bar Baz --zzz Bat Bam
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>Original ARGV: [&quot;Foo&quot;, &quot;--xxx&quot;, &quot;Bar&quot;, &quot;Baz&quot;, &quot;--zzz&quot;, &quot;Bat&quot;, &quot;Bam&quot;]
+[&quot;&quot;, &quot;Foo&quot;]
+[&quot;--xxx&quot;, &quot;Bar&quot;]
+[&quot;&quot;, &quot;Baz&quot;]
+[&quot;--zzz&quot;, &quot;&quot;]
+[&quot;&quot;, &quot;Bat&quot;]
+[&quot;&quot;, &quot;Bam&quot;]
+Remaining ARGV: []
+</code></pre>
+
+<h3 id="class-GetoptLong-label-Full+Example">Full Example</h3>
+
+<p><a href="File.html"><code>File</code></a> <code>fibonacci.rb</code>:</p>
+
+<pre><code>require &#39;getoptlong&#39;
+
+options = GetoptLong.new(
+  [&#39;--number&#39;, &#39;-n&#39;, GetoptLong::REQUIRED_ARGUMENT],
+  [&#39;--verbose&#39;, &#39;-v&#39;, GetoptLong::OPTIONAL_ARGUMENT],
+  [&#39;--help&#39;, &#39;-h&#39;, GetoptLong::NO_ARGUMENT]
+)
+
+def help(status = 0)
+  puts &lt;&lt;~HELP
+    Usage:
+
+      -n n, --number n:
+        Compute Fibonacci number for n.
+      -v [boolean], --verbose [boolean]:
+        Show intermediate results; default is &#39;false&#39;.
+      -h, --help:
+        Show this help.
+  HELP
+  exit(status)
+end
+
+def print_fibonacci (number)
+  return 0 if number == 0
+  return 1 if number == 1 or number == 2
+  i = 0
+  j = 1
+  (2..number).each do
+    k = i + j
+    i = j
+    j = k
+    puts j if @verbose
+  end
+  puts j unless @verbose
+end
+
+options.each do |option, argument|
+  case option
+  when &#39;--number&#39;
+    @number = argument.to_i
+  when &#39;--verbose&#39;
+    @verbose = if argument.empty?
+      true
+    elsif argument.match(/true/i)
+      true
+    elsif argument.match(/false/i)
+      false
+    else
+      puts &#39;--verbose argument must be true or false&#39;
+      help(255)
+    end
+  when &#39;--help&#39;
+    help
+  end
+end
+
+unless @number
+  puts &#39;Option --number is required.&#39;
+  help(255)
+end
+
+print_fibonacci(@number)
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>$ ruby fibonacci.rb
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>Option --number is required.
+Usage:
+
+  -n n, --number n:
+    Compute Fibonacci number for n.
+  -v [boolean], --verbose [boolean]:
+    Show intermediate results; default is &#39;false&#39;.
+  -h, --help:
+    Show this help.
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>$ ruby fibonacci.rb --number
+</code></pre>
+
+<p>Raises <a href="GetoptLong/MissingArgument.html"><code>GetoptLong::MissingArgument</code></a>:</p>
+
+<pre><code>fibonacci.rb: option `--number&#39; requires an argument
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>$ ruby fibonacci.rb --number 6
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>8
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>$ ruby fibonacci.rb --number 6 --verbose
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>1
+2
+3
+5
+8
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>$ ruby fibonacci.rb --number 6 --verbose yes
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>--verbose argument must be true or false
+Usage:
+
+  -n n, --number n:
+    Compute Fibonacci number for n.
+  -v [boolean], --verbose [boolean]:
+    Show intermediate results; default is &#39;false&#39;.
+  -h, --help:
+    Show this help.
 </code></pre>
 
     </div>
@@ -355,7 +804,7 @@ OPTIONAL_ARGUMENT = 2]</td>
           <tr valign='top'>
             <td class="attr-name">VERSION</td>
             <td>=</td>
-            <td class="attr-value">&quot;0.1.1&quot;</td>
+            <td class="attr-value">&quot;0.2.1&quot;</td>
           </tr>
           
             <tr valign='top'>
@@ -378,7 +827,7 @@ OPTIONAL_ARGUMENT = 2]</td>
               [R]
             </td>
             <td class='attr-name'>error</td>
-            <td class='attr-desc'><p>Examine whether an option processing is failed.</p></td>
+            <td class='attr-desc'><p>Returns whether option processing has failed.</p></td>
           </tr>
         
           <tr valign='top'>
@@ -386,7 +835,7 @@ OPTIONAL_ARGUMENT = 2]</td>
               [R]
             </td>
             <td class='attr-name'>error?</td>
-            <td class='attr-desc'><p>Examine whether an option processing is failed.</p></td>
+            <td class='attr-desc'><p>Returns whether option processing has failed.</p></td>
           </tr>
         
           <tr valign='top'>
@@ -394,7 +843,7 @@ OPTIONAL_ARGUMENT = 2]</td>
               [R]
             </td>
             <td class='attr-name'>ordering</td>
-            <td class='attr-desc'><p>Return ordering.</p></td>
+            <td class='attr-desc'><p>Returns the ordering setting.</p></td>
           </tr>
         
           <tr valign='top'>
@@ -402,7 +851,12 @@ OPTIONAL_ARGUMENT = 2]</td>
               [RW]
             </td>
             <td class='attr-name'>quiet</td>
-            <td class='attr-desc'><p>Set/Unset ‘quiet’ mode.</p></td>
+            <td class='attr-desc'><p>Sets quiet mode and returns the given argument:</p>
+<ul><li>
+<p>When <code>false</code> or <code>nil</code>, error messages are written to <code>$stdout</code>.</p>
+</li><li>
+<p>Otherwise, error messages are not written.</p>
+</li></ul></td>
           </tr>
         
           <tr valign='top'>
@@ -410,7 +864,12 @@ OPTIONAL_ARGUMENT = 2]</td>
               [RW]
             </td>
             <td class='attr-name'>quiet?</td>
-            <td class='attr-desc'><p>Set/Unset ‘quiet’ mode.</p></td>
+            <td class='attr-desc'><p>Sets quiet mode and returns the given argument:</p>
+<ul><li>
+<p>When <code>false</code> or <code>nil</code>, error messages are written to <code>$stdout</code>.</p>
+</li><li>
+<p>Otherwise, error messages are not written.</p>
+</li></ul></td>
           </tr>
         
       </table>
@@ -431,21 +890,27 @@ OPTIONAL_ARGUMENT = 2]</td>
 
           
             <div class="description">
-              <p>Set up option processing.</p>
+              <p>Returns a new GetoptLong object based on the given <code>arguments</code>. See <a href="#class-GetoptLong-label-Options">Options</a>.</p>
 
-<p>The options to support are passed to new() as an array of arrays. Each sub-array contains any number of <a href="String.html"><code>String</code></a> option names which carry the same meaning, and one of the following flags:</p>
-<dl class="rdoc-list note-list"><dt>GetoptLong::NO_ARGUMENT 
-<dd>
-<p>Option does not take an argument.</p>
-</dd><dt>GetoptLong::REQUIRED_ARGUMENT 
-<dd>
-<p>Option always takes an argument.</p>
-</dd><dt>GetoptLong::OPTIONAL_ARGUMENT 
-<dd>
-<p>Option may or may not take an argument.</p>
-</dd></dl>
+<p>Example:</p>
 
-<p>The first option name is considered to be the preferred (canonical) name. Other than that, the elements of each sub-array can be in any order.</p>
+<pre><code>require &#39;getoptlong&#39;
+
+options = GetoptLong.new(
+  [&#39;--number&#39;, &#39;-n&#39;, GetoptLong::REQUIRED_ARGUMENT],
+  [&#39;--verbose&#39;, &#39;-v&#39;, GetoptLong::OPTIONAL_ARGUMENT],
+  [&#39;--help&#39;, &#39;-h&#39;, GetoptLong::NO_ARGUMENT]
+)
+</code></pre>
+
+<p>Raises an exception if:</p>
+<ul><li>
+<p>Any of <code>arguments</code> is not an array.</p>
+</li><li>
+<p>Any option name or alias is not a string.</p>
+</li><li>
+<p>Any option type is invalid.</p>
+</li></ul>
             </div>
           
 
@@ -461,11 +926,11 @@ OPTIONAL_ARGUMENT = 2]</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/getoptlong.rb#L132" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/getoptlong.rb#L412" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 132</span>
+                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 412</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">arguments</span>)
   <span class="ruby-comment">#</span>
   <span class="ruby-comment"># Current ordering.</span>
@@ -544,11 +1009,44 @@ OPTIONAL_ARGUMENT = 2]</td>
 
           
             <div class="description">
-              <p>Iterator version of ‘get’.</p>
+              <p>Calls the given block with each option; each option is a 2-element array containing:</p>
+<ul><li>
+<p>The option name (the name itself, not an alias).</p>
+</li><li>
+<p>The option value.</p>
+</li></ul>
 
-<p>The block is called repeatedly with two arguments: The first is the option name. The second is the argument which followed it (if any). Example: (‘–opt’, ‘value’)</p>
+<p>Example:</p>
 
-<p>The option name is always converted to the first (preferred) name given in the original options to <a href="GetoptLong.html#method-c-new"><code>GetoptLong.new</code></a>.</p>
+<pre><code>require &#39;getoptlong&#39;
+
+options = GetoptLong.new(
+  [&#39;--xxx&#39;, &#39;-x&#39;, GetoptLong::REQUIRED_ARGUMENT],
+  [&#39;--yyy&#39;, &#39;-y&#39;, GetoptLong::OPTIONAL_ARGUMENT],
+  [&#39;--zzz&#39;, &#39;-z&#39;,GetoptLong::NO_ARGUMENT]
+)
+puts &quot;Original ARGV: #{ARGV}&quot;
+options.each do |option, argument|
+  p [option, argument]
+end
+puts &quot;Remaining ARGV: #{ARGV}&quot;
+</code></pre>
+
+<p>Command line:</p>
+
+<pre><code>ruby each.rb -xxx Foo -x Bar --yyy Baz -y Bat --zzz
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>Original ARGV: [&quot;-xxx&quot;, &quot;Foo&quot;, &quot;-x&quot;, &quot;Bar&quot;, &quot;--yyy&quot;, &quot;Baz&quot;, &quot;-y&quot;, &quot;Bat&quot;, &quot;--zzz&quot;]
+[&quot;--xxx&quot;, &quot;xx&quot;]
+[&quot;--xxx&quot;, &quot;Bar&quot;]
+[&quot;--yyy&quot;, &quot;Baz&quot;]
+[&quot;--yyy&quot;, &quot;Bat&quot;]
+[&quot;--zzz&quot;, &quot;&quot;]
+Remaining ARGV: [&quot;Foo&quot;]
+</code></pre>
             </div>
           
 
@@ -568,11 +1066,11 @@ OPTIONAL_ARGUMENT = 2]</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-each_source')" id="l_method-i-each_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/getoptlong.rb#L604" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/getoptlong.rb#L859" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-each_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 604</span>
+                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 859</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">each</span>
   <span class="ruby-identifier">loop</span> <span class="ruby-keyword">do</span>
     <span class="ruby-identifier">option_name</span>, <span class="ruby-identifier">option_argument</span> = <span class="ruby-identifier">get_option</span>
@@ -595,7 +1093,7 @@ OPTIONAL_ARGUMENT = 2]</td>
 
           
             <div class="description">
-              <p>‘each_option’ is an alias of ‘each’.</p>
+              
             </div>
           
 
@@ -620,7 +1118,7 @@ OPTIONAL_ARGUMENT = 2]</td>
 
           
             <div class="description">
-              <p>Return the appropriate error message in POSIX-defined format. If no error has occurred, returns nil.</p>
+              <p>Return the appropriate error message in POSIX-defined format. If no error has occurred, returns <code>nil</code>.</p>
             </div>
           
 
@@ -636,11 +1134,11 @@ OPTIONAL_ARGUMENT = 2]</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-error_message_source')" id="l_method-i-error_message_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/getoptlong.rb#L415" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/getoptlong.rb#L662" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-error_message_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 415</span>
+                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 662</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">error_message</span>
   <span class="ruby-keyword">return</span> <span class="ruby-ivar">@error_message</span>
 <span class="ruby-keyword">end</span></pre>
@@ -659,13 +1157,14 @@ OPTIONAL_ARGUMENT = 2]</td>
 
           
             <div class="description">
-              <p>Get next option name and its argument, as an <a href="Array.html"><code>Array</code></a> of two elements.</p>
+              <p>Returns the next option as a 2-element array containing:</p>
+<ul><li>
+<p>The option name (the name itself, not an alias).</p>
+</li><li>
+<p>The option value.</p>
+</li></ul>
 
-<p>The option name is always converted to the first (preferred) name given in the original options to <a href="GetoptLong.html#method-c-new"><code>GetoptLong.new</code></a>.</p>
-
-<p>Example: [‘–option’, ‘value’]</p>
-
-<p>Returns nil if the processing is complete (as determined by <a href="GetoptLong.html#STATUS_TERMINATED"><code>STATUS_TERMINATED</code></a>).</p>
+<p>Returns <code>nil</code> if there are no more options.</p>
             </div>
           
 
@@ -685,11 +1184,11 @@ OPTIONAL_ARGUMENT = 2]</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-get_source')" id="l_method-i-get_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/getoptlong.rb#L430" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/getoptlong.rb#L674" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-get_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 430</span>
+                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 674</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">get</span>
   <span class="ruby-identifier">option_name</span>, <span class="ruby-identifier">option_argument</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-string">&#39;&#39;</span>
 
@@ -863,7 +1362,7 @@ OPTIONAL_ARGUMENT = 2]</td>
 
           
             <div class="description">
-              <p>‘get_option’ is an alias of ‘get’.</p>
+              
             </div>
           
 
@@ -888,35 +1387,20 @@ OPTIONAL_ARGUMENT = 2]</td>
 
           
             <div class="description">
-              <p>Set the handling of the ordering of options and arguments. A <a href="RuntimeError.html"><code>RuntimeError</code></a> is raised if option processing has already started.</p>
+              <p>Sets the ordering; see <a href="#class-GetoptLong-label-Ordering">Ordering</a>; returns the new ordering.</p>
 
-<p>The supplied value must be a member of <a href="GetoptLong.html#ORDERINGS"><code>GetoptLong::ORDERINGS</code></a>. It alters the processing of options as follows:</p>
+<p>If the given <code>ordering</code> is <code>PERMUTE</code> and environment variable <code>POSIXLY_CORRECT</code> is defined, sets the ordering to <code>REQUIRE_ORDER</code>; otherwise sets the ordering to <code>ordering</code>:</p>
 
-<p><strong>REQUIRE_ORDER</strong> :</p>
+<pre><code>options = GetoptLong.new
+options.ordering == GetoptLong::PERMUTE # =&gt; true
+options.ordering = GetoptLong::RETURN_IN_ORDER
+options.ordering == GetoptLong::RETURN_IN_ORDER # =&gt; true
+ENV[&#39;POSIXLY_CORRECT&#39;] = &#39;true&#39;
+options.ordering = GetoptLong::PERMUTE
+options.ordering == GetoptLong::REQUIRE_ORDER # =&gt; true
+</code></pre>
 
-<p>Options are required to occur before non-options.</p>
-
-<p>Processing of options ends as soon as a word is encountered that has not been preceded by an appropriate option flag.</p>
-
-<p>For example, if -a and -b are options which do not take arguments, parsing command line arguments of ‘-a one -b two’ would result in ‘one’, ‘-b’, ‘two’ being left in ARGV, and only (‘-a’, ”) being processed as an option/arg pair.</p>
-
-<p>This is the default ordering, if the environment variable POSIXLY_CORRECT is set. (This is for compatibility with GNU getopt_long.)</p>
-
-<p><strong>PERMUTE</strong> :</p>
-
-<p>Options can occur anywhere in the command line parsed. This is the default behavior.</p>
-
-<p>Every sequence of words which can be interpreted as an option (with or without argument) is treated as an option; non-option words are skipped.</p>
-
-<p>For example, if -a does not require an argument and -b optionally takes an argument, parsing ‘-a one -b two three’ would result in (‘-a’,”) and (‘-b’, ‘two’) being processed as option/arg pairs, and ‘one’,‘three’ being left in ARGV.</p>
-
-<p>If the ordering is set to PERMUTE but the environment variable POSIXLY_CORRECT is set, REQUIRE_ORDER is used instead. This is for compatibility with GNU getopt_long.</p>
-
-<p><strong>RETURN_IN_ORDER</strong> :</p>
-
-<p>All words on the command line are processed as options. Words not preceded by a short or long option flag are passed as arguments with an option of ” (empty string).</p>
-
-<p>For example, if -a requires an argument but -b does not, a command line of ‘-a one -b two three’ would result in option/arg pairs of (‘-a’, ‘one’) (‘-b’, ”), (”, ‘two’), (”, ‘three’) being processed.</p>
+<p>Raises an exception if <code>ordering</code> is invalid.</p>
             </div>
           
 
@@ -932,11 +1416,11 @@ OPTIONAL_ARGUMENT = 2]</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-ordering-3D_source')" id="l_method-i-ordering-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/getoptlong.rb#L241" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/getoptlong.rb#L489" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ordering-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 241</span>
+                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 489</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ordering=</span>(<span class="ruby-identifier">ordering</span>)
   <span class="ruby-comment">#</span>
   <span class="ruby-comment"># The method is failed if option processing has already started.</span>
@@ -974,9 +1458,9 @@ OPTIONAL_ARGUMENT = 2]</td>
 
           
             <div class="description">
-              <p>Set options. Takes the same argument as <a href="GetoptLong.html#method-c-new"><code>GetoptLong.new</code></a>.</p>
+              <p>Replaces existing options with those given by <code>arguments</code>, which have the same form as the arguments to <a href="GetoptLong.html#method-c-new"><code>::new</code></a>; returns <code>self</code>.</p>
 
-<p>Raises a <a href="RuntimeError.html"><code>RuntimeError</code></a> if option processing has already started.</p>
+<p>Raises an exception if option processing has begun.</p>
             </div>
           
 
@@ -992,11 +1476,11 @@ OPTIONAL_ARGUMENT = 2]</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-set_options_source')" id="l_method-i-set_options_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/getoptlong.rb#L274" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/getoptlong.rb#L524" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-set_options_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 274</span>
+                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 524</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set_options</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">arguments</span>)
   <span class="ruby-comment">#</span>
   <span class="ruby-comment"># The method is failed if option processing has already started.</span>
@@ -1080,7 +1564,7 @@ OPTIONAL_ARGUMENT = 2]</td>
 
           
             <div class="description">
-              <p>Explicitly terminate option processing.</p>
+              <p>Terminate option processing; returns <code>nil</code> if processing has already terminated; otherwise returns <code>self</code>.</p>
             </div>
           
 
@@ -1096,11 +1580,11 @@ OPTIONAL_ARGUMENT = 2]</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-terminate_source')" id="l_method-i-terminate_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/getoptlong.rb#L361" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/getoptlong.rb#L612" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-terminate_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 361</span>
+                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 612</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">terminate</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@status</span> <span class="ruby-operator">==</span> <span class="ruby-constant">STATUS_TERMINATED</span>
   <span class="ruby-identifier">raise</span> <span class="ruby-constant">RuntimeError</span>, <span class="ruby-string">&quot;an error has occurred&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@error</span> <span class="ruby-operator">!=</span> <span class="ruby-keyword">nil</span>
@@ -1132,7 +1616,7 @@ OPTIONAL_ARGUMENT = 2]</td>
 
           
             <div class="description">
-              <p>Returns true if option processing has terminated, false otherwise.</p>
+              <p>Returns <code>true</code> if option processing has terminated, <code>false</code> otherwise.</p>
             </div>
           
 
@@ -1148,11 +1632,11 @@ OPTIONAL_ARGUMENT = 2]</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-terminated-3F_source')" id="l_method-i-terminated-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/getoptlong.rb#L381" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/getoptlong.rb#L632" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-terminated-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 381</span>
+                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 632</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">terminated?</span>
   <span class="ruby-keyword">return</span> <span class="ruby-ivar">@status</span> <span class="ruby-operator">==</span> <span class="ruby-constant">STATUS_TERMINATED</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1190,11 +1674,11 @@ OPTIONAL_ARGUMENT = 2]</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-set_error_source')" id="l_method-i-set_error_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/getoptlong.rb#L388" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/getoptlong.rb#L639" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-set_error_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 388</span>
+                <pre><span class="ruby-comment"># File ruby/lib/getoptlong.rb, line 639</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set_error</span>(<span class="ruby-identifier">type</span>, <span class="ruby-identifier">message</span>)
   <span class="ruby-identifier">$stderr</span>.<span class="ruby-identifier">print</span>(<span class="ruby-node">&quot;#{$0}: #{message}\n&quot;</span>) <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-ivar">@quiet</span>
 

@@ -56,10 +56,10 @@
             <li>
                 rails/actiontext/Rakefile
                 
-                    <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/actiontext/Rakefile" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actiontext/Rakefile" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2022-09-06 00:52:05 +0300</li>
+            <li>Last modified: 2024-05-24 23:57:10 +0300</li>
         </ul>
     </div>
 
@@ -88,6 +88,34 @@ t.verbose = true
 <pre><code>t.libs &lt;&lt; &quot;test&quot;
 t.test_files = FileList[&quot;test/system/**/*_test.rb&quot;]
 t.verbose = true
+</code></pre>
+
+<p>end</p>
+
+<p>task :vendor_trix do</p>
+
+<pre><code>require &quot;importmap-rails&quot;
+require &quot;importmap/packager&quot;
+
+packager = Importmap::Packager.new(vendor_path: &quot;app/assets/javascripts&quot;)
+imports = packager.import(&quot;trix@^1.3.2&quot;, from: &quot;unpkg&quot;)
+imports.each do |package, url|
+  # trix 1.x&#39;s js file is just trix.js
+  # url.gsub!(&quot;esm.min.js&quot;, &quot;umd.js&quot;)
+  puts %(Vendoring &quot;#{package}&quot; to #{packager.vendor_path}/#{package}.js via download from #{url})
+  packager.download(package, url)
+
+  # trix 1.x&#39;s js file is just trix.js
+  css_url = url.gsub(&quot;js&quot;, &quot;css&quot;)
+  puts %(Vendoring &quot;#{package}&quot; to #{packager.vendor_path}/#{package}.css via download from #{css_url})
+
+  response = Net::HTTP.get_response(URI(css_url))
+  if response.code == &quot;200&quot;
+    File.open(Pathname.new(&quot;app/assets/stylesheets/trix.css&quot;), &quot;w+&quot;) do |file|
+      file.write response.body
+    end
+  end
+end
 </code></pre>
 
 <p>end</p>

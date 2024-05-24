@@ -109,10 +109,9 @@ module Entryable
   end
 end
 
-# Schema: messages[ id, subject ]
+# Schema: messages[ id, subject, body ]
 class Message &lt; ApplicationRecord
   include Entryable
-  has_rich_text :content
 end
 
 # Schema: comments[ id, content ]
@@ -123,7 +122,7 @@ end
 
 <p>As you can see, neither <code>Message</code> nor <code>Comment</code> are meant to stand alone. Crucial metadata for both classes resides in the <code>Entry</code> “superclass”. But the <code>Entry</code> absolutely can stand alone in terms of querying capacity in particular. You can now easily do things like:</p>
 
-<pre><code>Account.entries.order(created_at: :desc).limit(50)
+<pre><code>Account.find(1).entries.order(created_at: :desc).limit(50)
 </code></pre>
 
 <p>Which is exactly what you want when displaying both comments and messages together. The entry itself can be rendered as its delegated type easily, like so:</p>
@@ -133,7 +132,9 @@ end
 
 # entries/entryables/_message.html.erb
 &lt;div class=&quot;message&quot;&gt;
-  Posted on &lt;%= entry.created_at %&gt; by &lt;%= entry.creator.name %&gt;: &lt;%= entry.message.content %&gt;
+  &lt;div class=&quot;subject&quot;&gt;&lt;%= entry.message.subject %&gt;&lt;/div&gt;
+  &lt;p&gt;&lt;%= entry.message.body %&gt;&lt;/p&gt;
+  &lt;i&gt;Posted on &lt;%= entry.created_at %&gt; by &lt;%= entry.creator.name %&gt;&lt;/i&gt;
 &lt;/div&gt;
 
 # entries/entryables/_comment.html.erb
@@ -191,7 +192,22 @@ class Comment &lt; ApplicationRecord
 end
 </code></pre>
 
-<p>Now you can list a bunch of entries, call +Entry#title+, and polymorphism will provide you with the answer.</p>
+<p>Now you can list a bunch of entries, call <code>Entry#title</code>, and polymorphism will provide you with the answer.</p>
+
+<h2 id="module-ActiveRecord::DelegatedType-label-Nested+Attributes">Nested <a href="Attributes.html"><code>Attributes</code></a></h2>
+
+<p>Enabling nested attributes on a <a href="DelegatedType.html#method-i-delegated_type"><code>delegated_type</code></a> association allows you to create the entry and message in one go:</p>
+
+<pre><code>class Entry &lt; ApplicationRecord
+  delegated_type :entryable, types: %w[ Message Comment ]
+  accepts_nested_attributes_for :entryable
+end
+
+params = { entry: { entryable_type: &#39;Message&#39;, entryable_attributes: { subject: &#39;Smiling&#39; } } }
+entry = Entry.create(params[:entry])
+entry.entryable.id # =&gt; 2
+entry.entryable.subject # =&gt; &#39;Smiling&#39;
+</code></pre>
 
     </div>
   
@@ -276,8 +292,6 @@ Entry#comment         # =&gt; returns the comment record, when entryable_type ==
 Entry#comment_id      # =&gt; returns entryable_id, when entryable_type == &quot;Comment&quot;, otherwise nil
 </code></pre>
 
-<p>The <code>options</code> are passed directly to the <code>belongs_to</code> call, so this is where you declare <code>dependent</code> etc.</p>
-
 <p>You can also declare namespaced types:</p>
 
 <pre><code>class Entry &lt; ApplicationRecord
@@ -287,6 +301,27 @@ end
 Entry.access_notice_messages
 entry.access_notice_message
 entry.access_notice_message?
+</code></pre>
+
+<h3 id="method-i-delegated_type-label-Options">Options</h3>
+
+<p>The <code>options</code> are passed directly to the <code>belongs_to</code> call, so this is where you declare <code>dependent</code> etc. The following options can be included to specialize the behavior of the delegated type convenience methods.</p>
+<dl class="rdoc-list label-list"><dt>:foreign_key
+<dd>
+<p>Specify the foreign key used for the convenience methods. By default this is guessed to be the passed <code>role</code> with an “_id” suffix. So a class that defines a <code>delegated_type :entryable, types: %w[ Message Comment ]</code> association will use “entryable_id” as the default <code>:foreign_key</code>.</p>
+</dd><dt>:primary_key
+<dd>
+<p>Specify the method that returns the primary key of associated object used for the convenience methods. By default this is <code>id</code>.</p>
+</dd></dl>
+
+<p>Option examples:</p>
+
+<pre><code>class Entry &lt; ApplicationRecord
+  delegated_type :entryable, types: %w[ Message Comment ], primary_key: :uuid, foreign_key: :entryable_uuid
+end
+
+Entry#message_uuid      # =&gt; returns entryable_uuid, when entryable_type == &quot;Message&quot;, otherwise nil
+Entry#comment_uuid      # =&gt; returns entryable_uuid, when entryable_type == &quot;Comment&quot;, otherwise nil
 </code></pre>
             </div>
           
@@ -303,14 +338,14 @@ entry.access_notice_message?
                 Source:
                 <a href="javascript:toggleSource('method-i-delegated_type_source')" id="l_method-i-delegated_type_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/delegated_type.rb#L170" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/delegated_type.rb#L206" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-delegated_type_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/delegated_type.rb, line 170</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/delegated_type.rb, line 206</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">delegated_type</span>(<span class="ruby-identifier">role</span>, <span class="ruby-value">types:</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">belongs_to</span> <span class="ruby-identifier">role</span>, <span class="ruby-identifier">options</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value">:scope</span>), <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-value">polymorphic:</span> <span class="ruby-keyword">true</span>)
-  <span class="ruby-identifier">define_delegated_type_methods</span> <span class="ruby-identifier">role</span>, <span class="ruby-value">types:</span> <span class="ruby-identifier">types</span>
+  <span class="ruby-identifier">define_delegated_type_methods</span> <span class="ruby-identifier">role</span>, <span class="ruby-value">types:</span> <span class="ruby-identifier">types</span>, <span class="ruby-value">options:</span> <span class="ruby-identifier">options</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>

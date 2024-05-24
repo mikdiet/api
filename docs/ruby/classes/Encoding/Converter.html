@@ -353,6 +353,20 @@
           
         
           <tr valign='top'>
+            <td class="attr-name">LF_NEWLINE_DECORATOR</td>
+            <td>=</td>
+            <td class="attr-value">Document-const</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"><p><a href="Converter.html#LF_NEWLINE_DECORATOR"><code>LF_NEWLINE_DECORATOR</code></a></p>
+
+<p>Decorator for converting CRLF and CR to LF when writing</p></td>
+            </tr>
+          
+        
+          <tr valign='top'>
             <td class="attr-name">PARTIAL_INPUT</td>
             <td>=</td>
             <td class="attr-value">Document-const</td>
@@ -555,11 +569,13 @@ econv_s_asciicompat_encoding(VALUE klass, VALUE arg)
   :undef =&gt; :replace         # replace undefined conversion
   :replace =&gt; string         # replacement string (&quot;?&quot; or &quot;\uFFFD&quot; if not specified)
   :newline =&gt; :universal     # decorator for converting CRLF and CR to LF
+  :newline =&gt; :lf            # decorator for converting CRLF and CR to LF when writing
   :newline =&gt; :crlf          # decorator for converting LF to CRLF
   :newline =&gt; :cr            # decorator for converting LF to CR
   :universal_newline =&gt; true # decorator for converting CRLF and CR to LF
   :crlf_newline =&gt; true      # decorator for converting LF to CRLF
   :cr_newline =&gt; true        # decorator for converting LF to CR
+  :lf_newline =&gt; true        # decorator for converting CRLF and CR to LF when writing
   :xml =&gt; :text              # escape as XML CharData.
   :xml =&gt; :attr              # escape as XML AttValue
 integer form:
@@ -567,6 +583,7 @@ integer form:
   Encoding::Converter::UNDEF_REPLACE
   Encoding::Converter::UNDEF_HEX_CHARREF
   Encoding::Converter::UNIVERSAL_NEWLINE_DECORATOR
+  Encoding::Converter::LF_NEWLINE_DECORATOR
   Encoding::Converter::CRLF_NEWLINE_DECORATOR
   Encoding::Converter::CR_NEWLINE_DECORATOR
   Encoding::Converter::XML_TEXT_DECORATOR
@@ -612,6 +629,9 @@ integer form:
 </dd><dt>:cr_newline =&gt; true
 <dd>
 <p>Convert LF to CR.</p>
+</dd><dt>:lf_newline =&gt; true
+<dd>
+<p>Convert CRLF and CR to LF (when writing).</p>
 </dd><dt>:xml =&gt; :text
 <dd>
 <p>Escape as XML CharData. This form can be used as an HTML 4.0 PCDATA.</p>
@@ -1078,9 +1098,7 @@ econv_convpath(VALUE self)
 econv_destination_encoding(VALUE self)
 {
     rb_econv_t *ec = check_econv(self);
-    if (!ec-&gt;destination_encoding)
-        return Qnil;
-    return rb_enc_from_encoding(ec-&gt;destination_encoding);
+    return econv_get_encoding(ec-&gt;destination_encoding);
 }</pre>
               </div>
             </div>
@@ -1496,11 +1514,8 @@ econv_primitive_convert(int argc, VALUE *argv, VALUE self)
     rb_str_modify(output);
 
     if (NIL_P(output_bytesize_v)) {
-#if USE_RVARGC
         output_bytesize = rb_str_capacity(output);
-#else
-        output_bytesize = RSTRING_EMBED_LEN_MAX;
-#endif
+
         if (!NIL_P(input) &amp;&amp; output_bytesize &lt; RSTRING_LEN(input))
             output_bytesize = RSTRING_LEN(input);
     }
@@ -1910,9 +1925,7 @@ econv_set_replacement(VALUE self, VALUE arg)
 econv_source_encoding(VALUE self)
 {
     rb_econv_t *ec = check_econv(self);
-    if (!ec-&gt;source_encoding)
-        return Qnil;
-    return rb_enc_from_encoding(ec-&gt;source_encoding);
+    return econv_get_encoding(ec-&gt;source_encoding);
 }</pre>
               </div>
             </div>

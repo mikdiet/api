@@ -30,7 +30,7 @@
     <meta property="og:description" content="Class Exception and its subclasses are used to communicate between Kernel#raise and rescue statements in begin ... end blocks.">
   
 
-    <meta name="keywords" content="Exception class, exception, to_tty?, exception, new, ==, to_s, message, full_message, inspect, backtrace, backtrace_locations, set_backtrace, cause, json_create, as_json, to_json">
+    <meta name="keywords" content="Exception class, exception, to_tty?, exception, new, ==, to_s, message, detailed_message, full_message, inspect, backtrace, backtrace_locations, set_backtrace, cause, json_create, as_json, to_json">
 </head>
 
 <body>
@@ -145,7 +145,7 @@ end
 </li><li>
 <p><a href="ScriptError.html"><code>ScriptError</code></a></p>
 <ul><li>
-<p><a href="LoadError.html"><code>LoadError</code></a></p>
+<p>LoadError</p>
 </li><li>
 <p><a href="NotImplementedError.html"><code>NotImplementedError</code></a></p>
 </li><li>
@@ -295,18 +295,30 @@ end
           </ul>
         </dd>
       
+        <dt>D</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-detailed_message">detailed_message</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>E</dt>
         <dd>
           <ul>
             
               
               <li>
-                <a href="#method-c-exception">exception</a>,
+                <a href="#method-i-exception">exception</a>,
               </li>
             
               
               <li>
-                <a href="#method-i-exception">exception</a>
+                <a href="#method-c-exception">exception</a>
               </li>
             
           </ul>
@@ -461,7 +473,7 @@ end
 
           
             <div class="description">
-              <p>Deserializes <a href="JSON.html"><code>JSON</code></a> string by constructing new <a href="Exception.html"><code>Exception</code></a> object with message <code>m</code> and backtrace <code>b</code> serialized with <code>to_json</code></p>
+              <p>See <a href="Exception.html#method-i-as_json"><code>as_json</code></a>.</p>
             </div>
           
 
@@ -477,11 +489,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-c-json_create_source')" id="l_method-c-json_create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/exception.rb#L10" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/json/lib/json/add/exception.rb#L9" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-json_create_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/exception.rb, line 10</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/exception.rb, line 9</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">json_create</span>(<span class="ruby-identifier">object</span>)
   <span class="ruby-identifier">result</span> = <span class="ruby-identifier">new</span>(<span class="ruby-identifier">object</span>[<span class="ruby-string">&#39;m&#39;</span>])
   <span class="ruby-identifier">result</span>.<span class="ruby-identifier">set_backtrace</span> <span class="ruby-identifier">object</span>[<span class="ruby-string">&#39;b&#39;</span>]
@@ -617,15 +629,15 @@ exc_equal(VALUE exc, VALUE obj)
         int state;
 
         obj = rb_protect(try_convert_to_exception, obj, &amp;state);
-        if (state || obj == Qundef) {
+        if (state || UNDEF_P(obj)) {
             rb_set_errinfo(Qnil);
             return Qfalse;
         }
         if (rb_obj_class(exc) != rb_obj_class(obj)) return Qfalse;
         mesg = rb_check_funcall(obj, id_message, 0, 0);
-        if (mesg == Qundef) return Qfalse;
+        if (UNDEF_P(mesg)) return Qfalse;
         backtrace = rb_check_funcall(obj, id_backtrace, 0, 0);
-        if (backtrace == Qundef) return Qfalse;
+        if (UNDEF_P(backtrace)) return Qfalse;
     }
     else {
         mesg = rb_attr_get(obj, id_mesg);
@@ -651,7 +663,18 @@ exc_equal(VALUE exc, VALUE obj)
 
           
             <div class="description">
-              <p>Returns a hash, that will be turned into a <a href="JSON.html"><code>JSON</code></a> object and represent this object.</p>
+              <p>Methods <code>Exception#as_json</code> and <code>Exception.json_create</code> may be used to serialize and deserialize a Exception object; see <a href="Marshal.html"><code>Marshal</code></a>.</p>
+
+<p>Method <code>Exception#as_json</code> serializes <code>self</code>, returning a 2-element hash representing <code>self</code>:</p>
+
+<pre><code>require &#39;json/add/exception&#39;
+x = Exception.new(&#39;Foo&#39;).as_json # =&gt; {&quot;json_class&quot;=&gt;&quot;Exception&quot;, &quot;m&quot;=&gt;&quot;Foo&quot;, &quot;b&quot;=&gt;nil}
+</code></pre>
+
+<p>Method <code>JSON.create</code> deserializes such a hash, returning a Exception object:</p>
+
+<pre><code>Exception.json_create(x) # =&gt; #&lt;Exception: Foo&gt;
+</code></pre>
             </div>
           
 
@@ -667,11 +690,11 @@ exc_equal(VALUE exc, VALUE obj)
                 Source:
                 <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/exception.rb#L18" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/json/lib/json/add/exception.rb#L29" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-as_json_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/exception.rb, line 18</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/exception.rb, line 29</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">as_json</span>(<span class="ruby-operator">*</span>)
   {
     <span class="ruby-constant">JSON</span>.<span class="ruby-identifier">create_id</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">name</span>,
@@ -848,6 +871,85 @@ exc_cause(VALUE exc)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-detailed_message">
+            
+              <b>exception.detailed_message(highlight: bool, **opt)   &rarr;  string
+</b>
+            
+            <a href="../classes/Exception.html#method-i-detailed_message" name="method-i-detailed_message" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Processes a string returned by <a href="Exception.html#method-i-message"><code>message</code></a>.</p>
+
+<p>It may add the class name of the exception to the end of the first line. Also, when <code>highlight</code> keyword is true, it adds ANSI escape sequences to make the message bold.</p>
+
+<p>If you override this method, it must be tolerant for unknown keyword arguments. All keyword arguments passed to <a href="Exception.html#method-i-full_message"><code>full_message</code></a> are delegated to this method.</p>
+
+<p>This method is overridden by did_you_mean and error_highlight to add their information.</p>
+
+<p>A user-defined exception class can also define their own <code>detailed_message</code> method to add supplemental information. When <code>highlight</code> is true, it can return a string containing escape sequences, but use widely-supported ones. It is recommended to limit the following codes:</p>
+<ul><li>
+<p>Reset (<code>\e[0m</code>)</p>
+</li><li>
+<p>Bold (<code>\e[1m</code>)</p>
+</li><li>
+<p>Underline (<code>\e[4m</code>)</p>
+</li><li>
+<p>Foreground color except white and black</p>
+<ul><li>
+<p>Red (<code>\e[31m</code>)</p>
+</li><li>
+<p>Green (<code>\e[32m</code>)</p>
+</li><li>
+<p>Yellow (<code>\e[33m</code>)</p>
+</li><li>
+<p>Blue (<code>\e[34m</code>)</p>
+</li><li>
+<p>Magenta (<code>\e[35m</code>)</p>
+</li><li>
+<p>Cyan (<code>\e[36m</code>)</p>
+</li></ul>
+</li></ul>
+
+<p>Use escape sequences carefully even if <code>highlight</code> is true. Do not use escape sequences to express essential information; the message should be readable even if all escape sequences are ignored.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-detailed_message_source')" id="l_method-i-detailed_message_source">show</a>
+                
+              </p>
+              <div id="method-i-detailed_message_source" class="dyn-source">
+                <pre>static VALUE
+exc_detailed_message(int argc, VALUE *argv, VALUE exc)
+{
+    VALUE opt;
+
+    rb_scan_args(argc, argv, &quot;0:&quot;, &amp;opt);
+
+    VALUE highlight = check_highlight_keyword(opt, 0);
+
+    extern VALUE rb_decorate_message(const VALUE eclass, const VALUE emesg, int highlight);
+
+    return rb_decorate_message(CLASS_OF(exc), rb_get_message(exc), RTEST(highlight));
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-exception">
             
               <b>exc.exception([string])  &rarr;  an_exception or exc
@@ -932,44 +1034,23 @@ exc_exception(int argc, VALUE *argv, VALUE self)
 exc_full_message(int argc, VALUE *argv, VALUE exc)
 {
     VALUE opt, str, emesg, errat;
-    enum {kw_highlight, kw_order, kw_max_};
-    static ID kw[kw_max_];
-    VALUE args[kw_max_] = {Qnil, Qnil};
+    VALUE highlight, order;
 
     rb_scan_args(argc, argv, &quot;0:&quot;, &amp;opt);
-    if (!NIL_P(opt)) {
-        if (!kw[0]) {
-#define INIT_KW(n) kw[kw_##n] = rb_intern_const(#n)
-            INIT_KW(highlight);
-            INIT_KW(order);
-#undef INIT_KW
-        }
-        rb_get_kwargs(opt, kw, 0, kw_max_, args);
-        switch (args[kw_highlight]) {
-          default:
-            rb_bool_expected(args[kw_highlight], &quot;highlight&quot;);
-            UNREACHABLE;
-          case Qundef: args[kw_highlight] = Qnil; break;
-          case Qtrue: case Qfalse: case Qnil: break;
-        }
-        if (args[kw_order] == Qundef) {
-            args[kw_order] = Qnil;
-        }
-        else {
-            ID id = rb_check_id(&amp;args[kw_order]);
-            if (id == id_bottom) args[kw_order] = Qtrue;
-            else if (id == id_top) args[kw_order] = Qfalse;
-            else {
-                rb_raise(rb_eArgError, &quot;expected :top or :bottom as &quot;
-                         &quot;order: %+&quot;PRIsVALUE, args[kw_order]);
-            }
-        }
+
+    highlight = check_highlight_keyword(opt, 1);
+    order = check_order_keyword(opt);
+
+    {
+        if (NIL_P(opt)) opt = rb_hash_new();
+        rb_hash_aset(opt, sym_highlight, highlight);
     }
+
     str = rb_str_new2(&quot;&quot;);
     errat = rb_get_backtrace(exc);
-    emesg = rb_get_message(exc);
+    emesg = rb_get_detailed_message(exc, opt);
 
-    rb_error_write(exc, emesg, errat, str, args[kw_highlight], args[kw_order]);
+    rb_error_write(exc, emesg, errat, str, opt, highlight, order);
     return str;
 }</pre>
               </div>
@@ -1020,8 +1101,15 @@ exc_inspect(VALUE exc)
     str = rb_str_buf_new2(&quot;#&lt;&quot;);
     klass = rb_class_name(klass);
     rb_str_buf_append(str, klass);
-    rb_str_buf_cat(str, &quot;: &quot;, 2);
-    rb_str_buf_append(str, exc);
+
+    if (RTEST(rb_str_include(exc, rb_str_new2(&quot;\n&quot;)))) {
+        rb_str_catf(str, &quot;:%+&quot;PRIsVALUE, exc);
+    }
+    else {
+        rb_str_buf_cat(str, &quot;: &quot;, 2);
+        rb_str_buf_append(str, exc);
+    }
+
     rb_str_buf_cat(str, &quot;&gt;&quot;, 1);
 
     return str;
@@ -1119,7 +1207,16 @@ exc_set_backtrace(VALUE exc, VALUE bt)
 
           
             <div class="description">
-              <p>Stores class name (<a href="Exception.html"><code>Exception</code></a>) with message <code>m</code> and backtrace array <code>b</code> as <a href="JSON.html"><code>JSON</code></a> string</p>
+              <p>Returns a <a href="JSON.html"><code>JSON</code></a> string representing <code>self</code>:</p>
+
+<pre><code>require &#39;json/add/exception&#39;
+puts Exception.new(&#39;Foo&#39;).to_json
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>{&quot;json_class&quot;:&quot;Exception&quot;,&quot;m&quot;:&quot;Foo&quot;,&quot;b&quot;:null}
+</code></pre>
             </div>
           
 
@@ -1135,11 +1232,11 @@ exc_set_backtrace(VALUE exc, VALUE bt)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_json_source')" id="l_method-i-to_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/exception.rb#L28" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/json/lib/json/add/exception.rb#L46" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_json_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/exception.rb, line 28</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/exception.rb, line 46</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_json</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
   <span class="ruby-identifier">as_json</span>.<span class="ruby-identifier">to_json</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
 <span class="ruby-keyword">end</span></pre>

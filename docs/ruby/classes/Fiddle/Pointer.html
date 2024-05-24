@@ -30,7 +30,7 @@
     <meta property="og:description" content="Fiddle::Pointer is a class to handle C pointers.">
   
 
-    <meta name="keywords" content="Fiddle::Pointer class, malloc, to_ptr, [], new, free=, free, call_free, freed?, to_i, to_int, to_value, ptr, +@, ref, -@, null?, to_s, to_str, inspect, <=>, ==, eql?, +, -, [], []=, size, size=">
+    <meta name="keywords" content="Fiddle::Pointer class, malloc, to_ptr, [], read, write, new, free=, free, call_free, freed?, to_i, to_int, to_value, ptr, +@, ref, -@, null?, to_s, to_str, inspect, <=>, ==, eql?, +, -, [], []=, size, size=">
 </head>
 
 <body>
@@ -259,6 +259,11 @@
             
               
               <li>
+                <a href="#method-c-read">read</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-ref">ref</a>
               </li>
             
@@ -314,6 +319,18 @@
               
               <li>
                 <a href="#method-i-to_value">to_value</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>W</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-write">write</a>
               </li>
             
           </ul>
@@ -402,7 +419,7 @@ rb_fiddle_ptr_s_to_ptr(VALUE self, VALUE val)
         if (num == val) wrap = 0;
         ptr = rb_fiddle_ptr_new(NUM2PTR(num), 0, NULL);
     }
-    if (wrap) RPTR_DATA(ptr)-&gt;wrap[0] = wrap;
+    if (wrap) RB_OBJ_WRITE(ptr, &amp;RPTR_DATA(ptr)-&gt;wrap[0], wrap);
     return ptr;
 }</pre>
               </div>
@@ -493,7 +510,7 @@ rb_fiddle_ptr_s_malloc(int argc, VALUE argv[], VALUE klass)
     }
 
     obj = rb_fiddle_ptr_malloc(klass, s,f);
-    if (wrap) RPTR_DATA(obj)-&gt;wrap[1] = wrap;
+    if (wrap) RB_OBJ_WRITE(obj, &amp;RPTR_DATA(obj)-&gt;wrap[1], wrap);
 
     if (rb_block_given_p()) {
         if (!f) {
@@ -567,14 +584,53 @@ rb_fiddle_ptr_initialize(int argc, VALUE argv[], VALUE self)
             /* Free previous memory. Use of inappropriate initialize may cause SEGV. */
             (*(data-&gt;free))(data-&gt;ptr);
         }
-        data-&gt;wrap[0] = wrap;
-        data-&gt;wrap[1] = funcwrap;
+        RB_OBJ_WRITE(self, &amp;data-&gt;wrap[0], wrap);
+        RB_OBJ_WRITE(self, &amp;data-&gt;wrap[1], funcwrap);
         data-&gt;ptr  = p;
         data-&gt;size = s;
         data-&gt;free = f;
     }
 
     return Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-read">
+            
+              <b>Fiddle::Pointer.read(address, len)     => string
+</b>
+            
+            <a href="../../classes/Fiddle/Pointer.html#method-c-read" name="method-c-read" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Or read the memory at address <code>address</code> with length <code>len</code> and return a string with that memory</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-read_source')" id="l_method-c-read_source">show</a>
+                
+              </p>
+              <div id="method-c-read_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiddle_ptr_read_mem(VALUE klass, VALUE address, VALUE len)
+{
+    return rb_str_new((char *)NUM2PTR(address), NUM2ULONG(len));
 }</pre>
               </div>
             </div>
@@ -641,8 +697,48 @@ rb_fiddle_ptr_s_to_ptr(VALUE self, VALUE val)
         if (num == val) wrap = 0;
         ptr = rb_fiddle_ptr_new(NUM2PTR(num), 0, NULL);
     }
-    if (wrap) RPTR_DATA(ptr)-&gt;wrap[0] = wrap;
+    if (wrap) RB_OBJ_WRITE(ptr, &amp;RPTR_DATA(ptr)-&gt;wrap[0], wrap);
     return ptr;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-write">
+            
+              <b>Fiddle::Pointer.write(address, str)
+</b>
+            
+            <a href="../../classes/Fiddle/Pointer.html#method-c-write" name="method-c-write" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Write bytes in <code>str</code> to the location pointed to by <code>address</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-write_source')" id="l_method-c-write_source">show</a>
+                
+              </p>
+              <div id="method-c-write_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiddle_ptr_write_mem(VALUE klass, VALUE addr, VALUE str)
+{
+    memcpy(NUM2PTR(addr), StringValuePtr(str), RSTRING_LEN(str));
+    return str;
 }</pre>
               </div>
             </div>

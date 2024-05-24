@@ -30,7 +30,7 @@
     <meta property="og:description" content="Creates and manages pseudo terminals (PTYs).  See also en.wikipedia.org/wiki/Pseudo_terminal  PTY allows you to allocate new terminals using ::open or ::spawn a new terminal with a specific command.">
   
 
-    <meta name="keywords" content="PTY class, getpty, spawn, check, open">
+    <meta name="keywords" content="PTY class, spawn, check, open, getpty">
 </head>
 
 <body>
@@ -59,8 +59,14 @@
     <div class="banner">
         
         <h2>
-            <span class="type">Module</span>
+            <span class="type">Class</span>
             PTY
+            
+                <span class="parent">&lt;
+                    
+                    <a href="Object.html">Object</a>
+                    
+                </span>
             
         </h2>
         <ul class="files">
@@ -79,7 +85,7 @@
 
 <p><a href="PTY.html"><code>PTY</code></a> allows you to allocate new terminals using <a href="PTY.html#method-c-open"><code>::open</code></a> or <a href="PTY.html#method-c-spawn"><code>::spawn</code></a> a new terminal with a specific command.</p>
 
-<h2 id="module-PTY-label-Example">Example</h2>
+<h2 id="class-PTY-label-Example">Example</h2>
 
 <p>In this example we will change the buffering type in the <code>factor</code> command, assuming that factor uses stdio for stdout buffering.</p>
 
@@ -114,7 +120,7 @@ ret = begin
 p ret #=&gt; nil
 </code></pre>
 
-<h2 id="module-PTY-label-License">License</h2>
+<h2 id="class-PTY-label-License">License</h2>
 
 <p>© Copyright 1998 by Akinori Ito.</p>
 
@@ -293,8 +299,7 @@ pty_check(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-c-getpty">
             
-              <b>PTY.spawn(command_line)  { |r, w, pid| ... }<br />PTY.spawn(command_line)  => [r, w, pid]<br />PTY.spawn(command, arguments, ...)  { |r, w, pid| ... }<br />PTY.spawn(command, arguments, ...)  => [r, w, pid]
-</b>
+              <b>getpty</b>(*args)
             
             <a href="../classes/PTY.html#method-c-getpty" name="method-c-getpty" class="permalink">Link</a>
           </h3>
@@ -304,6 +309,14 @@ pty_check(int argc, VALUE *argv, VALUE self)
               <p>Spawns the specified command on a newly allocated pty. You can also use the alias <a href="PTY.html#method-c-getpty"><code>::getpty</code></a>.</p>
 
 <p>The command’s controlling tty is set to the slave device of the pty and its standard input/output/error is redirected to the slave device.</p>
+
+<p><code>env</code> is an optional hash that provides additional environment variables to the spawned pty.</p>
+
+<pre><code># sets FOO to &quot;bar&quot;
+PTY.spawn({&quot;FOO&quot;=&gt;&quot;bar&quot;}, &quot;printenv&quot;, &quot;FOO&quot;) { |r,w,pid| p r.read } #=&gt; &quot;bar\r\n&quot;
+# unsets FOO
+PTY.spawn({&quot;FOO&quot;=&gt;nil}, &quot;printenv&quot;, &quot;FOO&quot;) { |r,w,pid| p r.read } #=&gt; &quot;&quot;
+</code></pre>
 
 <p><code>command</code> and <code>command_line</code> are the full commands to run, given a <a href="String.html"><code>String</code></a>. Any additional <code>arguments</code> will be passed to the command.</p>
 
@@ -328,57 +341,12 @@ pty_check(int argc, VALUE *argv, VALUE self)
           
 
           
+            <div class="aka">
+              Alias for: <a href="PTY.html#method-c-spawn">spawn</a>
+            </div>
+          
 
           
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-c-getpty_source')" id="l_method-c-getpty_source">show</a>
-                
-              </p>
-              <div id="method-c-getpty_source" class="dyn-source">
-                <pre>static VALUE
-pty_getpty(int argc, VALUE *argv, VALUE self)
-{
-    VALUE res;
-    struct pty_info info;
-    rb_io_t *wfptr,*rfptr;
-    VALUE rport = rb_obj_alloc(rb_cFile);
-    VALUE wport = rb_obj_alloc(rb_cFile);
-    char SlaveName[DEVICELEN];
-
-    MakeOpenFile(rport, rfptr);
-    MakeOpenFile(wport, wfptr);
-
-    establishShell(argc, argv, &amp;info, SlaveName);
-
-    rfptr-&gt;mode = rb_io_modestr_fmode(&quot;r&quot;);
-    rfptr-&gt;fd = info.fd;
-    rfptr-&gt;pathv = rb_obj_freeze(rb_str_new_cstr(SlaveName));
-
-    wfptr-&gt;mode = rb_io_modestr_fmode(&quot;w&quot;) | FMODE_SYNC;
-    wfptr-&gt;fd = rb_cloexec_dup(info.fd);
-    if (wfptr-&gt;fd == -1)
-        rb_sys_fail(&quot;dup()&quot;);
-    rb_update_max_fd(wfptr-&gt;fd);
-    wfptr-&gt;pathv = rfptr-&gt;pathv;
-
-    res = rb_ary_new2(3);
-    rb_ary_store(res,0,(VALUE)rport);
-    rb_ary_store(res,1,(VALUE)wport);
-    rb_ary_store(res,2,PIDT2NUM(info.child_pid));
-
-    if (rb_block_given_p()) {
-        rb_ensure(rb_yield, res, pty_detach_process, (VALUE)&amp;info);
-        return Qnil;
-    }
-    return res;
-}</pre>
-              </div>
-            </div>
-            
           </div>
         
         <div class="method">
@@ -450,28 +418,21 @@ pty_open(VALUE klass)
 {
     int master_fd, slave_fd;
     char slavename[DEVICELEN];
-    VALUE master_io, slave_file;
-    rb_io_t *master_fptr, *slave_fptr;
-    VALUE assoc;
 
     getDevice(&amp;master_fd, &amp;slave_fd, slavename, 1);
 
-    master_io = rb_obj_alloc(rb_cIO);
-    MakeOpenFile(master_io, master_fptr);
-    master_fptr-&gt;mode = FMODE_READWRITE | FMODE_SYNC | FMODE_DUPLEX;
-    master_fptr-&gt;fd = master_fd;
-    master_fptr-&gt;pathv = rb_obj_freeze(rb_sprintf(&quot;masterpty:%s&quot;, slavename));
+    VALUE master_path = rb_obj_freeze(rb_sprintf(&quot;masterpty:%s&quot;, slavename));
+    VALUE master_io = rb_io_open_descriptor(rb_cIO, master_fd, FMODE_READWRITE | FMODE_SYNC | FMODE_DUPLEX, master_path, RUBY_IO_TIMEOUT_DEFAULT, NULL);
 
-    slave_file = rb_obj_alloc(rb_cFile);
-    MakeOpenFile(slave_file, slave_fptr);
-    slave_fptr-&gt;mode = FMODE_READWRITE | FMODE_SYNC | FMODE_DUPLEX | FMODE_TTY;
-    slave_fptr-&gt;fd = slave_fd;
-    slave_fptr-&gt;pathv = rb_obj_freeze(rb_str_new_cstr(slavename));
+    VALUE slave_path = rb_obj_freeze(rb_str_new_cstr(slavename));
+    VALUE slave_file = rb_io_open_descriptor(rb_cFile, slave_fd, FMODE_READWRITE | FMODE_SYNC | FMODE_DUPLEX | FMODE_TTY, slave_path, RUBY_IO_TIMEOUT_DEFAULT, NULL);
 
-    assoc = rb_assoc_new(master_io, slave_file);
+    VALUE assoc = rb_assoc_new(master_io, slave_file);
+
     if (rb_block_given_p()) {
         return rb_ensure(rb_yield, assoc, pty_close_pty, assoc);
     }
+
     return assoc;
 }</pre>
               </div>
@@ -482,8 +443,7 @@ pty_open(VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-spawn">
             
-              <b>PTY.spawn(command_line)  { |r, w, pid| ... }<br />PTY.spawn(command_line)  => [r, w, pid]<br />PTY.spawn(command, arguments, ...)  { |r, w, pid| ... }<br />PTY.spawn(command, arguments, ...)  => [r, w, pid]
-</b>
+              <b>PTY.spawn([env,] command_line)  { |r, w, pid| ... }<br />PTY.spawn([env,] command_line)  => [r, w, pid]<br />PTY.spawn([env,] command, arguments, ...)  { |r, w, pid| ... }<br />PTY.spawn([env,] command, arguments, ...)  => [r, w, pid]</b>
             
             <a href="../classes/PTY.html#method-c-spawn" name="method-c-spawn" class="permalink">Link</a>
           </h3>
@@ -493,6 +453,14 @@ pty_open(VALUE klass)
               <p>Spawns the specified command on a newly allocated pty. You can also use the alias <a href="PTY.html#method-c-getpty"><code>::getpty</code></a>.</p>
 
 <p>The command’s controlling tty is set to the slave device of the pty and its standard input/output/error is redirected to the slave device.</p>
+
+<p><code>env</code> is an optional hash that provides additional environment variables to the spawned pty.</p>
+
+<pre><code># sets FOO to &quot;bar&quot;
+PTY.spawn({&quot;FOO&quot;=&gt;&quot;bar&quot;}, &quot;printenv&quot;, &quot;FOO&quot;) { |r,w,pid| p r.read } #=&gt; &quot;bar\r\n&quot;
+# unsets FOO
+PTY.spawn({&quot;FOO&quot;=&gt;nil}, &quot;printenv&quot;, &quot;FOO&quot;) { |r,w,pid| p r.read } #=&gt; &quot;&quot;
+</code></pre>
 
 <p><code>command</code> and <code>command_line</code> are the full commands to run, given a <a href="String.html"><code>String</code></a>. Any additional <code>arguments</code> will be passed to the command.</p>
 
@@ -515,6 +483,10 @@ pty_open(VALUE klass)
           
 
           
+            <div class="aka">
+              Also aliased as: <a href="PTY.html#method-c-getpty">getpty</a>
+            </div>
+          
 
           
 
@@ -533,30 +505,27 @@ pty_getpty(int argc, VALUE *argv, VALUE self)
 {
     VALUE res;
     struct pty_info info;
-    rb_io_t *wfptr,*rfptr;
-    VALUE rport = rb_obj_alloc(rb_cFile);
-    VALUE wport = rb_obj_alloc(rb_cFile);
     char SlaveName[DEVICELEN];
-
-    MakeOpenFile(rport, rfptr);
-    MakeOpenFile(wport, wfptr);
 
     establishShell(argc, argv, &amp;info, SlaveName);
 
-    rfptr-&gt;mode = rb_io_modestr_fmode(&quot;r&quot;);
-    rfptr-&gt;fd = info.fd;
-    rfptr-&gt;pathv = rb_obj_freeze(rb_str_new_cstr(SlaveName));
+    VALUE pty_path = rb_obj_freeze(rb_str_new_cstr(SlaveName));
+    VALUE rport = rb_io_open_descriptor(
+        rb_cFile, info.fd, FMODE_READABLE, pty_path, RUBY_IO_TIMEOUT_DEFAULT, NULL
+    );
 
-    wfptr-&gt;mode = rb_io_modestr_fmode(&quot;w&quot;) | FMODE_SYNC;
-    wfptr-&gt;fd = rb_cloexec_dup(info.fd);
-    if (wfptr-&gt;fd == -1)
+    int wpty_fd = rb_cloexec_dup(info.fd);
+    if (wpty_fd == -1) {
         rb_sys_fail(&quot;dup()&quot;);
-    rb_update_max_fd(wfptr-&gt;fd);
-    wfptr-&gt;pathv = rfptr-&gt;pathv;
+    }
+    VALUE wport = rb_io_open_descriptor(
+        rb_cFile, wpty_fd, FMODE_WRITABLE | FMODE_TRUNC | FMODE_CREATE | FMODE_SYNC,
+        pty_path, RUBY_IO_TIMEOUT_DEFAULT, NULL
+    );
 
     res = rb_ary_new2(3);
-    rb_ary_store(res,0,(VALUE)rport);
-    rb_ary_store(res,1,(VALUE)wport);
+    rb_ary_store(res, 0, rport);
+    rb_ary_store(res, 1, wport);
     rb_ary_store(res,2,PIDT2NUM(info.child_pid));
 
     if (rb_block_given_p()) {

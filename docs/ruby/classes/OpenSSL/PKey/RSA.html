@@ -387,11 +387,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-generate_source')" id="l_method-c-generate_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L335" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/pkey.rb#L343" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-generate_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 335</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 343</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">generate</span>(<span class="ruby-identifier">size</span>, <span class="ruby-identifier">exp</span> = <span class="ruby-value">0x10001</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">blk</span>)
   <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span>.<span class="ruby-identifier">generate_key</span>(<span class="ruby-string">&quot;RSA&quot;</span>, {
     <span class="ruby-string">&quot;rsa_keygen_bits&quot;</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">size</span>,
@@ -406,7 +406,7 @@
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>RSA.new &rarr; rsa<br />RSA.new(encoded_key [, passphrase]) &rarr; rsa<br />RSA.new(encoded_key) { passphrase } &rarr; rsa<br />RSA.new(size [, exponent]) &rarr; rsa
+              <b>RSA.new &rarr; rsa<br />RSA.new(encoded_key [, password ]) &rarr; rsa<br />RSA.new(encoded_key) { password } &rarr; rsa<br />RSA.new(size [, exponent]) &rarr; rsa
 </b>
             
             <a href="../../../classes/OpenSSL/PKey/RSA.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -418,7 +418,7 @@
 
 <p>If called without arguments, creates a new instance with no key components set. They can be set individually by <a href="RSA.html#method-i-set_key"><code>set_key</code></a>, <a href="RSA.html#method-i-set_factors"><code>set_factors</code></a>, and <a href="RSA.html#method-i-set_crt_params"><code>set_crt_params</code></a>.</p>
 
-<p>If called with a <a href="../../String.html"><code>String</code></a>, tries to parse as DER or PEM encoding of an RSA key. Note that, if <em>passphrase</em> is not specified but the key is encrypted with a passphrase, OpenSSL will prompt for it. See also <a href="../PKey.html#method-c-read"><code>OpenSSL::PKey.read</code></a> which can parse keys of any kinds.</p>
+<p>If called with a <a href="../../String.html"><code>String</code></a>, tries to parse as DER or PEM encoding of an RSA key. Note that if <em>password</em> is not specified, but the key is encrypted with a password, OpenSSL will prompt for it. See also <a href="../PKey.html#method-c-read"><code>OpenSSL::PKey.read</code></a> which can parse keys of any kind.</p>
 
 <p>If called with a number, generates a new key pair. This form works as an alias of <a href="RSA.html#method-c-generate"><code>RSA.generate</code></a>.</p>
 
@@ -426,7 +426,7 @@
 
 <pre><code>OpenSSL::PKey::RSA.new 2048
 OpenSSL::PKey::RSA.new File.read &#39;rsa.pem&#39;
-OpenSSL::PKey::RSA.new File.read(&#39;rsa.pem&#39;), &#39;my pass phrase&#39;
+OpenSSL::PKey::RSA.new File.read(&#39;rsa.pem&#39;), &#39;my password&#39;
 </code></pre>
             </div>
           
@@ -518,14 +518,56 @@ ossl_rsa_initialize(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-export">
             
-              <b>rsa.export([cipher, pass_phrase]) => PEM-format String</b>
+              <b>rsa.export([cipher, password]) => PEM-format String</b>
             
             <a href="../../../classes/OpenSSL/PKey/RSA.html#method-i-export" name="method-i-export" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Outputs this keypair in PEM encoding.  If <em>cipher</em> and <em>pass_phrase</em> are given they will be used to encrypt the key.  <em>cipher</em> must be an <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a> instance.</p>
+              <p>Serializes a private or public key to a PEM-encoding.</p>
+<dl class="rdoc-list label-list"><dt>When the key contains public components only
+<dd>
+<p>Serializes it into an X.509 SubjectPublicKeyInfo. The parameters <em>cipher</em> and <em>password</em> are ignored.</p>
+
+<p>A PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN PUBLIC KEY-----
+[...]
+-----END PUBLIC KEY-----
+</code></pre>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> instead. This serializes the key into an X.509 SubjectPublicKeyInfo regardless of whether the key is a public key or a private key.</p>
+</dd><dt>When the key contains private components, and no parameters are given
+<dd>
+<p>Serializes it into a PKCS #1 RSAPrivateKey.</p>
+
+<p>A PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN RSA PRIVATE KEY-----
+[...]
+-----END RSA PRIVATE KEY-----
+</code></pre>
+</dd><dt>When the key contains private components, and <em>cipher</em> and <em>password</em> are given
+<dd>
+<p>Serializes it into a PKCS #1 RSAPrivateKey and encrypts it in OpenSSL’s traditional PEM encryption format. <em>cipher</em> must be a cipher name understood by <a href="../Cipher.html#method-c-new"><code>OpenSSL::Cipher.new</code></a> or an instance of <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a>.</p>
+
+<p>An encrypted PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,733F5302505B34701FC41F5C0746E4C0
+
+[...]
+-----END RSA PRIVATE KEY-----
+</code></pre>
+
+<p>Note that this format uses MD5 to derive the encryption key, and hence will not be available on FIPS-compliant systems.</p>
+</dd></dl>
+
+<p><strong>This method is kept for compatibility.</strong> This should only be used when the PKCS #1 RSAPrivateKey format is required.</p>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> (X.509 SubjectPublicKeyInfo) or <a href="PKey.html#method-i-private_to_pem"><code>private_to_pem</code></a> (PKCS #8 PrivateKeyInfo or EncryptedPrivateKeyInfo) instead.</p>
             </div>
           
 
@@ -655,7 +697,7 @@ ossl_rsa_initialize_copy(VALUE self, VALUE other)
                 <pre>static VALUE
 ossl_rsa_get_params(VALUE self)
 {
-    RSA *rsa;
+    OSSL_3_const RSA *rsa;
     VALUE hash;
     const BIGNUM *n, *e, *d, *p, *q, *dmp1, *dmq1, *iqmp;
 
@@ -713,7 +755,7 @@ ossl_rsa_get_params(VALUE self)
                 <pre>static VALUE
 ossl_rsa_is_private(VALUE self)
 {
-    RSA *rsa;
+    OSSL_3_const RSA *rsa;
 
     GetRSA(self, rsa);
 
@@ -735,7 +777,7 @@ ossl_rsa_is_private(VALUE self)
 
           
             <div class="description">
-              <p>Decrypt <code>string</code>, which has been encrypted with the public key, with the private key. <code>padding</code> defaults to <a href="RSA.html#PKCS1_PADDING"><code>PKCS1_PADDING</code></a>.</p>
+              <p>Decrypt <code>string</code>, which has been encrypted with the public key, with the private key. <code>padding</code> defaults to <a href="RSA.html#PKCS1_PADDING"><code>PKCS1_PADDING</code></a>, which is known to be insecure but is kept for backwards compatibility.</p>
 
 <p><strong>Deprecated in version 3.0</strong>. Consider using <a href="PKey.html#method-i-encrypt"><code>PKey::PKey#encrypt</code></a> and <a href="PKey.html#method-i-decrypt"><code>PKey::PKey#decrypt</code></a> instead.</p>
             </div>
@@ -753,11 +795,11 @@ ossl_rsa_is_private(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-private_decrypt_source')" id="l_method-i-private_decrypt_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L427" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/pkey.rb#L439" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-private_decrypt_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 427</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 439</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">private_decrypt</span>(<span class="ruby-identifier">data</span>, <span class="ruby-identifier">padding</span> = <span class="ruby-constant">PKCS1_PADDING</span>)
   <span class="ruby-identifier">n</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">raise</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">RSAError</span>, <span class="ruby-string">&quot;incomplete RSA&quot;</span>
   <span class="ruby-identifier">private?</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">raise</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">RSAError</span>, <span class="ruby-string">&quot;private key needed.&quot;</span>
@@ -785,7 +827,7 @@ ossl_rsa_is_private(VALUE self)
 
           
             <div class="description">
-              <p>Encrypt <code>string</code> with the private key.  <code>padding</code> defaults to <a href="RSA.html#PKCS1_PADDING"><code>PKCS1_PADDING</code></a>. The encrypted string output can be decrypted using <a href="RSA.html#method-i-public_decrypt"><code>public_decrypt</code></a>.</p>
+              <p>Encrypt <code>string</code> with the private key.  <code>padding</code> defaults to <a href="RSA.html#PKCS1_PADDING"><code>PKCS1_PADDING</code></a>, which is known to be insecure but is kept for backwards compatibility. The encrypted string output can be decrypted using <a href="RSA.html#method-i-public_decrypt"><code>public_decrypt</code></a>.</p>
 
 <p><strong>Deprecated in version 3.0</strong>. Consider using <a href="PKey.html#method-i-sign_raw"><code>PKey::PKey#sign_raw</code></a> and <a href="PKey.html#method-i-verify_raw"><code>PKey::PKey#verify_raw</code></a>, and <a href="PKey.html#method-i-verify_recover"><code>PKey::PKey#verify_recover</code></a> instead.</p>
             </div>
@@ -803,11 +845,11 @@ ossl_rsa_is_private(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-private_encrypt_source')" id="l_method-i-private_encrypt_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L364" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/pkey.rb#L373" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-private_encrypt_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 364</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 373</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">private_encrypt</span>(<span class="ruby-identifier">string</span>, <span class="ruby-identifier">padding</span> = <span class="ruby-constant">PKCS1_PADDING</span>)
   <span class="ruby-identifier">n</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">raise</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">RSAError</span>, <span class="ruby-string">&quot;incomplete RSA&quot;</span>
   <span class="ruby-identifier">private?</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">raise</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">RSAError</span>, <span class="ruby-string">&quot;private key needed.&quot;</span>
@@ -856,7 +898,7 @@ ossl_rsa_is_private(VALUE self)
                 <pre>static VALUE
 ossl_rsa_is_public(VALUE self)
 {
-    RSA *rsa;
+    OSSL_3_const RSA *rsa;
 
     GetRSA(self, rsa);
     /*
@@ -881,7 +923,7 @@ ossl_rsa_is_public(VALUE self)
 
           
             <div class="description">
-              <p>Decrypt <code>string</code>, which has been encrypted with the private key, with the public key.  <code>padding</code> defaults to <a href="RSA.html#PKCS1_PADDING"><code>PKCS1_PADDING</code></a>.</p>
+              <p>Decrypt <code>string</code>, which has been encrypted with the private key, with the public key.  <code>padding</code> defaults to <a href="RSA.html#PKCS1_PADDING"><code>PKCS1_PADDING</code></a> which is known to be insecure but is kept for backwards compatibility.</p>
 
 <p><strong>Deprecated in version 3.0</strong>. Consider using <a href="PKey.html#method-i-sign_raw"><code>PKey::PKey#sign_raw</code></a> and <a href="PKey.html#method-i-verify_raw"><code>PKey::PKey#verify_raw</code></a>, and <a href="PKey.html#method-i-verify_recover"><code>PKey::PKey#verify_recover</code></a> instead.</p>
             </div>
@@ -899,11 +941,11 @@ ossl_rsa_is_public(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-public_decrypt_source')" id="l_method-i-public_decrypt_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L386" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/pkey.rb#L396" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-public_decrypt_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 386</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 396</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">public_decrypt</span>(<span class="ruby-identifier">string</span>, <span class="ruby-identifier">padding</span> = <span class="ruby-constant">PKCS1_PADDING</span>)
   <span class="ruby-identifier">n</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">raise</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">RSAError</span>, <span class="ruby-string">&quot;incomplete RSA&quot;</span>
   <span class="ruby-keyword">begin</span>
@@ -930,7 +972,7 @@ ossl_rsa_is_public(VALUE self)
 
           
             <div class="description">
-              <p>Encrypt <code>string</code> with the public key.  <code>padding</code> defaults to <a href="RSA.html#PKCS1_PADDING"><code>PKCS1_PADDING</code></a>. The encrypted string output can be decrypted using <a href="RSA.html#method-i-private_decrypt"><code>private_decrypt</code></a>.</p>
+              <p>Encrypt <code>string</code> with the public key.  <code>padding</code> defaults to <a href="RSA.html#PKCS1_PADDING"><code>PKCS1_PADDING</code></a>, which is known to be insecure but is kept for backwards compatibility. The encrypted string output can be decrypted using <a href="RSA.html#method-i-private_decrypt"><code>private_decrypt</code></a>.</p>
 
 <p><strong>Deprecated in version 3.0</strong>. Consider using <a href="PKey.html#method-i-encrypt"><code>PKey::PKey#encrypt</code></a> and <a href="PKey.html#method-i-decrypt"><code>PKey::PKey#decrypt</code></a> instead.</p>
             </div>
@@ -948,11 +990,11 @@ ossl_rsa_is_public(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-public_encrypt_source')" id="l_method-i-public_encrypt_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L407" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/pkey.rb#L418" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-public_encrypt_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 407</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 418</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">public_encrypt</span>(<span class="ruby-identifier">data</span>, <span class="ruby-identifier">padding</span> = <span class="ruby-constant">PKCS1_PADDING</span>)
   <span class="ruby-identifier">n</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">raise</span> <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span><span class="ruby-operator">::</span><span class="ruby-constant">RSAError</span>, <span class="ruby-string">&quot;incomplete RSA&quot;</span>
   <span class="ruby-keyword">begin</span>
@@ -999,11 +1041,11 @@ ossl_rsa_is_public(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-public_key_source')" id="l_method-i-public_key_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/pkey.rb#L319" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/pkey.rb#L327" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-public_key_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 319</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/pkey.rb, line 327</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">public_key</span>
   <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">PKey</span>.<span class="ruby-identifier">read</span>(<span class="ruby-identifier">public_to_der</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1215,7 +1257,13 @@ ossl_rsa_sign_pss(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Outputs this keypair in DER encoding.</p>
+              <p>Serializes a private or public key to a DER-encoding.</p>
+
+<p>See <a href="RSA.html#method-i-to_pem"><code>to_pem</code></a> for details.</p>
+
+<p><strong>This method is kept for compatibility.</strong> This should only be used when the PKCS #1 RSAPrivateKey format is required.</p>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_der"><code>public_to_der</code></a> or <a href="PKey.html#method-i-private_to_der"><code>private_to_der</code></a> instead.</p>
             </div>
           
 
@@ -1249,14 +1297,56 @@ ossl_rsa_to_der(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_pem">
             
-              <b>rsa.to_pem([cipher, pass_phrase]) => PEM-format String</b>
+              <b>rsa.to_pem([cipher, password]) => PEM-format String</b>
             
             <a href="../../../classes/OpenSSL/PKey/RSA.html#method-i-to_pem" name="method-i-to_pem" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Outputs this keypair in PEM encoding.  If <em>cipher</em> and <em>pass_phrase</em> are given they will be used to encrypt the key.  <em>cipher</em> must be an <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a> instance.</p>
+              <p>Serializes a private or public key to a PEM-encoding.</p>
+<dl class="rdoc-list label-list"><dt>When the key contains public components only
+<dd>
+<p>Serializes it into an X.509 SubjectPublicKeyInfo. The parameters <em>cipher</em> and <em>password</em> are ignored.</p>
+
+<p>A PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN PUBLIC KEY-----
+[...]
+-----END PUBLIC KEY-----
+</code></pre>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> instead. This serializes the key into an X.509 SubjectPublicKeyInfo regardless of whether the key is a public key or a private key.</p>
+</dd><dt>When the key contains private components, and no parameters are given
+<dd>
+<p>Serializes it into a PKCS #1 RSAPrivateKey.</p>
+
+<p>A PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN RSA PRIVATE KEY-----
+[...]
+-----END RSA PRIVATE KEY-----
+</code></pre>
+</dd><dt>When the key contains private components, and <em>cipher</em> and <em>password</em> are given
+<dd>
+<p>Serializes it into a PKCS #1 RSAPrivateKey and encrypts it in OpenSSL’s traditional PEM encryption format. <em>cipher</em> must be a cipher name understood by <a href="../Cipher.html#method-c-new"><code>OpenSSL::Cipher.new</code></a> or an instance of <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a>.</p>
+
+<p>An encrypted PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,733F5302505B34701FC41F5C0746E4C0
+
+[...]
+-----END RSA PRIVATE KEY-----
+</code></pre>
+
+<p>Note that this format uses MD5 to derive the encryption key, and hence will not be available on FIPS-compliant systems.</p>
+</dd></dl>
+
+<p><strong>This method is kept for compatibility.</strong> This should only be used when the PKCS #1 RSAPrivateKey format is required.</p>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> (X.509 SubjectPublicKeyInfo) or <a href="PKey.html#method-i-private_to_pem"><code>private_to_pem</code></a> (PKCS #8 PrivateKeyInfo or EncryptedPrivateKeyInfo) instead.</p>
             </div>
           
 
@@ -1274,14 +1364,56 @@ ossl_rsa_to_der(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_s">
             
-              <b>rsa.to_s([cipher, pass_phrase]) => PEM-format String</b>
+              <b>rsa.to_s([cipher, password]) => PEM-format String</b>
             
             <a href="../../../classes/OpenSSL/PKey/RSA.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Outputs this keypair in PEM encoding.  If <em>cipher</em> and <em>pass_phrase</em> are given they will be used to encrypt the key.  <em>cipher</em> must be an <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a> instance.</p>
+              <p>Serializes a private or public key to a PEM-encoding.</p>
+<dl class="rdoc-list label-list"><dt>When the key contains public components only
+<dd>
+<p>Serializes it into an X.509 SubjectPublicKeyInfo. The parameters <em>cipher</em> and <em>password</em> are ignored.</p>
+
+<p>A PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN PUBLIC KEY-----
+[...]
+-----END PUBLIC KEY-----
+</code></pre>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> instead. This serializes the key into an X.509 SubjectPublicKeyInfo regardless of whether the key is a public key or a private key.</p>
+</dd><dt>When the key contains private components, and no parameters are given
+<dd>
+<p>Serializes it into a PKCS #1 RSAPrivateKey.</p>
+
+<p>A PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN RSA PRIVATE KEY-----
+[...]
+-----END RSA PRIVATE KEY-----
+</code></pre>
+</dd><dt>When the key contains private components, and <em>cipher</em> and <em>password</em> are given
+<dd>
+<p>Serializes it into a PKCS #1 RSAPrivateKey and encrypts it in OpenSSL’s traditional PEM encryption format. <em>cipher</em> must be a cipher name understood by <a href="../Cipher.html#method-c-new"><code>OpenSSL::Cipher.new</code></a> or an instance of <a href="../Cipher.html"><code>OpenSSL::Cipher</code></a>.</p>
+
+<p>An encrypted PEM-encoded key will look like:</p>
+
+<pre><code>-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-128-CBC,733F5302505B34701FC41F5C0746E4C0
+
+[...]
+-----END RSA PRIVATE KEY-----
+</code></pre>
+
+<p>Note that this format uses MD5 to derive the encryption key, and hence will not be available on FIPS-compliant systems.</p>
+</dd></dl>
+
+<p><strong>This method is kept for compatibility.</strong> This should only be used when the PKCS #1 RSAPrivateKey format is required.</p>
+
+<p>Consider using <a href="PKey.html#method-i-public_to_pem"><code>public_to_pem</code></a> (X.509 SubjectPublicKeyInfo) or <a href="PKey.html#method-i-private_to_pem"><code>private_to_pem</code></a> (PKCS #8 PrivateKeyInfo or EncryptedPrivateKeyInfo) instead.</p>
             </div>
           
 

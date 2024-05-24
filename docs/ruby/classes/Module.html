@@ -30,7 +30,7 @@
     <meta property="og:description" content="A Module is a collection of methods and constants. The methods in a module may be instance methods or module methods.">
   
 
-    <meta name="keywords" content="Module class, include, prepend, used_modules, nesting, constants, autoload, autoload?, freeze, ===, ==, <=>, <, <=, >, >=, to_s, included_modules, include?, name, ancestors, attr, attr_reader, attr_writer, attr_accessor, new, instance_methods, public_instance_methods, protected_instance_methods, private_instance_methods, constants, const_get, const_set, const_defined?, const_source_location, const_missing, class_variables, remove_class_variable, class_variable_get, class_variable_set, class_variable_defined?, public_constant, private_constant, deprecate_constant, singleton_class?, inspect, instance_method, public_instance_method, define_method, module_exec, class_exec, module_eval, class_eval, remove_method, undef_method, alias_method, method_defined?, public_method_defined?, private_method_defined?, protected_method_defined?, public_class_method, private_class_method">
+    <meta name="keywords" content="Module class, include, prepend, refinements, used_modules, used_refinements, nesting, constants, autoload, autoload?, freeze, ===, ==, <=>, <, <=, >, >=, to_s, included_modules, include?, name, set_temporary_name, ancestors, attr, attr_reader, attr_writer, attr_accessor, new, instance_methods, public_instance_methods, protected_instance_methods, private_instance_methods, undefined_instance_methods, constants, const_get, const_set, const_defined?, const_source_location, const_missing, class_variables, remove_class_variable, class_variable_get, class_variable_set, class_variable_defined?, public_constant, private_constant, deprecate_constant, singleton_class?, inspect, instance_method, public_instance_method, define_method, module_exec, class_exec, module_eval, class_eval, remove_method, undef_method, alias_method, method_defined?, public_method_defined?, private_method_defined?, protected_method_defined?, public_class_method, private_class_method">
 </head>
 
 <body>
@@ -470,6 +470,11 @@ Mod.instance_methods   #=&gt; [:meth]
             
               
               <li>
+                <a href="#method-i-refinements">refinements</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-remove_class_variable">remove_class_variable</a>,
               </li>
             
@@ -484,6 +489,11 @@ Mod.instance_methods   #=&gt; [:meth]
         <dt>S</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-set_temporary_name">set_temporary_name</a>,
+              </li>
             
               
               <li>
@@ -516,7 +526,17 @@ Mod.instance_methods   #=&gt; [:meth]
             
               
               <li>
-                <a href="#method-c-used_modules">used_modules</a>
+                <a href="#method-i-undefined_instance_methods">undefined_instance_methods</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-used_modules">used_modules</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-used_refinements">used_refinements</a>
               </li>
             
           </ul>
@@ -803,6 +823,75 @@ rb_mod_s_used_modules(VALUE _)
             
           </div>
         
+        <div class="method">
+          <h3 class="title method-title" id="method-c-used_refinements">
+            
+              <b>used_refinements &rarr; array
+</b>
+            
+            <a href="../classes/Module.html#method-c-used_refinements" name="method-c-used_refinements" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns an array of all modules used in the current scope. The ordering of modules in the resulting array is not defined.</p>
+
+<pre><code>module A
+  refine Object do
+  end
+end
+
+module B
+  refine Object do
+  end
+end
+
+using A
+using B
+p Module.used_refinements
+</code></pre>
+
+<p><em>produces:</em></p>
+
+<pre><code>[#&lt;refinement:Object@B&gt;, #&lt;refinement:Object@A&gt;]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-used_refinements_source')" id="l_method-c-used_refinements_source">show</a>
+                
+              </p>
+              <div id="method-c-used_refinements_source" class="dyn-source">
+                <pre>static VALUE
+rb_mod_s_used_refinements(VALUE _)
+{
+    const rb_cref_t *cref = rb_vm_cref();
+    VALUE ary = rb_ary_new();
+
+    while (cref) {
+        if (!NIL_P(CREF_REFINEMENTS(cref))) {
+            rb_hash_foreach(CREF_REFINEMENTS(cref), used_refinements_i, ary);
+        }
+        cref = CREF_NEXT(cref);
+    }
+
+    return ary;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
       
     
       <h2 class="sectiontitle">Instance Public methods</h2>
@@ -818,7 +907,7 @@ rb_mod_s_used_modules(VALUE _)
 
           
             <div class="description">
-              <p>Returns true if <em>mod</em> is a subclass of <em>other</em>. Returns <code>nil</code> if there’s no relationship between the two. (Think of the relationship in terms of the class definition: “class A &lt; B” implies “A &lt; B”.)</p>
+              <p>Returns true if <em>mod</em> is a subclass of <em>other</em>. Returns <code>false</code> if <em>mod</em> is the same as <em>other</em> or <em>mod</em> is an ancestor of <em>other</em>. Returns <code>nil</code> if there’s no relationship between the two. (Think of the relationship in terms of the class definition: “class A &lt; B” implies “A &lt; B”.)</p>
             </div>
           
 
@@ -880,17 +969,41 @@ rb_mod_lt(VALUE mod, VALUE arg)
 rb_class_inherited_p(VALUE mod, VALUE arg)
 {
     if (mod == arg) return Qtrue;
-    if (!CLASS_OR_MODULE_P(arg) &amp;&amp; !RB_TYPE_P(arg, T_ICLASS)) {
-        rb_raise(rb_eTypeError, &quot;compared with non class/module&quot;);
+
+    if (RB_TYPE_P(arg, T_CLASS) &amp;&amp; RB_TYPE_P(mod, T_CLASS)) {
+        // comparison between classes
+        size_t mod_depth = RCLASS_SUPERCLASS_DEPTH(mod);
+        size_t arg_depth = RCLASS_SUPERCLASS_DEPTH(arg);
+        if (arg_depth &lt; mod_depth) {
+            // check if mod &lt; arg
+            return RCLASS_SUPERCLASSES(mod)[arg_depth] == arg ?
+                Qtrue :
+                Qnil;
+        }
+        else if (arg_depth &gt; mod_depth) {
+            // check if mod &gt; arg
+            return RCLASS_SUPERCLASSES(arg)[mod_depth] == mod ?
+                Qfalse :
+                Qnil;
+        }
+        else {
+            // Depths match, and we know they aren&#39;t equal: no relation
+            return Qnil;
+        }
     }
-    if (class_search_ancestor(mod, RCLASS_ORIGIN(arg))) {
-        return Qtrue;
+    else {
+        if (!CLASS_OR_MODULE_P(arg) &amp;&amp; !RB_TYPE_P(arg, T_ICLASS)) {
+            rb_raise(rb_eTypeError, &quot;compared with non class/module&quot;);
+        }
+        if (class_search_ancestor(mod, RCLASS_ORIGIN(arg))) {
+            return Qtrue;
+        }
+        /* not mod &lt; arg; check if mod &gt; arg */
+        if (class_search_ancestor(arg, mod)) {
+            return Qfalse;
+        }
+        return Qnil;
     }
-    /* not mod &lt; arg; check if mod &gt; arg */
-    if (class_search_ancestor(arg, mod)) {
-        return Qfalse;
-    }
-    return Qnil;
 }</pre>
               </div>
             </div>
@@ -997,7 +1110,7 @@ obj.equal? obj    #=&gt; true
                 
               </p>
               <div id="method-i-3D-3D_source" class="dyn-source">
-                <pre>MJIT_FUNC_EXPORTED VALUE
+                <pre>VALUE
 rb_obj_equal(VALUE obj1, VALUE obj2)
 {
     return RBOOL(obj1 == obj2);
@@ -1057,7 +1170,7 @@ rb_mod_eqq(VALUE mod, VALUE arg)
 
           
             <div class="description">
-              <p>Returns true if <em>mod</em> is an ancestor of <em>other</em>. Returns <code>nil</code> if there’s no relationship between the two. (Think of the relationship in terms of the class definition: “class A &lt; B” implies “B &gt; A”.)</p>
+              <p>Returns true if <em>mod</em> is an ancestor of <em>other</em>. Returns <code>false</code> if <em>mod</em> is the same as <em>other</em> or <em>mod</em> is a descendant of <em>other</em>. Returns <code>nil</code> if there’s no relationship between the two. (Think of the relationship in terms of the class definition: “class A &lt; B” implies “B &gt; A”.)</p>
             </div>
           
 
@@ -1235,19 +1348,19 @@ rb_mod_ancestors(VALUE mod)
 {
     VALUE p, ary = rb_ary_new();
     VALUE refined_class = Qnil;
-    if (FL_TEST(mod, RMODULE_IS_REFINEMENT)) {
+    if (BUILTIN_TYPE(mod) == T_MODULE &amp;&amp; FL_TEST(mod, RMODULE_IS_REFINEMENT)) {
         refined_class = rb_refinement_module_get_refined_class(mod);
     }
 
     for (p = mod; p; p = RCLASS_SUPER(p)) {
         if (p == refined_class) break;
         if (p != RCLASS_ORIGIN(p)) continue;
-	if (BUILTIN_TYPE(p) == T_ICLASS) {
-	    rb_ary_push(ary, RBASIC(p)-&gt;klass);
-	}
+        if (BUILTIN_TYPE(p) == T_ICLASS) {
+            rb_ary_push(ary, METACLASS_OF(p));
+        }
         else {
-	    rb_ary_push(ary, p);
-	}
+            rb_ary_push(ary, p);
+        }
     }
     return ary;
 }</pre>
@@ -1457,7 +1570,7 @@ rb_mod_attr_writer(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-i-autoload">
             
-              <b>mod.autoload(module, filename)   &rarr; nil
+              <b>mod.autoload(const, filename)   &rarr; nil
 </b>
             
             <a href="../classes/Module.html#method-i-autoload" name="method-i-autoload" class="permalink">Link</a>
@@ -1465,13 +1578,17 @@ rb_mod_attr_writer(int argc, VALUE *argv, VALUE klass)
 
           
             <div class="description">
-              <p>Registers <em>filename</em> to be loaded (using Kernel::require) the first time that <em>module</em> (which may be a <a href="String.html"><code>String</code></a> or a symbol) is accessed in the namespace of <em>mod</em>.</p>
+              <pre><code>Registers _filename_ to be loaded (using Kernel::require)
+the first time that _const_ (which may be a String or
+a symbol) is accessed in the namespace of _mod_.
 
-<pre><code>module A
-end
-A.autoload(:B, &quot;b&quot;)
-A::B.doit            # autoloads &quot;b&quot;
+   module A
+   end
+   A.autoload(:B, &quot;b&quot;)
+   A::B.doit            # autoloads &quot;b&quot;
 </code></pre>
+
+<p>If <em>const</em> in <em>mod</em> is defined as autoload, the file name to be loaded is replaced with <em>filename</em>.  If <em>const</em> is defined but not as autoload, does nothing.</p>
             </div>
           
 
@@ -1848,10 +1965,10 @@ rb_mod_class_variables(int argc, const VALUE *argv, VALUE mod)
 
     if (rb_check_arity(argc, 0, 1)) inherit = RTEST(argv[0]);
     if (inherit) {
-	tbl = mod_cvar_of(mod, 0);
+        tbl = mod_cvar_of(mod, 0);
     }
     else {
-	tbl = mod_cvar_at(mod, 0);
+        tbl = mod_cvar_at(mod, 0);
     }
     return cvar_list(tbl);
 }</pre>
@@ -1996,7 +2113,7 @@ rb_mod_const_defined(int argc, VALUE *argv, VALUE mod)
 
 #if 0
         mod = rb_const_search(mod, id, beglen &gt; 0 || !RTEST(recur), RTEST(recur), FALSE);
-        if (mod == Qundef) return Qfalse;
+        if (UNDEF_P(mod)) return Qfalse;
 #else
         if (!RTEST(recur)) {
             if (!rb_const_defined_at(mod, id))
@@ -2255,11 +2372,12 @@ end
                 <pre>VALUE
 rb_mod_const_missing(VALUE klass, VALUE name)
 {
-    VALUE ref = GET_EC()-&gt;private_const_reference;
+    rb_execution_context_t *ec = GET_EC();
+    VALUE ref = ec-&gt;private_const_reference;
     rb_vm_pop_cfunc_frame();
     if (ref) {
-	rb_name_err_raise(&quot;private constant %2$s::%1$s referenced&quot;,
-			  ref, name);
+        ec-&gt;private_const_reference = 0;
+        rb_name_err_raise(&quot;private constant %2$s::%1$s referenced&quot;, ref, name);
     }
     uninitialized_constant(klass, name);
 
@@ -2541,10 +2659,10 @@ rb_mod_constants(int argc, const VALUE *argv, VALUE mod)
     if (rb_check_arity(argc, 0, 1)) inherit = RTEST(argv[0]);
 
     if (inherit) {
-	return rb_const_list(rb_mod_const_of(mod, 0));
+        return rb_const_list(rb_mod_const_of(mod, 0));
     }
     else {
-	return rb_local_constants(mod);
+        return rb_local_constants(mod);
     }
 }</pre>
               </div>
@@ -2613,76 +2731,15 @@ I&#39;m Dino!
                 <pre>static VALUE
 rb_mod_define_method(int argc, VALUE *argv, VALUE mod)
 {
-    ID id;
-    VALUE body;
-    VALUE name;
     const rb_cref_t *cref = rb_vm_cref_in_context(mod, mod);
     const rb_scope_visibility_t default_scope_visi = {METHOD_VISI_PUBLIC, FALSE};
     const rb_scope_visibility_t *scope_visi = &amp;default_scope_visi;
-    int is_method = FALSE;
 
     if (cref) {
         scope_visi = CREF_SCOPE_VISI(cref);
     }
 
-    rb_check_arity(argc, 1, 2);
-    name = argv[0];
-    id = rb_check_id(&amp;name);
-    if (argc == 1) {
-        body = rb_block_lambda();
-    }
-    else {
-        body = argv[1];
-
-        if (rb_obj_is_method(body)) {
-            is_method = TRUE;
-        }
-        else if (rb_obj_is_proc(body)) {
-            is_method = FALSE;
-        }
-        else {
-            rb_raise(rb_eTypeError,
-                     &quot;wrong argument type %s (expected Proc/Method/UnboundMethod)&quot;,
-                     rb_obj_classname(body));
-        }
-    }
-    if (!id) id = rb_to_id(name);
-
-    if (is_method) {
-        struct METHOD *method = (struct METHOD *)DATA_PTR(body);
-        if (method-&gt;me-&gt;owner != mod &amp;&amp; !RB_TYPE_P(method-&gt;me-&gt;owner, T_MODULE) &amp;&amp;
-            !RTEST(rb_class_inherited_p(mod, method-&gt;me-&gt;owner))) {
-            if (FL_TEST(method-&gt;me-&gt;owner, FL_SINGLETON)) {
-                rb_raise(rb_eTypeError,
-                         &quot;can&#39;t bind singleton method to a different class&quot;);
-            }
-            else {
-                rb_raise(rb_eTypeError,
-                         &quot;bind argument must be a subclass of % &quot;PRIsVALUE,
-                         method-&gt;me-&gt;owner);
-            }
-        }
-        rb_method_entry_set(mod, id, method-&gt;me, scope_visi-&gt;method_visi);
-        if (scope_visi-&gt;module_func) {
-            rb_method_entry_set(rb_singleton_class(mod), id, method-&gt;me, METHOD_VISI_PUBLIC);
-        }
-        RB_GC_GUARD(body);
-    }
-    else {
-        VALUE procval = rb_proc_dup(body);
-        if (vm_proc_iseq(procval) != NULL) {
-            rb_proc_t *proc;
-            GetProcPtr(procval, proc);
-            proc-&gt;is_lambda = TRUE;
-            proc-&gt;is_from_method = TRUE;
-        }
-        rb_add_method(mod, id, VM_METHOD_TYPE_BMETHOD, (void *)procval, scope_visi-&gt;method_visi);
-        if (scope_visi-&gt;module_func) {
-            rb_add_method(rb_singleton_class(mod), id, VM_METHOD_TYPE_BMETHOD, (void *)body, METHOD_VISI_PUBLIC);
-        }
-    }
-
-    return ID2SYM(id);
+    return rb_mod_define_method_with_visibility(argc, argv, mod, scope_visi);
 }</pre>
               </div>
             </div>
@@ -2820,13 +2877,17 @@ rb_mod_include(int argc, VALUE *argv, VALUE module)
     CONST_ID(id_append_features, &quot;append_features&quot;);
     CONST_ID(id_included, &quot;included&quot;);
 
-    if (FL_TEST(module, RMODULE_IS_REFINEMENT)) {
-        rb_warn_deprecated_to_remove_at(3.2, &quot;Refinement#include&quot;, NULL);
+    if (BUILTIN_TYPE(module) == T_MODULE &amp;&amp; FL_TEST(module, RMODULE_IS_REFINEMENT)) {
+        rb_raise(rb_eTypeError, &quot;Refinement#include has been removed&quot;);
     }
 
     rb_check_arity(argc, 1, UNLIMITED_ARGUMENTS);
-    for (i = 0; i &lt; argc; i++)
+    for (i = 0; i &lt; argc; i++) {
         Check_Type(argv[i], T_MODULE);
+        if (FL_TEST(argv[i], RMODULE_IS_REFINEMENT)) {
+            rb_raise(rb_eTypeError, &quot;Cannot include refinement&quot;);
+        }
+    }
     while (argc--) {
         rb_funcall(argv[argc], id_append_features, 1, module);
         rb_funcall(argv[argc], id_included, 1, module);
@@ -2887,8 +2948,8 @@ rb_mod_include_p(VALUE mod, VALUE mod2)
     Check_Type(mod2, T_MODULE);
     for (p = RCLASS_SUPER(mod); p; p = RCLASS_SUPER(p)) {
         if (BUILTIN_TYPE(p) == T_ICLASS &amp;&amp; !FL_TEST(p, RICLASS_IS_ORIGIN)) {
-	    if (RBASIC(p)-&gt;klass == mod2) return Qtrue;
-	}
+            if (METACLASS_OF(p) == mod2) return Qtrue;
+        }
     }
     return Qfalse;
 }</pre>
@@ -2950,10 +3011,10 @@ rb_mod_included_modules(VALUE mod)
 
     for (p = RCLASS_SUPER(mod); p; p = RCLASS_SUPER(p)) {
         if (p != origin &amp;&amp; RCLASS_ORIGIN(p) == p &amp;&amp; BUILTIN_TYPE(p) == T_ICLASS) {
-	    VALUE m = RBASIC(p)-&gt;klass;
-	    if (RB_TYPE_P(m, T_MODULE))
-		rb_ary_push(ary, m);
-	}
+            VALUE m = METACLASS_OF(p);
+            if (RB_TYPE_P(m, T_MODULE))
+                rb_ary_push(ary, m);
+        }
     }
     return ary;
 }</pre>
@@ -3084,6 +3145,15 @@ B.instance_methods(false)                   #=&gt; [:method2]
 B.instance_methods(true).include?(:method1) #=&gt; true
 C.instance_methods(false)                   #=&gt; [:method3]
 C.instance_methods.include?(:method2)       #=&gt; true
+</code></pre>
+
+<p>Note that method visibility changes in the current class, as well as aliases, are considered as methods of the current class by this method:</p>
+
+<pre><code>class C &lt; B
+  alias method4 method2
+  protected :method2
+end
+C.instance_methods(false).sort               #=&gt; [:method2, :method3, :method4]
 </code></pre>
             </div>
           
@@ -3322,7 +3392,7 @@ rb_mod_module_exec_internal(int argc, const VALUE *argv, VALUE mod)
                 <pre>VALUE
 rb_mod_name(VALUE mod)
 {
-    int permanent;
+    bool permanent;
     return classname(mod, &amp;permanent);
 }</pre>
               </div>
@@ -3365,16 +3435,20 @@ rb_mod_prepend(int argc, VALUE *argv, VALUE module)
     int i;
     ID id_prepend_features, id_prepended;
 
-    if (FL_TEST(module, RMODULE_IS_REFINEMENT)) {
-        rb_warn_deprecated_to_remove_at(3.2, &quot;Refinement#prepend&quot;, NULL);
+    if (BUILTIN_TYPE(module) == T_MODULE &amp;&amp; FL_TEST(module, RMODULE_IS_REFINEMENT)) {
+        rb_raise(rb_eTypeError, &quot;Refinement#prepend has been removed&quot;);
     }
 
     CONST_ID(id_prepend_features, &quot;prepend_features&quot;);
     CONST_ID(id_prepended, &quot;prepended&quot;);
 
     rb_check_arity(argc, 1, UNLIMITED_ARGUMENTS);
-    for (i = 0; i &lt; argc; i++)
+    for (i = 0; i &lt; argc; i++) {
         Check_Type(argv[i], T_MODULE);
+        if (FL_TEST(argv[i], RMODULE_IS_REFINEMENT)) {
+            rb_raise(rb_eTypeError, &quot;Cannot prepend refinement&quot;);
+        }
+    }
     while (argc--) {
         rb_funcall(argv[argc], id_prepend_features, 1, module);
         rb_funcall(argv[argc], id_prepended, 1, module);
@@ -3906,6 +3980,69 @@ rb_mod_public_method_defined(int argc, VALUE *argv, VALUE mod)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-refinements">
+            
+              <b>refinements &rarr; array
+</b>
+            
+            <a href="../classes/Module.html#method-i-refinements" name="method-i-refinements" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns an array of modules defined within the receiver.</p>
+
+<pre><code>module A
+  refine Integer do
+  end
+
+  refine String do
+  end
+end
+
+p A.refinements
+</code></pre>
+
+<p><em>produces:</em></p>
+
+<pre><code>[#&lt;refinement:Integer@A&gt;, #&lt;refinement:String@A&gt;]
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-refinements_source')" id="l_method-i-refinements_source">show</a>
+                
+              </p>
+              <div id="method-i-refinements_source" class="dyn-source">
+                <pre>static VALUE
+mod_refinements(VALUE self)
+{
+    ID id_refinements;
+    VALUE refinements;
+
+    CONST_ID(id_refinements, &quot;__refinements__&quot;);
+    refinements = rb_attr_get(self, id_refinements);
+    if (NIL_P(refinements)) {
+        return rb_ary_new();
+    }
+    return rb_hash_values(refinements);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-remove_class_variable">
             
               <b>remove_class_variable(sym)    &rarr; obj
@@ -3951,17 +4088,18 @@ nil
 rb_mod_remove_cvar(VALUE mod, VALUE name)
 {
     const ID id = id_for_var_message(mod, name, class, &quot;wrong class variable name %1$s&quot;);
-    st_data_t val, n = id;
+    st_data_t val;
 
     if (!id) {
         goto not_defined;
     }
     rb_check_frozen(mod);
-    if (RCLASS_IV_TBL(mod) &amp;&amp; st_delete(RCLASS_IV_TBL(mod), &amp;n, &amp;val)) {
-	return (VALUE)val;
+    val = rb_ivar_delete(mod, id, Qundef);
+    if (!UNDEF_P(val)) {
+        return (VALUE)val;
     }
     if (rb_cvar_defined(mod, id)) {
-	rb_name_err_raise(&quot;cannot remove %1$s for %2$s&quot;, mod, ID2SYM(id));
+        rb_name_err_raise(&quot;cannot remove %1$s for %2$s&quot;, mod, ID2SYM(id));
     }
   not_defined:
     rb_name_err_raise(&quot;class variable %1$s not defined for %2$s&quot;,
@@ -4016,6 +4154,104 @@ rb_mod_remove_method(int argc, VALUE *argv, VALUE mod)
         }
         remove_method(mod, id);
     }
+    return mod;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-set_temporary_name">
+            
+              <b>mod.set_temporary_name(string) &rarr; self<br />mod.set_temporary_name(nil) &rarr; self
+</b>
+            
+            <a href="../classes/Module.html#method-i-set_temporary_name" name="method-i-set_temporary_name" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Sets the temporary name of the module. This name is reflected in introspection of the module and the values that are related to it, such as instances, constants, and methods.</p>
+
+<p>The name should be <code>nil</code> or non-empty string that is not a valid constant name (to avoid confusing between permanent and temporary names).</p>
+
+<p>The method can be useful to distinguish dynamically generated classes and modules without assigning them to constants.</p>
+
+<p>If the module is given a permanent name by assigning it to a constant, the temporary name is discarded. A temporary name can’t be assigned to modules that have a permanent name.</p>
+
+<p>If the given name is <code>nil</code>, the module becomes anonymous again.</p>
+
+<p>Example:</p>
+
+<pre><code>m = Module.new # =&gt; #&lt;Module:0x0000000102c68f38&gt;
+m.name #=&gt; nil
+
+m.set_temporary_name(&quot;fake_name&quot;) # =&gt; fake_name
+m.name #=&gt; &quot;fake_name&quot;
+
+m.set_temporary_name(nil) # =&gt; #&lt;Module:0x0000000102c68f38&gt;
+m.name #=&gt; nil
+
+c = Class.new
+c.set_temporary_name(&quot;MyClass(with description)&quot;)
+
+c.new # =&gt; #&lt;MyClass(with description):0x0....&gt;
+
+c::M = m
+c::M.name #=&gt; &quot;MyClass(with description)::M&quot;
+
+# Assigning to a constant replaces the name with a permanent one
+C = c
+
+C.name #=&gt; &quot;C&quot;
+C::M.name #=&gt; &quot;C::M&quot;
+c.new # =&gt; #&lt;C:0x0....&gt;
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-set_temporary_name_source')" id="l_method-i-set_temporary_name_source">show</a>
+                
+              </p>
+              <div id="method-i-set_temporary_name_source" class="dyn-source">
+                <pre>VALUE
+rb_mod_set_temporary_name(VALUE mod, VALUE name)
+{
+    // We don&#39;t allow setting the name if the classpath is already permanent:
+    if (RCLASS_EXT(mod)-&gt;permanent_classpath) {
+        rb_raise(rb_eRuntimeError, &quot;can&#39;t change permanent name&quot;);
+    }
+
+    if (NIL_P(name)) {
+        // Set the temporary classpath to NULL (anonymous):
+        RCLASS_SET_CLASSPATH(mod, 0, FALSE);
+    } else {
+        // Ensure the name is a string:
+        StringValue(name);
+
+        if (RSTRING_LEN(name) == 0) {
+            rb_raise(rb_eArgError, &quot;empty class/module name&quot;);
+        }
+
+        if (is_constant_path(name)) {
+            rb_raise(rb_eArgError, &quot;the temporary name must not be a constant path to avoid confusion&quot;);
+        }
+
+        // Set the temporary classpath to the given name:
+        RCLASS_SET_CLASSPATH(mod, name, FALSE);
+    }
+
     return mod;
 }</pre>
               </div>
@@ -4100,7 +4336,7 @@ rb_mod_singleton_p(VALUE klass)
                 
               </p>
               <div id="method-i-to_s_source" class="dyn-source">
-                <pre>MJIT_FUNC_EXPORTED VALUE
+                <pre>VALUE
 rb_mod_to_s(VALUE klass)
 {
     ID id_defined_at;
@@ -4108,7 +4344,7 @@ rb_mod_to_s(VALUE klass)
 
     if (FL_TEST(klass, FL_SINGLETON)) {
         VALUE s = rb_usascii_str_new2(&quot;#&lt;Class:&quot;);
-        VALUE v = rb_ivar_get(klass, id__attached__);
+        VALUE v = RCLASS_ATTACHED_OBJECT(klass);
 
         if (CLASS_OR_MODULE_P(v)) {
             rb_str_append(s, rb_inspect(v));
@@ -4213,6 +4449,46 @@ rb_mod_undef_method(int argc, VALUE *argv, VALUE mod)
         rb_undef(mod, id);
     }
     return mod;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-undefined_instance_methods">
+            
+              <b>mod.undefined_instance_methods   &rarr; array
+</b>
+            
+            <a href="../classes/Module.html#method-i-undefined_instance_methods" name="method-i-undefined_instance_methods" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a list of the undefined instance methods defined in <em>mod</em>. The undefined methods of any ancestors are not included.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-undefined_instance_methods_source')" id="l_method-i-undefined_instance_methods_source">show</a>
+                
+              </p>
+              <div id="method-i-undefined_instance_methods_source" class="dyn-source">
+                <pre>VALUE
+rb_class_undefined_instance_methods(VALUE mod)
+{
+    VALUE include_super = Qfalse;
+    return class_instance_method_list(1, &amp;include_super, mod, 0, ins_methods_undef_i);
 }</pre>
               </div>
             </div>

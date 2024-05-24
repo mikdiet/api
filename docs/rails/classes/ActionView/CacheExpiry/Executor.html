@@ -26,7 +26,7 @@
 
   
 
-    <meta name="keywords" content="ActionView::CacheExpiry::Executor class, new, before">
+    <meta name="keywords" content="ActionView::CacheExpiry::Executor class, new, run, complete">
 </head>
 
 <body>
@@ -92,13 +92,13 @@
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
       
-        <dt>B</dt>
+        <dt>C</dt>
         <dd>
           <ul>
             
               
               <li>
-                <a href="#method-i-before">before</a>
+                <a href="#method-i-complete">complete</a>
               </li>
             
           </ul>
@@ -111,6 +111,18 @@
               
               <li>
                 <a href="#method-c-new">new</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>R</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-run">run</a>
               </li>
             
           </ul>
@@ -165,13 +177,16 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/actionview/lib/action_view/cache_expiry.rb#L6" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actionview/lib/action_view/cache_expiry.rb#L6" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
                 <pre><span class="ruby-comment"># File rails/actionview/lib/action_view/cache_expiry.rb, line 6</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-value">watcher:</span>)
-  <span class="ruby-ivar">@cache_expiry</span> = <span class="ruby-constant">CacheExpiry</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">watcher:</span> <span class="ruby-identifier">watcher</span>)
+  <span class="ruby-ivar">@execution_lock</span> = <span class="ruby-constant">Concurrent</span><span class="ruby-operator">::</span><span class="ruby-constant">ReentrantReadWriteLock</span>.<span class="ruby-identifier">new</span>
+  <span class="ruby-ivar">@cache_expiry</span> = <span class="ruby-constant">ViewModificationWatcher</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value">watcher:</span> <span class="ruby-identifier">watcher</span>) <span class="ruby-keyword">do</span>
+    <span class="ruby-identifier">clear_cache</span>
+  <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -183,11 +198,11 @@
       <h2 class="sectiontitle">Instance Public methods</h2>
       
         <div class="method">
-          <h3 class="title method-title" id="method-i-before">
+          <h3 class="title method-title" id="method-i-complete">
             
-              <b>before</b>(target)
+              <b>complete</b>(_)
             
-            <a href="../../../classes/ActionView/CacheExpiry/Executor.html#method-i-before" name="method-i-before" class="permalink">Link</a>
+            <a href="../../../classes/ActionView/CacheExpiry/Executor.html#method-i-complete" name="method-i-complete" class="permalink">Link</a>
           </h3>
 
           
@@ -206,15 +221,57 @@
               
               <p class="source-link">
                 Source:
-                <a href="javascript:toggleSource('method-i-before_source')" id="l_method-i-before_source">show</a>
+                <a href="javascript:toggleSource('method-i-complete_source')" id="l_method-i-complete_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/actionview/lib/action_view/cache_expiry.rb#L10" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actionview/lib/action_view/cache_expiry.rb#L20" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
-              <div id="method-i-before_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionview/lib/action_view/cache_expiry.rb, line 10</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">before</span>(<span class="ruby-identifier">target</span>)
-  <span class="ruby-ivar">@cache_expiry</span>.<span class="ruby-identifier">clear_cache_if_necessary</span>
+              <div id="method-i-complete_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/actionview/lib/action_view/cache_expiry.rb, line 20</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">complete</span>(<span class="ruby-identifier">_</span>)
+  <span class="ruby-ivar">@execution_lock</span>.<span class="ruby-identifier">release_read_lock</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-run">
+            
+              <b>run</b>()
+            
+            <a href="../../../classes/ActionView/CacheExpiry/Executor.html#method-i-run" name="method-i-run" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-run_source')" id="l_method-i-run_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actionview/lib/action_view/cache_expiry.rb#L13" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-run_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/actionview/lib/action_view/cache_expiry.rb, line 13</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">run</span>
+  <span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">Dependencies</span>.<span class="ruby-identifier">interlock</span>.<span class="ruby-identifier">permit_concurrent_loads</span> <span class="ruby-keyword">do</span>
+    <span class="ruby-ivar">@cache_expiry</span>.<span class="ruby-identifier">execute_if_updated</span>
+    <span class="ruby-ivar">@execution_lock</span>.<span class="ruby-identifier">acquire_read_lock</span>
+  <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>

@@ -26,8 +26,8 @@
 
   
     
-    <meta name="description" content="Utility methods for using the RubyGems API.">
-    <meta property="og:description" content="Utility methods for using the RubyGems API.">
+    <meta name="description" content="Utility methods for using the RubyGems API.  The WebauthnListener class retrieves an OTP after a user successfully WebAuthns with the Gem host.">
+    <meta property="og:description" content="Utility methods for using the RubyGems API.  The WebauthnListener class retrieves an OTP after a user successfully WebAuthns with the Gem host.">
   
 
     <meta name="keywords" content="Gem::GemcutterUtilities class, add_key_option, add_otp_option, api_key, otp, host, rubygems_api_request, mfa_unauthorized?, update_scope, sign_in, verify_api_key, with_response, set_api_key">
@@ -67,6 +67,12 @@
             
             <li><a href="../../files/ruby/lib/rubygems/gemcutter_utilities_rb.html">ruby/lib/rubygems/gemcutter_utilities.rb</a></li>
             
+            <li><a href="../../files/ruby/lib/rubygems/gemcutter_utilities/webauthn_listener_rb.html">ruby/lib/rubygems/gemcutter_utilities/webauthn_listener.rb</a></li>
+            
+            <li><a href="../../files/ruby/lib/rubygems/gemcutter_utilities/webauthn_listener/response_rb.html">ruby/lib/rubygems/gemcutter_utilities/webauthn_listener/response.rb</a></li>
+            
+            <li><a href="../../files/ruby/lib/rubygems/gemcutter_utilities/webauthn_poller_rb.html">ruby/lib/rubygems/gemcutter_utilities/webauthn_poller.rb</a></li>
+            
         </ul>
     </div>
 
@@ -77,6 +83,61 @@
       
 <p>Utility methods for using the RubyGems API.</p>
 
+<p>The <a href="GemcutterUtilities/WebauthnListener.html"><code>WebauthnListener</code></a> class retrieves an OTP after a user successfully WebAuthns with the Gem host. An instance opens a socket using the <a href="../TCPServer.html"><code>TCPServer</code></a> instance given and listens for a request from the Gem host. The request should be a GET request to the root path and contains the OTP code in the form of a query parameter ‘code`. The listener will return the code which will be used as the OTP for API requests.</p>
+
+<p>Types of responses sent by the listener after receiving a request:</p>
+
+<pre><code>- 200 OK: OTP code was successfully retrieved
+- 204 No Content: If the request was an OPTIONS request
+- 400 Bad Request: If the request did not contain a query parameter `code`
+- 404 Not Found: The request was not to the root path
+- 405 Method Not Allowed: OTP code was not retrieved because the request was not a GET/OPTIONS request
+</code></pre>
+
+<p>Example usage:</p>
+
+<pre><code>thread = Gem::WebauthnListener.listener_thread(&quot;https://rubygems.example&quot;, server)
+thread.join
+otp = thread[:otp]
+error = thread[:error]
+</code></pre>
+
+<p>The <a href="GemcutterUtilities/WebauthnListener.html"><code>WebauthnListener</code></a> Response class is used by the <a href="GemcutterUtilities/WebauthnListener.html"><code>WebauthnListener</code></a> to create responses to be sent to the Gem host. It creates a Gem::Net::HTTPResponse instance when initialized and can be converted to the appropriate format to be sent by a socket using ‘to_s`. Gem::Net::HTTPResponse instances cannot be directly sent over a socket.</p>
+
+<p>Types of response classes:</p>
+
+<pre><code>- OkResponse
+- NoContentResponse
+- BadRequestResponse
+- NotFoundResponse
+- MethodNotAllowedResponse
+</code></pre>
+
+<p>Example usage:</p>
+
+<pre><code>server = TCPServer.new(0)
+socket = server.accept
+
+response = OkResponse.for(&quot;https://rubygems.example&quot;)
+socket.print response.to_s
+socket.close
+</code></pre>
+
+<p>The <a href="GemcutterUtilities/WebauthnPoller.html"><code>WebauthnPoller</code></a> class retrieves an OTP after a user successfully WebAuthns. An instance polls the Gem host for the OTP code. The polling request (api/v1/webauthn_verification/&lt;webauthn_token&gt;/status.json) is sent to the Gem host every 5 seconds and will timeout after 5 minutes. If the status field in the json response is “success”, the code field will contain the OTP code.</p>
+
+<p>Example usage:</p>
+
+<pre><code>thread = Gem::WebauthnPoller.poll_thread(
+  {},
+  &quot;RubyGems.org&quot;,
+  &quot;https://rubygems.org/api/v1/webauthn_verification/odow34b93t6aPCdY&quot;,
+  { email: &quot;email@example.com&quot;, password: &quot;password&quot; }
+)
+thread.join
+otp = thread[:otp]
+error = thread[:error]
+</code></pre>
+
     </div>
   
 
@@ -88,6 +149,22 @@
   
 
 
+  
+    <!-- Namespace -->
+    <div class="sectiontitle">Namespace</div>
+    <ul>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="GemcutterUtilities/WebauthnListener.html">Gem::GemcutterUtilities::WebauthnListener</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="GemcutterUtilities/WebauthnPoller.html">Gem::GemcutterUtilities::WebauthnPoller</a>
+        </li>
+      
+    </ul>
   
 
 
@@ -254,7 +331,7 @@
           <tr valign='top'>
             <td class="attr-name">API_SCOPES</td>
             <td>=</td>
-            <td class="attr-value">%i[index_rubygems push_rubygem yank_rubygem add_owner remove_owner access_webhooks show_dashboard].freeze</td>
+            <td class="attr-value">[:index_rubygems, :push_rubygem, :yank_rubygem, :add_owner, :remove_owner, :access_webhooks].freeze</td>
           </tr>
           
             <tr valign='top'>
@@ -267,6 +344,18 @@
             <td class="attr-name">ERROR_CODE</td>
             <td>=</td>
             <td class="attr-value">1</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+          <tr valign='top'>
+            <td class="attr-name">EXCLUSIVELY_API_SCOPES</td>
+            <td>=</td>
+            <td class="attr-value">[:show_dashboard].freeze</td>
           </tr>
           
             <tr valign='top'>
@@ -335,14 +424,14 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-add_key_option_source')" id="l_method-i-add_key_option_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L21" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L24" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-add_key_option_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 21</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 24</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_key_option</span>
-  <span class="ruby-identifier">add_option</span>(<span class="ruby-string">&#39;-k&#39;</span>, <span class="ruby-string">&#39;--key KEYNAME&#39;</span>, <span class="ruby-constant">Symbol</span>,
-             <span class="ruby-string">&#39;Use the given API key&#39;</span>,
+  <span class="ruby-identifier">add_option</span>(<span class="ruby-string">&quot;-k&quot;</span>, <span class="ruby-string">&quot;--key KEYNAME&quot;</span>, <span class="ruby-constant">Symbol</span>,
+             <span class="ruby-string">&quot;Use the given API key&quot;</span>,
              <span class="ruby-node">&quot;from #{Gem.configuration.credentials_path}&quot;</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span>,<span class="ruby-identifier">options</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">options</span>[<span class="ruby-value">:key</span>] = <span class="ruby-identifier">value</span>
   <span class="ruby-keyword">end</span>
@@ -378,15 +467,15 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-add_otp_option_source')" id="l_method-i-add_otp_option_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L32" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L35" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-add_otp_option_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 32</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 35</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">add_otp_option</span>
-  <span class="ruby-identifier">add_option</span>(<span class="ruby-string">&#39;--otp CODE&#39;</span>,
-             <span class="ruby-string">&#39;Digit code for multifactor authentication&#39;</span>,
-             <span class="ruby-string">&#39;You can also use the environment variable GEM_HOST_OTP_CODE&#39;</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span>, <span class="ruby-identifier">options</span><span class="ruby-operator">|</span>
+  <span class="ruby-identifier">add_option</span>(<span class="ruby-string">&quot;--otp CODE&quot;</span>,
+             <span class="ruby-string">&quot;Digit code for multifactor authentication&quot;</span>,
+             <span class="ruby-string">&quot;You can also use the environment variable GEM_HOST_OTP_CODE&quot;</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span>, <span class="ruby-identifier">options</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">options</span>[<span class="ruby-value">:otp</span>] = <span class="ruby-identifier">value</span>
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
@@ -421,11 +510,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-api_key_source')" id="l_method-i-api_key_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L43" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L46" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-api_key_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 43</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 46</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">api_key</span>
   <span class="ruby-keyword">if</span> <span class="ruby-constant">ENV</span>[<span class="ruby-string">&quot;GEM_HOST_API_KEY&quot;</span>]
     <span class="ruby-constant">ENV</span>[<span class="ruby-string">&quot;GEM_HOST_API_KEY&quot;</span>]
@@ -468,20 +557,19 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-host_source')" id="l_method-i-host_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L66" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L69" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-host_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 66</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 69</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">host</span>
   <span class="ruby-identifier">configured_host</span> = <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">host</span> <span class="ruby-keyword">unless</span>
     <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">configuration</span>.<span class="ruby-identifier">disable_default_gem_server</span>
 
   <span class="ruby-ivar">@host</span> <span class="ruby-operator">||=</span>
     <span class="ruby-keyword">begin</span>
-      <span class="ruby-identifier">env_rubygems_host</span> = <span class="ruby-constant">ENV</span>[<span class="ruby-string">&#39;RUBYGEMS_HOST&#39;</span>]
-      <span class="ruby-identifier">env_rubygems_host</span> = <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span>
-        <span class="ruby-identifier">env_rubygems_host</span> <span class="ruby-keyword">and</span> <span class="ruby-identifier">env_rubygems_host</span>.<span class="ruby-identifier">empty?</span>
+      <span class="ruby-identifier">env_rubygems_host</span> = <span class="ruby-constant">ENV</span>[<span class="ruby-string">&quot;RUBYGEMS_HOST&quot;</span>]
+      <span class="ruby-identifier">env_rubygems_host</span> = <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">env_rubygems_host</span>&amp;.<span class="ruby-identifier">empty?</span>
 
       <span class="ruby-identifier">env_rubygems_host</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">configured_host</span>
     <span class="ruby-keyword">end</span>
@@ -517,13 +605,13 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-mfa_unauthorized-3F_source')" id="l_method-i-mfa_unauthorized-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L120" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L122" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mfa_unauthorized-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 120</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 122</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mfa_unauthorized?</span>(<span class="ruby-identifier">response</span>)
-  <span class="ruby-identifier">response</span>.<span class="ruby-identifier">kind_of?</span>(<span class="ruby-constant">Net</span><span class="ruby-operator">::</span><span class="ruby-constant">HTTPUnauthorized</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">response</span>.<span class="ruby-identifier">body</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-string">&#39;You have enabled multifactor authentication&#39;</span>)
+  <span class="ruby-identifier">response</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Net</span><span class="ruby-operator">::</span><span class="ruby-constant">HTTPUnauthorized</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">response</span>.<span class="ruby-identifier">body</span>.<span class="ruby-identifier">start_with?</span>(<span class="ruby-string">&quot;You have enabled multifactor authentication&quot;</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -556,11 +644,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-otp_source')" id="l_method-i-otp_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L58" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L61" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-otp_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 58</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 61</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">otp</span>
   <span class="ruby-identifier">options</span>[<span class="ruby-value">:otp</span>] <span class="ruby-operator">||</span> <span class="ruby-constant">ENV</span>[<span class="ruby-string">&quot;GEM_HOST_OTP_CODE&quot;</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -572,7 +660,7 @@
         <div class="method">
           <h3 class="title method-title" id="method-i-rubygems_api_request">
             
-              <b>rubygems_api_request</b>(method, path, host = nil, allowed_push_host = nil, scope: nil, &amp;block)
+              <b>rubygems_api_request</b>(method, path, host = nil, allowed_push_host = nil, scope: nil, credentials: {}, &amp;block)
             
             <a href="../../classes/Gem/GemcutterUtilities.html#method-i-rubygems_api_request" name="method-i-rubygems_api_request" class="permalink">Link</a>
           </h3>
@@ -597,13 +685,13 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-rubygems_api_request_source')" id="l_method-i-rubygems_api_request_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L85" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L87" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-rubygems_api_request_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 85</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">rubygems_api_request</span>(<span class="ruby-identifier">method</span>, <span class="ruby-identifier">path</span>, <span class="ruby-identifier">host</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">allowed_push_host</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-value">scope:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
-  <span class="ruby-identifier">require</span> <span class="ruby-string">&#39;net/http&#39;</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 87</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">rubygems_api_request</span>(<span class="ruby-identifier">method</span>, <span class="ruby-identifier">path</span>, <span class="ruby-identifier">host</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">allowed_push_host</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-value">scope:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">credentials:</span> {}, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">require_relative</span> <span class="ruby-string">&quot;vendored_net_http&quot;</span>
 
   <span class="ruby-keyword">self</span>.<span class="ruby-identifier">host</span> = <span class="ruby-identifier">host</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">host</span>
   <span class="ruby-keyword">unless</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">host</span>
@@ -612,8 +700,8 @@
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">allowed_push_host</span>
-    <span class="ruby-identifier">allowed_host_uri</span> = <span class="ruby-constant">URI</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">allowed_push_host</span>)
-    <span class="ruby-identifier">host_uri</span>         = <span class="ruby-constant">URI</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">host</span>)
+    <span class="ruby-identifier">allowed_host_uri</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">URI</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-identifier">allowed_push_host</span>)
+    <span class="ruby-identifier">host_uri</span>         = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">URI</span>.<span class="ruby-identifier">parse</span>(<span class="ruby-keyword">self</span>.<span class="ruby-identifier">host</span>)
 
     <span class="ruby-keyword">unless</span> (<span class="ruby-identifier">host_uri</span>.<span class="ruby-identifier">scheme</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">allowed_host_uri</span>.<span class="ruby-identifier">scheme</span>) <span class="ruby-operator">&amp;&amp;</span> (<span class="ruby-identifier">host_uri</span>.<span class="ruby-identifier">host</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">allowed_host_uri</span>.<span class="ruby-identifier">host</span>)
       <span class="ruby-identifier">alert_error</span> <span class="ruby-node">&quot;#{self.host.inspect} is not allowed by the gemspec, which only allows #{allowed_push_host.inspect}&quot;</span>
@@ -621,11 +709,11 @@
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span>
 
-  <span class="ruby-identifier">uri</span> = <span class="ruby-constant">URI</span>.<span class="ruby-identifier">parse</span> <span class="ruby-node">&quot;#{self.host}/#{path}&quot;</span>
+  <span class="ruby-identifier">uri</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">URI</span>.<span class="ruby-identifier">parse</span> <span class="ruby-node">&quot;#{self.host}/#{path}&quot;</span>
   <span class="ruby-identifier">response</span> = <span class="ruby-identifier">request_with_otp</span>(<span class="ruby-identifier">method</span>, <span class="ruby-identifier">uri</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">mfa_unauthorized?</span>(<span class="ruby-identifier">response</span>)
-    <span class="ruby-identifier">ask_otp</span>
+    <span class="ruby-identifier">fetch_otp</span>(<span class="ruby-identifier">credentials</span>)
     <span class="ruby-identifier">response</span> = <span class="ruby-identifier">request_with_otp</span>(<span class="ruby-identifier">method</span>, <span class="ruby-identifier">uri</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-keyword">end</span>
 
@@ -667,13 +755,13 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-set_api_key_source')" id="l_method-i-set_api_key_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L221" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L237" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-set_api_key_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 221</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 237</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">set_api_key</span>(<span class="ruby-identifier">host</span>, <span class="ruby-identifier">key</span>)
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">host</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">DEFAULT_HOST</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">default_host?</span>
     <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">configuration</span>.<span class="ruby-identifier">rubygems_api_key</span> = <span class="ruby-identifier">key</span>
   <span class="ruby-keyword">else</span>
     <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">configuration</span>.<span class="ruby-identifier">set_api_key</span> <span class="ruby-identifier">host</span>, <span class="ruby-identifier">key</span>
@@ -710,33 +798,40 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-sign_in_source')" id="l_method-i-sign_in_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L150" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L152" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-sign_in_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 150</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 152</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">sign_in</span>(<span class="ruby-identifier">sign_in_host</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-value">scope:</span> <span class="ruby-keyword">nil</span>)
-  <span class="ruby-identifier">sign_in_host</span> <span class="ruby-operator">||=</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">host</span>
+  <span class="ruby-identifier">sign_in_host</span> <span class="ruby-operator">||=</span> <span class="ruby-identifier">host</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">api_key</span>
 
   <span class="ruby-identifier">pretty_host</span> = <span class="ruby-identifier">pretty_host</span>(<span class="ruby-identifier">sign_in_host</span>)
 
   <span class="ruby-identifier">say</span> <span class="ruby-node">&quot;Enter your #{pretty_host} credentials.&quot;</span>
-  <span class="ruby-identifier">say</span> <span class="ruby-string">&quot;Don&#39;t have an account yet? &quot;</span> <span class="ruby-operator">+</span>
+  <span class="ruby-identifier">say</span> <span class="ruby-string">&quot;Don&#39;t have an account yet? &quot;</span> \
       <span class="ruby-node">&quot;Create one at #{sign_in_host}/sign_up&quot;</span>
 
-  <span class="ruby-identifier">email</span> = <span class="ruby-identifier">ask</span> <span class="ruby-string">&quot;   Email: &quot;</span>
-  <span class="ruby-identifier">password</span> = <span class="ruby-identifier">ask_for_password</span> <span class="ruby-string">&quot;Password: &quot;</span>
+  <span class="ruby-identifier">identifier</span> = <span class="ruby-identifier">ask</span> <span class="ruby-string">&quot;Username/email: &quot;</span>
+  <span class="ruby-identifier">password</span>   = <span class="ruby-identifier">ask_for_password</span> <span class="ruby-string">&quot;      Password: &quot;</span>
   <span class="ruby-identifier">say</span> <span class="ruby-string">&quot;\n&quot;</span>
 
   <span class="ruby-identifier">key_name</span>     = <span class="ruby-identifier">get_key_name</span>(<span class="ruby-identifier">scope</span>)
   <span class="ruby-identifier">scope_params</span> = <span class="ruby-identifier">get_scope_params</span>(<span class="ruby-identifier">scope</span>)
+  <span class="ruby-identifier">profile</span>      = <span class="ruby-identifier">get_user_profile</span>(<span class="ruby-identifier">identifier</span>, <span class="ruby-identifier">password</span>)
+  <span class="ruby-identifier">mfa_params</span>   = <span class="ruby-identifier">get_mfa_params</span>(<span class="ruby-identifier">profile</span>)
+  <span class="ruby-identifier">all_params</span>   = <span class="ruby-identifier">scope_params</span>.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">mfa_params</span>)
+  <span class="ruby-identifier">warning</span>      = <span class="ruby-identifier">profile</span>[<span class="ruby-string">&quot;warning&quot;</span>]
+  <span class="ruby-identifier">credentials</span>  = { <span class="ruby-value">identifier:</span> <span class="ruby-identifier">identifier</span>, <span class="ruby-value">password:</span> <span class="ruby-identifier">password</span> }
+
+  <span class="ruby-identifier">say</span> <span class="ruby-node">&quot;#{warning}\n&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">warning</span>
 
   <span class="ruby-identifier">response</span> = <span class="ruby-identifier">rubygems_api_request</span>(<span class="ruby-value">:post</span>, <span class="ruby-string">&quot;api/v1/api_key&quot;</span>,
-                                  <span class="ruby-identifier">sign_in_host</span>, <span class="ruby-value">scope:</span> <span class="ruby-identifier">scope</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">request</span><span class="ruby-operator">|</span>
-    <span class="ruby-identifier">request</span>.<span class="ruby-identifier">basic_auth</span> <span class="ruby-identifier">email</span>, <span class="ruby-identifier">password</span>
+                                  <span class="ruby-identifier">sign_in_host</span>, <span class="ruby-value">credentials:</span> <span class="ruby-identifier">credentials</span>, <span class="ruby-value">scope:</span> <span class="ruby-identifier">scope</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">request</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">request</span>.<span class="ruby-identifier">basic_auth</span> <span class="ruby-identifier">identifier</span>, <span class="ruby-identifier">password</span>
     <span class="ruby-identifier">request</span>[<span class="ruby-string">&quot;OTP&quot;</span>] = <span class="ruby-identifier">otp</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">otp</span>
-    <span class="ruby-identifier">request</span>.<span class="ruby-identifier">body</span> = <span class="ruby-constant">URI</span>.<span class="ruby-identifier">encode_www_form</span>({ <span class="ruby-value">name:</span> <span class="ruby-identifier">key_name</span> }.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">scope_params</span>))
+    <span class="ruby-identifier">request</span>.<span class="ruby-identifier">body</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">URI</span>.<span class="ruby-identifier">encode_www_form</span>({ <span class="ruby-value">name:</span> <span class="ruby-identifier">key_name</span> }.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">all_params</span>))
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-identifier">with_response</span> <span class="ruby-identifier">response</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">resp</span><span class="ruby-operator">|</span>
@@ -775,29 +870,29 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-update_scope_source')" id="l_method-i-update_scope_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L124" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L126" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-update_scope_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 124</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 126</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">update_scope</span>(<span class="ruby-identifier">scope</span>)
-  <span class="ruby-identifier">sign_in_host</span>        = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">host</span>
+  <span class="ruby-identifier">sign_in_host</span>        = <span class="ruby-identifier">host</span>
   <span class="ruby-identifier">pretty_host</span>         = <span class="ruby-identifier">pretty_host</span>(<span class="ruby-identifier">sign_in_host</span>)
   <span class="ruby-identifier">update_scope_params</span> = { <span class="ruby-identifier">scope</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">true</span> }
 
   <span class="ruby-identifier">say</span> <span class="ruby-node">&quot;The existing key doesn&#39;t have access of #{scope} on #{pretty_host}. Please sign in to update access.&quot;</span>
 
-  <span class="ruby-identifier">email</span>    = <span class="ruby-identifier">ask</span> <span class="ruby-string">&quot;   Email: &quot;</span>
-  <span class="ruby-identifier">password</span> = <span class="ruby-identifier">ask_for_password</span> <span class="ruby-string">&quot;Password: &quot;</span>
+  <span class="ruby-identifier">identifier</span> = <span class="ruby-identifier">ask</span> <span class="ruby-string">&quot;Username/email: &quot;</span>
+  <span class="ruby-identifier">password</span>   = <span class="ruby-identifier">ask_for_password</span> <span class="ruby-string">&quot;      Password: &quot;</span>
 
   <span class="ruby-identifier">response</span> = <span class="ruby-identifier">rubygems_api_request</span>(<span class="ruby-value">:put</span>, <span class="ruby-string">&quot;api/v1/api_key&quot;</span>,
                                   <span class="ruby-identifier">sign_in_host</span>, <span class="ruby-value">scope:</span> <span class="ruby-identifier">scope</span>) <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">request</span><span class="ruby-operator">|</span>
-    <span class="ruby-identifier">request</span>.<span class="ruby-identifier">basic_auth</span> <span class="ruby-identifier">email</span>, <span class="ruby-identifier">password</span>
+    <span class="ruby-identifier">request</span>.<span class="ruby-identifier">basic_auth</span> <span class="ruby-identifier">identifier</span>, <span class="ruby-identifier">password</span>
     <span class="ruby-identifier">request</span>[<span class="ruby-string">&quot;OTP&quot;</span>] = <span class="ruby-identifier">otp</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">otp</span>
-    <span class="ruby-identifier">request</span>.<span class="ruby-identifier">body</span> = <span class="ruby-constant">URI</span>.<span class="ruby-identifier">encode_www_form</span>({<span class="ruby-value">:api_key</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">api_key</span> }.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">update_scope_params</span>))
+    <span class="ruby-identifier">request</span>.<span class="ruby-identifier">body</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">URI</span>.<span class="ruby-identifier">encode_www_form</span>({ <span class="ruby-value">api_key:</span> <span class="ruby-identifier">api_key</span> }.<span class="ruby-identifier">merge</span>(<span class="ruby-identifier">update_scope_params</span>))
   <span class="ruby-keyword">end</span>
 
-  <span class="ruby-identifier">with_response</span> <span class="ruby-identifier">response</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">resp</span><span class="ruby-operator">|</span>
+  <span class="ruby-identifier">with_response</span> <span class="ruby-identifier">response</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">_resp</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">say</span> <span class="ruby-node">&quot;Added #{scope} scope to the existing API key&quot;</span>
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
@@ -832,11 +927,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-verify_api_key_source')" id="l_method-i-verify_api_key_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L184" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L193" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-verify_api_key_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 184</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 193</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">verify_api_key</span>(<span class="ruby-identifier">key</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">configuration</span>.<span class="ruby-identifier">api_keys</span>.<span class="ruby-identifier">key?</span> <span class="ruby-identifier">key</span>
     <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">configuration</span>.<span class="ruby-identifier">api_keys</span>[<span class="ruby-identifier">key</span>]
@@ -862,7 +957,7 @@
             <div class="description">
               <p>If <code>response</code> is an HTTP Success (2XX) response, yields the response if a block was given or shows the response body to the user.</p>
 
-<p>If the response was not successful, shows an error to the user including the <code>error_prefix</code> and the response body.</p>
+<p>If the response was not successful, shows an error to the user including the <code>error_prefix</code> and the response body. If the response was a permanent redirect, shows an error to the user including the redirect location.</p>
             </div>
           
 
@@ -878,19 +973,25 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-with_response_source')" id="l_method-i-with_response_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rubygems/gemcutter_utilities.rb#L200" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/gemcutter_utilities.rb#L210" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-with_response_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 200</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/gemcutter_utilities.rb, line 210</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">with_response</span>(<span class="ruby-identifier">response</span>, <span class="ruby-identifier">error_prefix</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">response</span>
-  <span class="ruby-keyword">when</span> <span class="ruby-constant">Net</span><span class="ruby-operator">::</span><span class="ruby-constant">HTTPSuccess</span> <span class="ruby-keyword">then</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Net</span><span class="ruby-operator">::</span><span class="ruby-constant">HTTPSuccess</span> <span class="ruby-keyword">then</span>
     <span class="ruby-keyword">if</span> <span class="ruby-identifier">block_given?</span>
       <span class="ruby-keyword">yield</span> <span class="ruby-identifier">response</span>
     <span class="ruby-keyword">else</span>
       <span class="ruby-identifier">say</span> <span class="ruby-identifier">clean_text</span>(<span class="ruby-identifier">response</span>.<span class="ruby-identifier">body</span>)
     <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Net</span><span class="ruby-operator">::</span><span class="ruby-constant">HTTPPermanentRedirect</span>, <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Net</span><span class="ruby-operator">::</span><span class="ruby-constant">HTTPRedirection</span> <span class="ruby-keyword">then</span>
+    <span class="ruby-identifier">message</span> = <span class="ruby-node">&quot;The request has redirected permanently to #{response[&quot;location&quot;]}. Please check your defined push host URL.&quot;</span>
+    <span class="ruby-identifier">message</span> = <span class="ruby-node">&quot;#{error_prefix}: #{message}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">error_prefix</span>
+
+    <span class="ruby-identifier">say</span> <span class="ruby-identifier">clean_text</span>(<span class="ruby-identifier">message</span>)
+    <span class="ruby-identifier">terminate_interaction</span>(<span class="ruby-constant">ERROR_CODE</span>)
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">message</span> = <span class="ruby-identifier">response</span>.<span class="ruby-identifier">body</span>
     <span class="ruby-identifier">message</span> = <span class="ruby-node">&quot;#{error_prefix}: #{message}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">error_prefix</span>

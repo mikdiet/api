@@ -115,6 +115,8 @@ build_other(attributes={})        |     X      |              |    X
 create_other(attributes={})       |     X      |              |    X
 create_other!(attributes={})      |     X      |              |    X
 reload_other                      |     X      |      X       |    X
+other_changed?                    |     X      |      X       |
+other_previously_changed?         |     X      |      X       |
 </code></pre>
 
 <h3 id="module-ActiveRecord::Associations::ClassMethods-label-Collection+associations+-28one-to-many+-2F+many-to-many-29">Collection associations (one-to-many / many-to-many)</h3>
@@ -168,7 +170,7 @@ end
 
 <h2 id="module-ActiveRecord::Associations::ClassMethods-label-Cardinality+and+associations">Cardinality and associations</h2>
 
-<p>Active Record associations can be used to describe one-to-one, one-to-many and many-to-many relationships between models. Each model uses an association to describe its role in the relation. The <a href="ClassMethods.html#method-i-belongs_to"><code>belongs_to</code></a> association is always used in the model that has the foreign key.</p>
+<p>Active Record associations can be used to describe one-to-one, one-to-many, and many-to-many relationships between models. Each model uses an association to describe its role in the relation. The <a href="ClassMethods.html#method-i-belongs_to"><code>belongs_to</code></a> association is always used in the model that has the foreign key.</p>
 
 <h3 id="module-ActiveRecord::Associations::ClassMethods-label-One-to-one">One-to-one</h3>
 
@@ -307,34 +309,60 @@ end
 end
 </code></pre>
 
-<p>Note: Joining, eager loading and preloading of these associations is not possible. These operations happen before instance creation and the scope will be called with a <code>nil</code> argument.</p>
+<p>Note: Joining or eager loading such associations is not possible because those operations happen before instance creation. Such associations <em>can</em> be preloaded, but doing so will perform N+1 queries because there will be a different scope for each record (similar to preloading polymorphic scopes).</p>
 
 <h2 id="module-ActiveRecord::Associations::ClassMethods-label-Association+callbacks">Association callbacks</h2>
 
 <p>Similar to the normal callbacks that hook into the life cycle of an Active Record object, you can also define callbacks that get triggered when you add an object to or remove an object from an association collection.</p>
 
-<pre><code>class Project
-  has_and_belongs_to_many :developers, after_add: :evaluate_velocity
+<pre><code>class Firm &lt; ActiveRecord::Base
+  has_many :clients,
+           dependent: :destroy,
+           after_add: :congratulate_client,
+           after_remove: :log_after_remove
 
-  def evaluate_velocity(developer)
-    ...
+  def congratulate_client(record)
+    # ...
   end
-end
+
+  def log_after_remove(record)
+    # ...
+  end
 </code></pre>
 
 <p>It’s possible to stack callbacks by passing them as an array. Example:</p>
 
-<pre><code>class Project
-  has_and_belongs_to_many :developers,
-                          after_add: [:evaluate_velocity, Proc.new { |p, d| p.shipping_date = Time.now}]
+<pre><code>class Firm &lt; ActiveRecord::Base
+  has_many :clients,
+           dependent: :destroy,
+           after_add: [:congratulate_client, -&gt; (firm, record) { firm.log &lt;&lt; &quot;after_adding#{record.id}&quot; }],
+           after_remove: :log_after_remove
 end
 </code></pre>
 
-<p>Possible callbacks are: <code>before_add</code>, <code>after_add</code>, <code>before_remove</code> and <code>after_remove</code>.</p>
+<p>Possible callbacks are: <code>before_add</code>, <code>after_add</code>, <code>before_remove</code>, and <code>after_remove</code>.</p>
 
 <p>If any of the <code>before_add</code> callbacks throw an exception, the object will not be added to the collection.</p>
 
 <p>Similarly, if any of the <code>before_remove</code> callbacks throw an exception, the object will not be removed from the collection.</p>
+
+<p>Note: To trigger remove callbacks, you must use <code>destroy</code> / <code>destroy_all</code> methods. For example:</p>
+<ul><li>
+<p><code>firm.clients.destroy(client)</code></p>
+</li><li>
+<p><code>firm.clients.destroy(*clients)</code></p>
+</li><li>
+<p><code>firm.clients.destroy_all</code></p>
+</li></ul>
+
+<p><code>delete</code> / <code>delete_all</code> methods like the following do <strong>not</strong> trigger remove callbacks:</p>
+<ul><li>
+<p><code>firm.clients.delete(client)</code></p>
+</li><li>
+<p><code>firm.clients.delete(*clients)</code></p>
+</li><li>
+<p><code>firm.clients.delete_all</code></p>
+</li></ul>
 
 <h2 id="module-ActiveRecord::Associations::ClassMethods-label-Association+extensions">Association extensions</h2>
 
@@ -469,7 +497,7 @@ end
 
 <p>If you do not set the <code>:inverse_of</code> record, the association will do its best to match itself up with the correct inverse. Automatic inverse detection only works on <a href="ClassMethods.html#method-i-has_many"><code>has_many</code></a>, <a href="ClassMethods.html#method-i-has_one"><code>has_one</code></a>, and <a href="ClassMethods.html#method-i-belongs_to"><code>belongs_to</code></a> associations.</p>
 
-<p><code>:foreign_key</code> and <code>:through</code> options on the associations, or a custom scope, will also prevent the association’s inverse from being found automatically.</p>
+<p><code>:foreign_key</code> and <code>:through</code> options on the associations will also prevent the association’s inverse from being found automatically, as will a custom scopes in some cases. See further details in the <a href="https://guides.rubyonrails.org/association_basics.html#bi-directional-associations">Active Record Associations guide</a>.</p>
 
 <p>The automatic guessing of the inverse association uses a heuristic based on the name of the class, so it may not work for all associations, especially the ones with non-standard names.</p>
 
@@ -948,6 +976,12 @@ Author.find(1).destroy # =&gt; Will destroy all of the author&#39;s posts, too
 </dd><dt>reload_association
 <dd>
 <p>Returns the associated object, forcing a database read.</p>
+</dd><dt>association_changed?
+<dd>
+<p>Returns true if a new associate object has been assigned and the next save will update the foreign key.</p>
+</dd><dt>association_previously_changed?
+<dd>
+<p>Returns true if the previous save updated the association to reference a new associate object.</p>
 </dd></dl>
 
 <h3 id="method-i-belongs_to-label-Example">Example</h3>
@@ -965,6 +999,10 @@ Author.find(1).destroy # =&gt; Will destroy all of the author&#39;s posts, too
 <p><code>Post#create_author!</code> (similar to <code>post.author = Author.new; post.author.save!; post.author</code>)</p>
 </li><li>
 <p><code>Post#reload_author</code></p>
+</li><li>
+<p><code>Post#author_changed?</code></p>
+</li><li>
+<p><code>Post#author_previously_changed?</code></p>
 </li></ul>
 
 <p>The declaration can also include an <code>options</code> hash to specialize the behavior of the association.</p>
@@ -1014,7 +1052,7 @@ belongs_to :level, -&gt;(game) { where(&quot;game_level &gt; ?&quot;, game.curre
 <p>Note that <a href="../NestedAttributes/ClassMethods.html#method-i-accepts_nested_attributes_for"><code>NestedAttributes::ClassMethods#accepts_nested_attributes_for</code></a> sets <code>:autosave</code> to <code>true</code>.</p>
 </dd><dt>:touch
 <dd>
-<p>If true, the associated object will be touched (the updated_at/on attributes set to current time) when this record is either saved or destroyed. If you specify a symbol, that attribute will be updated with the current time in addition to the updated_at/on attribute. Please note that with touching no validation is performed and only the <code>after_touch</code>, <code>after_commit</code> and <code>after_rollback</code> callbacks are executed.</p>
+<p>If true, the associated object will be touched (the <code>updated_at</code> / <code>updated_on</code> attributes set to current time) when this record is either saved or destroyed. If you specify a symbol, that attribute will be updated with the current time in addition to the <code>updated_at</code> / <code>updated_on</code> attribute. Please note that no validation will be performed when touching, and only the <code>after_touch</code>, <code>after_commit</code>, and <code>after_rollback</code> callbacks will be executed.</p>
 </dd><dt>:inverse_of
 <dd>
 <p>Specifies the name of the <a href="ClassMethods.html#method-i-has_one"><code>has_one</code></a> or <a href="ClassMethods.html#method-i-has_many"><code>has_many</code></a> association on the associated object that is the inverse of this <a href="ClassMethods.html#method-i-belongs_to"><code>belongs_to</code></a> association. See <a href="ClassMethods.html"><code>ActiveRecord::Associations::ClassMethods</code></a>‘s overview on Bi-directional associations for more detail.</p>
@@ -1066,11 +1104,11 @@ belongs_to :account, strict_loading: true
                 Source:
                 <a href="javascript:toggleSource('method-i-belongs_to_source')" id="l_method-i-belongs_to_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/associations.rb#L1761" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/associations.rb#L1799" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-belongs_to_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/associations.rb, line 1761</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/associations.rb, line 1799</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">belongs_to</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">scope</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">reflection</span> = <span class="ruby-constant">Builder</span><span class="ruby-operator">::</span><span class="ruby-constant">BelongsTo</span>.<span class="ruby-identifier">build</span>(<span class="ruby-keyword">self</span>, <span class="ruby-identifier">name</span>, <span class="ruby-identifier">scope</span>, <span class="ruby-identifier">options</span>)
   <span class="ruby-constant">Reflection</span>.<span class="ruby-identifier">add_reflection</span> <span class="ruby-keyword">self</span>, <span class="ruby-identifier">name</span>, <span class="ruby-identifier">reflection</span>
@@ -1094,7 +1132,7 @@ belongs_to :account, strict_loading: true
 
 <p>The join table should not have a primary key or a model associated with it. You must manually generate the join table with a migration such as this:</p>
 
-<pre><code>class CreateDevelopersProjectsJoinTable &lt; ActiveRecord::Migration[6.0]
+<pre><code>class CreateDevelopersProjectsJoinTable &lt; ActiveRecord::Migration[7.0]
   def change
     create_join_table :developers, :projects
   end
@@ -1204,7 +1242,7 @@ has_and_belongs_to_many :categories, -&gt;(post) {
 
 <h3 id="method-i-has_and_belongs_to_many-label-Extensions">Extensions</h3>
 
-<p>The <code>extension</code> argument allows you to pass a block into a <a href="ClassMethods.html#method-i-has_and_belongs_to_many"><code>has_and_belongs_to_many</code></a> association. This is useful for adding new finders, creators and other factory-type methods to be used as part of the association.</p>
+<p>The <code>extension</code> argument allows you to pass a block into a <a href="ClassMethods.html#method-i-has_and_belongs_to_many"><code>has_and_belongs_to_many</code></a> association. This is useful for adding new finders, creators, and other factory-type methods to be used as part of the association.</p>
 
 <p>Extension examples:</p>
 
@@ -1268,11 +1306,11 @@ has_and_belongs_to_many :categories, strict_loading: true
                 Source:
                 <a href="javascript:toggleSource('method-i-has_and_belongs_to_many_source')" id="l_method-i-has_and_belongs_to_many_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/associations.rb#L1933" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/associations.rb#L1971" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-has_and_belongs_to_many_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/associations.rb, line 1933</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/associations.rb, line 1971</span>
         <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">has_and_belongs_to_many</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">scope</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">extension</span>)
           <span class="ruby-identifier">habtm_reflection</span> = <span class="ruby-constant">ActiveRecord</span><span class="ruby-operator">::</span><span class="ruby-constant">Reflection</span><span class="ruby-operator">::</span><span class="ruby-constant">HasAndBelongsToManyReflection</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">scope</span>, <span class="ruby-identifier">options</span>, <span class="ruby-keyword">self</span>)
 
@@ -1434,7 +1472,7 @@ has_many :posts, -&gt;(blog) { where(&quot;max_post_length &gt; ?&quot;, blog.ma
 
 <h3 id="method-i-has_many-label-Extensions">Extensions</h3>
 
-<p>The <code>extension</code> argument allows you to pass a block into a <a href="ClassMethods.html#method-i-has_many"><code>has_many</code></a> association. This is useful for adding new finders, creators and other factory-type methods to be used as part of the association.</p>
+<p>The <code>extension</code> argument allows you to pass a block into a <a href="ClassMethods.html#method-i-has_many"><code>has_many</code></a> association. This is useful for adding new finders, creators, and other factory-type methods to be used as part of the association.</p>
 
 <p>Extension examples:</p>
 
@@ -1496,6 +1534,9 @@ end
 <p>If the association on the join model is a <a href="ClassMethods.html#method-i-belongs_to"><code>belongs_to</code></a>, the collection can be modified and the records on the <code>:through</code> model will be automatically created and removed as appropriate. Otherwise, the collection is read-only, so you should manipulate the <code>:through</code> association directly.</p>
 
 <p>If you are going to modify the association (rather than just read from it), then it is a good idea to set the <code>:inverse_of</code> option on the source association on the join model. This allows associated records to be built which will automatically create the appropriate join model records when they are saved. (See the ‘Association Join Models’ section above.)</p>
+</dd><dt>:disable_joins
+<dd>
+<p>Specifies whether joins should be skipped for an association. If set to true, two or more queries will be generated. Note that in some cases, if order or limit is applied, it will be done in-memory due to database limitations. This option is only applicable on <code>has_many :through</code> associations as <code>has_many</code> alone do not perform a join.</p>
 </dd><dt>:source
 <dd>
 <p>Specifies the source association name used by <a href="ClassMethods.html#method-i-has_many"><code>has_many</code></a> <code>:through</code> queries. Only use it if the name cannot be inferred from the association. <code>has_many :subscribers, through: :subscriptions</code> will look for either <code>:subscribers</code> or <code>:subscriber</code> on Subscription, unless a <code>:source</code> is given.</p>
@@ -1518,7 +1559,7 @@ end
 <p>Specifies a module or array of modules that will be extended into the association object returned. Useful for defining methods on associations, especially when they should be shared between multiple association objects.</p>
 </dd><dt>:strict_loading
 <dd>
-<p>Enforces strict loading every time the associated record is loaded through this association.</p>
+<p>When set to <code>true</code>, enforces strict loading every time the associated record is loaded through this association.</p>
 </dd><dt>:ensuring_owner_was
 <dd>
 <p>Specifies an instance method to be called on the owner. The method must return true in order for the associated records to be deleted in a background job.</p>
@@ -1534,6 +1575,7 @@ has_many :comments, dependent: :nullify
 has_many :tags, as: :taggable
 has_many :reports, -&gt; { readonly }
 has_many :subscribers, through: :subscriptions, source: :user
+has_many :subscribers, through: :subscriptions, disable_joins: true
 has_many :comments, strict_loading: true
 </code></pre>
             </div>
@@ -1551,11 +1593,11 @@ has_many :comments, strict_loading: true
                 Source:
                 <a href="javascript:toggleSource('method-i-has_many_source')" id="l_method-i-has_many_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/associations.rb#L1457" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/associations.rb#L1469" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-has_many_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/associations.rb, line 1457</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/associations.rb, line 1469</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">has_many</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">scope</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">extension</span>)
   <span class="ruby-identifier">reflection</span> = <span class="ruby-constant">Builder</span><span class="ruby-operator">::</span><span class="ruby-constant">HasMany</span>.<span class="ruby-identifier">build</span>(<span class="ruby-keyword">self</span>, <span class="ruby-identifier">name</span>, <span class="ruby-identifier">scope</span>, <span class="ruby-identifier">options</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">extension</span>)
   <span class="ruby-constant">Reflection</span>.<span class="ruby-identifier">add_reflection</span> <span class="ruby-keyword">self</span>, <span class="ruby-identifier">name</span>, <span class="ruby-identifier">reflection</span>
@@ -1674,7 +1716,12 @@ has_one :latest_post, -&gt;(blog) { where(&quot;created_at &gt; ?&quot;, blog.en
 <dd>
 <p>Specifies a Join Model through which to perform the query. Options for <code>:class_name</code>, <code>:primary_key</code>, and <code>:foreign_key</code> are ignored, as the association uses the source reflection. You can only use a <code>:through</code> query through a <a href="ClassMethods.html#method-i-has_one"><code>has_one</code></a> or <a href="ClassMethods.html#method-i-belongs_to"><code>belongs_to</code></a> association on the join model.</p>
 
-<p>If you are going to modify the association (rather than just read from it), then it is a good idea to set the <code>:inverse_of</code> option.</p>
+<p>If the association on the join model is a <a href="ClassMethods.html#method-i-belongs_to"><code>belongs_to</code></a>, the collection can be modified and the records on the <code>:through</code> model will be automatically created and removed as appropriate. Otherwise, the collection is read-only, so you should manipulate the <code>:through</code> association directly.</p>
+
+<p>If you are going to modify the association (rather than just read from it), then it is a good idea to set the <code>:inverse_of</code> option on the source association on the join model. This allows associated records to be built which will automatically create the appropriate join model records when they are saved. (See the ‘Association Join Models’ section above.)</p>
+</dd><dt>:disable_joins
+<dd>
+<p>Specifies whether joins should be skipped for an association. If set to true, two or more queries will be generated. Note that in some cases, if order or limit is applied, it will be done in-memory due to database limitations. This option is only applicable on <code>has_one :through</code> associations as <code>has_one</code> alone does not perform a join.</p>
 </dd><dt>:source
 <dd>
 <p>Specifies the source association name used by <a href="ClassMethods.html#method-i-has_one"><code>has_one</code></a> <code>:through</code> queries. Only use it if the name cannot be inferred from the association. <code>has_one :favorite, through: :favorites</code> will look for a <code>:favorite</code> on Favorite, unless a <code>:source</code> is given.</p>
@@ -1689,6 +1736,9 @@ has_one :latest_post, -&gt;(blog) { where(&quot;created_at &gt; ?&quot;, blog.en
 <p>If true, always save the associated object or destroy it if marked for destruction, when saving the parent object. If false, never save or destroy the associated object. By default, only save the associated object if it’s a new record.</p>
 
 <p>Note that <a href="../NestedAttributes/ClassMethods.html#method-i-accepts_nested_attributes_for"><code>NestedAttributes::ClassMethods#accepts_nested_attributes_for</code></a> sets <code>:autosave</code> to <code>true</code>.</p>
+</dd><dt>:touch
+<dd>
+<p>If true, the associated object will be touched (the <code>updated_at</code> / <code>updated_on</code> attributes set to current time) when this record is either saved or destroyed. If you specify a symbol, that attribute will be updated with the current time in addition to the <code>updated_at</code> / <code>updated_on</code> attribute. Please note that no validation will be performed when touching, and only the <code>after_touch</code>, <code>after_commit</code>, and <code>after_rollback</code> callbacks will be executed.</p>
 </dd><dt>:inverse_of
 <dd>
 <p>Specifies the name of the <a href="ClassMethods.html#method-i-belongs_to"><code>belongs_to</code></a> association on the associated object that is the inverse of this <a href="ClassMethods.html#method-i-has_one"><code>has_one</code></a> association. See <a href="ClassMethods.html"><code>ActiveRecord::Associations::ClassMethods</code></a>‘s overview on Bi-directional associations for more detail.</p>
@@ -1713,6 +1763,7 @@ has_one :project_manager, -&gt; { where(role: &#39;project_manager&#39;) }, clas
 has_one :attachment, as: :attachable
 has_one :boss, -&gt; { readonly }
 has_one :club, through: :membership
+has_one :club, through: :membership, disable_joins: true
 has_one :primary_address, -&gt; { where(primary: true) }, through: :addressables, source: :addressable
 has_one :credit_card, required: true
 has_one :credit_card, strict_loading: true
@@ -1732,11 +1783,11 @@ has_one :credit_card, strict_loading: true
                 Source:
                 <a href="javascript:toggleSource('method-i-has_one_source')" id="l_method-i-has_one_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/associations.rb#L1607" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/associations.rb#L1639" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-has_one_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/associations.rb, line 1607</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/associations.rb, line 1639</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">has_one</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">scope</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">reflection</span> = <span class="ruby-constant">Builder</span><span class="ruby-operator">::</span><span class="ruby-constant">HasOne</span>.<span class="ruby-identifier">build</span>(<span class="ruby-keyword">self</span>, <span class="ruby-identifier">name</span>, <span class="ruby-identifier">scope</span>, <span class="ruby-identifier">options</span>)
   <span class="ruby-constant">Reflection</span>.<span class="ruby-identifier">add_reflection</span> <span class="ruby-keyword">self</span>, <span class="ruby-identifier">name</span>, <span class="ruby-identifier">reflection</span>

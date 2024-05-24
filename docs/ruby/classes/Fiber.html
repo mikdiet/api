@@ -30,7 +30,7 @@
     <meta property="og:description" content="Fibers are primitives for implementing light weight cooperative concurrency in Ruby. Basically they are a means of creating code blocks that can be paused and resumed, much like threads.">
   
 
-    <meta name="keywords" content="Fiber class, yield, current, new, blocking?, resume, raise, backtrace, backtrace_locations, to_s, transfer, alive?, blocking?, scheduler, set_scheduler, current_scheduler, schedule, inspect">
+    <meta name="keywords" content="Fiber class, yield, current, blocking, [], []=, new, blocking?, storage, storage=, resume, raise, kill, backtrace, backtrace_locations, to_s, transfer, alive?, blocking?, scheduler, set_scheduler, current_scheduler, schedule, inspect">
 </head>
 
 <body>
@@ -134,7 +134,7 @@ FiberError: dead fiber called
 
 <p>For a <a href="Fiber.html"><code>Fiber</code></a> to behave as non-blocking, it need to be created in <a href="Fiber.html#method-c-new"><code>Fiber.new</code></a> with <code>blocking: false</code> (which is the default), and <a href="Fiber.html#method-c-scheduler"><code>Fiber.scheduler</code></a> should be set with <a href="Fiber.html#method-c-set_scheduler"><code>Fiber.set_scheduler</code></a>. If <a href="Fiber.html#method-c-scheduler"><code>Fiber.scheduler</code></a> is not set in the current thread, blocking and non-blocking fibers’ behavior is identical.</p>
 
-<p>Ruby doesn’t provide a scheduler class: it is expected to be implemented by the user and correspond to <a href="Fiber/SchedulerInterface.html"><code>Fiber::SchedulerInterface</code></a>.</p>
+<p>Ruby doesn’t provide a scheduler class: it is expected to be implemented by the user and correspond to <a href="Fiber/Scheduler.html"><code>Fiber::Scheduler</code></a>.</p>
 
 <p>There is also <a href="Fiber.html#method-c-schedule"><code>Fiber.schedule</code></a> method, which is expected to immediately perform the given block in a non-blocking manner. Its actual implementation is up to the scheduler.</p>
 
@@ -156,7 +156,12 @@ FiberError: dead fiber called
       
         <li>
           <span class="type">CLASS</span>
-          <a href="Fiber/SchedulerInterface.html">Fiber::SchedulerInterface</a>
+          <a href="Fiber/Pool.html">Fiber::Pool</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Fiber/Scheduler.html">Fiber::Scheduler</a>
         </li>
       
     </ul>
@@ -167,6 +172,23 @@ FiberError: dead fiber called
     <!-- Method ref -->
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
+      
+        <dt>#</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-5B-5D">[]</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-5B-5D-3D">[]=</a>
+              </li>
+            
+          </ul>
+        </dd>
       
         <dt>A</dt>
         <dd>
@@ -196,12 +218,17 @@ FiberError: dead fiber called
             
               
               <li>
-                <a href="#method-c-blocking-3F">blocking?</a>,
+                <a href="#method-c-blocking">blocking</a>,
               </li>
             
               
               <li>
-                <a href="#method-i-blocking-3F">blocking?</a>
+                <a href="#method-i-blocking-3F">blocking?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-blocking-3F">blocking?</a>
               </li>
             
           </ul>
@@ -231,6 +258,18 @@ FiberError: dead fiber called
               
               <li>
                 <a href="#method-i-inspect">inspect</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>K</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-kill">kill</a>
               </li>
             
           </ul>
@@ -281,7 +320,17 @@ FiberError: dead fiber called
             
               
               <li>
-                <a href="#method-c-set_scheduler">set_scheduler</a>
+                <a href="#method-c-set_scheduler">set_scheduler</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-storage">storage</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-storage-3D">storage=</a>
               </li>
             
           </ul>
@@ -339,6 +388,157 @@ FiberError: dead fiber called
     
       <h2 class="sectiontitle">Class Public methods</h2>
       
+        <div class="method">
+          <h3 class="title method-title" id="method-c-5B-5D">
+            
+              <b>Fiber[key] &rarr; value
+</b>
+            
+            <a href="../classes/Fiber.html#method-c-5B-5D" name="method-c-5B-5D" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the value of the fiber storage variable identified by <code>key</code>.</p>
+
+<p>The <code>key</code> must be a symbol, and the value is set by Fiber#[]= or Fiber#store.</p>
+
+<p>See also <a href="Fiber.html#method-c-5B-5D-3D"><code>Fiber::[]=</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-5B-5D_source')" id="l_method-c-5B-5D_source">show</a>
+                
+              </p>
+              <div id="method-c-5B-5D_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_storage_aref(VALUE class, VALUE key)
+{
+    Check_Type(key, T_SYMBOL);
+
+    VALUE storage = fiber_storage_get(fiber_current(), FALSE);
+    if (storage == Qnil) return Qnil;
+
+    return rb_hash_aref(storage, key);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-5B-5D-3D">
+            
+              <b>Fiber[key] = value
+</b>
+            
+            <a href="../classes/Fiber.html#method-c-5B-5D-3D" name="method-c-5B-5D-3D" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Assign <code>value</code> to the fiber storage variable identified by <code>key</code>. The variable is created if it doesn’t exist.</p>
+
+<p><code>key</code> must be a <a href="Symbol.html"><code>Symbol</code></a>, otherwise a <a href="TypeError.html"><code>TypeError</code></a> is raised.</p>
+
+<p>See also <a href="Fiber.html#method-c-5B-5D"><code>Fiber::[]</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-5B-5D-3D_source')" id="l_method-c-5B-5D-3D_source">show</a>
+                
+              </p>
+              <div id="method-c-5B-5D-3D_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_storage_aset(VALUE class, VALUE key, VALUE value)
+{
+    Check_Type(key, T_SYMBOL);
+
+    VALUE storage = fiber_storage_get(fiber_current(), value != Qnil);
+    if (storage == Qnil) return Qnil;
+
+    if (value == Qnil) {
+        return rb_hash_delete(storage, key);
+    }
+    else {
+        return rb_hash_aset(storage, key, value);
+    }
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-blocking">
+            
+              <b>Fiber.blocking{|fiber| ...} &rarr; result
+</b>
+            
+            <a href="../classes/Fiber.html#method-c-blocking" name="method-c-blocking" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Forces the fiber to be blocking for the duration of the block. Returns the result of the block.</p>
+
+<p>See the “Non-blocking fibers” section in class docs for details.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-blocking_source')" id="l_method-c-blocking_source">show</a>
+                
+              </p>
+              <div id="method-c-blocking_source" class="dyn-source">
+                <pre>VALUE
+rb_fiber_blocking(VALUE class)
+{
+    VALUE fiber_value = rb_fiber_current();
+    rb_fiber_t *fiber = fiber_ptr(fiber_value);
+
+    // If we are already blocking, this is essentially a no-op:
+    if (fiber-&gt;blocking) {
+        return rb_yield(fiber_value);
+    }
+    else {
+        return rb_ensure(fiber_blocking_yield, fiber_value, fiber_blocking_ensure, fiber_value);
+    }
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
         <div class="method">
           <h3 class="title method-title" id="method-c-blocking-3F">
             
@@ -471,7 +671,7 @@ rb_fiber_current_scheduler(VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>Fiber.new(blocking: false) { |*args| ... } &rarr; fiber
+              <b>Fiber.new(blocking: false, storage: true) { |*args| ... } &rarr; fiber
 </b>
             
             <a href="../classes/Fiber.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -495,6 +695,28 @@ f.resume          # prints: current: nil
 </code></pre>
 
 <p>If <code>blocking: false</code> is passed to <code>Fiber.new</code>, <em>and</em> current thread has a <a href="Fiber.html#method-c-scheduler"><code>Fiber.scheduler</code></a> defined, the <a href="Fiber.html"><code>Fiber</code></a> becomes non-blocking (see “Non-blocking Fibers” section in class docs).</p>
+
+<p>If the <code>storage</code> is unspecified, the default is to inherit a copy of the storage from the current fiber. This is the same as specifying <code>storage: true</code>.</p>
+
+<pre><code>Fiber[:x] = 1
+Fiber.new do
+  Fiber[:x] # =&gt; 1
+  Fiber[:x] = 2
+end.resume
+Fiber[:x] # =&gt; 1
+</code></pre>
+
+<p>If the given <code>storage</code> is <code>nil</code>, this function will lazy initialize the internal storage, which starts as an empty hash.</p>
+
+<pre><code>Fiber[:x] = &quot;Hello World&quot;
+Fiber.new(storage: nil) do
+  Fiber[:x] # nil
+end
+</code></pre>
+
+<p>Otherwise, the given <code>storage</code> is used as the new fiber’s storage, and it must be an instance of <a href="Hash.html"><code>Hash</code></a>.</p>
+
+<p>Explicitly using <code>storage: true</code> is currently experimental and may change in the future.</p>
             </div>
           
 
@@ -559,7 +781,7 @@ I slept well
 
 <p>…e.g. on the first blocking operation inside the <a href="Fiber.html"><code>Fiber</code></a> (<code>sleep(1)</code>), the control is yielded to the outside code (main fiber), and <em>at the end of that execution</em>, the scheduler takes care of properly resuming all the blocked fibers.</p>
 
-<p>Note that the behavior described above is how the method is <em>expected</em> to behave, actual behavior is up to the current scheduler’s implementation of <a href="Fiber/SchedulerInterface.html#method-i-fiber"><code>Fiber::SchedulerInterface#fiber</code></a> method. Ruby doesn’t enforce this method to behave in any particular way.</p>
+<p>Note that the behavior described above is how the method is <em>expected</em> to behave, actual behavior is up to the current scheduler’s implementation of <a href="Fiber/Scheduler.html#method-i-fiber"><code>Fiber::Scheduler#fiber</code></a> method. Ruby doesn’t enforce this method to behave in any particular way.</p>
 
 <p>If the scheduler is not set, the method raises <code>RuntimeError (No scheduler is available!)</code>.</p>
             </div>
@@ -600,14 +822,7 @@ rb_fiber_s_schedule(int argc, VALUE *argv, VALUE obj)
 
           
             <div class="description">
-              <pre><code>Returns the Fiber scheduler, that was last set for the current thread with Fiber.set_scheduler.
-Returns +nil+ if no scheduler is set (which is the default), and non-blocking fibers&#39;
-</code></pre>
-
-<p>#  behavior is the same as blocking.</p>
-
-<pre><code>(see &quot;Non-blocking fibers&quot; section in class docs for details about the scheduler concept).
-</code></pre>
+              <p>Returns the <a href="Fiber.html"><code>Fiber</code></a> scheduler, that was last set for the current thread with <a href="Fiber.html#method-c-set_scheduler"><code>Fiber.set_scheduler</code></a>. Returns <code>nil</code> if no scheduler is set (which is the default), and non-blocking fibers’ behavior is the same as blocking. (see “Non-blocking fibers” section in class docs for details about the scheduler concept).</p>
             </div>
           
 
@@ -648,7 +863,7 @@ rb_fiber_s_scheduler(VALUE klass)
             <div class="description">
               <p>Sets the <a href="Fiber.html"><code>Fiber</code></a> scheduler for the current thread. If the scheduler is set, non-blocking fibers (created by <a href="Fiber.html#method-c-new"><code>Fiber.new</code></a> with <code>blocking: false</code>, or by <a href="Fiber.html#method-c-schedule"><code>Fiber.schedule</code></a>) call that scheduler’s hook methods on potentially blocking operations, and the current thread will call scheduler’s <code>close</code> method on finalization (allowing the scheduler to properly manage all non-finished fibers).</p>
 
-<p><code>scheduler</code> can be an object of any class corresponding to <a href="Fiber/SchedulerInterface.html"><code>Fiber::SchedulerInterface</code></a>. Its implementation is up to the user.</p>
+<p><code>scheduler</code> can be an object of any class corresponding to <a href="Fiber/Scheduler.html"><code>Fiber::Scheduler</code></a>. Its implementation is up to the user.</p>
 
 <p>See also the “Non-blocking fibers” section in class docs.</p>
             </div>
@@ -753,7 +968,7 @@ rb_fiber_s_yield(int argc, VALUE *argv, VALUE klass)
                 <pre>VALUE
 rb_fiber_alive_p(VALUE fiber_value)
 {
-    return FIBER_TERMINATED_P(fiber_ptr(fiber_value)) ? Qfalse : Qtrue;
+    return RBOOL(!FIBER_TERMINATED_P(fiber_ptr(fiber_value)));
 }</pre>
               </div>
             </div>
@@ -918,7 +1133,7 @@ rb_fiber_backtrace_locations(int argc, VALUE *argv, VALUE fiber)
                 <pre>VALUE
 rb_fiber_blocking_p(VALUE fiber)
 {
-    return RBOOL(fiber_ptr(fiber)-&gt;blocking != 0);
+    return RBOOL(fiber_ptr(fiber)-&gt;blocking);
 }</pre>
               </div>
             </div>
@@ -951,6 +1166,69 @@ rb_fiber_blocking_p(VALUE fiber)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-kill">
+            
+              <b>fiber.kill &rarr; nil
+</b>
+            
+            <a href="../classes/Fiber.html#method-i-kill" name="method-i-kill" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Terminates the fiber by raising an uncatchable exception. It only terminates the given fiber and no other fiber, returning <code>nil</code> to another fiber if that fiber was calling <a href="Fiber.html#method-i-resume"><code>resume</code></a> or <a href="Fiber.html#method-i-transfer"><code>transfer</code></a>.</p>
+
+<p><code>Fiber#kill</code> only interrupts another fiber when it is in <a href="Fiber.html#method-c-yield"><code>Fiber.yield</code></a>. If called on the current fiber then it raises that exception at the <code>Fiber#kill</code> call site.</p>
+
+<p>If the fiber has not been started, transition directly to the terminated state.</p>
+
+<p>If the fiber is already terminated, does nothing.</p>
+
+<p>Raises <a href="FiberError.html"><code>FiberError</code></a> if called on a fiber belonging to another thread.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-kill_source')" id="l_method-i-kill_source">show</a>
+                
+              </p>
+              <div id="method-i-kill_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_m_kill(VALUE self)
+{
+    rb_fiber_t *fiber = fiber_ptr(self);
+
+    if (fiber-&gt;killed) return Qfalse;
+    fiber-&gt;killed = 1;
+
+    if (fiber-&gt;status == FIBER_CREATED) {
+        fiber-&gt;status = FIBER_TERMINATED;
+    }
+    else if (fiber-&gt;status != FIBER_TERMINATED) {
+        if (fiber_current() == fiber) {
+            fiber_check_killed(fiber);
+        } else {
+            fiber_raise(fiber_ptr(self), Qnil);
+        }
+    }
+
+    return self;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-raise">
             
               <b>fiber.raise                                 &rarr; obj<br />fiber.raise(string)                         &rarr; obj<br />fiber.raise(exception [, string [, array]]) &rarr; obj
@@ -964,6 +1242,8 @@ rb_fiber_blocking_p(VALUE fiber)
               <p>Raises an exception in the fiber at the point at which the last <code>Fiber.yield</code> was called. If the fiber has not been started or has already run to completion, raises <code>FiberError</code>. If the fiber is yielding, it is resumed. If it is transferring, it is transferred into. But if it is resuming, raises <code>FiberError</code>.</p>
 
 <p>With no arguments, raises a <code>RuntimeError</code>. With a single <code>String</code> argument, raises a <code>RuntimeError</code> with the string as a message.  Otherwise, the first parameter should be the name of an <code>Exception</code> class (or an object that returns an <code>Exception</code> object when sent an <code>exception</code> message). The optional second parameter sets the message associated with the exception, and the third parameter is an array of callback information. Exceptions are caught by the <code>rescue</code> clause of <code>begin...end</code> blocks.</p>
+
+<p>Raises <code>FiberError</code> if called on a <a href="Fiber.html"><code>Fiber</code></a> belonging to another <code>Thread</code>.</p>
             </div>
           
 
@@ -1026,6 +1306,115 @@ rb_fiber_m_raise(int argc, VALUE *argv, VALUE self)
 rb_fiber_m_resume(int argc, VALUE *argv, VALUE fiber)
 {
     return rb_fiber_resume_kw(fiber, argc, argv, rb_keyword_given_p());
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-storage">
+            
+              <b>fiber.storage &rarr; hash (dup)
+</b>
+            
+            <a href="../classes/Fiber.html#method-i-storage" name="method-i-storage" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a copy of the storage hash for the fiber. The method can only be called on the <a href="Fiber.html#method-c-current"><code>Fiber.current</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-storage_source')" id="l_method-i-storage_source">show</a>
+                
+              </p>
+              <div id="method-i-storage_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_storage_get(VALUE self)
+{
+    storage_access_must_be_from_same_fiber(self);
+
+    VALUE storage = fiber_storage_get(fiber_ptr(self), FALSE);
+
+    if (storage == Qnil) {
+        return Qnil;
+    }
+    else {
+        return rb_obj_dup(storage);
+    }
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-storage-3D">
+            
+              <b>fiber.storage = hash
+</b>
+            
+            <a href="../classes/Fiber.html#method-i-storage-3D" name="method-i-storage-3D" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Sets the storage hash for the fiber. This feature is experimental and may change in the future. The method can only be called on the <a href="Fiber.html#method-c-current"><code>Fiber.current</code></a>.</p>
+
+<p>You should be careful about using this method as you may inadvertently clear important fiber-storage state. You should mostly prefer to assign specific keys in the storage using <a href="Fiber.html#method-c-5B-5D-3D"><code>Fiber::[]=</code></a>.</p>
+
+<p>You can also use <code>Fiber.new(storage: nil)</code> to create a fiber with an empty storage.</p>
+
+<p>Example:</p>
+
+<pre><code>while request = request_queue.pop
+  # Reset the per-request state:
+  Fiber.current.storage = nil
+  handle_request(request)
+end
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-storage-3D_source')" id="l_method-i-storage-3D_source">show</a>
+                
+              </p>
+              <div id="method-i-storage-3D_source" class="dyn-source">
+                <pre>static VALUE
+rb_fiber_storage_set(VALUE self, VALUE value)
+{
+    if (rb_warning_category_enabled_p(RB_WARN_CATEGORY_EXPERIMENTAL)) {
+        rb_category_warn(RB_WARN_CATEGORY_EXPERIMENTAL,
+          &quot;Fiber#storage= is experimental and may be removed in the future!&quot;);
+    }
+
+    storage_access_must_be_from_same_fiber(self);
+    fiber_storage_validate(value);
+
+    fiber_ptr(self)-&gt;cont.saved_ec.storage = rb_obj_dup(value);
+    return value;
 }</pre>
               </div>
             </div>

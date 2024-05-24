@@ -30,7 +30,7 @@
     <meta property="og:description" content="The InstructionSequence class represents a compiled sequence of instructions for the Virtual Machine used in MRI.">
   
 
-    <meta name="keywords" content="RubyVM::InstructionSequence class, inspect, disasm, disassemble, to_a, eval, to_binary, load_from_binary, load_from_binary_extra_data, path, absolute_path, label, base_label, first_lineno, trace_points, each_child, compile, new, compile_file, compile_option, compile_option=, disasm, disassemble, of, script_lines">
+    <meta name="keywords" content="RubyVM::InstructionSequence class, inspect, disasm, disassemble, to_a, eval, to_binary, load_from_binary, load_from_binary_extra_data, path, absolute_path, label, base_label, first_lineno, trace_points, each_child, compile, compile_prism, compile_file_prism, new, compile_file, compile_option, compile_option=, disasm, disassemble, of, script_lines">
 </head>
 
 <body>
@@ -150,12 +150,22 @@
             
               
               <li>
+                <a href="#method-c-compile_file_prism">compile_file_prism</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-c-compile_option">compile_option</a>,
               </li>
             
               
               <li>
-                <a href="#method-c-compile_option-3D">compile_option=</a>
+                <a href="#method-c-compile_option-3D">compile_option=</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-compile_prism">compile_prism</a>
               </li>
             
           </ul>
@@ -355,7 +365,7 @@
 
           
             <div class="description">
-              <p>Takes <code>source</code>, a <a href="../String.html"><code>String</code></a> of Ruby code and compiles it to an <a href="InstructionSequence.html"><code>InstructionSequence</code></a>.</p>
+              <p>Takes <code>source</code>, which can be a string of Ruby code, or an open <code>File</code> object. that contains Ruby source code.</p>
 
 <p>Optionally takes <code>file</code>, <code>path</code>, and <code>line</code> which describe the file path, real path and first line number of the ruby code in <code>source</code> which are metadata attached to the returned <code>iseq</code>.</p>
 
@@ -371,6 +381,10 @@
 path = &quot;test.rb&quot;
 RubyVM::InstructionSequence.compile(File.read(path), path, File.expand_path(path))
 #=&gt; &lt;RubyVM::InstructionSequence:&lt;compiled&gt;@test.rb:1&gt;
+
+file = File.open(&quot;test.rb&quot;)
+RubyVM::InstructionSequence.compile(file)
+#=&gt; &lt;RubyVM::InstructionSequence:&lt;compiled&gt;@&lt;compiled&gt;:1&gt;
 
 path = File.expand_path(&quot;test.rb&quot;)
 RubyVM::InstructionSequence.compile(File.read(path), path, path)
@@ -396,7 +410,7 @@ RubyVM::InstructionSequence.compile(File.read(path), path, path)
                 <pre>static VALUE
 iseqw_s_compile(int argc, VALUE *argv, VALUE self)
 {
-    VALUE src, file = Qnil, path = Qnil, line = INT2FIX(1), opt = Qnil;
+    VALUE src, file = Qnil, path = Qnil, line = Qnil, opt = Qnil;
     int i;
 
     i = rb_scan_args(argc, argv, &quot;1*:&quot;, &amp;src, NULL, &amp;opt);
@@ -466,7 +480,7 @@ RubyVM::InstructionSequence.compile_file(&quot;/tmp/hello.rb&quot;)
                 <pre>static VALUE
 iseqw_s_compile_file(int argc, VALUE *argv, VALUE self)
 {
-    VALUE file, line = INT2FIX(1), opt = Qnil;
+    VALUE file, opt = Qnil;
     VALUE parser, f, exc = Qnil, ret;
     rb_ast_t *ast;
     rb_compile_option_t option;
@@ -481,6 +495,9 @@ iseqw_s_compile_file(int argc, VALUE *argv, VALUE self)
     file = rb_fstring(file); /* rb_io_t-&gt;pathv gets frozen anyways */
 
     f = rb_file_open_str(file, &quot;r&quot;);
+
+    rb_execution_context_t *ec = GET_EC();
+    VALUE v = rb_vm_push_frame_fname(ec, file);
 
     parser = rb_parser_new();
     rb_parser_set_context(parser, NULL, FALSE);
@@ -498,9 +515,76 @@ iseqw_s_compile_file(int argc, VALUE *argv, VALUE self)
     ret = iseqw_new(rb_iseq_new_with_opt(&amp;ast-&gt;body, rb_fstring_lit(&quot;&lt;main&gt;&quot;),
                                          file,
                                          rb_realpath_internal(Qnil, file, 1),
-                                         line, NULL, 0, ISEQ_TYPE_TOP, &amp;option));
+                                         1, NULL, 0, ISEQ_TYPE_TOP, &amp;option));
     rb_ast_dispose(ast);
+
+    rb_vm_pop_frame(ec);
+    RB_GC_GUARD(v);
     return ret;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-compile_file_prism">
+            
+              <b>compile_file_prism</b>(p1, *args, p3 = {})
+            
+            <a href="../../classes/RubyVM/InstructionSequence.html#method-c-compile_file_prism" name="method-c-compile_file_prism" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-compile_file_prism_source')" id="l_method-c-compile_file_prism_source">show</a>
+                
+              </p>
+              <div id="method-c-compile_file_prism_source" class="dyn-source">
+                <pre>static VALUE
+iseqw_s_compile_file_prism(int argc, VALUE *argv, VALUE self)
+{
+    VALUE file = Qnil, opt = Qnil;
+    int i;
+
+    i = rb_scan_args(argc, argv, &quot;1*:&quot;, &amp;file, NULL, &amp;opt);
+    if (i &gt; 1+NIL_P(opt)) rb_error_arity(argc, 1, 5);
+    switch (i) {
+      case 2: opt = argv[--i];
+    }
+    FilePathValue(file);
+    file = rb_fstring(file); /* rb_io_t-&gt;pathv gets frozen anyways */
+
+    pm_string_t input;
+    pm_string_mapped_init(&amp;input, RSTRING_PTR(file));
+
+    pm_options_t options = { 0 };
+    pm_options_filepath_set(&amp;options, RSTRING_PTR(file));
+
+    pm_parser_t parser;
+    pm_parser_init(&amp;parser, pm_string_source(&amp;input), pm_string_length(&amp;input), &amp;options);
+
+    rb_iseq_t *iseq = iseq_alloc();
+    iseqw_s_compile_prism_compile(&amp;parser, opt, iseq, file, rb_realpath_internal(Qnil, file, 1), 1);
+    pm_parser_free(&amp;parser);
+    pm_string_free(&amp;input);
+    pm_options_free(&amp;options);
+
+    return iseqw_new(iseq);
 }</pre>
               </div>
             </div>
@@ -577,8 +661,6 @@ iseqw_s_compile_option_get(VALUE self)
 </li><li>
 <p><code>:specialized_instruction</code></p>
 </li><li>
-<p><code>:stack_caching</code></p>
-</li><li>
 <p><code>:tailcall_optimization</code></p>
 </li></ul>
 
@@ -609,6 +691,89 @@ iseqw_s_compile_option_set(VALUE self, VALUE opt)
     make_compile_option(&amp;option, opt);
     COMPILE_OPTION_DEFAULT = option;
     return opt;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-compile_prism">
+            
+              <b>compile_prism</b>(p1, *args, p3 = {})
+            
+            <a href="../../classes/RubyVM/InstructionSequence.html#method-c-compile_prism" name="method-c-compile_prism" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-compile_prism_source')" id="l_method-c-compile_prism_source">show</a>
+                
+              </p>
+              <div id="method-c-compile_prism_source" class="dyn-source">
+                <pre>static VALUE
+iseqw_s_compile_prism(int argc, VALUE *argv, VALUE self)
+{
+    VALUE src, file = Qnil, path = Qnil, line = Qnil, opt = Qnil;
+    int i;
+
+    i = rb_scan_args(argc, argv, &quot;1*:&quot;, &amp;src, NULL, &amp;opt);
+    if (i &gt; 4+NIL_P(opt)) rb_error_arity(argc, 1, 5);
+    switch (i) {
+      case 5: opt = argv[--i];
+      case 4: line = argv[--i];
+      case 3: path = argv[--i];
+      case 2: file = argv[--i];
+    }
+
+    if (NIL_P(file)) file = rb_fstring_lit(&quot;&lt;compiled&gt;&quot;);
+    if (NIL_P(path)) path = file;
+    if (NIL_P(line)) line = INT2FIX(1);
+
+    Check_Type(path, T_STRING);
+    Check_Type(file, T_STRING);
+
+    pm_options_t options = { 0 };
+    pm_options_filepath_set(&amp;options, RSTRING_PTR(file));
+
+    int start_line = NUM2INT(line);
+    pm_options_line_set(&amp;options, start_line);
+
+    pm_parser_t parser;
+
+    if (RB_TYPE_P(src, T_FILE)) {
+        FilePathValue(src);
+        file = rb_fstring(src); /* rb_io_t-&gt;pathv gets frozen anyways */
+
+        pm_string_t input;
+        pm_string_mapped_init(&amp;input, RSTRING_PTR(file));
+
+        pm_parser_init(&amp;parser, pm_string_source(&amp;input), pm_string_length(&amp;input), &amp;options);
+    }
+    else {
+        pm_parser_init(&amp;parser, (const uint8_t *) RSTRING_PTR(src), RSTRING_LEN(src), &amp;options);
+    }
+
+    rb_iseq_t *iseq = iseq_alloc();
+    iseqw_s_compile_prism_compile(&amp;parser, opt, iseq, file, path, start_line);
+    pm_parser_free(&amp;parser);
+    pm_options_free(&amp;options);
+
+    return iseqw_new(iseq);
 }</pre>
               </div>
             </div>
@@ -882,7 +1047,7 @@ iseqw_s_load_from_binary_extra_data(VALUE self, VALUE str)
 
           
             <div class="description">
-              <p>Takes <code>source</code>, a <a href="../String.html"><code>String</code></a> of Ruby code and compiles it to an <a href="InstructionSequence.html"><code>InstructionSequence</code></a>.</p>
+              <p>Takes <code>source</code>, which can be a string of Ruby code, or an open <code>File</code> object. that contains Ruby source code.</p>
 
 <p>Optionally takes <code>file</code>, <code>path</code>, and <code>line</code> which describe the file path, real path and first line number of the ruby code in <code>source</code> which are metadata attached to the returned <code>iseq</code>.</p>
 
@@ -898,6 +1063,10 @@ iseqw_s_load_from_binary_extra_data(VALUE self, VALUE str)
 path = &quot;test.rb&quot;
 RubyVM::InstructionSequence.compile(File.read(path), path, File.expand_path(path))
 #=&gt; &lt;RubyVM::InstructionSequence:&lt;compiled&gt;@test.rb:1&gt;
+
+file = File.open(&quot;test.rb&quot;)
+RubyVM::InstructionSequence.compile(file)
+#=&gt; &lt;RubyVM::InstructionSequence:&lt;compiled&gt;@&lt;compiled&gt;:1&gt;
 
 path = File.expand_path(&quot;test.rb&quot;)
 RubyVM::InstructionSequence.compile(File.read(path), path, path)
@@ -923,7 +1092,7 @@ RubyVM::InstructionSequence.compile(File.read(path), path, path)
                 <pre>static VALUE
 iseqw_s_compile(int argc, VALUE *argv, VALUE self)
 {
-    VALUE src, file = Qnil, path = Qnil, line = INT2FIX(1), opt = Qnil;
+    VALUE src, file = Qnil, path = Qnil, line = Qnil, opt = Qnil;
     int i;
 
     i = rb_scan_args(argc, argv, &quot;1*:&quot;, &amp;src, NULL, &amp;opt);
@@ -1405,7 +1574,7 @@ iseqw_first_lineno(VALUE self)
 iseqw_inspect(VALUE self)
 {
     const rb_iseq_t *iseq = iseqw_check(self);
-    const struct rb_iseq_constant_body *const body = iseq-&gt;body;
+    const struct rb_iseq_constant_body *const body = ISEQ_BODY(iseq);
     VALUE klass = rb_class_name(rb_obj_class(self));
 
     if (!body-&gt;location.label) {
@@ -1554,7 +1723,7 @@ iseqw_path(VALUE self)
 
           
             <div class="description">
-              <p>It returns recorded script lines if it is availalble. The script lines are not limited to the iseq range, but are entire lines of the source file.</p>
+              <p>It returns recorded script lines if it is available. The script lines are not limited to the iseq range, but are entire lines of the source file.</p>
 
 <p>Note that this is an API for ruby internal use, debugging, and research. Do not use this for any other purpose. The compatibility is not guaranteed.</p>
             </div>
@@ -1578,7 +1747,7 @@ iseqw_path(VALUE self)
 iseqw_script_lines(VALUE self)
 {
     const rb_iseq_t *iseq = iseqw_check(self);
-    return iseq-&gt;body-&gt;variable.script_lines;
+    return ISEQ_BODY(iseq)-&gt;variable.script_lines;
 }</pre>
               </div>
             </div>
@@ -1767,7 +1936,7 @@ iseqw_to_binary(int argc, VALUE *argv, VALUE self)
 iseqw_trace_points(VALUE self)
 {
     const rb_iseq_t *iseq = iseqw_check(self);
-    const struct rb_iseq_constant_body *const body = iseq-&gt;body;
+    const struct rb_iseq_constant_body *const body = ISEQ_BODY(iseq);
     unsigned int i;
     VALUE ary = rb_ary_new();
 

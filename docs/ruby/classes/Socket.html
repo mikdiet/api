@@ -245,6 +245,11 @@ s.close             # close socket when done
       
         <li>
           <span class="type">CLASS</span>
+          <a href="Socket/ResolutionError.html">Socket::ResolutionError</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
           <a href="Socket/UDPSource.html">Socket::UDPSource</a>
         </li>
       
@@ -557,7 +562,7 @@ s.close             # close socket when done
           <tr valign='top'>
             <td class="attr-name">AF_INET6</td>
             <td>=</td>
-            <td class="attr-value">Object.new</td>
+            <td class="attr-value">Object.new.freeze</td>
           </tr>
           
             <tr valign='top'>
@@ -607,11 +612,11 @@ s.close             # close socket when done
                 Source:
                 <a href="javascript:toggleSource('method-c-accept_loop_source')" id="l_method-c-accept_loop_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L800" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L805" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-accept_loop_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 800</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 805</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">accept_loop</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">sockets</span>) <span class="ruby-comment"># :yield: socket, client_addrinfo</span>
   <span class="ruby-identifier">sockets</span>.<span class="ruby-identifier">flatten!</span>(<span class="ruby-value">1</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">sockets</span>.<span class="ruby-identifier">empty?</span>
@@ -1181,7 +1186,7 @@ sock_s_getnameinfo(int argc, VALUE *argv, VALUE _)
     saved_errno = errno;
     if (res) rb_freeaddrinfo(res);
     errno = saved_errno;
-    rsock_raise_socket_error(&quot;getnameinfo&quot;, error);
+    rsock_raise_resolution_error(&quot;getnameinfo&quot;, error);
 
     UNREACHABLE_RETURN(Qnil);
 }</pre>
@@ -1404,9 +1409,8 @@ socket_s_ip_address_list(VALUE self)
     freeifaddrs(ifp);
 
     return list;
-#elif defined(SIOCGLIFCONF) &amp;&amp; defined(SIOCGLIFNUM) &amp;&amp; !defined(__hpux)
+#elif defined(SIOCGLIFCONF) &amp;&amp; defined(SIOCGLIFNUM)
     /* Solaris if_tcp(7P) */
-    /* HP-UX has SIOCGLIFCONF too.  But it uses different struct */
     int fd = -1;
     int ret;
     struct lifnum ln;
@@ -1465,8 +1469,7 @@ socket_s_ip_address_list(VALUE self)
 
   finish:
     save_errno = errno;
-    if (lc.lifc_buf != NULL)
-        xfree(lc.lifc_req);
+    xfree(lc.lifc_req);
     if (fd != -1)
         close(fd);
     errno = save_errno;
@@ -1640,7 +1643,7 @@ socket_s_ip_address_list(VALUE self)
     for (; adapters; adapters = adapters-&gt;Next) {
         ip_adapter_unicast_address_t *uni;
         ip_adapter_anycast_address_t *any;
-        if (adapters-&gt;OperStatus != 1) /* 1 means IfOperStatusUp */
+        if (adapters-&gt;OperStatus != 1)  /* 1 means IfOperStatusUp */
             continue;
         for (uni = adapters-&gt;FirstUnicastAddress; uni; uni = uni-&gt;Next) {
 #ifndef INET6
@@ -2125,9 +2128,6 @@ rsock_sock_s_socketpair(int argc, VALUE *argv, VALUE klass)
 <dl class="rdoc-list label-list"><dt>:connect_timeout
 <dd>
 <p>specify the timeout in seconds.</p>
-</dd><dt>:resolv_timeout
-<dd>
-<p>specify the name resolution timeout in seconds.</p>
 </dd></dl>
 
 <p>If a block is given, the block is called with the socket. The value of the block is returned. The socket is closed when this method returns.</p>
@@ -2155,11 +2155,11 @@ rsock_sock_s_socketpair(int argc, VALUE *argv, VALUE klass)
                 Source:
                 <a href="javascript:toggleSource('method-c-tcp_source')" id="l_method-c-tcp_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L623" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L628" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-tcp_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 623</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 628</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">tcp</span>(<span class="ruby-identifier">host</span>, <span class="ruby-identifier">port</span>, <span class="ruby-identifier">local_host</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">local_port</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-value">connect_timeout:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">resolv_timeout:</span> <span class="ruby-keyword">nil</span>) <span class="ruby-comment"># :yield: socket</span>
   <span class="ruby-identifier">last_error</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-identifier">ret</span> = <span class="ruby-keyword">nil</span>
@@ -2267,11 +2267,11 @@ Socket.tcp_server_loop(16807) {|sock, client_addrinfo|
                 Source:
                 <a href="javascript:toggleSource('method-c-tcp_server_loop_source')" id="l_method-c-tcp_server_loop_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L856" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L861" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-tcp_server_loop_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 856</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 861</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">tcp_server_loop</span>(<span class="ruby-identifier">host</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-identifier">port</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>) <span class="ruby-comment"># :yield: socket, client_addrinfo</span>
   <span class="ruby-identifier">tcp_server_sockets</span>(<span class="ruby-identifier">host</span>, <span class="ruby-identifier">port</span>) {<span class="ruby-operator">|</span><span class="ruby-identifier">sockets</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">accept_loop</span>(<span class="ruby-identifier">sockets</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>)
@@ -2335,11 +2335,11 @@ Socket.tcp_server_sockets(0) {|sockets|
                 Source:
                 <a href="javascript:toggleSource('method-c-tcp_server_sockets_source')" id="l_method-c-tcp_server_sockets_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L756" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L761" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-tcp_server_sockets_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 756</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 761</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">tcp_server_sockets</span>(<span class="ruby-identifier">host</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-identifier">port</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">port</span> <span class="ruby-operator">==</span> <span class="ruby-value">0</span>
     <span class="ruby-identifier">sockets</span> = <span class="ruby-identifier">tcp_server_sockets_port0</span>(<span class="ruby-identifier">host</span>)
@@ -2418,11 +2418,11 @@ Socket.udp_server_loop(9261) {|msg, msg_src|
                 Source:
                 <a href="javascript:toggleSource('method-c-udp_server_loop_source')" id="l_method-c-udp_server_loop_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L1026" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L1031" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-udp_server_loop_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1026</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1031</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">udp_server_loop</span>(<span class="ruby-identifier">host</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-identifier">port</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>) <span class="ruby-comment"># :yield: message, message_source</span>
   <span class="ruby-identifier">udp_server_sockets</span>(<span class="ruby-identifier">host</span>, <span class="ruby-identifier">port</span>) {<span class="ruby-operator">|</span><span class="ruby-identifier">sockets</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">udp_server_loop_on</span>(<span class="ruby-identifier">sockets</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>)
@@ -2464,11 +2464,11 @@ Socket.udp_server_loop(9261) {|msg, msg_src|
                 Source:
                 <a href="javascript:toggleSource('method-c-udp_server_loop_on_source')" id="l_method-c-udp_server_loop_on_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L999" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L1004" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-udp_server_loop_on_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 999</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1004</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">udp_server_loop_on</span>(<span class="ruby-identifier">sockets</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>) <span class="ruby-comment"># :yield: msg, msg_src</span>
   <span class="ruby-identifier">loop</span> {
     <span class="ruby-identifier">readable</span>, <span class="ruby-identifier">_</span>, <span class="ruby-identifier">_</span> = <span class="ruby-constant">IO</span>.<span class="ruby-identifier">select</span>(<span class="ruby-identifier">sockets</span>)
@@ -2519,11 +2519,11 @@ Socket.udp_server_loop(9261) {|msg, msg_src|
                 Source:
                 <a href="javascript:toggleSource('method-c-udp_server_recv_source')" id="l_method-c-udp_server_recv_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L972" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L977" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-udp_server_recv_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 972</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 977</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">udp_server_recv</span>(<span class="ruby-identifier">sockets</span>)
   <span class="ruby-identifier">sockets</span>.<span class="ruby-identifier">each</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">r</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">msg</span>, <span class="ruby-identifier">sender_addrinfo</span>, <span class="ruby-identifier">_</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">controls</span> = <span class="ruby-identifier">r</span>.<span class="ruby-identifier">recvmsg_nonblock</span>(<span class="ruby-value">exception:</span> <span class="ruby-keyword">false</span>)
@@ -2588,11 +2588,11 @@ Socket.udp_server_sockets(0) {|sockets|
                 Source:
                 <a href="javascript:toggleSource('method-c-udp_server_sockets_source')" id="l_method-c-udp_server_sockets_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L884" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L889" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-udp_server_sockets_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 884</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 889</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">udp_server_sockets</span>(<span class="ruby-identifier">host</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-identifier">port</span>)
   <span class="ruby-identifier">last_error</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-identifier">sockets</span> = []
@@ -2704,11 +2704,11 @@ Socket.unix(&quot;/tmp/sock&quot;) {|sock|
                 Source:
                 <a href="javascript:toggleSource('method-c-unix_source')" id="l_method-c-unix_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L1076" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L1081" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-unix_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1076</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1081</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">unix</span>(<span class="ruby-identifier">path</span>) <span class="ruby-comment"># :yield: socket</span>
   <span class="ruby-identifier">addr</span> = <span class="ruby-constant">Addrinfo</span>.<span class="ruby-identifier">unix</span>(<span class="ruby-identifier">path</span>)
   <span class="ruby-identifier">sock</span> = <span class="ruby-identifier">addr</span>.<span class="ruby-identifier">connect</span>
@@ -2770,11 +2770,11 @@ Socket.unix_server_loop(&quot;/tmp/sock&quot;) {|sock, client_addrinfo|
                 Source:
                 <a href="javascript:toggleSource('method-c-unix_server_loop_source')" id="l_method-c-unix_server_loop_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L1163" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L1168" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-unix_server_loop_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1163</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1168</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">unix_server_loop</span>(<span class="ruby-identifier">path</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>) <span class="ruby-comment"># :yield: socket, client_addrinfo</span>
   <span class="ruby-identifier">unix_server_socket</span>(<span class="ruby-identifier">path</span>) {<span class="ruby-operator">|</span><span class="ruby-identifier">serv</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">accept_loop</span>(<span class="ruby-identifier">serv</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>)
@@ -2825,11 +2825,11 @@ Socket.unix_server_socket(&quot;/tmp/sock&quot;) {|s|
                 Source:
                 <a href="javascript:toggleSource('method-c-unix_server_socket_source')" id="l_method-c-unix_server_socket_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L1106" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L1111" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-unix_server_socket_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1106</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1111</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">unix_server_socket</span>(<span class="ruby-identifier">path</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">unix_socket_abstract_name?</span>(<span class="ruby-identifier">path</span>)
     <span class="ruby-keyword">begin</span>
@@ -3113,11 +3113,11 @@ socket.close
                 Source:
                 <a href="javascript:toggleSource('method-i-accept_nonblock_source')" id="l_method-i-accept_nonblock_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L592" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L598" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-accept_nonblock_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 592</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 598</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">accept_nonblock</span>(<span class="ruby-value">exception:</span> <span class="ruby-keyword">true</span>)
   <span class="ruby-identifier">__accept_nonblock</span>(<span class="ruby-identifier">exception</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -3520,11 +3520,11 @@ results = socket.read
                 Source:
                 <a href="javascript:toggleSource('method-i-connect_nonblock_source')" id="l_method-i-connect_nonblock_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L1213" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L1218" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-connect_nonblock_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1213</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 1218</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">connect_nonblock</span>(<span class="ruby-identifier">addr</span>, <span class="ruby-value">exception:</span> <span class="ruby-keyword">true</span>)
   <span class="ruby-identifier">__connect_nonblock</span>(<span class="ruby-identifier">addr</span>, <span class="ruby-identifier">exception</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -3559,11 +3559,11 @@ results = socket.read
                 Source:
                 <a href="javascript:toggleSource('method-i-ipv6only-21_source')" id="l_method-i-ipv6only-21_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L463" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L468" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ipv6only-21_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 463</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 468</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ipv6only!</span>
   <span class="ruby-keyword">if</span> <span class="ruby-keyword">defined?</span> <span class="ruby-constant">Socket</span><span class="ruby-operator">::</span><span class="ruby-constant">IPV6_V6ONLY</span>
     <span class="ruby-keyword">self</span>.<span class="ruby-identifier">setsockopt</span>(<span class="ruby-value">:IPV6</span>, <span class="ruby-value">:V6ONLY</span>, <span class="ruby-value">1</span>)
@@ -3849,7 +3849,7 @@ sock_recvfrom(int argc, VALUE *argv, VALUE sock)
             <div class="description">
               <p>Receives up to <em>maxlen</em> bytes from <code>socket</code> using recvfrom(2) after O_NONBLOCK is set for the underlying file descriptor. <em>flags</em> is zero or more of the <code>MSG_</code> options. The first element of the results, <em>mesg</em>, is the data received. The second element, <em>sender_addrinfo</em>, contains protocol-specific address information of the sender.</p>
 
-<p>When recvfrom(2) returns 0, <a href="Socket.html#method-i-recvfrom_nonblock"><code>Socket#recvfrom_nonblock</code></a> returns an empty string as data. The meaning depends on the socket: EOF on TCP, empty packet on UDP, etc.</p>
+<p>When recvfrom(2) returns 0, <a href="BasicSocket.html#method-i-recv_nonblock"><code>Socket#recv_nonblock</code></a> returns nil. In most cases it means the connection was closed, but for UDP connections it may mean an empty packet was received, as the underlying API makes it impossible to distinguish these two cases.</p>
 
 <h3 id="method-i-recvfrom_nonblock-label-Parameters">Parameters</h3>
 <ul><li>
@@ -3920,11 +3920,11 @@ socket.close
                 Source:
                 <a href="javascript:toggleSource('method-i-recvfrom_nonblock_source')" id="l_method-i-recvfrom_nonblock_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/socket/lib/socket.rb#L535" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/socket/lib/socket.rb#L541" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-recvfrom_nonblock_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 535</span>
+                <pre><span class="ruby-comment"># File ruby/ext/socket/lib/socket.rb, line 541</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">recvfrom_nonblock</span>(<span class="ruby-identifier">len</span>, <span class="ruby-identifier">flag</span> = <span class="ruby-value">0</span>, <span class="ruby-identifier">str</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-value">exception:</span> <span class="ruby-keyword">true</span>)
   <span class="ruby-identifier">__recvfrom_nonblock</span>(<span class="ruby-identifier">len</span>, <span class="ruby-identifier">flag</span>, <span class="ruby-identifier">str</span>, <span class="ruby-identifier">exception</span>)
 <span class="ruby-keyword">end</span></pre>

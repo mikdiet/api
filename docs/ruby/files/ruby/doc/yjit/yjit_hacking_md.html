@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>yjit_hacking.md</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+
+<meta name="data-rel-prefix" content="/">
+<meta name="data-tree-keys" content='[]'>
+
+</head>
+
+<body>
+    <a class="sr-only sr-only-focusable" href="#content" data-turbolinks="false">Skip to Content</a>
+    <a class="sr-only sr-only-focusable" href="#search" data-turbolinks="false">Skip to Search</a>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<nav class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search (/) for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</nav>
+
+
+    <div class="banner">
+        
+        <h2>
+            yjit_hacking.md
+        </h2>
+        <ul class="files">
+            
+            <li>
+                ruby/doc/yjit/yjit_hacking.md
+                
+                    <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/doc/yjit/yjit_hacking.md" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2024-05-24 23:57:53 +0300</li>
+        </ul>
+    </div>
+
+    <main id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h1 id="label-YJIT+Hacking">YJIT Hacking</h1>
+
+<h2 id="label-Code+Generation+and+Assembly+Language">Code Generation and Assembly Language</h2>
+
+<p>YJIT’s basic purpose is to take ISEQs and generate machine code.</p>
+
+<p>Documentation on each Ruby bytecode can be found in insns.def.</p>
+
+<p>YJIT uses those bytecodes as the “Basic Blocks” in Lazy Basic Block Versioning (LBBV.) For more deep details of LBBV, see <a href="yjit_md.html">yjit.md</a> in this directory.</p>
+
+<p>Current YJIT has a simple assembler as a backend. Each method that generates code does it by emitting machine code:</p>
+
+<pre><code># Excerpt of yjit_gen_exit() from yjit_codegen.c, Sept 2021
+// Generate an exit to return to the interpreter
+static uint32_t
+yjit_gen_exit(VALUE *exit_pc, ctx_t *ctx, codeblock_t *cb)
+{
+    const uint32_t code_pos = cb-&gt;write_pos;
+
+    ADD_COMMENT(cb, &quot;exit to interpreter&quot;);
+
+    // Generate the code to exit to the interpreters
+    // Write the adjusted SP back into the CFP
+    if (ctx-&gt;sp_offset != 0) {
+        x86opnd_t stack_pointer = ctx_sp_opnd(ctx, 0);
+        lea(cb, REG_SP, stack_pointer);
+        mov(cb, member_opnd(REG_CFP, rb_control_frame_t, sp), REG_SP);
+    }
+
+    // Update CFP-&gt;PC
+    mov(cb, RAX, const_ptr_opnd(exit_pc));
+    mov(cb, member_opnd(REG_CFP, rb_control_frame_t, pc), RAX);
+</code></pre>
+
+<p>Later there will be a more complex backend.</p>
+
+<h2 id="label-Code+Generation+vs+Code+Execution">Code Generation vs Code Execution</h2>
+
+<p>When you see lea() call above (“load effective address,”) it’s not running the LEA x86 instruction. It’s generating an LEA instruction to the codeblock pointer in the first argument. It will execute that instruction later, when the codeblock gets executed.</p>
+
+<p>This is subtle because YJIT will often wait to compile the method until you’re about to run it – that’s when it knows the most about what types of arguments the method will receive. So it’s a compile-time instruction, but often it will defer compile-time until just barely before runtime.</p>
+
+<p>The ctx structure tracks what is known at compile time about the arguments being passed into the Ruby bytecode. Often YJIT will “peek” at an expected type before it generates machine code.</p>
+
+<h2 id="label-Inlined+and+Outlined+Code">Inlined and Outlined Code</h2>
+
+<p>When YJIT is generating code, it needs a code pointer. In many cases it needs two, usually called “cb” (codeblock) and “ocb” (out-of-line codeblock.)</p>
+
+<p>cb is for “inlined” normal code and ocb is for “outline” code such as exits. Inlined code is normal generated code for Ruby operations, while outlined code is for unusual and error conditions, such as encountering an unexpected parameter type and exiting to the interpreter.</p>
+
+<p>The purpose of the outlined code block is to keep things we believe are going to be infrequent somewhere else. That way we can keep the code in the inline block more linear and compact. Linear code, with as few branches as possible, is more easily predicted by the CPU. An exception or unsupported operation will cause YJIT to generate outlined code to handle it.</p>
+
+<p>If you search for ocb in yjit_codegen.c, you can see some places where out-of-line code is generated.</p>
+
+<p>YJIT statistics are only gathered when RUBY_DEBUG or YJIT_STATS is true. In some cases the code to increment YJIT statistics will be generated out-of-line, especially if those statistics are gathered when a side exit happens.</p>
+
+<h2 id="label-Statistics+and+Comments">Statistics and Comments</h2>
+
+<p>When RUBY_DEBUG is defined to a true value, YJIT will emit comments into the generated machine code. This can make disassemblies a lot more readable. When RUBY_DEBUG or YJIT_STATS is defined and stats are active (–yjit-stats or export YJIT_STATS=1), code will be generated to collect statistics during the run, and a report will be printed when the process exits.</p>
+
+<h2 id="label-Entering+and+Exiting+the+Interpreter">Entering and Exiting the Interpreter</h2>
+
+<p>YJIT won’t generate machine code for an ISEQ until it’s been run a certain number of times (10 by default.) Then, the next time the interpreter would call that ISEQ, it will call the generated machine code version instead. If YJIT hits an unexpected or unsupported operation, it will return to the normal interpreter.</p>
+
+<p>If YJIT returns to the interpreter, the behaviour will be correct but slower. YJIT only optimises part of some operations - for instance, YJIT will not optimise a BMETHOD call yet.</p>
+
+<p>When the interpreter calls to a YJIT-optimised method again, control will return to YJIT’s generated machine code. The more time that’s spent in YJIT-generated code (“ratio in YJIT,”) the more CPU time YJIT can save with its optimisations.</p>
+
+<h2 id="label-Side+Exits">Side Exits</h2>
+
+<p>When YJIT has compiled an ISEQ and is running it later, sometimes it will hit an unexpected condition. It might see a parameter of a different type than before, or square-brackets might be used on a hash when they were first used on an array. In those cases, the generated code will contain a call to return to the interpreter at runtime, called a “side exit.”</p>
+
+<p>Side exits are generated as out-of-line code.</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </main>
+  </body>
+</html>

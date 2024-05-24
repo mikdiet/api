@@ -30,7 +30,7 @@
     <meta property="og:description" content="Coverage provides coverage measurement feature for Ruby. This feature is experimental, so these APIs may be changed in future.">
   
 
-    <meta name="keywords" content="Coverage class, setup, start, resume, suspend, result, peek_result, state, running?, line_stub">
+    <meta name="keywords" content="Coverage class, supported?, setup, start, resume, suspend, result, peek_result, state, running?, line_stub">
 </head>
 
 <body>
@@ -79,7 +79,7 @@
       
 <p><a href="Coverage.html"><code>Coverage</code></a> provides coverage measurement feature for Ruby. This feature is experimental, so these APIs may be changed in future.</p>
 
-<p>Caveat: Currently, only process-global coverage measurement is supported. You cannot measure per-thread covearge.</p>
+<p>Caveat: Currently, only process-global coverage measurement is supported. You cannot measure per-thread coverage.</p>
 
 <h1 id="module-Coverage-label-Usage">Usage</h1>
 <ol><li>
@@ -304,6 +304,11 @@ p Coverage.result #=&gt; {&quot;foo.rb&quot;=&gt;{:lines=&gt;[1, 1, 10, nil, nil
             
               
               <li>
+                <a href="#method-c-supported-3F">supported?</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-c-suspend">suspend</a>
               </li>
             
@@ -359,7 +364,7 @@ p Coverage.result #=&gt; {&quot;foo.rb&quot;=&gt;{:lines=&gt;[1, 1, 10, nil, nil
                 Source:
                 <a href="javascript:toggleSource('method-c-line_stub_source')" id="l_method-c-line_stub_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/coverage/lib/coverage.rb#L4" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/coverage/lib/coverage.rb#L4" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-line_stub_source" class="dyn-source">
@@ -522,7 +527,7 @@ rb_coverage_result(int argc, VALUE *argv, VALUE klass)
             <div class="description">
               <p>Start/resume the coverage measurement.</p>
 
-<p>Caveat: Currently, only process-global coverage measurement is supported. You cannot measure per-thread covearge. If your process has multiple thread, using <a href="Coverage.html#method-c-resume"><code>Coverage.resume</code></a>/suspend to capture code coverage executed from only a limited code block, may yield misleading results.</p>
+<p>Caveat: Currently, only process-global coverage measurement is supported. You cannot measure per-thread coverage. If your process has multiple thread, using <a href="Coverage.html#method-c-resume"><code>Coverage.resume</code></a>/suspend to capture code coverage executed from only a limited code block, may yield misleading results.</p>
             </div>
           
 
@@ -600,7 +605,7 @@ rb_coverage_running(VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-setup">
             
-              <b>Coverage.setup                                              => nil<br />Coverage.setup(:all)                                        => nil<br />Coverage.setup(lines: bool, branches: bool, methods: bool)  => nil<br />Coverage.setup(oneshot_lines: true)                         => nil
+              <b>Coverage.setup                                                          => nil<br />Coverage.setup(:all)                                                    => nil<br />Coverage.setup(lines: bool, branches: bool, methods: bool, eval: bool)  => nil<br />Coverage.setup(oneshot_lines: true)                                     => nil
 </b>
             
             <a href="../classes/Coverage.html#method-c-setup" name="method-c-setup" class="permalink">Link</a>
@@ -646,7 +651,7 @@ rb_coverage_setup(int argc, VALUE *argv, VALUE klass)
         mode = 0; /* compatible mode */
     }
     else if (opt == ID2SYM(rb_intern(&quot;all&quot;))) {
-        mode = COVERAGE_TARGET_LINES | COVERAGE_TARGET_BRANCHES | COVERAGE_TARGET_METHODS;
+        mode = COVERAGE_TARGET_LINES | COVERAGE_TARGET_BRANCHES | COVERAGE_TARGET_METHODS | COVERAGE_TARGET_EVAL;
     }
     else {
         mode = 0;
@@ -664,6 +669,8 @@ rb_coverage_setup(int argc, VALUE *argv, VALUE klass)
             mode |= COVERAGE_TARGET_LINES;
             mode |= COVERAGE_TARGET_ONESHOT_LINES;
         }
+        if (RTEST(rb_hash_lookup(opt, ID2SYM(rb_intern(&quot;eval&quot;)))))
+            mode |= COVERAGE_TARGET_EVAL;
     }
 
     if (mode &amp; COVERAGE_TARGET_METHODS) {
@@ -686,7 +693,6 @@ rb_coverage_setup(int argc, VALUE *argv, VALUE klass)
         rb_raise(rb_eRuntimeError, &quot;cannot change the measuring target during coverage measurement&quot;);
     }
 
-
     return Qnil;
 }</pre>
               </div>
@@ -697,7 +703,7 @@ rb_coverage_setup(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-c-start">
             
-              <b>Coverage.start                                              => nil<br />Coverage.start(:all)                                        => nil<br />Coverage.start(lines: bool, branches: bool, methods: bool)  => nil<br />Coverage.start(oneshot_lines: true)                         => nil
+              <b>Coverage.start                                                          => nil<br />Coverage.start(:all)                                                    => nil<br />Coverage.start(lines: bool, branches: bool, methods: bool, eval: bool)  => nil<br />Coverage.start(oneshot_lines: true)                                     => nil
 </b>
             
             <a href="../classes/Coverage.html#method-c-start" name="method-c-start" class="permalink">Link</a>
@@ -773,6 +779,61 @@ rb_coverage_state(VALUE klass)
         case RUNNING: return ID2SYM(rb_intern(&quot;running&quot;));
     }
     return Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-supported-3F">
+            
+              <b>Coverage.supported?(mode) &rarr; true or false
+</b>
+            
+            <a href="../classes/Coverage.html#method-c-supported-3F" name="method-c-supported-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns true if coverage measurement is supported for the given mode.</p>
+
+<p>The mode should be one of the following symbols: <code>:lines</code>, <code>:oneshot_lines</code>, <code>:branches</code>, <code>:methods</code>, <code>:eval</code>.</p>
+
+<p>Example:</p>
+
+<pre><code>Coverage.supported?(:lines)  #=&gt; true
+Coverage.supported?(:all)    #=&gt; false
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-supported-3F_source')" id="l_method-c-supported-3F_source">show</a>
+                
+              </p>
+              <div id="method-c-supported-3F_source" class="dyn-source">
+                <pre>static VALUE
+rb_coverage_supported(VALUE self, VALUE _mode)
+{
+    ID mode = RB_SYM2ID(_mode);
+
+    return RBOOL(
+        mode == rb_intern(&quot;lines&quot;) ||
+        mode == rb_intern(&quot;oneshot_lines&quot;) ||
+        mode == rb_intern(&quot;branches&quot;) ||
+        mode == rb_intern(&quot;methods&quot;) ||
+        mode == rb_intern(&quot;eval&quot;)
+    );
 }</pre>
               </div>
             </div>

@@ -26,11 +26,11 @@
 
   
     
-    <meta name="description" content="PStore implements a file based persistence mechanism based on a Hash.  User code can store hierarchies of Ruby objects (values) into the data store file by name (keys).">
-    <meta property="og:description" content="PStore implements a file based persistence mechanism based on a Hash.  User code can store hierarchies of Ruby objects (values) into the data store file by name (keys).">
+    <meta name="description" content="PStore implements a file based persistence mechanism based on a Hash. User code can store hierarchies of Ruby objects (values) into the data store by name (keys).">
+    <meta property="og:description" content="PStore implements a file based persistence mechanism based on a Hash. User code can store hierarchies of Ruby objects (values) into the data store by name (keys).">
   
 
-    <meta name="keywords" content="PStore class, new, [], fetch, []=, delete, roots, root?, path, commit, abort, transaction">
+    <meta name="keywords" content="PStore class, new, [], fetch, []=, delete, keys, roots, key?, root?, path, commit, abort, transaction">
 </head>
 
 <body>
@@ -81,73 +81,294 @@
   
     <div class="description">
       
-<p><a href="PStore.html"><code>PStore</code></a> implements a file based persistence mechanism based on a <a href="Hash.html"><code>Hash</code></a>.  User code can store hierarchies of Ruby objects (values) into the data store file by name (keys).  An object hierarchy may be just a single object.  User code may later read values back from the data store or even update data, as needed.</p>
+<p>PStore implements a file based persistence mechanism based on a <a href="Hash.html"><code>Hash</code></a>. User code can store hierarchies of Ruby objects (values) into the data store by name (keys). An object hierarchy may be just a single object. User code may later read values back from the data store or even update data, as needed.</p>
 
 <p>The transactional behavior ensures that any changes succeed or fail together. This can be used to ensure that the data store is not left in a transitory state, where some values were updated but others were not.</p>
 
-<p>Behind the scenes, Ruby objects are stored to the data store file with <a href="Marshal.html"><code>Marshal</code></a>.  That carries the usual limitations.  <a href="Proc.html"><code>Proc</code></a> objects cannot be marshalled, for example.</p>
+<p>Behind the scenes, Ruby objects are stored to the data store file with <a href="Marshal.html"><code>Marshal</code></a>. That carries the usual limitations. <a href="Proc.html"><code>Proc</code></a> objects cannot be marshalled, for example.</p>
 
-<h2 id="class-PStore-label-Usage+example-3A">Usage example:</h2>
+<p>There are three important concepts here (details at the links):</p>
+<ul><li>
+<p><a href="PStore.html#class-PStore-label-The+Store">Store</a>: a store is an instance of PStore.</p>
+</li><li>
+<p><a href="PStore.html#class-PStore-label-Entries">Entries</a>: the store is hash-like; each entry is the key for a stored object.</p>
+</li><li>
+<p><a href="PStore.html#class-PStore-label-Transactions">Transactions</a>: each transaction is a collection of prospective changes to the store; a transaction is defined in the block given with a call to <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a>.</p>
+</li></ul>
+
+<h2 id="class-PStore-label-About+the+Examples">About the Examples</h2>
+
+<p>Examples on this page need a store that has known properties. They can get a new (and populated) store by calling thus:</p>
+
+<pre><code>example_store do |store|
+  # Example code using store goes here.
+end
+</code></pre>
+
+<p>All we really need to know about <code>example_store</code> is that it yields a fresh store with a known population of entries; its implementation:</p>
+
+<pre><code>require &#39;pstore&#39;
+require &#39;tempfile&#39;
+# Yield a pristine store for use in examples.
+def example_store
+  # Create the store in a temporary file.
+  Tempfile.create do |file|
+    store = PStore.new(file)
+    # Populate the store.
+    store.transaction do
+      store[:foo] = 0
+      store[:bar] = 1
+      store[:baz] = 2
+    end
+    yield store
+  end
+end
+</code></pre>
+
+<h2 id="class-PStore-label-The+Store">The Store</h2>
+
+<p>The contents of the store are maintained in a file whose path is specified when the store is created (see <a href="PStore.html#method-c-new"><code>PStore.new</code></a>). The objects are stored and retrieved using module <a href="Marshal.html"><code>Marshal</code></a>, which means that certain objects cannot be added to the store; see <a href="Marshal.html#method-c-dump">Marshal::dump</a>.</p>
+
+<h2 id="class-PStore-label-Entries">Entries</h2>
+
+<p>A store may have any number of entries. Each entry has a key and a value, just as in a hash:</p>
+<ul><li>
+<p>Key: as in a hash, the key can be (almost) any object; see <a href="Hash.html#class-Hash-label-Hash+Keys">Hash Keys</a>. You may find it convenient to keep it simple by using only symbols or strings as keys.</p>
+</li><li>
+<p>Value: the value may be any object that can be marshalled by Marshal (see <a href="Marshal.html#method-c-dump">Marshal::dump</a>) and in fact may be a collection (e.g., an array, a hash, a set, a range, etc). That collection may in turn contain nested objects, including collections, to any depth; those objects must also be Marshal-able. See <a href="PStore.html#class-PStore-label-Hierarchical+Values">Hierarchical Values</a>.</p>
+</li></ul>
+
+<h2 id="class-PStore-label-Transactions">Transactions</h2>
+
+<h3 id="class-PStore-label-The+Transaction+Block">The Transaction Block</h3>
+
+<p>The block given with a call to method <a href="PStore.html#method-i-transaction"><code>transaction</code></a># contains a <em>transaction</em>, which consists of calls to PStore methods that read from or write to the store (that is, all PStore methods except <a href="PStore.html#method-i-transaction"><code>transaction</code></a> itself, <a href="PStore.html#method-i-path"><code>path</code></a>, and Pstore.new):</p>
+
+<pre><code>example_store do |store|
+  store.transaction do
+    store.keys # =&gt; [:foo, :bar, :baz]
+    store[:bat] = 3
+    store.keys # =&gt; [:foo, :bar, :baz, :bat]
+  end
+end
+</code></pre>
+
+<p>Execution of the transaction is deferred until the block exits, and is executed <em>atomically</em> (all-or-nothing): either all transaction calls are executed, or none are. This maintains the integrity of the store.</p>
+
+<p>Other code in the block (including even calls to <a href="PStore.html#method-i-path"><code>path</code></a> and <a href="PStore.html#method-c-new"><code>PStore.new</code></a>) is executed immediately, not deferred.</p>
+
+<p>The transaction block:</p>
+<ul><li>
+<p>May not contain a nested call to <a href="PStore.html#method-i-transaction"><code>transaction</code></a>.</p>
+</li><li>
+<p>Is the only context where methods that read from or write to the store are allowed.</p>
+</li></ul>
+
+<p>As seen above, changes in a transaction are made automatically when the block exits. The block may be exited early by calling method <a href="PStore.html#method-i-commit"><code>commit</code></a> or <a href="PStore.html#method-i-abort"><code>abort</code></a>.</p>
+<ul><li>
+<p><a href="Method.html"><code>Method</code></a> <a href="PStore.html#method-i-commit"><code>commit</code></a> triggers the update to the store and exits the block:</p>
+
+<pre><code>example_store do |store|
+  store.transaction do
+    store.keys # =&gt; [:foo, :bar, :baz]
+    store[:bat] = 3
+    store.commit
+    fail &#39;Cannot get here&#39;
+  end
+  store.transaction do
+    # Update was completed.
+    store.keys # =&gt; [:foo, :bar, :baz, :bat]
+  end
+end
+</code></pre>
+</li><li>
+<p><a href="Method.html"><code>Method</code></a> <a href="PStore.html#method-i-abort"><code>abort</code></a> discards the update to the store and exits the block:</p>
+
+<pre><code>example_store do |store|
+  store.transaction do
+    store.keys # =&gt; [:foo, :bar, :baz]
+    store[:bat] = 3
+    store.abort
+    fail &#39;Cannot get here&#39;
+  end
+  store.transaction do
+    # Update was not completed.
+    store.keys # =&gt; [:foo, :bar, :baz]
+  end
+end
+</code></pre>
+</li></ul>
+
+<h3 id="class-PStore-label-Read-Only+Transactions">Read-Only Transactions</h3>
+
+<p>By default, a transaction allows both reading from and writing to the store:</p>
+
+<pre><code>store.transaction do
+  # Read-write transaction.
+  # Any code except a call to #transaction is allowed here.
+end
+</code></pre>
+
+<p>If argument <code>read_only</code> is passed as <code>true</code>, only reading is allowed:</p>
+
+<pre><code>store.transaction(true) do
+  # Read-only transaction:
+  # Calls to #transaction, #[]=, and #delete are not allowed here.
+end
+</code></pre>
+
+<h2 id="class-PStore-label-Hierarchical+Values">Hierarchical Values</h2>
+
+<p>The value for an entry may be a simple object (as seen above). It may also be a hierarchy of objects nested to any depth:</p>
+
+<pre><code>deep_store = PStore.new(&#39;deep.store&#39;)
+deep_store.transaction do
+  array_of_hashes = [{}, {}, {}]
+  deep_store[:array_of_hashes] = array_of_hashes
+  deep_store[:array_of_hashes] # =&gt; [{}, {}, {}]
+  hash_of_arrays = {foo: [], bar: [], baz: []}
+  deep_store[:hash_of_arrays] = hash_of_arrays
+  deep_store[:hash_of_arrays]  # =&gt; {:foo=&gt;[], :bar=&gt;[], :baz=&gt;[]}
+  deep_store[:hash_of_arrays][:foo].push(:bat)
+  deep_store[:hash_of_arrays]  # =&gt; {:foo=&gt;[:bat], :bar=&gt;[], :baz=&gt;[]}
+end
+</code></pre>
+
+<p>And recall that you can use <a href="../files/ruby/doc/dig_methods_rdoc.html">dig methods</a> in a returned hierarchy of objects.</p>
+
+<h2 id="class-PStore-label-Working+with+the+Store">Working with the Store</h2>
+
+<h3 id="class-PStore-label-Creating+a+Store">Creating a Store</h3>
+
+<p>Use method <a href="PStore.html#method-c-new"><code>PStore.new</code></a> to create a store. The new store creates or opens its containing file:</p>
+
+<pre><code>store = PStore.new(&#39;t.store&#39;)
+</code></pre>
+
+<h3 id="class-PStore-label-Modifying+the+Store">Modifying the Store</h3>
+
+<p>Use method <a href="PStore.html#method-i-5B-5D-3D"><code>[]=</code></a> to update or create an entry:</p>
+
+<pre><code>example_store do |store|
+  store.transaction do
+    store[:foo] = 1 # Update.
+    store[:bam] = 1 # Create.
+  end
+end
+</code></pre>
+
+<p>Use method <a href="PStore.html#method-i-delete"><code>delete</code></a> to remove an entry:</p>
+
+<pre><code>example_store do |store|
+  store.transaction do
+    store.delete(:foo)
+    store[:foo] # =&gt; nil
+  end
+end
+</code></pre>
+
+<h3 id="class-PStore-label-Retrieving+Values">Retrieving Values</h3>
+
+<p>Use method <a href="PStore.html#method-i-fetch"><code>fetch</code></a> (allows default) or <a href="PStore.html#method-i-5B-5D"><code>[]</code></a> (defaults to <code>nil</code>) to retrieve an entry:</p>
+
+<pre><code>example_store do |store|
+  store.transaction do
+    store[:foo]             # =&gt; 0
+    store[:nope]            # =&gt; nil
+    store.fetch(:baz)       # =&gt; 2
+    store.fetch(:nope, nil) # =&gt; nil
+    store.fetch(:nope)      # Raises exception.
+  end
+end
+</code></pre>
+
+<h3 id="class-PStore-label-Querying+the+Store">Querying the Store</h3>
+
+<p>Use method <a href="PStore.html#method-i-key-3F"><code>key?</code></a> to determine whether a given key exists:</p>
+
+<pre><code>example_store do |store|
+  store.transaction do
+    store.key?(:foo) # =&gt; true
+  end
+end
+</code></pre>
+
+<p>Use method <a href="PStore.html#method-i-keys"><code>keys</code></a> to retrieve keys:</p>
+
+<pre><code>example_store do |store|
+  store.transaction do
+    store.keys # =&gt; [:foo, :bar, :baz]
+  end
+end
+</code></pre>
+
+<p>Use method <a href="PStore.html#method-i-path"><code>path</code></a> to retrieve the path to the store’s underlying file; this method may be called from outside a transaction block:</p>
+
+<pre><code>store = PStore.new(&#39;t.store&#39;)
+store.path # =&gt; &quot;t.store&quot;
+</code></pre>
+
+<h2 id="class-PStore-label-Transaction+Safety">Transaction Safety</h2>
+
+<p>For transaction safety, see:</p>
+<ul><li>
+<p>Optional argument <code>thread_safe</code> at method <a href="PStore.html#method-c-new"><code>PStore.new</code></a>.</p>
+</li><li>
+<p>Attribute <a href="PStore.html#attribute-i-ultra_safe"><code>ultra_safe</code></a>.</p>
+</li></ul>
+
+<p>Needless to say, if you’re storing valuable data with PStore, then you should backup the PStore file from time to time.</p>
+
+<h2 id="class-PStore-label-An+Example+Store">An Example Store</h2>
 
 <pre><code>require &quot;pstore&quot;
 
-# a mock wiki object...
+# A mock wiki object.
 class WikiPage
-  def initialize( page_name, author, contents )
-    @page_name = page_name
-    @revisions = Array.new
-
-    add_revision(author, contents)
-  end
 
   attr_reader :page_name
 
-  def add_revision( author, contents )
-    @revisions &lt;&lt; { :created  =&gt; Time.now,
-                    :author   =&gt; author,
-                    :contents =&gt; contents }
+  def initialize(page_name, author, contents)
+    @page_name = page_name
+    @revisions = Array.new
+    add_revision(author, contents)
+  end
+
+  def add_revision(author, contents)
+    @revisions &lt;&lt; {created: Time.now,
+                   author: author,
+                   contents: contents}
   end
 
   def wiki_page_references
     [@page_name] + @revisions.last[:contents].scan(/\b(?:[A-Z]+[a-z]+){2,}/)
   end
 
-  # ...
 end
 
-# create a new page...
-home_page = WikiPage.new( &quot;HomePage&quot;, &quot;James Edward Gray II&quot;,
-                          &quot;A page about the JoysOfDocumentation...&quot; )
+# Create a new wiki page.
+home_page = WikiPage.new(&quot;HomePage&quot;, &quot;James Edward Gray II&quot;,
+                         &quot;A page about the JoysOfDocumentation...&quot; )
 
-# then we want to update page data and the index together, or not at all...
 wiki = PStore.new(&quot;wiki_pages.pstore&quot;)
-wiki.transaction do  # begin transaction; do all of this or none of it
-  # store page...
+# Update page data and the index together, or not at all.
+wiki.transaction do
+  # Store page.
   wiki[home_page.page_name] = home_page
-  # ensure that an index has been created...
+  # Create page index.
   wiki[:wiki_index] ||= Array.new
-  # update wiki index...
+  # Update wiki index.
   wiki[:wiki_index].push(*home_page.wiki_page_references)
-end                   # commit changes to wiki data store file
+end
 
-### Some time later... ###
-
-# read wiki data...
-wiki.transaction(true) do  # begin read-only transaction, no changes allowed
-  wiki.roots.each do |data_root_name|
-    p data_root_name
-    p wiki[data_root_name]
+# Read wiki data, setting argument read_only to true.
+wiki.transaction(true) do
+  wiki.keys.each do |key|
+    puts key
+    puts wiki[key]
   end
 end
 </code></pre>
-
-<h2 id="class-PStore-label-Transaction+modes">Transaction modes</h2>
-
-<p>By default, file integrity is only ensured as long as the operating system (and the underlying hardware) doesn’t raise any unexpected I/O errors. If an I/O error occurs while <a href="PStore.html"><code>PStore</code></a> is writing to its file, then the file will become corrupted.</p>
-
-<p>You can prevent this by setting <em>pstore.ultra_safe = true</em>. However, this results in a minor performance loss, and only works on platforms that support atomic file renames. Please consult the documentation for <code>ultra_safe</code> for details.</p>
-
-<p>Needless to say, if you’re storing valuable data with <a href="PStore.html"><code>PStore</code></a>, then you should backup the <a href="PStore.html"><code>PStore</code></a> files from time to time.</p>
 
     </div>
   
@@ -239,6 +460,23 @@ end
               
               <li>
                 <a href="#method-i-fetch">fetch</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>K</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-key-3F">key?</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-keys">keys</a>
               </li>
             
           </ul>
@@ -395,7 +633,7 @@ end</td>
           <tr valign='top'>
             <td class="attr-name">VERSION</td>
             <td>=</td>
-            <td class="attr-value">&quot;0.1.1&quot;</td>
+            <td class="attr-value">&quot;0.1.3&quot;</td>
           </tr>
           
             <tr valign='top'>
@@ -430,9 +668,12 @@ end</td>
               [RW]
             </td>
             <td class='attr-name'>ultra_safe</td>
-            <td class='attr-desc'><p>Whether <a href="PStore.html"><code>PStore</code></a> should do its best to prevent file corruptions, even when under unlikely-to-occur error conditions such as out-of-space conditions and other unusual OS filesystem errors. Setting this flag comes at the price in the form of a performance loss.</p>
-
-<p>This flag only has effect on platforms on which file renames are atomic (e.g. all POSIX platforms: Linux, MacOS X, FreeBSD, etc). The default value is false.</p></td>
+            <td class='attr-desc'><p>Whether PStore should do its best to prevent file corruptions, even when an unlikely error (such as memory-error or filesystem error) occurs:</p>
+<ul><li>
+<p><code>true</code>: changes are posted by creating a temporary file, writing the updated data to it, then renaming the file to the given <a href="PStore.html#method-i-path"><code>path</code></a>. <a href="File.html"><code>File</code></a> integrity is maintained. Note: has effect only if the filesystem has atomic file rename (as do POSIX platforms Linux, MacOS, FreeBSD and others).</p>
+</li><li>
+<p><code>false</code> (the default): changes are posted by rewinding the open file and writing the updated data. <a href="File.html"><code>File</code></a> integrity is maintained if the filesystem raises no unexpected I/O error; if such an error occurs during a write to the store, the file may become corrupted.</p>
+</li></ul></td>
           </tr>
         
       </table>
@@ -453,9 +694,18 @@ end</td>
 
           
             <div class="description">
-              <p>To construct a <a href="PStore.html"><code>PStore</code></a> object, pass in the <em>file</em> path where you would like the data to be stored.</p>
+              <p>Returns a new PStore object.</p>
 
-<p><a href="PStore.html"><code>PStore</code></a> objects are always reentrant. But if <em>thread_safe</em> is set to true, then it will become thread-safe at the cost of a minor performance hit.</p>
+<p>Argument <code>file</code> is the path to the file in which objects are to be stored; if the file exists, it should be one that was written by PStore.</p>
+
+<pre><code>path = &#39;t.store&#39;
+store = PStore.new(path)
+</code></pre>
+
+<p>A PStore object is <a href="https://en.wikipedia.org/wiki/Reentrancy_(computing)">reentrant</a>. If argument <code>thread_safe</code> is given as <code>true</code>, the object is also thread-safe (at the cost of a small performance penalty):</p>
+
+<pre><code>store = PStore.new(path, true)
+</code></pre>
             </div>
           
 
@@ -471,11 +721,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L121" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L372" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 121</span>
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 372</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">file</span>, <span class="ruby-identifier">thread_safe</span> = <span class="ruby-keyword">false</span>)
   <span class="ruby-identifier">dir</span> = <span class="ruby-constant">File</span><span class="ruby-operator">::</span><span class="ruby-identifier">dirname</span>(<span class="ruby-identifier">file</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-constant">File</span><span class="ruby-operator">::</span><span class="ruby-identifier">directory?</span> <span class="ruby-identifier">dir</span>
@@ -502,16 +752,28 @@ end</td>
         <div class="method">
           <h3 class="title method-title" id="method-i-5B-5D">
             
-              <b>[]</b>(name)
+              <b>[]</b>(key)
             
             <a href="../classes/PStore.html#method-i-5B-5D" name="method-i-5B-5D" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Retrieves a value from the <a href="PStore.html"><code>PStore</code></a> file data, by <em>name</em>.  The hierarchy of Ruby objects stored under that root <em>name</em> will be returned.</p>
+              <p>Returns the value for the given <code>key</code> if the key exists. <code>nil</code> otherwise; if not <code>nil</code>, the returned value is an object or a hierarchy of objects:</p>
 
-<p><strong>WARNING</strong>:  This method is only valid in a <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a>.  It will raise <a href="PStore/Error.html"><code>PStore::Error</code></a> if called at any other time.</p>
+<pre><code>example_store do |store|
+  store.transaction do
+    store[:foo]  # =&gt; 0
+    store[:nope] # =&gt; nil
+  end
+end
+</code></pre>
+
+<p>Returns <code>nil</code> if there is no such key.</p>
+
+<p>See also <a href="PStore.html#class-PStore-label-Hierarchical+Values">Hierarchical Values</a>.</p>
+
+<p>Raises an exception if called outside a transaction block.</p>
             </div>
           
 
@@ -527,14 +789,14 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L157" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L417" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-5B-5D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 157</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]</span>(<span class="ruby-identifier">name</span>)
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 417</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]</span>(<span class="ruby-identifier">key</span>)
   <span class="ruby-identifier">in_transaction</span>
-  <span class="ruby-ivar">@table</span>[<span class="ruby-identifier">name</span>]
+  <span class="ruby-ivar">@table</span>[<span class="ruby-identifier">key</span>]
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -544,29 +806,25 @@ end</td>
         <div class="method">
           <h3 class="title method-title" id="method-i-5B-5D-3D">
             
-              <b>[]=</b>(name, value)
+              <b>[]=</b>(key, value)
             
             <a href="../classes/PStore.html#method-i-5B-5D-3D" name="method-i-5B-5D-3D" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Stores an individual Ruby object or a hierarchy of Ruby objects in the data store file under the root <em>name</em>.  Assigning to a <em>name</em> already in the data store clobbers the old data.</p>
+              <p>Creates or replaces the value for the given <code>key</code>:</p>
 
-<h2 id="method-i-5B-5D-3D-label-Example-3A">Example:</h2>
-
-<pre><code>require &quot;pstore&quot;
-
-store = PStore.new(&quot;data_file.pstore&quot;)
-store.transaction do  # begin transaction
-  # load some data into the store...
-  store[:single_object] = &quot;My data...&quot;
-  store[:obj_hierarchy] = { &quot;Kev Jackson&quot; =&gt; [&quot;rational.rb&quot;, &quot;pstore.rb&quot;],
-                            &quot;James Gray&quot;  =&gt; [&quot;erb.rb&quot;, &quot;pstore.rb&quot;] }
-end                   # commit changes to data store file
+<pre><code>example_store do |store|
+  temp.transaction do
+    temp[:bat] = 3
+  end
+end
 </code></pre>
 
-<p><strong>WARNING</strong>:  This method is only valid in a <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a> and it cannot be read-only.  It will raise <a href="PStore/Error.html"><code>PStore::Error</code></a> if called at any other time.</p>
+<p>See also <a href="PStore.html#class-PStore-label-Hierarchical+Values">Hierarchical Values</a>.</p>
+
+<p>Raises an exception if called outside a transaction block.</p>
             </div>
           
 
@@ -582,14 +840,14 @@ end                   # commit changes to data store file
                 Source:
                 <a href="javascript:toggleSource('method-i-5B-5D-3D_source')" id="l_method-i-5B-5D-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L202" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L459" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-5B-5D-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 202</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]=</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">value</span>)
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 459</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]=</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">value</span>)
   <span class="ruby-identifier">in_transaction_wr</span>
-  <span class="ruby-ivar">@table</span>[<span class="ruby-identifier">name</span>] = <span class="ruby-identifier">value</span>
+  <span class="ruby-ivar">@table</span>[<span class="ruby-identifier">key</span>] = <span class="ruby-identifier">value</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -606,24 +864,9 @@ end                   # commit changes to data store file
 
           
             <div class="description">
-              <p>Ends the current <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a>, discarding any changes to the data store.</p>
+              <p>Exits the current transaction block, discarding any changes specified in the <a href="PStore.html#class-PStore-label-The+Transaction+Block">transaction block</a>.</p>
 
-<h2 id="method-i-abort-label-Example-3A">Example:</h2>
-
-<pre><code>require &quot;pstore&quot;
-
-store = PStore.new(&quot;data_file.pstore&quot;)
-store.transaction do  # begin transaction
-  store[:one] = 1     # this change is not applied, see below...
-  store[:two] = 2     # this change is not applied, see below...
-
-  store.abort         # end transaction here, discard all changes
-
-  store[:three] = 3   # this change is never reached
-end
-</code></pre>
-
-<p><strong>WARNING</strong>:  This method is only valid in a <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a>.  It will raise <a href="PStore/Error.html"><code>PStore::Error</code></a> if called at any other time.</p>
+<p>Raises an exception if called outside a transaction block.</p>
             </div>
           
 
@@ -639,11 +882,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-abort_source')" id="l_method-i-abort_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L290" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L535" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-abort_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 290</span>
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 535</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">abort</span>
   <span class="ruby-identifier">in_transaction</span>
   <span class="ruby-ivar">@abort</span> = <span class="ruby-keyword">true</span>
@@ -664,25 +907,9 @@ end
 
           
             <div class="description">
-              <p>Ends the current <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a>, committing any changes to the data store immediately.</p>
+              <p>Exits the current transaction block, committing any changes specified in the <a href="PStore.html#class-PStore-label-The+Transaction+Block">transaction block</a>.</p>
 
-<h2 id="method-i-commit-label-Example-3A">Example:</h2>
-
-<pre><code>require &quot;pstore&quot;
-
-store = PStore.new(&quot;data_file.pstore&quot;)
-store.transaction do  # begin transaction
-  # load some data into the store...
-  store[:one] = 1
-  store[:two] = 2
-
-  store.commit        # end transaction here, committing changes
-
-  store[:three] = 3   # this change is never reached
-end
-</code></pre>
-
-<p><strong>WARNING</strong>:  This method is only valid in a <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a>.  It will raise <a href="PStore/Error.html"><code>PStore::Error</code></a> if called at any other time.</p>
+<p>Raises an exception if called outside a transaction block.</p>
             </div>
           
 
@@ -698,11 +925,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-commit_source')" id="l_method-i-commit_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L264" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L524" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-commit_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 264</span>
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 524</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">commit</span>
   <span class="ruby-identifier">in_transaction</span>
   <span class="ruby-ivar">@abort</span> = <span class="ruby-keyword">false</span>
@@ -716,16 +943,26 @@ end
         <div class="method">
           <h3 class="title method-title" id="method-i-delete">
             
-              <b>delete</b>(name)
+              <b>delete</b>(key)
             
             <a href="../classes/PStore.html#method-i-delete" name="method-i-delete" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Removes an object hierarchy from the data store, by <em>name</em>.</p>
+              <p>Removes and returns the value at <code>key</code> if it exists:</p>
 
-<p><strong>WARNING</strong>:  This method is only valid in a <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a> and it cannot be read-only.  It will raise <a href="PStore/Error.html"><code>PStore::Error</code></a> if called at any other time.</p>
+<pre><code>example_store do |store|
+  store.transaction do
+    store[:bat] = 3
+    store.delete(:bat)
+  end
+end
+</code></pre>
+
+<p>Returns <code>nil</code> if there is no such key.</p>
+
+<p>Raises an exception if called outside a transaction block.</p>
             </div>
           
 
@@ -741,14 +978,14 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-delete_source')" id="l_method-i-delete_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L212" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L476" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-delete_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 212</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">delete</span>(<span class="ruby-identifier">name</span>)
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 476</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">delete</span>(<span class="ruby-identifier">key</span>)
   <span class="ruby-identifier">in_transaction_wr</span>
-  <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">delete</span> <span class="ruby-identifier">name</span>
+  <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">delete</span> <span class="ruby-identifier">key</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -758,16 +995,29 @@ end
         <div class="method">
           <h3 class="title method-title" id="method-i-fetch">
             
-              <b>fetch</b>(name, default=PStore::Error)
+              <b>fetch</b>(key, default=PStore::Error)
             
             <a href="../classes/PStore.html#method-i-fetch" name="method-i-fetch" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>This method is just like <a href="PStore.html#method-i-5B-5D"><code>PStore#[]</code></a>, save that you may also provide a <em>default</em> value for the object.  In the event the specified <em>name</em> is not found in the data store, your <em>default</em> will be returned instead.  If you do not specify a default, <a href="PStore/Error.html"><code>PStore::Error</code></a> will be raised if the object is not found.</p>
+              <p>Like <a href="PStore.html#method-i-5B-5D"><code>[]</code></a>, except that it accepts a default value for the store. If the <code>key</code> does not exist:</p>
+<ul><li>
+<p>Raises an exception if <code>default</code> is <code>PStore::Error</code>.</p>
+</li><li>
+<p>Returns the value of <code>default</code> otherwise:</p>
 
-<p><strong>WARNING</strong>:  This method is only valid in a <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a>.  It will raise <a href="PStore/Error.html"><code>PStore::Error</code></a> if called at any other time.</p>
+<pre><code>example_store do |store|
+  store.transaction do
+    store.fetch(:nope, nil) # =&gt; nil
+    store.fetch(:nope)      # Raises an exception.
+  end
+end
+</code></pre>
+</li></ul>
+
+<p>Raises an exception if called outside a transaction block.</p>
             </div>
           
 
@@ -783,21 +1033,127 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-fetch_source')" id="l_method-i-fetch_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L171" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L436" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-fetch_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 171</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fetch</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">default</span>=<span class="ruby-constant">PStore</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>)
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 436</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fetch</span>(<span class="ruby-identifier">key</span>, <span class="ruby-identifier">default</span>=<span class="ruby-constant">PStore</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>)
   <span class="ruby-identifier">in_transaction</span>
-  <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">key?</span> <span class="ruby-identifier">name</span>
+  <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">key?</span> <span class="ruby-identifier">key</span>
     <span class="ruby-keyword">if</span> <span class="ruby-identifier">default</span> <span class="ruby-operator">==</span> <span class="ruby-constant">PStore</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>
-      <span class="ruby-identifier">raise</span> <span class="ruby-constant">PStore</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>, <span class="ruby-identifier">format</span>(<span class="ruby-string">&quot;undefined root name `%s&#39;&quot;</span>, <span class="ruby-identifier">name</span>)
+      <span class="ruby-identifier">raise</span> <span class="ruby-constant">PStore</span><span class="ruby-operator">::</span><span class="ruby-constant">Error</span>, <span class="ruby-identifier">format</span>(<span class="ruby-string">&quot;undefined key `%s&#39;&quot;</span>, <span class="ruby-identifier">key</span>)
     <span class="ruby-keyword">else</span>
       <span class="ruby-keyword">return</span> <span class="ruby-identifier">default</span>
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span>
-  <span class="ruby-ivar">@table</span>[<span class="ruby-identifier">name</span>]
+  <span class="ruby-ivar">@table</span>[<span class="ruby-identifier">key</span>]
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-key-3F">
+            
+              <b>key?</b>(key)
+            
+            <a href="../classes/PStore.html#method-i-key-3F" name="method-i-key-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns <code>true</code> if <code>key</code> exists, <code>false</code> otherwise:</p>
+
+<pre><code>example_store do |store|
+  store.transaction do
+    store.key?(:foo) # =&gt; true
+  end
+end
+</code></pre>
+
+<p>Raises an exception if called outside a transaction block.</p>
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="PStore.html#method-i-root-3F">root?</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-key-3F_source')" id="l_method-i-key-3F_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L505" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-key-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 505</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">key?</span>(<span class="ruby-identifier">key</span>)
+  <span class="ruby-identifier">in_transaction</span>
+  <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">key?</span> <span class="ruby-identifier">key</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-keys">
+            
+              <b>keys</b>()
+            
+            <a href="../classes/PStore.html#method-i-keys" name="method-i-keys" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns an array of the existing keys:</p>
+
+<pre><code>example_store do |store|
+  store.transaction do
+    store.keys # =&gt; [:foo, :bar, :baz]
+  end
+end
+</code></pre>
+
+<p>Raises an exception if called outside a transaction block.</p>
+            </div>
+          
+
+          
+            <div class="aka">
+              Also aliased as: <a href="PStore.html#method-i-roots">roots</a>
+            </div>
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-keys_source')" id="l_method-i-keys_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L490" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-keys_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 490</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">keys</span>
+  <span class="ruby-identifier">in_transaction</span>
+  <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">keys</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -814,7 +1170,10 @@ end
 
           
             <div class="description">
-              <p>Returns the path to the data store file.</p>
+              <p>Returns the string file path used to create the store:</p>
+
+<pre><code>store.path # =&gt; &quot;flat.store&quot;
+</code></pre>
             </div>
           
 
@@ -830,11 +1189,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-path_source')" id="l_method-i-path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L238" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L515" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-path_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 238</span>
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 515</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">path</span>
   <span class="ruby-ivar">@filename</span>
 <span class="ruby-keyword">end</span></pre>
@@ -846,43 +1205,26 @@ end
         <div class="method">
           <h3 class="title method-title" id="method-i-root-3F">
             
-              <b>root?</b>(name)
+              <b>root?</b>(key)
             
             <a href="../classes/PStore.html#method-i-root-3F" name="method-i-root-3F" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns true if the supplied <em>name</em> is currently in the data store.</p>
-
-<p><strong>WARNING</strong>:  This method is only valid in a <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a>.  It will raise <a href="PStore/Error.html"><code>PStore::Error</code></a> if called at any other time.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
               
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-root-3F_source')" id="l_method-i-root-3F_source">show</a>
-                
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L233" target="_blank" class="github_url">on GitHub</a>
-                
-              </p>
-              <div id="method-i-root-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 233</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">root?</span>(<span class="ruby-identifier">name</span>)
-  <span class="ruby-identifier">in_transaction</span>
-  <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">key?</span> <span class="ruby-identifier">name</span>
-<span class="ruby-keyword">end</span></pre>
-              </div>
             </div>
-            
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="PStore.html#method-i-key-3F">key?</a>
+            </div>
+          
+
+          
           </div>
         
         <div class="method">
@@ -895,36 +1237,19 @@ end
 
           
             <div class="description">
-              <p>Returns the names of all object hierarchies currently in the store.</p>
-
-<p><strong>WARNING</strong>:  This method is only valid in a <a href="PStore.html#method-i-transaction"><code>PStore#transaction</code></a>.  It will raise <a href="PStore/Error.html"><code>PStore::Error</code></a> if called at any other time.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
               
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-roots_source')" id="l_method-i-roots_source">show</a>
-                
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L223" target="_blank" class="github_url">on GitHub</a>
-                
-              </p>
-              <div id="method-i-roots_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 223</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">roots</span>
-  <span class="ruby-identifier">in_transaction</span>
-  <span class="ruby-ivar">@table</span>.<span class="ruby-identifier">keys</span>
-<span class="ruby-keyword">end</span></pre>
-              </div>
             </div>
-            
+          
+
+          
+
+          
+            <div class="aka">
+              Alias for: <a href="PStore.html#method-i-keys">keys</a>
+            </div>
+          
+
+          
           </div>
         
         <div class="method">
@@ -937,13 +1262,13 @@ end
 
           
             <div class="description">
-              <p>Opens a new transaction for the data store.  Code executed inside a block passed to this method may read and write data to and from the data store file.</p>
+              <p>Opens a transaction block for the store. See <a href="PStore.html#class-PStore-label-Transactions">Transactions</a>.</p>
 
-<p>At the end of the block, changes are committed to the data store automatically.  You may exit the transaction early with a call to either <a href="PStore.html#method-i-commit"><code>PStore#commit</code></a> or <a href="PStore.html#method-i-abort"><code>PStore#abort</code></a>.  See those methods for details about how changes are handled.  Raising an uncaught <a href="Exception.html"><code>Exception</code></a> in the block is equivalent to calling <a href="PStore.html#method-i-abort"><code>PStore#abort</code></a>.</p>
+<p>With argument <code>read_only</code> as <code>false</code>, the block may both read from and write to the store.</p>
 
-<p>If <em>read_only</em> is set to <code>true</code>, you will only be allowed to read from the data store during the transaction and any attempts to change the data will raise a <a href="PStore/Error.html"><code>PStore::Error</code></a>.</p>
+<p>With argument <code>read_only</code> as <code>true</code>, the block may not include calls to <a href="PStore.html#method-i-transaction"><code>transaction</code></a>, <a href="PStore.html#method-i-5B-5D-3D"><code>[]=</code></a>, or <a href="PStore.html#method-i-delete"><code>delete</code></a>.</p>
 
-<p>Note that <a href="PStore.html"><code>PStore</code></a> does not support nested transactions.</p>
+<p>Raises an exception if called within a transaction block.</p>
             </div>
           
 
@@ -959,11 +1284,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-transaction_source')" id="l_method-i-transaction_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/pstore.rb#L313" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/pstore.rb#L551" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-transaction_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 313</span>
+                <pre><span class="ruby-comment"># File ruby/lib/pstore.rb, line 551</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">transaction</span>(<span class="ruby-identifier">read_only</span> = <span class="ruby-keyword">false</span>)  <span class="ruby-comment"># :yields:  pstore</span>
   <span class="ruby-identifier">value</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-ivar">@thread_safe</span>

@@ -26,11 +26,11 @@
 
   
     
-    <meta name="description" content="StringScanner provides for lexical scanning operations on a String.  Here is an example of its usage:  s = StringScanner.new(&#39;This is an example string&#39;) s.">
-    <meta property="og:description" content="StringScanner provides for lexical scanning operations on a String.  Here is an example of its usage:  s = StringScanner.new(&#39;This is an example string&#39;) s.">
+    <meta name="description" content="StringScanner provides for lexical scanning operations on a String.  Here is an example of its usage:  require &#39;strscan&#39;  s = StringScanner.new(&#39;This is an example string&#39;) s.">
+    <meta property="og:description" content="StringScanner provides for lexical scanning operations on a String.  Here is an example of its usage:  require &#39;strscan&#39;  s = StringScanner.new(&#39;This is an example string&#39;) s.">
   
 
-    <meta name="keywords" content="StringScanner class, new, must_C_version, reset, terminate, clear, string, string=, concat, <<, pos, pos=, charpos, pointer, pointer=, scan, skip, match?, check, scan_full, scan_until, skip_until, exist?, check_until, search_full, getch, get_byte, getbyte, peek, peep, unscan, beginning_of_line?, eos?, empty?, rest?, matched?, matched, matched_size, [], pre_match, post_match, size, captures, values_at, rest, rest_size, restsize, inspect, fixed_anchor?">
+    <meta name="keywords" content="StringScanner class, new, must_C_version, reset, terminate, clear, string, string=, concat, <<, pos, pos=, charpos, pointer, pointer=, scan, skip, match?, check, scan_full, scan_until, skip_until, exist?, check_until, search_full, getch, get_byte, getbyte, peek, peep, unscan, beginning_of_line?, eos?, empty?, rest?, matched?, matched, matched_size, [], pre_match, post_match, size, captures, values_at, rest, rest_size, restsize, inspect, fixed_anchor?, named_captures">
 </head>
 
 <body>
@@ -83,7 +83,9 @@
       
 <p><a href="StringScanner.html"><code>StringScanner</code></a> provides for lexical scanning operations on a <a href="String.html"><code>String</code></a>.  Here is an example of its usage:</p>
 
-<pre><code>s = StringScanner.new(&#39;This is an example string&#39;)
+<pre><code>require &#39;strscan&#39;
+
+s = StringScanner.new(&#39;This is an example string&#39;)
 s.eos?               # -&gt; false
 
 p s.scan(/\w+/)      # -&gt; &quot;This&quot;
@@ -170,7 +172,7 @@ p s.scan(/\w+/)      # -&gt; nil
 <p><a href="StringScanner.html#method-i-pos-3D"><code>pos=</code></a></p>
 </li></ul>
 
-<h3 id="class-StringScanner-label-Match+Data">Match Data</h3>
+<h3 id="class-StringScanner-label-Match+Data">Match <a href="Data.html"><code>Data</code></a></h3>
 <ul><li>
 <p><a href="StringScanner.html#method-i-matched"><code>matched</code></a></p>
 </li><li>
@@ -399,6 +401,11 @@ p s.scan(/\w+/)      # -&gt; nil
         <dt>N</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-named_captures">named_captures</a>,
+              </li>
             
               
               <li>
@@ -959,11 +966,11 @@ strscan_captures(VALUE self)
 
 <p>In short, it’s a 0-based index into the string.</p>
 
-<pre><code>s = StringScanner.new(&quot;abcädeföghi&quot;)
-s.charpos           # -&gt; 0
-s.scan_until(/ä/)   # -&gt; &quot;abcä&quot;
-s.pos               # -&gt; 5
-s.charpos           # -&gt; 4
+<pre><code>s = StringScanner.new(&quot;abc\u00e4def\u00f6ghi&quot;)
+s.charpos                # -&gt; 0
+s.scan_until(/\u00e4/)   # -&gt; &quot;abc\u00E4&quot;
+s.pos                    # -&gt; 5
+s.charpos                # -&gt; 4
 </code></pre>
             </div>
           
@@ -1793,6 +1800,59 @@ strscan_matched_size(VALUE self)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-named_captures">
+            
+              <b>scanner.named_captures &rarr; hash
+</b>
+            
+            <a href="../classes/StringScanner.html#method-i-named_captures" name="method-i-named_captures" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a hash of string variables matching the regular expression.</p>
+
+<pre><code>scan = StringScanner.new(&#39;foobarbaz&#39;)
+scan.match?(/(?&lt;f&gt;foo)(?&lt;r&gt;bar)(?&lt;z&gt;baz)/)
+scan.named_captures # -&gt; {&quot;f&quot;=&gt;&quot;foo&quot;, &quot;r&quot;=&gt;&quot;bar&quot;, &quot;z&quot;=&gt;&quot;baz&quot;}
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-named_captures_source')" id="l_method-i-named_captures_source">show</a>
+                
+              </p>
+              <div id="method-i-named_captures_source" class="dyn-source">
+                <pre>static VALUE
+strscan_named_captures(VALUE self)
+{
+    struct strscanner *p;
+    GET_SCANNER(self, p);
+    named_captures_data data;
+    data.self = self;
+    data.captures = rb_hash_new();
+    if (!RB_NIL_P(p-&gt;regex)) {
+        onig_foreach_name(RREGEXP_PTR(p-&gt;regex), named_captures_iter, &amp;data);
+    }
+
+    return data.captures;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-peek">
             
               <b>peek(len)
@@ -2263,8 +2323,9 @@ strscan_rest(VALUE self)
               <p>Returns true if and only if there is more data in the string.  See <a href="StringScanner.html#method-i-eos-3F"><code>eos?</code></a>. This method is obsolete; use <a href="StringScanner.html#method-i-eos-3F"><code>eos?</code></a> instead.</p>
 
 <pre><code>s = StringScanner.new(&#39;test string&#39;)
-s.eos?              # These two
-s.rest?             # are opposites.
+# These two are opposites
+s.eos? # =&gt; false
+s.rest? # =&gt; true
 </code></pre>
             </div>
           

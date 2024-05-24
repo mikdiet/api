@@ -30,7 +30,7 @@
     <meta property="og:description" content="The Thread::Queue class implements multi-producer, multi-consumer queues.  It is especially useful in threaded programming when information must be exchanged safely between multiple threads.">
   
 
-    <meta name="keywords" content="Thread::Queue class, new, close, closed?, push, pop, empty?, clear, length, num_waiting, enq, <<, deq, shift, size">
+    <meta name="keywords" content="Thread::Queue class, new, close, closed?, push, empty?, clear, length, num_waiting, freeze, enq, <<, size, pop, deq, shift">
 </head>
 
 <body>
@@ -73,6 +73,8 @@
             
             <li><a href="../../files/ruby/thread_sync_c.html">ruby/thread_sync.c</a></li>
             
+            <li><a href="../../files/ruby/thread_sync_rb.html">ruby/thread_sync.rb</a></li>
+            
         </ul>
     </div>
 
@@ -83,7 +85,7 @@
       
 <p>The <a href="Queue.html"><code>Thread::Queue</code></a> class implements multi-producer, multi-consumer queues.  It is especially useful in threaded programming when information must be exchanged safely between multiple threads. The <a href="Queue.html"><code>Thread::Queue</code></a> class implements all the required locking semantics.</p>
 
-<p>The class implements FIFO type of queue. In a FIFO queue, the first tasks added are the first retrieved.</p>
+<p>The class implements FIFO (first in, first out) type of queue. In a FIFO queue, the first tasks added are the first retrieved.</p>
 
 <p>Example:</p>
 
@@ -91,17 +93,17 @@
 
 producer = Thread.new do
   5.times do |i|
-     sleep rand(i) # simulate expense
-     queue &lt;&lt; i
-     puts &quot;#{i} produced&quot;
+    sleep rand(i) # simulate expense
+    queue &lt;&lt; i
+    puts &quot;#{i} produced&quot;
   end
 end
 
 consumer = Thread.new do
   5.times do |i|
-     value = queue.pop
-     sleep rand(i/2) # simulate expense
-     puts &quot;consumed #{value}&quot;
+    value = queue.pop
+    sleep rand(i/2) # simulate expense
+    puts &quot;consumed #{value}&quot;
   end
 end
 
@@ -185,6 +187,18 @@ consumer.join
               
               <li>
                 <a href="#method-i-enq">enq</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>F</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-freeze">freeze</a>
               </li>
             
           </ul>
@@ -328,8 +342,8 @@ rb_queue_initialize(int argc, VALUE *argv, VALUE self)
     if ((argc = rb_scan_args(argc, argv, &quot;01&quot;, &amp;initial)) == 1) {
         initial = rb_to_array(initial);
     }
-    RB_OBJ_WRITE(self, &amp;q-&gt;que, ary_buf_new());
-    list_head_init(queue_waitq(q));
+    RB_OBJ_WRITE(self, queue_list(q), ary_buf_new());
+    ccan_list_head_init(queue_waitq(q));
     if (argc == 1) {
         rb_ary_concat(q-&gt;que, initial);
     }
@@ -525,16 +539,14 @@ rb_queue_closed_p(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-deq">
             
-              <b>deq(non_block=false)</b>
+              <b>deq</b>(non_block = false, timeout: nil)
             
             <a href="../../classes/Thread/Queue.html#method-i-deq" name="method-i-deq" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Retrieves data from the queue.</p>
-
-<p>If the queue is empty, the calling thread is suspended until data is pushed onto the queue. If <code>non_block</code> is true, the thread isn’t suspended, and <code>ThreadError</code> is raised.</p>
+              
             </div>
           
 
@@ -611,6 +623,49 @@ rb_queue_empty_p(VALUE self)
           
 
           
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-freeze">
+            
+              <b>freeze
+</b>
+            
+            <a href="../../classes/Thread/Queue.html#method-i-freeze" name="method-i-freeze" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>The queue can’t be frozen, so this method raises an exception:</p>
+
+<pre><code>Thread::Queue.new.freeze # Raises TypeError (cannot freeze #&lt;Thread::Queue:0x...&gt;)
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-freeze_source')" id="l_method-i-freeze_source">show</a>
+                
+              </p>
+              <div id="method-i-freeze_source" class="dyn-source">
+                <pre>static VALUE
+rb_queue_freeze(VALUE self)
+{
+    rb_raise(rb_eTypeError, &quot;cannot freeze &quot; &quot;%+&quot;PRIsVALUE, self);
+    UNREACHABLE_RETURN(self);
+}</pre>
+              </div>
+            </div>
+            
           </div>
         
         <div class="method">
@@ -698,7 +753,7 @@ rb_queue_num_waiting(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-pop">
             
-              <b>pop(non_block=false)</b>
+              <b>pop(non_block=false, timeout: nil)</b>
             
             <a href="../../classes/Thread/Queue.html#method-i-pop" name="method-i-pop" class="permalink">Link</a>
           </h3>
@@ -708,6 +763,8 @@ rb_queue_num_waiting(VALUE self)
               <p>Retrieves data from the queue.</p>
 
 <p>If the queue is empty, the calling thread is suspended until data is pushed onto the queue. If <code>non_block</code> is true, the thread isn’t suspended, and <code>ThreadError</code> is raised.</p>
+
+<p>If <code>timeout</code> seconds have passed and no data is available <code>nil</code> is returned. If <code>timeout</code> is <code>0</code> it returns immediately.</p>
             </div>
           
 
@@ -727,14 +784,17 @@ rb_queue_num_waiting(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-pop_source')" id="l_method-i-pop_source">show</a>
                 
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/thread_sync.rb#L14" target="_blank" class="github_url">on GitHub</a>
+                
               </p>
               <div id="method-i-pop_source" class="dyn-source">
-                <pre>static VALUE
-rb_queue_pop(int argc, VALUE *argv, VALUE self)
-{
-    int should_block = queue_pop_should_block(argc, argv);
-    return queue_do_pop(self, queue_ptr(self), should_block);
-}</pre>
+                <pre><span class="ruby-comment"># File ruby/thread_sync.rb, line 14</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">pop</span>(<span class="ruby-identifier">non_block</span> = <span class="ruby-keyword">false</span>, <span class="ruby-value">timeout:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">non_block</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">timeout</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-string">&quot;can&#39;t set a timeout if non_block is enabled&quot;</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">rb_queue_pop</span>(<span class="ruby-identifier">non_block</span>, <span class="ruby-identifier">timeout</span>)
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -785,16 +845,14 @@ rb_queue_push(VALUE self, VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-shift">
             
-              <b>shift(non_block=false)</b>
+              <b>shift</b>(non_block = false, timeout: nil)
             
             <a href="../../classes/Thread/Queue.html#method-i-shift" name="method-i-shift" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Retrieves data from the queue.</p>
-
-<p>If the queue is empty, the calling thread is suspended until data is pushed onto the queue. If <code>non_block</code> is true, the thread isn’t suspended, and <code>ThreadError</code> is raised.</p>
+              
             </div>
           
 

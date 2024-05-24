@@ -163,7 +163,7 @@
           <tr valign='top'>
             <td class="attr-name">VERSION</td>
             <td>=</td>
-            <td class="attr-value">&quot;0.3.0&quot;</td>
+            <td class="attr-value">&quot;0.6.0&quot;</td>
           </tr>
           
             <tr valign='top'>
@@ -209,7 +209,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-formatter_source')" id="l_method-c-formatter_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/error_highlight/formatter.rb#L16" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/error_highlight/formatter.rb#L16" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-formatter_source" class="dyn-source">
@@ -248,7 +248,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-formatter-3D_source')" id="l_method-c-formatter-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/error_highlight/formatter.rb#L20" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/error_highlight/formatter.rb#L20" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-formatter-3D_source" class="dyn-source">
@@ -264,20 +264,27 @@
         <div class="method">
           <h3 class="title method-title" id="method-c-spot">
             
-              <b>spot</b>(...)
+              <b>spot</b>(obj, **opts)
             
             <a href="../classes/ErrorHighlight.html#method-c-spot" name="method-c-spot" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Identify the code fragment that seems associated with a given error</p>
+              <p>Identify the code fragment at that a given exception occurred.</p>
 
-<p>Arguments:</p>
+<p>Options:</p>
 
-<pre><code>node: RubyVM::AbstractSyntaxTree::Node (script_lines should be enabled)
-point_type: :name | :args
-name: The name associated with the NameError/NoMethodError
+<p>point_type: :name | :args</p>
+
+<pre><code>:name (default) points the method/variable name that the exception occurred.
+:args points the arguments of the method call that the exception occurred.
+</code></pre>
+
+<p>backtrace_location: <a href="Thread/Backtrace/Location.html"><code>Thread::Backtrace::Location</code></a></p>
+
+<pre><code>It locates the code fragment of the given backtrace_location.
+By default, it uses the first frame of backtrace_locations of the given exception.
 </code></pre>
 
 <p>Returns:</p>
@@ -288,8 +295,13 @@ name: The name associated with the NameError/NoMethodError
   last_lineno: Integer,
   last_column: Integer,
   snippet: String,
+  script_lines: [String],
 } | nil
 </code></pre>
+
+<p>Limitations:</p>
+
+<p>Currently, <a href="ErrorHighlight.html#method-c-spot"><code>ErrorHighlight.spot</code></a> only supports a single-line code fragment. Therefore, if the return value is not nil, first_lineno and last_lineno will have the same value. If the relevant code fragment spans multiple lines (e.g., <a href="Array.html#method-i-5B-5D"><code>Array#[]</code></a> of +<a href="(newline)expr(newline)">ary</a>+), the method will return nil. This restriction may be removed in the future.</p>
             </div>
           
 
@@ -305,13 +317,51 @@ name: The name associated with the NameError/NoMethodError
                 Source:
                 <a href="javascript:toggleSource('method-c-spot_source')" id="l_method-c-spot_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/error_highlight/base.rb#L19" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/error_highlight/base.rb#L33" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-spot_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/error_highlight/base.rb, line 19</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">spot</span>(<span class="ruby-operator">...</span>)
-  <span class="ruby-constant">Spotter</span>.<span class="ruby-identifier">new</span>(<span class="ruby-operator">...</span>).<span class="ruby-identifier">spot</span>
+                <pre><span class="ruby-comment"># File ruby/lib/error_highlight/base.rb, line 33</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">spot</span>(<span class="ruby-identifier">obj</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>)
+  <span class="ruby-keyword">case</span> <span class="ruby-identifier">obj</span>
+  <span class="ruby-keyword">when</span> <span class="ruby-constant">Exception</span>
+    <span class="ruby-identifier">exc</span> = <span class="ruby-identifier">obj</span>
+    <span class="ruby-identifier">loc</span> = <span class="ruby-identifier">opts</span>[<span class="ruby-value">:backtrace_location</span>]
+    <span class="ruby-identifier">opts</span> = { <span class="ruby-value">point_type:</span> <span class="ruby-identifier">opts</span>.<span class="ruby-identifier">fetch</span>(<span class="ruby-value">:point_type</span>, <span class="ruby-value">:name</span>) }
+
+    <span class="ruby-keyword">unless</span> <span class="ruby-identifier">loc</span>
+      <span class="ruby-keyword">case</span> <span class="ruby-identifier">exc</span>
+      <span class="ruby-keyword">when</span> <span class="ruby-constant">TypeError</span>, <span class="ruby-constant">ArgumentError</span>
+        <span class="ruby-identifier">opts</span>[<span class="ruby-value">:point_type</span>] = <span class="ruby-value">:args</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">locs</span> = <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">backtrace_locations</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">locs</span>
+
+      <span class="ruby-identifier">loc</span> = <span class="ruby-identifier">locs</span>.<span class="ruby-identifier">first</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">loc</span>
+
+      <span class="ruby-identifier">opts</span>[<span class="ruby-value">:name</span>] = <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">name</span> <span class="ruby-keyword">if</span> <span class="ruby-constant">NameError</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">obj</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-constant">Thread</span><span class="ruby-operator">::</span><span class="ruby-constant">Backtrace</span><span class="ruby-operator">::</span><span class="ruby-constant">Location</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">loc</span>
+
+    <span class="ruby-identifier">node</span> = <span class="ruby-constant">RubyVM</span><span class="ruby-operator">::</span><span class="ruby-constant">AbstractSyntaxTree</span>.<span class="ruby-identifier">of</span>(<span class="ruby-identifier">loc</span>, <span class="ruby-value">keep_script_lines:</span> <span class="ruby-keyword">true</span>)
+
+    <span class="ruby-constant">Spotter</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">node</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>).<span class="ruby-identifier">spot</span>
+
+  <span class="ruby-keyword">when</span> <span class="ruby-constant">RubyVM</span><span class="ruby-operator">::</span><span class="ruby-constant">AbstractSyntaxTree</span><span class="ruby-operator">::</span><span class="ruby-constant">Node</span>
+    <span class="ruby-constant">Spotter</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">obj</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">opts</span>).<span class="ruby-identifier">spot</span>
+
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">TypeError</span>, <span class="ruby-string">&quot;Exception is expected&quot;</span>
+  <span class="ruby-keyword">end</span>
+
+<span class="ruby-keyword">rescue</span> <span class="ruby-constant">SyntaxError</span>,
+       <span class="ruby-constant">SystemCallError</span>, <span class="ruby-comment"># file not found or something</span>
+       <span class="ruby-constant">ArgumentError</span> <span class="ruby-comment"># eval&#39;ed code</span>
+
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>

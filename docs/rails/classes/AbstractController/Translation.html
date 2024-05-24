@@ -179,7 +179,7 @@
 
           
             <div class="description">
-              <p>Delegates to <code>I18n.localize</code>. Also aliased as <code>l</code>.</p>
+              <p>Delegates to <code>I18n.localize</code>.</p>
             </div>
           
 
@@ -199,11 +199,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-localize_source')" id="l_method-i-localize_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/actionpack/lib/abstract_controller/translation.rb#L32" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actionpack/lib/abstract_controller/translation.rb#L51" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-localize_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/actionpack/lib/abstract_controller/translation.rb, line 32</span>
+                <pre><span class="ruby-comment"># File rails/actionpack/lib/abstract_controller/translation.rb, line 51</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">localize</span>(<span class="ruby-identifier">object</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-constant">I18n</span>.<span class="ruby-identifier">localize</span>(<span class="ruby-identifier">object</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -247,7 +247,7 @@
 
           
             <div class="description">
-              <p>Delegates to <code>I18n.translate</code>. Also aliased as <code>t</code>.</p>
+              <p>Delegates to <code>I18n.translate</code>.</p>
 
 <p>When the given key starts with a period, it will be scoped by the current controller and action. So if you call <code>translate(&quot;.foo&quot;)</code> from <code>PeopleController#index</code>, it will convert the call to <code>I18n.translate(&quot;people.index.foo&quot;)</code>. This makes it less repetitive to translate many keys within the same controller / action and gives you a simple framework for scoping them consistently.</p>
             </div>
@@ -269,7 +269,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-translate_source')" id="l_method-i-translate_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/actionpack/lib/abstract_controller/translation.rb#L17" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actionpack/lib/abstract_controller/translation.rb#L17" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-translate_source" class="dyn-source">
@@ -284,7 +284,26 @@
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-identifier">i18n_raise</span> = <span class="ruby-identifier">options</span>.<span class="ruby-identifier">fetch</span>(<span class="ruby-value">:raise</span>, <span class="ruby-keyword">self</span>.<span class="ruby-identifier">raise_on_missing_translations</span>)
-  <span class="ruby-constant">I18n</span>.<span class="ruby-identifier">translate</span>(<span class="ruby-identifier">key</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>, <span class="ruby-value">raise:</span> <span class="ruby-identifier">i18n_raise</span>)
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:default</span>]
+    <span class="ruby-identifier">options</span>[<span class="ruby-value">:default</span>] = [<span class="ruby-identifier">options</span>[<span class="ruby-value">:default</span>]] <span class="ruby-keyword">unless</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:default</span>].<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Array</span>)
+    <span class="ruby-identifier">options</span>[<span class="ruby-value">:default</span>] = <span class="ruby-identifier">options</span>[<span class="ruby-value">:default</span>].<span class="ruby-identifier">map</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">value</span><span class="ruby-operator">|</span>
+      <span class="ruby-identifier">value</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">String</span>) <span class="ruby-operator">?</span> <span class="ruby-constant">ERB</span><span class="ruby-operator">::</span><span class="ruby-constant">Util</span>.<span class="ruby-identifier">html_escape</span>(<span class="ruby-identifier">value</span>) <span class="ruby-operator">:</span> <span class="ruby-identifier">value</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">unless</span> <span class="ruby-identifier">i18n_raise</span>
+    <span class="ruby-identifier">options</span>[<span class="ruby-value">:default</span>] = [] <span class="ruby-keyword">unless</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:default</span>]
+    <span class="ruby-identifier">options</span>[<span class="ruby-value">:default</span>] <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-constant">MISSING_TRANSLATION</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">result</span> = <span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">HtmlSafeTranslation</span>.<span class="ruby-identifier">translate</span>(<span class="ruby-identifier">key</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>, <span class="ruby-value">raise:</span> <span class="ruby-identifier">i18n_raise</span>)
+
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">result</span> <span class="ruby-operator">==</span> <span class="ruby-constant">MISSING_TRANSLATION</span>
+    <span class="ruby-node">+&quot;translation missing: #{key}&quot;</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">result</span>
+  <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>

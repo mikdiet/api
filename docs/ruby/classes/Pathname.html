@@ -30,7 +30,7 @@
     <meta property="og:description" content="Pathname represents the name of a file or directory on the filesystem, but not the file itself.  The pathname depends on the Operating System: Unix, Windows, etc.">
   
 
-    <meta name="keywords" content="Pathname class, cleanpath, parent, mountpoint?, root?, absolute?, relative?, each_filename, descend, ascend, +, /, join, children, each_child, relative_path_from, find, mkpath, rmtree, new, freeze, taint, untaint, ==, ===, eql?, <=>, to_s, to_path, sub, sub_ext, realpath, realdirpath, each_line, read, binread, readlines, write, binwrite, sysopen, atime, birthtime, ctime, mtime, chmod, lchmod, chown, lchown, fnmatch, fnmatch?, ftype, make_link, open, readlink, rename, stat, lstat, make_symlink, truncate, utime, basename, dirname, extname, expand_path, split, blockdev?, chardev?, executable?, executable_real?, exist?, grpowned?, directory?, file?, pipe?, socket?, owned?, readable?, world_readable?, readable_real?, setuid?, setgid?, size, size?, sticky?, symlink?, writable?, world_writable?, writable_real?, zero?, empty?, glob, getwd, pwd, glob, entries, mkdir, rmdir, opendir, each_entry, unlink, delete">
+    <meta name="keywords" content="Pathname class, cleanpath, parent, mountpoint?, root?, absolute?, relative?, each_filename, descend, ascend, +, /, join, children, each_child, relative_path_from, find, mkpath, rmtree, new, freeze, ==, ===, eql?, <=>, to_s, to_path, sub, sub_ext, realpath, realdirpath, each_line, read, binread, readlines, write, binwrite, sysopen, atime, birthtime, ctime, mtime, chmod, lchmod, chown, lchown, fnmatch, fnmatch?, ftype, make_link, open, readlink, rename, stat, lstat, make_symlink, truncate, utime, lutime, basename, dirname, extname, expand_path, split, blockdev?, chardev?, executable?, executable_real?, exist?, grpowned?, directory?, file?, pipe?, socket?, owned?, readable?, world_readable?, readable_real?, setuid?, setgid?, size, size?, sticky?, symlink?, writable?, world_writable?, writable_real?, zero?, empty?, glob, getwd, pwd, glob, entries, mkdir, rmdir, opendir, each_entry, unlink, delete">
 </head>
 
 <body>
@@ -270,6 +270,8 @@ p5.children                     # [Pathname:/home/gavin/articles/linux, ...]
 <p><a href="Pathname.html#method-i-truncate"><code>truncate(length)</code></a></p>
 </li><li>
 <p><a href="Pathname.html#method-i-utime"><code>utime</code></a>(atime, mtime)</p>
+</li><li>
+<p><a href="Pathname.html#method-i-lutime"><code>lutime</code></a>(atime, mtime)</p>
 </li><li>
 <p><a href="Pathname.html#method-i-basename"><code>basename(*args)</code></a></p>
 </li><li>
@@ -621,12 +623,12 @@ p5.children                     # [Pathname:/home/gavin/articles/linux, ...]
             
               
               <li>
-                <a href="#method-i-glob">glob</a>,
+                <a href="#method-c-glob">glob</a>,
               </li>
             
               
               <li>
-                <a href="#method-c-glob">glob</a>,
+                <a href="#method-i-glob">glob</a>,
               </li>
             
               
@@ -665,7 +667,12 @@ p5.children                     # [Pathname:/home/gavin/articles/linux, ...]
             
               
               <li>
-                <a href="#method-i-lstat">lstat</a>
+                <a href="#method-i-lstat">lstat</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-lutime">lutime</a>
               </li>
             
           </ul>
@@ -909,11 +916,6 @@ p5.children                     # [Pathname:/home/gavin/articles/linux, ...]
             
               
               <li>
-                <a href="#method-i-taint">taint</a>,
-              </li>
-            
-              
-              <li>
                 <a href="#method-i-to_path">to_path</a>,
               </li>
             
@@ -937,11 +939,6 @@ p5.children                     # [Pathname:/home/gavin/articles/linux, ...]
               
               <li>
                 <a href="#method-i-unlink">unlink</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-untaint">untaint</a>,
               </li>
             
               
@@ -1009,6 +1006,24 @@ p5.children                     # [Pathname:/home/gavin/articles/linux, ...]
 
     
 
+    
+      <!-- Section constants -->
+      <h2 class="sectiontitle">Constants</h2>
+      <table border='0' cellpadding='5'>
+        
+          <tr valign='top'>
+            <td class="attr-name">VERSION</td>
+            <td>=</td>
+            <td class="attr-value">&quot;0.3.0&quot;</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"></td>
+            </tr>
+          
+        
+      </table>
     
 
 
@@ -1240,7 +1255,7 @@ path_s_getwd(VALUE klass)
 
           
             <div class="description">
-              <p>Appends a pathname fragment to <code>self</code> to produce a new <a href="Pathname.html"><code>Pathname</code></a> object.</p>
+              <p>Appends a pathname fragment to <code>self</code> to produce a new <a href="Pathname.html"><code>Pathname</code></a> object. Since <code>other</code> is considered as a path relative to <code>self</code>, if <code>other</code> is an absolute path, the new <a href="Pathname.html"><code>Pathname</code></a> object is created from just <code>other</code>.</p>
 
 <pre><code>p1 = Pathname.new(&quot;/usr&quot;)      # Pathname:/usr
 p2 = p1 + &quot;bin/ruby&quot;           # Pathname:/usr/bin/ruby
@@ -1271,11 +1286,11 @@ p5 = p1 / &quot;/etc/passwd&quot;        # Pathname:/etc/passwd
                 Source:
                 <a href="javascript:toggleSource('method-i-2B_source')" id="l_method-i-2B_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L352" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L356" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-2B_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 352</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 356</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">+</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-identifier">other</span> = <span class="ruby-constant">Pathname</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">other</span>) <span class="ruby-keyword">unless</span> <span class="ruby-constant">Pathname</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">other</span>
   <span class="ruby-constant">Pathname</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">plus</span>(<span class="ruby-ivar">@path</span>, <span class="ruby-identifier">other</span>.<span class="ruby-identifier">to_s</span>))
@@ -1492,11 +1507,11 @@ p.absolute?
                 Source:
                 <a href="javascript:toggleSource('method-i-absolute-3F_source')" id="l_method-i-absolute-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L231" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L233" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-absolute-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 231</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 233</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">absolute?</span>
   <span class="ruby-constant">ABSOLUTE_PATH</span>.<span class="ruby-identifier">match?</span> <span class="ruby-ivar">@path</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1555,11 +1570,11 @@ enum.each { |e| ... }
                 Source:
                 <a href="javascript:toggleSource('method-i-ascend_source')" id="l_method-i-ascend_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L328" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L330" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-ascend_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 328</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 330</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">ascend</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">to_enum</span>(<span class="ruby-identifier">__method__</span>) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block_given?</span>
   <span class="ruby-identifier">path</span> = <span class="ruby-ivar">@path</span>
@@ -1912,11 +1927,11 @@ pn.children(false)
                 Source:
                 <a href="javascript:toggleSource('method-i-children_source')" id="l_method-i-children_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L443" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L449" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-children_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 443</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 449</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">children</span>(<span class="ruby-identifier">with_directory</span>=<span class="ruby-keyword">true</span>)
   <span class="ruby-identifier">with_directory</span> = <span class="ruby-keyword">false</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@path</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;.&#39;</span>
   <span class="ruby-identifier">result</span> = []
@@ -2047,11 +2062,11 @@ path_chown(VALUE self, VALUE owner, VALUE group)
                 Source:
                 <a href="javascript:toggleSource('method-i-cleanpath_source')" id="l_method-i-cleanpath_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L92" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L94" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-cleanpath_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 92</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 94</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">cleanpath</span>(<span class="ruby-identifier">consider_symlink</span>=<span class="ruby-keyword">false</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">consider_symlink</span>
     <span class="ruby-identifier">cleanpath_conservative</span>
@@ -2180,11 +2195,11 @@ enum.each { |e| ... }
                 Source:
                 <a href="javascript:toggleSource('method-i-descend_source')" id="l_method-i-descend_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L295" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L297" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-descend_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 295</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 297</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">descend</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">to_enum</span>(<span class="ruby-identifier">__method__</span>) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block_given?</span>
   <span class="ruby-identifier">vs</span> = []
@@ -2334,11 +2349,11 @@ Pathname(&quot;/usr/local&quot;).each_child(false) {|f| p f }
                 Source:
                 <a href="javascript:toggleSource('method-i-each_child_source')" id="l_method-i-each_child_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L493" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L499" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-each_child_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 493</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 499</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">each_child</span>(<span class="ruby-identifier">with_directory</span>=<span class="ruby-keyword">true</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>)
   <span class="ruby-identifier">children</span>(<span class="ruby-identifier">with_directory</span>).<span class="ruby-identifier">each</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -2379,6 +2394,7 @@ Pathname(&quot;/usr/local&quot;).each_child(false) {|f| p f }
 path_each_entry(VALUE self)
 {
     VALUE args[1];
+    RETURN_ENUMERATOR(self, 0, 0);
 
     args[0] = get_strpath(self);
     return rb_block_call(rb_cDir, id_foreach, 1, args, each_entry_i, rb_obj_class(self));
@@ -2426,11 +2442,11 @@ enum.each { |e| ... }
                 Source:
                 <a href="javascript:toggleSource('method-i-each_filename_source')" id="l_method-i-each_filename_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L263" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L265" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-each_filename_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 263</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 265</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">each_filename</span> <span class="ruby-comment"># :yield: filename</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">to_enum</span>(<span class="ruby-identifier">__method__</span>) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block_given?</span>
   <span class="ruby-identifier">_</span>, <span class="ruby-identifier">names</span> = <span class="ruby-identifier">split_names</span>(<span class="ruby-ivar">@path</span>)
@@ -2903,11 +2919,11 @@ path_file_p(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-find_source')" id="l_method-i-find_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L565" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L571" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-find_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 565</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 571</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find</span>(<span class="ruby-value">ignore_error:</span> <span class="ruby-keyword">true</span>) <span class="ruby-comment"># :yield: pathname</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">to_enum</span>(<span class="ruby-identifier">__method__</span>, <span class="ruby-value">ignore_error:</span> <span class="ruby-identifier">ignore_error</span>) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block_given?</span>
   <span class="ruby-identifier">require</span> <span class="ruby-string">&#39;find&#39;</span>
@@ -3200,7 +3216,7 @@ path_grpowned_p(VALUE self)
 
           
             <div class="description">
-              <p>Joins the given pathnames onto <code>self</code> to create a new <a href="Pathname.html"><code>Pathname</code></a> object.</p>
+              <p>Joins the given pathnames onto <code>self</code> to create a new <a href="Pathname.html"><code>Pathname</code></a> object. This is effectively the same as using <a href="Pathname.html#method-i-2B"><code>Pathname#+</code></a> to append <code>self</code> and all arguments sequentially.</p>
 
 <pre><code>path0 = Pathname.new(&quot;/usr&quot;)                # Pathname:/usr
 path0 = path0.join(&quot;bin/ruby&quot;)              # Pathname:/usr/bin/ruby
@@ -3224,11 +3240,11 @@ path0 == path1
                 Source:
                 <a href="javascript:toggleSource('method-i-join_source')" id="l_method-i-join_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L410" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L416" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-join_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 410</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 416</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">join</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">self</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">args</span>.<span class="ruby-identifier">empty?</span>
   <span class="ruby-identifier">result</span> = <span class="ruby-identifier">args</span>.<span class="ruby-identifier">pop</span>
@@ -3360,6 +3376,48 @@ path_lchown(VALUE self, VALUE owner, VALUE group)
 path_lstat(VALUE self)
 {
     return rb_funcall(rb_cFile, id_lstat, 1, get_strpath(self));
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-lutime">
+            
+              <b>lutime</b>(p1, p2)
+            
+            <a href="../classes/Pathname.html#method-i-lutime" name="method-i-lutime" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Update the access and modification times of the file.</p>
+
+<p>Same as <a href="Pathname.html#method-i-utime"><code>Pathname#utime</code></a>, but does not follow symbolic links.</p>
+
+<p>See <a href="File.html#method-c-lutime"><code>File.lutime</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-lutime_source')" id="l_method-i-lutime_source">show</a>
+                
+              </p>
+              <div id="method-i-lutime_source" class="dyn-source">
+                <pre>static VALUE
+path_lutime(VALUE self, VALUE atime, VALUE mtime)
+{
+    return rb_funcall(rb_cFile, id_lutime, 3, atime, mtime, get_strpath(self));
 }</pre>
               </div>
             </div>
@@ -3521,11 +3579,11 @@ path_mkdir(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-mkpath_source')" id="l_method-i-mkpath_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L584" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L590" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mkpath_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 584</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 590</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mkpath</span>(<span class="ruby-value">mode:</span> <span class="ruby-keyword">nil</span>)
   <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">mkpath</span>(<span class="ruby-ivar">@path</span>, <span class="ruby-value">mode:</span> <span class="ruby-identifier">mode</span>)
   <span class="ruby-keyword">nil</span>
@@ -3561,11 +3619,11 @@ path_mkdir(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-mountpoint-3F_source')" id="l_method-i-mountpoint-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L199" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L201" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mountpoint-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 199</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 201</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mountpoint?</span>
   <span class="ruby-keyword">begin</span>
     <span class="ruby-identifier">stat1</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">lstat</span>
@@ -3781,11 +3839,11 @@ path_owned_p(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-parent_source')" id="l_method-i-parent_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L194" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L196" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parent_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 194</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 196</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parent</span>
   <span class="ruby-keyword">self</span> <span class="ruby-operator">+</span> <span class="ruby-string">&#39;..&#39;</span>
 <span class="ruby-keyword">end</span></pre>
@@ -4169,11 +4227,11 @@ p.relative?
                 Source:
                 <a href="javascript:toggleSource('method-i-relative-3F_source')" id="l_method-i-relative-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L246" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L248" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-relative-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 246</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 248</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">relative?</span>
   <span class="ruby-operator">!</span><span class="ruby-identifier">absolute?</span>
 <span class="ruby-keyword">end</span></pre>
@@ -4218,11 +4276,11 @@ p.relative?
                 Source:
                 <a href="javascript:toggleSource('method-i-relative_path_from_source')" id="l_method-i-relative_path_from_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L511" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L517" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-relative_path_from_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 511</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 517</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">relative_path_from</span>(<span class="ruby-identifier">base_directory</span>)
   <span class="ruby-identifier">base_directory</span> = <span class="ruby-constant">Pathname</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">base_directory</span>) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">base_directory</span>.<span class="ruby-identifier">is_a?</span> <span class="ruby-constant">Pathname</span>
   <span class="ruby-identifier">dest_directory</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">cleanpath</span>.<span class="ruby-identifier">to_s</span>
@@ -4347,7 +4405,7 @@ path_rmdir(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-rmtree">
             
-              <b>rmtree</b>()
+              <b>rmtree</b>(noop: nil, verbose: nil, secure: nil)
             
             <a href="../classes/Pathname.html#method-i-rmtree" name="method-i-rmtree" class="permalink">Link</a>
           </h3>
@@ -4356,7 +4414,7 @@ path_rmdir(VALUE self)
             <div class="description">
               <p>Recursively deletes a directory, including all directories beneath it.</p>
 
-<p>See <a href="FileUtils.html#method-c-rm_r"><code>FileUtils.rm_r</code></a></p>
+<p>See <a href="FileUtils.html#method-c-rm_rf"><code>FileUtils.rm_rf</code></a></p>
             </div>
           
 
@@ -4372,15 +4430,16 @@ path_rmdir(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-rmtree_source')" id="l_method-i-rmtree_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L592" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L598" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-rmtree_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 592</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">rmtree</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 598</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">rmtree</span>(<span class="ruby-value">noop:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">verbose:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">secure:</span> <span class="ruby-keyword">nil</span>)
   <span class="ruby-comment"># The name &quot;rmtree&quot; is borrowed from File::Path of Perl.</span>
   <span class="ruby-comment"># File::Path provides &quot;mkpath&quot; and &quot;rmtree&quot;.</span>
-  <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">rm_r</span>(<span class="ruby-ivar">@path</span>)
+  <span class="ruby-identifier">require</span> <span class="ruby-string">&#39;fileutils&#39;</span>
+  <span class="ruby-constant">FileUtils</span>.<span class="ruby-identifier">rm_rf</span>(<span class="ruby-ivar">@path</span>, <span class="ruby-value">noop:</span> <span class="ruby-identifier">noop</span>, <span class="ruby-value">verbose:</span> <span class="ruby-identifier">verbose</span>, <span class="ruby-value">secure:</span> <span class="ruby-identifier">secure</span>)
   <span class="ruby-keyword">nil</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -4416,11 +4475,11 @@ path_rmdir(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-root-3F_source')" id="l_method-i-root-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/pathname/lib/pathname.rb#L216" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/pathname/lib/pathname.rb#L218" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-root-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 216</span>
+                <pre><span class="ruby-comment"># File ruby/ext/pathname/lib/pathname.rb, line 218</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">root?</span>
   <span class="ruby-identifier">chop_basename</span>(<span class="ruby-ivar">@path</span>) <span class="ruby-operator">==</span> <span class="ruby-keyword">nil</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-regexp">/#{SEPARATOR_PAT}/o</span>.<span class="ruby-identifier">match?</span>(<span class="ruby-ivar">@path</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -4941,46 +5000,6 @@ path_sysopen(int argc, VALUE *argv, VALUE self)
           </div>
         
         <div class="method">
-          <h3 class="title method-title" id="method-i-taint">
-            
-              <b>pathname.taint &rarr; obj
-</b>
-            
-            <a href="../classes/Pathname.html#method-i-taint" name="method-i-taint" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Returns pathname.  This method is deprecated and will be removed in Ruby 3.2.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-taint_source')" id="l_method-i-taint_source">show</a>
-                
-              </p>
-              <div id="method-i-taint_source" class="dyn-source">
-                <pre>static VALUE
-path_taint(VALUE self)
-{
-    rb_warn(&quot;Pathname#taint is deprecated and will be removed in Ruby 3.2.&quot;);
-    return self;
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
           <h3 class="title method-title" id="method-i-to_path">
             
               <b>pathname.to_path          &rarr; string</b>
@@ -5129,46 +5148,6 @@ path_unlink(VALUE self)
     VALUE eENOTDIR = rb_const_get_at(rb_mErrno, id_ENOTDIR);
     VALUE str = get_strpath(self);
     return rb_rescue2(unlink_body, str, unlink_rescue, str, eENOTDIR, (VALUE)0);
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-untaint">
-            
-              <b>pathname.untaint &rarr; obj
-</b>
-            
-            <a href="../classes/Pathname.html#method-i-untaint" name="method-i-untaint" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Returns pathname.  This method is deprecated and will be removed in Ruby 3.2.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-untaint_source')" id="l_method-i-untaint_source">show</a>
-                
-              </p>
-              <div id="method-i-untaint_source" class="dyn-source">
-                <pre>static VALUE
-path_untaint(VALUE self)
-{
-    rb_warn(&quot;Pathname#untaint is deprecated and will be removed in Ruby 3.2.&quot;);
-    return self;
 }</pre>
               </div>
             </div>

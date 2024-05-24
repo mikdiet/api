@@ -56,10 +56,10 @@
             <li>
                 rails/actioncable/app/javascript/action_cable/connection_monitor.js
                 
-                    <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/actioncable/app/javascript/action_cable/connection_monitor.js" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actioncable/app/javascript/action_cable/connection_monitor.js" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2022-09-06 00:52:05 +0300</li>
+            <li>Last modified: 2024-05-24 23:57:09 +0300</li>
         </ul>
     </div>
 
@@ -76,8 +76,6 @@
 
 <p>const secondsSince = time =&gt; (now() - time) / 1000</p>
 
-<p>const clamp = (number, min, max) =&gt; Math.max(min, Math.min(max, number))</p>
-
 <p>class ConnectionMonitor {</p>
 
 <pre><code>constructor(connection) {
@@ -92,7 +90,7 @@ start() {
     delete this.stoppedAt
     this.startPolling()
     addEventListener(&quot;visibilitychange&quot;, this.visibilityDidChange)
-    logger.log(`ConnectionMonitor started. pollInterval = ${this.getPollInterval()} ms`)
+    logger.log(`ConnectionMonitor started. stale threshold = ${this.constructor.staleThreshold} s`)
   }
 }
 
@@ -145,17 +143,19 @@ poll() {
 }
 
 getPollInterval() {
-  const {min, max, multiplier} = this.constructor.pollInterval
-  const interval = multiplier * Math.log(this.reconnectAttempts + 1)
-  return Math.round(clamp(interval, min, max) * 1000)
+  const { staleThreshold, reconnectionBackoffRate } = this.constructor
+  const backoff = Math.pow(1 + reconnectionBackoffRate, Math.min(this.reconnectAttempts, 10))
+  const jitterMax = this.reconnectAttempts === 0 ? 1.0 : reconnectionBackoffRate
+  const jitter = jitterMax * Math.random()
+  return staleThreshold * 1000 * backoff * (1 + jitter)
 }
 
 reconnectIfStale() {
   if (this.connectionIsStale()) {
-    logger.log(`ConnectionMonitor detected stale connection. reconnectAttempts = ${this.reconnectAttempts}, pollInterval = ${this.getPollInterval()} ms, time disconnected = ${secondsSince(this.disconnectedAt)} s, stale threshold = ${this.constructor.staleThreshold} s`)
+    logger.log(`ConnectionMonitor detected stale connection. reconnectAttempts = ${this.reconnectAttempts}, time stale = ${secondsSince(this.refreshedAt)} s, stale threshold = ${this.constructor.staleThreshold} s`)
     this.reconnectAttempts++
     if (this.disconnectedRecently()) {
-      logger.log(&quot;ConnectionMonitor skipping reopening recent disconnect&quot;)
+      logger.log(`ConnectionMonitor skipping reopening recent disconnect. time disconnected = ${secondsSince(this.disconnectedAt)} s`)
     } else {
       logger.log(&quot;ConnectionMonitor reopening&quot;)
       this.connection.reopen()
@@ -163,8 +163,12 @@ reconnectIfStale() {
   }
 }
 
+get refreshedAt() {
+  return this.pingedAt ? this.pingedAt : this.startedAt
+}
+
 connectionIsStale() {
-  return secondsSince(this.pingedAt ? this.pingedAt : this.startedAt) &gt; this.constructor.staleThreshold
+  return secondsSince(this.refreshedAt) &gt; this.constructor.staleThreshold
 }
 
 disconnectedRecently() {
@@ -186,16 +190,7 @@ visibilityDidChange() {
 
 <p>}</p>
 
-<p>ConnectionMonitor.pollInterval = {</p>
-
-<pre><code>min: 3,
-max: 30,
-multiplier: 5
-</code></pre>
-
-<p>}</p>
-
-<p>ConnectionMonitor.staleThreshold = 6 // Server::Connections::BEAT_INTERVAL * 2 (missed two pings)</p>
+<p>ConnectionMonitor.staleThreshold = 6 // Server::Connections::BEAT_INTERVAL * 2 (missed two pings) ConnectionMonitor.reconnectionBackoffRate = 0.15</p>
 
 <p>export default ConnectionMonitor</p>
 

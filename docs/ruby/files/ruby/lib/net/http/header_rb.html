@@ -56,10 +56,10 @@
             <li>
                 ruby/lib/net/http/header.rb
                 
-                    <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/net/http/header.rb" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/net/http/header.rb" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2022-09-06 00:52:29 +0300</li>
+            <li>Last modified: 2024-05-24 23:57:54 +0300</li>
         </ul>
     </div>
 
@@ -68,9 +68,210 @@
   
     <div class="description">
       
-<p>The HTTPHeader module defines methods for reading and writing HTTP headers.</p>
+<p>The HTTPHeader module provides access to HTTP headers.</p>
 
-<p>It is used as a mixin by other classes, to provide hash-like access to HTTP header values. Unlike raw hash access, HTTPHeader provides access via case-insensitive keys. It also provides methods for accessing commonly-used HTTP header values in more convenient formats.</p>
+<p>The module is included in:</p>
+<ul><li>
+<p><a href="../../../../../classes/Net/HTTPGenericRequest.html"><code>Net::HTTPGenericRequest</code></a> (and therefore <a href="../../../../../classes/Net/HTTPRequest.html"><code>Net::HTTPRequest</code></a>).</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPResponse.html"><code>Net::HTTPResponse</code></a>.</p>
+</li></ul>
+
+<p>The headers are a hash-like collection of key/value pairs called <em>fields</em>.</p>
+
+<h2 id="label-Request+and+Response+Fields">Request and Response Fields</h2>
+
+<p>Headers may be included in:</p>
+<ul><li>
+<p>A <a href="../../../../../classes/Net/HTTPRequest.html"><code>Net::HTTPRequest</code></a> object: the object’s headers will be sent with the request. Any fields may be defined in the request; see <a href="../../../../../classes/Net/HTTPHeader.html#module-Net::HTTPHeader-label-Setters">Setters</a>.</p>
+</li><li>
+<p>A <a href="../../../../../classes/Net/HTTPResponse.html"><code>Net::HTTPResponse</code></a> object: the objects headers are usually those returned from the host. Fields may be retrieved from the object; see <a href="../../../../../classes/Net/HTTPHeader.html#module-Net::HTTPHeader-label-Getters">Getters</a> and <a href="../../../../../classes/Net/HTTPHeader.html#module-Net::HTTPHeader-label-Iterators">Iterators</a>.</p>
+</li></ul>
+
+<p>Exactly which fields should be sent or expected depends on the host; see:</p>
+<ul><li>
+<p><a href="https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Request_fields">Request fields</a>.</p>
+</li><li>
+<p><a href="https://en.wikipedia.org/wiki/List_of_HTTP_header_fields#Response_fields">Response fields</a>.</p>
+</li></ul>
+
+<h2 id="label-About+the+Examples">About the Examples</h2>
+
+<h2 id="label-Fields">Fields</h2>
+
+<p>A header field is a key/value pair.</p>
+
+<h3 id="label-Field+Keys">Field Keys</h3>
+
+<p>A field key may be:</p>
+<ul><li>
+<p>A string: Key <code>&#39;Accept&#39;</code> is treated as if it were <code>&#39;Accept&#39;.downcase</code>;  i.e., <code>&#39;accept&#39;</code>.</p>
+</li><li>
+<p>A symbol: Key <code>:Accept</code> is treated as if it were <code>:Accept.to_s.downcase</code>;  i.e., <code>&#39;accept&#39;</code>.</p>
+</li></ul>
+
+<p>Examples:</p>
+
+<pre><code>req = Net::HTTP::Get.new(uri)
+req[:accept]  # =&gt; &quot;*/*&quot;
+req[&#39;Accept&#39;] # =&gt; &quot;*/*&quot;
+req[&#39;ACCEPT&#39;] # =&gt; &quot;*/*&quot;
+
+req[&#39;accept&#39;] = &#39;text/html&#39;
+req[:accept] = &#39;text/html&#39;
+req[&#39;ACCEPT&#39;] = &#39;text/html&#39;
+</code></pre>
+
+<h3 id="label-Field+Values">Field Values</h3>
+
+<p>A field value may be returned as an array of strings or as a string:</p>
+<ul><li>
+<p>These methods return field values as arrays:</p>
+<ul><li>
+<p>get_fields: Returns the array value for the given key, or <code>nil</code> if it does not exist.</p>
+</li><li>
+<p>to_hash: Returns a hash of all header fields: each key is a field name; its value is the array value for the field.</p>
+</li></ul>
+</li><li>
+<p>These methods return field values as string; the string value for a field is equivalent to <code>self[key.downcase.to_s].join(&#39;, &#39;))</code>:</p>
+<ul><li>
+<p>[]: Returns the string value for the given key, or <code>nil</code> if it does not exist.</p>
+</li><li>
+<p>fetch: Like [], but accepts a default value to be returned if the key does not exist.</p>
+</li></ul>
+</li></ul>
+
+<p>The field value may be set:</p>
+<ul><li>
+<p>[]=: Sets the value for the given key; the given value may be a string, a symbol, an array, or a hash.</p>
+</li><li>
+<p>add_field: Adds a given value to a value for the given key (not overwriting the existing value).</p>
+</li><li>
+<p>delete: Deletes the field for the given key.</p>
+</li></ul>
+
+<p>Example field values:</p>
+<ul><li>
+<p>String:</p>
+
+<pre><code>req[&#39;Accept&#39;] = &#39;text/html&#39; # =&gt; &quot;text/html&quot;
+req[&#39;Accept&#39;]               # =&gt; &quot;text/html&quot;
+req.get_fields(&#39;Accept&#39;)    # =&gt; [&quot;text/html&quot;]
+</code></pre>
+</li><li>
+<p>Symbol:</p>
+
+<pre><code>req[&#39;Accept&#39;] = :text    # =&gt; :text
+req[&#39;Accept&#39;]            # =&gt; &quot;text&quot;
+req.get_fields(&#39;Accept&#39;) # =&gt; [&quot;text&quot;]
+</code></pre>
+</li><li>
+<p>Simple array:</p>
+
+<pre><code>req[:foo] = %w[bar baz bat]
+req[:foo]            # =&gt; &quot;bar, baz, bat&quot;
+req.get_fields(:foo) # =&gt; [&quot;bar&quot;, &quot;baz&quot;, &quot;bat&quot;]
+</code></pre>
+</li><li>
+<p>Simple hash:</p>
+
+<pre><code>req[:foo] = {bar: 0, baz: 1, bat: 2}
+req[:foo]            # =&gt; &quot;bar, 0, baz, 1, bat, 2&quot;
+req.get_fields(:foo) # =&gt; [&quot;bar&quot;, &quot;0&quot;, &quot;baz&quot;, &quot;1&quot;, &quot;bat&quot;, &quot;2&quot;]
+</code></pre>
+</li><li>
+<p>Nested:</p>
+
+<pre><code>req[:foo] = [%w[bar baz], {bat: 0, bam: 1}]
+req[:foo]            # =&gt; &quot;bar, baz, bat, 0, bam, 1&quot;
+req.get_fields(:foo) # =&gt; [&quot;bar&quot;, &quot;baz&quot;, &quot;bat&quot;, &quot;0&quot;, &quot;bam&quot;, &quot;1&quot;]
+
+req[:foo] = {bar: %w[baz bat], bam: {bah: 0, bad: 1}}
+req[:foo]            # =&gt; &quot;bar, baz, bat, bam, bah, 0, bad, 1&quot;
+req.get_fields(:foo) # =&gt; [&quot;bar&quot;, &quot;baz&quot;, &quot;bat&quot;, &quot;bam&quot;, &quot;bah&quot;, &quot;0&quot;, &quot;bad&quot;, &quot;1&quot;]
+</code></pre>
+</li></ul>
+
+<h2 id="label-Convenience+Methods">Convenience Methods</h2>
+
+<p>Various convenience methods retrieve values, set values, query values, set form values, or iterate over fields.</p>
+
+<h3 id="label-Setters">Setters</h3>
+
+<p>Method []= can set any field, but does little to validate the new value; some of the other setter methods provide some validation:</p>
+<ul><li>
+<p>[]=: Sets the string or array value for the given key.</p>
+</li><li>
+<p>add_field: Creates or adds to the array value for the given key.</p>
+</li><li>
+<p>basic_auth: Sets the string authorization header for <code>&#39;Authorization&#39;</code>.</p>
+</li><li>
+<p>content_length=: Sets the integer length for field <code>&#39;Content-Length</code>.</p>
+</li><li>
+<p>content_type=: Sets the string value for field <code>&#39;Content-Type&#39;</code>.</p>
+</li><li>
+<p>proxy_basic_auth: Sets the string authorization header for <code>&#39;Proxy-Authorization&#39;</code>.</p>
+</li><li>
+<p>set_range: Sets the value for field <code>&#39;Range&#39;</code>.</p>
+</li></ul>
+
+<h3 id="label-Form+Setters">Form Setters</h3>
+<ul><li>
+<p>set_form: Sets an HTML form data set.</p>
+</li><li>
+<p>set_form_data: Sets header fields and a body from HTML form data.</p>
+</li></ul>
+
+<h3 id="label-Getters">Getters</h3>
+
+<p>Method [] can retrieve the value of any field that exists, but always as a string; some of the other getter methods return something different from the simple string value:</p>
+<ul><li>
+<p>[]: Returns the string field value for the given key.</p>
+</li><li>
+<p>content_length: Returns the integer value of field <code>&#39;Content-Length&#39;</code>.</p>
+</li><li>
+<p>content_range: Returns the <a href="../../../../../classes/Range.html"><code>Range</code></a> value of field <code>&#39;Content-Range&#39;</code>.</p>
+</li><li>
+<p>content_type: Returns the string value of field <code>&#39;Content-Type&#39;</code>.</p>
+</li><li>
+<p>fetch: Returns the string field value for the given key.</p>
+</li><li>
+<p>get_fields: Returns the array field value for the given <code>key</code>.</p>
+</li><li>
+<p>main_type: Returns first part of the string value of field <code>&#39;Content-Type&#39;</code>.</p>
+</li><li>
+<p>sub_type: Returns second part of the string value of field <code>&#39;Content-Type&#39;</code>.</p>
+</li><li>
+<p>range: Returns an array of <a href="../../../../../classes/Range.html"><code>Range</code></a> objects of field <code>&#39;Range&#39;</code>, or <code>nil</code>.</p>
+</li><li>
+<p>range_length: Returns the integer length of the range given in field <code>&#39;Content-Range&#39;</code>.</p>
+</li><li>
+<p>type_params: Returns the string parameters for <code>&#39;Content-Type&#39;</code>.</p>
+</li></ul>
+
+<h3 id="label-Queries">Queries</h3>
+<ul><li>
+<p>chunked?: Returns whether field <code>&#39;Transfer-Encoding&#39;</code> is set to <code>&#39;chunked&#39;</code>.</p>
+</li><li>
+<p>connection_close?: Returns whether field <code>&#39;Connection&#39;</code> is set to <code>&#39;close&#39;</code>.</p>
+</li><li>
+<p>connection_keep_alive?: Returns whether field <code>&#39;Connection&#39;</code> is set to <code>&#39;keep-alive&#39;</code>.</p>
+</li><li>
+<p>key?: Returns whether a given key exists.</p>
+</li></ul>
+
+<h3 id="label-Iterators">Iterators</h3>
+<ul><li>
+<p>each_capitalized: Passes each field capitalized-name/value pair to the block.</p>
+</li><li>
+<p>each_capitalized_name: Passes each capitalized field name to the block.</p>
+</li><li>
+<p>each_header: Passes each field name/value pair to the block.</p>
+</li><li>
+<p>each_name: Passes each field name to the block.</p>
+</li><li>
+<p>each_value: Passes each string field value to the block.</p>
+</li></ul>
 
     </div>
   

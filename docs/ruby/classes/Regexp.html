@@ -26,11 +26,11 @@
 
   
     
-    <meta name="description" content="A Regexp holds a regular expression, used to match a pattern against strings. Regexps are created using the /.../ and %r{...} literals, and by the Regexp::new constructor.">
-    <meta property="og:description" content="A Regexp holds a regular expression, used to match a pattern against strings. Regexps are created using the /.../ and %r{...} literals, and by the Regexp::new constructor.">
+    <meta name="description" content="A regular expression (also called a regexp) is a match pattern (also simply called a pattern).">
+    <meta property="og:description" content="A regular expression (also called a regexp) is a match pattern (also simply called a pattern).">
   
 
-    <meta name="keywords" content="Regexp class, json_create, as_json, to_json, compile, quote, escape, union, last_match, try_convert, new, hash, eql?, ==, =~, ===, ~, match, match?, to_s, inspect, source, casefold?, options, encoding, fixed_encoding?, names, named_captures">
+    <meta name="keywords" content="Regexp class, json_create, as_json, to_json, compile, quote, escape, union, last_match, try_convert, linear_time?, new, hash, eql?, ==, =~, ===, ~, match, match?, to_s, inspect, source, casefold?, options, encoding, fixed_encoding?, names, named_captures, timeout, timeout, timeout=">
 </head>
 
 <body>
@@ -77,6 +77,8 @@
             
             <li><a href="../files/ruby/lib/optparse_rb.html">ruby/lib/optparse.rb</a></li>
             
+            <li><a href="../files/ruby/lib/prism/node_ext_rb.html">ruby/lib/prism/node_ext.rb</a></li>
+            
             <li><a href="../files/ruby/lib/rubygems/commands/dependency_command_rb.html">ruby/lib/rubygems/commands/dependency_command.rb</a></li>
             
             <li><a href="../files/ruby/lib/uri/rfc2396_parser_rb.html">ruby/lib/uri/rfc2396_parser.rb</a></li>
@@ -91,98 +93,282 @@
   
     <div class="description">
       
-<p>A <a href="Regexp.html"><code>Regexp</code></a> holds a regular expression, used to match a pattern against strings. Regexps are created using the <code>/.../</code> and <code>%r{...}</code> literals, and by the <a href="Regexp.html#method-c-new"><code>Regexp::new</code></a> constructor.</p>
+<p>A <a href="https://en.wikipedia.org/wiki/Regular_expression">regular expression</a> (also called a <em>regexp</em>) is a <em>match pattern</em> (also simply called a <em>pattern</em>).</p>
 
-<p>You can create a Regexp object explicitly with:</p>
+<p>A common notation for a regexp uses enclosing slash characters:</p>
+
+<pre><code>/foo/
+</code></pre>
+
+<p>A regexp may be applied to a <em>target string</em>; The part of the string (if any) that matches the pattern is called a <em>match</em>, and may be said <em>to match</em>:</p>
+
+<pre><code>re = /red/
+re.match?(&#39;redirect&#39;) # =&gt; true   # Match at beginning of target.
+re.match?(&#39;bored&#39;)    # =&gt; true   # Match at end of target.
+re.match?(&#39;credit&#39;)   # =&gt; true   # Match within target.
+re.match?(&#39;foo&#39;)      # =&gt; false  # No match.
+</code></pre>
+
+<h2 id="class-Regexp-label-Regexp+Uses">Regexp Uses</h2>
+
+<p>A regexp may be used:</p>
 <ul><li>
-<p>A <a href="doc/syntax/literals_rdoc.html#label-Regexp+Literals">regexp literal</a>.</p>
+<p>To extract substrings based on a given pattern:</p>
+
+<pre><code>re = /foo/              # =&gt; /foo/
+re.match(&#39;food&#39;)        # =&gt; #&lt;MatchData &quot;foo&quot;&gt;
+re.match(&#39;good&#39;)        # =&gt; nil
+</code></pre>
+
+<p>See sections <a href="Regexp.html#class-Regexp-label-Method+match">Method match</a> and <a href="Regexp.html#class-Regexp-label-Operator+-3D~">Operator =~</a>.</p>
+</li><li>
+<p>To determine whether a string matches a given pattern:</p>
+
+<pre><code>re.match?(&#39;food&#39;) # =&gt; true
+re.match?(&#39;good&#39;) # =&gt; false
+</code></pre>
+
+<p>See section <a href="Regexp.html#class-Regexp-label-Method+match-3F">Method match?</a>.</p>
+</li><li>
+<p>As an argument for calls to certain methods in other classes and modules; most such methods accept an argument that may be either a string or the (much more powerful) regexp.</p>
+
+<p>See Regexp Methods.</p>
 </li></ul>
 
-<p>Regular expressions (<em>regexp</em>s) are patterns which describe the contents of a string. They’re used for testing whether a string contains a given pattern, or extracting the portions that match. They are created with the <code>/</code><em>pat</em><code>/</code> and <code>%r{</code><em>pat</em><code>}</code> literals or the <code>Regexp.new</code> constructor.</p>
+<h2 id="class-Regexp-label-Regexp+Objects">Regexp Objects</h2>
 
-<p>A regexp is usually delimited with forward slashes (<code>/</code>). For example:</p>
+<p>A regexp object has:</p>
+<ul><li>
+<p>A source; see <a href="Regexp.html#class-Regexp-label-Sources">Sources</a>.</p>
+</li><li>
+<p>Several modes; see <a href="Regexp.html#class-Regexp-label-Modes">Modes</a>.</p>
+</li><li>
+<p>A timeout; see <a href="Regexp.html#class-Regexp-label-Timeouts">Timeouts</a>.</p>
+</li><li>
+<p>An encoding; see <a href="Regexp.html#class-Regexp-label-Encodings">Encodings</a>.</p>
+</li></ul>
 
-<pre><code>/hay/ =~ &#39;haystack&#39;   #=&gt; 0
-/y/.match(&#39;haystack&#39;) #=&gt; #&lt;MatchData &quot;y&quot;&gt;
+<h2 id="class-Regexp-label-Creating+a+Regexp">Creating a Regexp</h2>
+
+<p>A regular expression may be created with:</p>
+<ul><li>
+<p>A regexp literal using slash characters (see Regexp Literals):</p>
+
+<pre><code># This is a very common usage.
+/foo/ # =&gt; /foo/
+</code></pre>
+</li><li>
+<p>A <code>%r</code> regexp literal (see Regexp Literals):</p>
+
+<pre><code># Same delimiter character at beginning and end;
+# useful for avoiding escaping characters
+%r/name\/value pair/ # =&gt; /name\/value pair/
+%r:name/value pair:  # =&gt; /name\/value pair/
+%r|name/value pair|  # =&gt; /name\/value pair/
+
+# Certain &quot;paired&quot; characters can be delimiters.
+%r[foo] # =&gt; /foo/
+%r{foo} # =&gt; /foo/
+%r(foo) # =&gt; /foo/
+%r&lt;foo&gt; # =&gt; /foo/
+</code></pre>
+</li><li>
+<p>Method <a href="Regexp.html#method-c-new"><code>Regexp.new</code></a>.</p>
+</li></ul>
+
+<h2 id="class-Regexp-label-Method+match">Method <code>match</code></h2>
+
+<p>Each of the methods <a href="Regexp.html#method-i-match"><code>Regexp#match</code></a>, <a href="String.html#method-i-match"><code>String#match</code></a>, and <a href="Symbol.html#method-i-match"><code>Symbol#match</code></a> returns a <a href="MatchData.html"><code>MatchData</code></a> object if a match was found, <code>nil</code> otherwise; each also sets <a href="Regexp.html#class-Regexp-label-Global+Variables">global variables</a>:</p>
+
+<pre><code>&#39;food&#39;.match(/foo/) # =&gt; #&lt;MatchData &quot;foo&quot;&gt;
+&#39;food&#39;.match(/bar/) # =&gt; nil
 </code></pre>
 
-<p>If a string contains the pattern it is said to <em>match</em>. A literal string matches itself.</p>
+<h2 id="class-Regexp-label-Operator+-3D~">Operator <code>=~</code></h2>
 
-<p>Here ‘haystack’ does not contain the pattern ‘needle’, so it doesn’t match:</p>
+<p>Each of the operators Regexp#=~, String#=~, and Symbol#=~ returns an integer offset if a match was found, <code>nil</code> otherwise; each also sets <a href="Regexp.html#class-Regexp-label-Global+Variables">global variables</a>:</p>
 
-<pre><code>/needle/.match(&#39;haystack&#39;) #=&gt; nil
+<pre><code>/bar/ =~ &#39;foo bar&#39; # =&gt; 4
+&#39;foo bar&#39; =~ /bar/ # =&gt; 4
+/baz/ =~ &#39;foo bar&#39; # =&gt; nil
 </code></pre>
 
-<p>Here ‘haystack’ contains the pattern ‘hay’, so it matches:</p>
+<h2 id="class-Regexp-label-Method+match-3F">Method <code>match?</code></h2>
 
-<pre><code>/hay/.match(&#39;haystack&#39;)    #=&gt; #&lt;MatchData &quot;hay&quot;&gt;
+<p>Each of the methods <a href="Regexp.html#method-i-match-3F"><code>Regexp#match?</code></a>, <a href="String.html#method-i-match-3F"><code>String#match?</code></a>, and <a href="Symbol.html#method-i-match-3F"><code>Symbol#match?</code></a> returns <code>true</code> if a match was found, <code>false</code> otherwise; none sets <a href="Regexp.html#class-Regexp-label-Global+Variables">global variables</a>:</p>
+
+<pre><code>&#39;food&#39;.match?(/foo/) # =&gt; true
+&#39;food&#39;.match?(/bar/) # =&gt; false
 </code></pre>
 
-<p>Specifically, <code>/st/</code> requires that the string contains the letter <em>s</em> followed by the letter <em>t</em>, so it matches <em>haystack</em>, also.</p>
+<h2 id="class-Regexp-label-Global+Variables">Global Variables</h2>
 
-<h2 id="class-Regexp-label-3D~+and+Regexp-23match"><code>=~</code> and <a href="Regexp.html#method-i-match"><code>Regexp#match</code></a></h2>
+<p>Certain regexp-oriented methods assign values to global variables:</p>
+<ul><li>
+<p><code>#match</code>: see <a href="Regexp.html#class-Regexp-label-Method+match">Method match</a>.</p>
+</li><li>
+<p><code>#=~</code>: see <a href="Regexp.html#class-Regexp-label-Operator+-3D~">Operator =~</a>.</p>
+</li></ul>
 
-<p>Pattern matching may be achieved by using <code>=~</code> operator or <a href="Regexp.html#method-i-match"><code>Regexp#match</code></a> method.</p>
+<p>The affected global variables are:</p>
+<ul><li>
+<p><code>$~</code>: Returns a <a href="MatchData.html"><code>MatchData</code></a> object, or <code>nil</code>.</p>
+</li><li>
+<p><code>$&amp;</code>: Returns the matched part of the string, or <code>nil</code>.</p>
+</li><li>
+<p><code>$`</code>: Returns the part of the string to the left of the match, or <code>nil</code>.</p>
+</li><li>
+<p><code>$&#39;</code>: Returns the part of the string to the right of the match, or <code>nil</code>.</p>
+</li><li>
+<p><code>$+</code>: Returns the last group matched, or <code>nil</code>.</p>
+</li><li>
+<p><code>$1</code>, <code>$2</code>, etc.: Returns the first, second, etc., matched group, or <code>nil</code>. Note that <code>$0</code> is quite different; it returns the name of the currently executing program.</p>
+</li></ul>
 
-<h3 id="class-Regexp-label-3D~+operator"><code>=~</code> operator</h3>
+<p>Examples:</p>
 
-<p><code>=~</code> is Ruby’s basic pattern-matching operator.  When one operand is a regular expression and the other is a string then the regular expression is used as a pattern to match against the string.  (This operator is equivalently defined by <a href="Regexp.html"><code>Regexp</code></a> and <a href="String.html"><code>String</code></a> so the order of <a href="String.html"><code>String</code></a> and <a href="Regexp.html"><code>Regexp</code></a> do not matter. Other classes may have different implementations of <code>=~</code>.)  If a match is found, the operator returns index of first match in string, otherwise it returns <code>nil</code>.</p>
+<pre><code># Matched string, but no matched groups.
+&#39;foo bar bar baz&#39;.match(&#39;bar&#39;)
+$~ # =&gt; #&lt;MatchData &quot;bar&quot;&gt;
+$&amp; # =&gt; &quot;bar&quot;
+$` # =&gt; &quot;foo &quot;
+$&#39; # =&gt; &quot; bar baz&quot;
+$+ # =&gt; nil
+$1 # =&gt; nil
 
-<pre><code>/hay/ =~ &#39;haystack&#39;   #=&gt; 0
-&#39;haystack&#39; =~ /hay/   #=&gt; 0
-/a/   =~ &#39;haystack&#39;   #=&gt; 1
-/u/   =~ &#39;haystack&#39;   #=&gt; nil
+# Matched groups.
+/s(\w{2}).*(c)/.match(&#39;haystack&#39;)
+$~ # =&gt; #&lt;MatchData &quot;stac&quot; 1:&quot;ta&quot; 2:&quot;c&quot;&gt;
+$&amp; # =&gt; &quot;stac&quot;
+$` # =&gt; &quot;hay&quot;
+$&#39; # =&gt; &quot;k&quot;
+$+ # =&gt; &quot;c&quot;
+$1 # =&gt; &quot;ta&quot;
+$2 # =&gt; &quot;c&quot;
+$3 # =&gt; nil
+
+# No match.
+&#39;foo&#39;.match(&#39;bar&#39;)
+$~ # =&gt; nil
+$&amp; # =&gt; nil
+$` # =&gt; nil
+$&#39; # =&gt; nil
+$+ # =&gt; nil
+$1 # =&gt; nil
 </code></pre>
 
-<p>Using <code>=~</code> operator with a <a href="String.html"><code>String</code></a> and <a href="Regexp.html"><code>Regexp</code></a> the <code>$~</code> global variable is set after a successful match.  <code>$~</code> holds a <a href="MatchData.html"><code>MatchData</code></a> object. <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a> is equivalent to <code>$~</code>.</p>
+<p>Note that <a href="Regexp.html#method-i-match-3F"><code>Regexp#match?</code></a>, <a href="String.html#method-i-match-3F"><code>String#match?</code></a>, and <a href="Symbol.html#method-i-match-3F"><code>Symbol#match?</code></a> do not set global variables.</p>
 
-<h3 id="class-Regexp-label-Regexp-23match+method"><a href="Regexp.html#method-i-match"><code>Regexp#match</code></a> method</h3>
+<h2 id="class-Regexp-label-Sources">Sources</h2>
 
-<p>The <a href="Regexp.html#method-i-match"><code>match</code></a> method returns a <a href="MatchData.html"><code>MatchData</code></a> object:</p>
+<p>As seen above, the simplest regexp uses a literal expression as its source:</p>
 
-<pre><code>/st/.match(&#39;haystack&#39;)   #=&gt; #&lt;MatchData &quot;st&quot;&gt;
+<pre><code>re = /foo/              # =&gt; /foo/
+re.match(&#39;food&#39;)        # =&gt; #&lt;MatchData &quot;foo&quot;&gt;
+re.match(&#39;good&#39;)        # =&gt; nil
 </code></pre>
 
-<h2 id="class-Regexp-label-Metacharacters+and+Escapes">Metacharacters and Escapes</h2>
+<p>A rich collection of available <em>subexpressions</em> gives the regexp great power and flexibility:</p>
+<ul><li>
+<p><a href="Regexp.html#class-Regexp-label-Special+Characters">Special characters</a></p>
+</li><li>
+<p><a href="Regexp.html#class-Regexp-label-Source+Literals">Source literals</a></p>
+</li><li>
+<p><a href="Regexp.html#class-Regexp-label-Character+Classes">Character classes</a></p>
+</li><li>
+<p><a href="Regexp.html#class-Regexp-label-Shorthand+Character+Classes">Shorthand character classes</a></p>
+</li><li>
+<p><a href="Regexp.html#class-Regexp-label-Anchors">Anchors</a></p>
+</li><li>
+<p><a href="Regexp.html#class-Regexp-label-Alternation">Alternation</a></p>
+</li><li>
+<p><a href="Regexp.html#class-Regexp-label-Quantifiers">Quantifiers</a></p>
+</li><li>
+<p><a href="Regexp.html#class-Regexp-label-Groups+and+Captures">Groups and captures</a></p>
+</li><li>
+<p><a href="Regexp.html#class-Regexp-label-Unicode">Unicode</a></p>
+</li><li>
+<p><a href="Regexp.html#class-Regexp-label-POSIX+Bracket+Expressions">POSIX Bracket Expressions</a></p>
+</li><li>
+<p><a href="Regexp.html#class-Regexp-label-Comments">Comments</a></p>
+</li></ul>
 
-<p>The following are <em>metacharacters</em> <code>(</code>, <code>)</code>, <code>[</code>, <code>]</code>, <code>{</code>, <code>}</code>, <code>.</code>, <code>?</code>, <code>+</code>, <code>*</code>. They have a specific meaning when appearing in a pattern. To match them literally they must be backslash-escaped. To match a backslash literally, backslash-escape it: <code>\\</code>.</p>
+<h3 id="class-Regexp-label-Special+Characters">Special Characters</h3>
 
-<pre><code>/1 \+ 2 = 3\?/.match(&#39;Does 1 + 2 = 3?&#39;) #=&gt; #&lt;MatchData &quot;1 + 2 = 3?&quot;&gt;
-/a\\\\b/.match(&#39;a\\\\b&#39;)                    #=&gt; #&lt;MatchData &quot;a\\b&quot;&gt;
+<p>Regexp special characters, called <em>metacharacters</em>, have special meanings in certain contexts; depending on the context, these are sometimes metacharacters:</p>
+
+<pre><code>. ? - + * ^ \ | $ ( ) [ ] { }
 </code></pre>
 
-<p>Patterns behave like double-quoted strings and can contain the same backslash escapes (the meaning of <code>\s</code> is different, however, see <a href="#label-Character+Classes">below</a>).</p>
+<p>To match a metacharacter literally, backslash-escape it:</p>
 
-<pre><code>/\s\u{6771 4eac 90fd}/.match(&quot;Go to 東京都&quot;)
-    #=&gt; #&lt;MatchData &quot; 東京都&quot;&gt;
+<pre><code># Matches one or more &#39;o&#39; characters.
+/o+/.match(&#39;foo&#39;)  # =&gt; #&lt;MatchData &quot;oo&quot;&gt;
+# Would match &#39;o+&#39;.
+/o\+/.match(&#39;foo&#39;) # =&gt; nil
 </code></pre>
 
-<p>Arbitrary Ruby expressions can be embedded into patterns with the <code>#{...}</code> construct.</p>
+<p>To match a backslash literally, backslash-escape it:</p>
 
-<pre><code>place = &quot;東京都&quot;
-/#{place}/.match(&quot;Go to 東京都&quot;)
-    #=&gt; #&lt;MatchData &quot;東京都&quot;&gt;
+<pre><code>/\./.match(&#39;\.&#39;)  # =&gt; #&lt;MatchData &quot;.&quot;&gt;
+/\\./.match(&#39;\.&#39;) # =&gt; #&lt;MatchData &quot;\\.&quot;&gt;
 </code></pre>
 
-<h2 id="class-Regexp-label-Character+Classes">Character Classes</h2>
+<p><a href="Method.html"><code>Method</code></a> <a href="Regexp.html#method-c-escape"><code>Regexp.escape</code></a> returns an escaped string:</p>
 
-<p>A <em>character class</em> is delimited with square brackets (<code>[</code>, <code>]</code>) and lists characters that may appear at that point in the match. <code>/[ab]/</code> means <em>a</em> or <em>b</em>, as opposed to <code>/ab/</code> which means <em>a</em> followed by <em>b</em>.</p>
-
-<pre><code>/W[aeiou]rd/.match(&quot;Word&quot;) #=&gt; #&lt;MatchData &quot;Word&quot;&gt;
+<pre><code>Regexp.escape(&#39;.?-+*^\|$()[]{}&#39;)
+# =&gt; &quot;\\.\\?\\-\\+\\*\\^\\\\\\|\\$\\(\\)\\[\\]\\{\\}&quot;
 </code></pre>
 
-<p>Within a character class the hyphen (<code>-</code>) is a metacharacter denoting an inclusive range of characters. <code>[abcd]</code> is equivalent to <code>[a-d]</code>. A range can be followed by another range, so <code>[abcdwxyz]</code> is equivalent to <code>[a-dw-z]</code>. The order in which ranges or individual characters appear inside a character class is irrelevant.</p>
+<h3 id="class-Regexp-label-Source+Literals">Source Literals</h3>
 
-<pre><code>/[0-9a-f]/.match(&#39;9f&#39;) #=&gt; #&lt;MatchData &quot;9&quot;&gt;
-/[9f]/.match(&#39;9f&#39;)     #=&gt; #&lt;MatchData &quot;9&quot;&gt;
+<p>The source literal largely behaves like a double-quoted string; see Regexp Literals.</p>
+
+<p>In particular, a source literal may contain interpolated expressions:</p>
+
+<pre><code>s = &#39;foo&#39;         # =&gt; &quot;foo&quot;
+/#{s}/            # =&gt; /foo/
+/#{s.capitalize}/ # =&gt; /Foo/
+/#{2 + 2}/        # =&gt; /4/
 </code></pre>
 
-<p>If the first character of a character class is a caret (<code>^</code>) the class is inverted: it matches any character <em>except</em> those named.</p>
+<p>There are differences between an ordinary string literal and a source literal; see <a href="Regexp.html#class-Regexp-label-Shorthand+Character+Classes">Shorthand Character Classes</a>.</p>
+<ul><li>
+<p><code>\s</code> in an ordinary string literal is equivalent to a space character; in a source literal, it’s shorthand for matching a whitespace character.</p>
+</li><li>
+<p>In an ordinary string literal, these are (needlessly) escaped characters; in a source literal, they are shorthands for various matching characters:</p>
 
-<pre><code>/[^a-eg-z]/.match(&#39;f&#39;) #=&gt; #&lt;MatchData &quot;f&quot;&gt;
+<pre><code>\w \W \d \D \h \H \S \R
+</code></pre>
+</li></ul>
+
+<h3 id="class-Regexp-label-Character+Classes">Character Classes</h3>
+
+<p>A <em>character class</em> is delimited by square brackets; it specifies that certain characters match at a given point in the target string:</p>
+
+<pre><code># This character class will match any vowel.
+re = /B[aeiou]rd/
+re.match(&#39;Bird&#39;) # =&gt; #&lt;MatchData &quot;Bird&quot;&gt;
+re.match(&#39;Bard&#39;) # =&gt; #&lt;MatchData &quot;Bard&quot;&gt;
+re.match(&#39;Byrd&#39;) # =&gt; nil
 </code></pre>
 
-<p>A character class may contain another character class. By itself this isn’t useful because <code>[a-z[0-9]]</code> describes the same set as <code>[a-z0-9]</code>. However, character classes also support the <code>&amp;&amp;</code> operator which performs set intersection on its arguments. The two can be combined as follows:</p>
+<p>A character class may contain hyphen characters to specify ranges of characters:</p>
+
+<pre><code># These regexps have the same effect.
+/[abcdef]/.match(&#39;foo&#39;) # =&gt; #&lt;MatchData &quot;f&quot;&gt;
+/[a-f]/.match(&#39;foo&#39;)    # =&gt; #&lt;MatchData &quot;f&quot;&gt;
+/[a-cd-f]/.match(&#39;foo&#39;) # =&gt; #&lt;MatchData &quot;f&quot;&gt;
+</code></pre>
+
+<p>When the first character of a character class is a caret (<code>^</code>), the sense of the class is inverted: it matches any character <em>except</em> those specified.</p>
+
+<pre><code>/[^a-eg-z]/.match(&#39;f&#39;) # =&gt; #&lt;MatchData &quot;f&quot;&gt;
+</code></pre>
+
+<p>A character class may contain another character class. By itself this isn’t useful because <code>[a-z[0-9]]</code> describes the same set as <code>[a-z0-9]</code>.</p>
+
+<p>However, character classes also support the <code>&amp;&amp;</code> operator, which performs set intersection on its arguments. The two can be combined as follows:</p>
 
 <pre><code>/[a-w&amp;&amp;[^c-g]z]/ # ([a-w] AND ([^c-g] OR z))
 </code></pre>
@@ -192,219 +378,470 @@
 <pre><code>/[abh-w]/
 </code></pre>
 
-<p>The following metacharacters also behave like character classes:</p>
+<h3 id="class-Regexp-label-Shorthand+Character+Classes">Shorthand Character Classes</h3>
+
+<p>Each of the following metacharacters serves as a shorthand for a character class:</p>
 <ul><li>
-<p><code>/./</code> - Any character except a newline.</p>
+<p><code>/./</code>: Matches any character except a newline:</p>
+
+<pre><code>/./.match(&#39;foo&#39;) # =&gt; #&lt;MatchData &quot;f&quot;&gt;
+/./.match(&quot;\n&quot;)  # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/./m</code> - Any character (the <code>m</code> modifier enables multiline mode)</p>
+<p><code>/./m</code>: Matches any character, including a newline; see <a href="Regexp.html#class-Regexp-label-Multiline+Mode">Multiline Mode</a>:</p>
+
+<pre><code>/./m.match(&quot;\n&quot;) # =&gt; #&lt;MatchData &quot;\n&quot;&gt;
+</code></pre>
 </li><li>
-<p><code>/\w/</code> - A word character (<code>[a-zA-Z0-9_]</code>)</p>
+<p><code>/\w/</code>: Matches a word character: equivalent to <code>[a-zA-Z0-9_]</code>:</p>
+
+<pre><code>/\w/.match(&#39; foo&#39;) # =&gt; #&lt;MatchData &quot;f&quot;&gt;
+/\w/.match(&#39; _&#39;)   # =&gt; #&lt;MatchData &quot;_&quot;&gt;
+/\w/.match(&#39; &#39;)    # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/\W/</code> - A non-word character (<code>[^a-zA-Z0-9_]</code>). Please take a look at <a href="https://bugs.ruby-lang.org/issues/4044">Bug #4044</a> if using <code>/\W/</code> with the <code>/i</code> modifier.</p>
+<p><code>/\W/</code>: Matches a non-word character: equivalent to <code>[^a-zA-Z0-9_]</code>:</p>
+
+<pre><code>/\W/.match(&#39; &#39;) # =&gt; #&lt;MatchData &quot; &quot;&gt;
+/\W/.match(&#39;_&#39;) # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/\d/</code> - A digit character (<code>[0-9]</code>)</p>
+<p><code>/\d/</code>: Matches a digit character: equivalent to <code>[0-9]</code>:</p>
+
+<pre><code>/\d/.match(&#39;THX1138&#39;) # =&gt; #&lt;MatchData &quot;1&quot;&gt;
+/\d/.match(&#39;foo&#39;)     # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/\D/</code> - A non-digit character (<code>[^0-9]</code>)</p>
+<p><code>/\D/</code>: Matches a non-digit character: equivalent to <code>[^0-9]</code>:</p>
+
+<pre><code>/\D/.match(&#39;123Jump!&#39;) # =&gt; #&lt;MatchData &quot;J&quot;&gt;
+/\D/.match(&#39;123&#39;)      # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/\h/</code> - A hexdigit character (<code>[0-9a-fA-F]</code>)</p>
+<p><code>/\h/</code>: Matches a hexdigit character: equivalent to <code>[0-9a-fA-F]</code>:</p>
+
+<pre><code>/\h/.match(&#39;xyz fedcba9876543210&#39;) # =&gt; #&lt;MatchData &quot;f&quot;&gt;
+/\h/.match(&#39;xyz&#39;)                  # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/\H/</code> - A non-hexdigit character (<code>[^0-9a-fA-F]</code>)</p>
+<p><code>/\H/</code>: Matches a non-hexdigit character: equivalent to <code>[^0-9a-fA-F]</code>:</p>
+
+<pre><code>/\H/.match(&#39;fedcba9876543210xyz&#39;) # =&gt; #&lt;MatchData &quot;x&quot;&gt;
+/\H/.match(&#39;fedcba9876543210&#39;)    # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/\s/</code> - A whitespace character: <code>/[ \t\r\n\f\v]/</code></p>
+<p><code>/\s/</code>: Matches a whitespace character: equivalent to <code>/[ \t\r\n\f\v]/</code>:</p>
+
+<pre><code>/\s/.match(&#39;foo bar&#39;) # =&gt; #&lt;MatchData &quot; &quot;&gt;
+/\s/.match(&#39;foo&#39;)     # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/\S/</code> - A non-whitespace character: <code>/[^ \t\r\n\f\v]/</code></p>
+<p><code>/\S/</code>: Matches a non-whitespace character: equivalent to <code>/[^ \t\r\n\f\v]/</code>:</p>
+
+<pre><code>/\S/.match(&quot; \t\r\n\f\v foo&quot;) # =&gt; #&lt;MatchData &quot;f&quot;&gt;
+/\S/.match(&quot; \t\r\n\f\v&quot;)     # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/\R/</code> - A linebreak: <code>\n</code>, <code>\v</code>, <code>\f</code>, <code>\r</code> <code>\u0085</code> (NEXT LINE), <code>\u2028</code> (LINE SEPARATOR), <code>\u2029</code> (PARAGRAPH SEPARATOR) or <code>\r\n</code>.</p>
+<p><code>/\R/</code>: Matches a linebreak, platform-independently:</p>
+
+<pre><code>/\R/.match(&quot;\r&quot;)     # =&gt; #&lt;MatchData &quot;\r&quot;&gt;     # Carriage return (CR)
+/\R/.match(&quot;\n&quot;)     # =&gt; #&lt;MatchData &quot;\n&quot;&gt;     # Newline (LF)
+/\R/.match(&quot;\f&quot;)     # =&gt; #&lt;MatchData &quot;\f&quot;&gt;     # Formfeed (FF)
+/\R/.match(&quot;\v&quot;)     # =&gt; #&lt;MatchData &quot;\v&quot;&gt;     # Vertical tab (VT)
+/\R/.match(&quot;\r\n&quot;)   # =&gt; #&lt;MatchData &quot;\r\n&quot;&gt;   # CRLF
+/\R/.match(&quot;\u0085&quot;) # =&gt; #&lt;MatchData &quot;\u0085&quot;&gt; # Next line (NEL)
+/\R/.match(&quot;\u2028&quot;) # =&gt; #&lt;MatchData &quot;\u2028&quot;&gt; # Line separator (LSEP)
+/\R/.match(&quot;\u2029&quot;) # =&gt; #&lt;MatchData &quot;\u2029&quot;&gt; # Paragraph separator (PSEP)
+</code></pre>
 </li></ul>
 
-<p>POSIX <em>bracket expressions</em> are also similar to character classes. They provide a portable alternative to the above, with the added benefit that they encompass non-ASCII characters. For instance, <code>/\d/</code> matches only the ASCII decimal digits (0-9); whereas <code>/[[:digit:]]/</code> matches any character in the Unicode <em>Nd</em> category.</p>
+<h3 id="class-Regexp-label-Anchors">Anchors</h3>
+
+<p>An anchor is a metasequence that matches a zero-width position between characters in the target string.</p>
+
+<p>For a subexpression with no anchor, matching may begin anywhere in the target string:</p>
+
+<pre><code>/real/.match(&#39;surrealist&#39;) # =&gt; #&lt;MatchData &quot;real&quot;&gt;
+</code></pre>
+
+<p>For a subexpression with an anchor, matching must begin at the matched anchor.</p>
+
+<h4 id="class-Regexp-label-Boundary+Anchors">Boundary Anchors</h4>
+
+<p>Each of these anchors matches a boundary:</p>
 <ul><li>
-<p><code>/[[:alnum:]]/</code> - Alphabetic and numeric character</p>
+<p><code>^</code>: Matches the beginning of a line:</p>
+
+<pre><code>/^bar/.match(&quot;foo\nbar&quot;) # =&gt; #&lt;MatchData &quot;bar&quot;&gt;
+/^ar/.match(&quot;foo\nbar&quot;)  # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/[[:alpha:]]/</code> - Alphabetic character</p>
+<p><code>$</code>: Matches the end of a line:</p>
+
+<pre><code>/bar$/.match(&quot;foo\nbar&quot;) # =&gt; #&lt;MatchData &quot;bar&quot;&gt;
+/ba$/.match(&quot;foo\nbar&quot;)  # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/[[:blank:]]/</code> - Space or tab</p>
+<p><code>\A</code>: Matches the beginning of the string:</p>
+
+<pre><code>/\Afoo/.match(&#39;foo bar&#39;)  # =&gt; #&lt;MatchData &quot;foo&quot;&gt;
+/\Afoo/.match(&#39; foo bar&#39;) # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/[[:cntrl:]]/</code> - Control character</p>
+<p><code>\Z</code>: Matches the end of the string; if string ends with a single newline, it matches just before the ending newline:</p>
+
+<pre><code>/foo\Z/.match(&#39;bar foo&#39;)     # =&gt; #&lt;MatchData &quot;foo&quot;&gt;
+/foo\Z/.match(&#39;foo bar&#39;)     # =&gt; nil
+/foo\Z/.match(&quot;bar foo\n&quot;)   # =&gt; #&lt;MatchData &quot;foo&quot;&gt;
+/foo\Z/.match(&quot;bar foo\n\n&quot;) # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/[[:digit:]]/</code> - Digit</p>
+<p><code>\z</code>: Matches the end of the string:</p>
+
+<pre><code>/foo\z/.match(&#39;bar foo&#39;)   # =&gt; #&lt;MatchData &quot;foo&quot;&gt;
+/foo\z/.match(&#39;foo bar&#39;)   # =&gt; nil
+/foo\z/.match(&quot;bar foo\n&quot;) # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/[[:graph:]]/</code> - Non-blank character (excludes spaces, control characters, and similar)</p>
+<p><code>\b</code>: Matches word boundary when not inside brackets; matches backspace (<code>&quot;0x08&quot;</code>) when inside brackets:</p>
+
+<pre><code>/foo\b/.match(&#39;foo bar&#39;) # =&gt; #&lt;MatchData &quot;foo&quot;&gt;
+/foo\b/.match(&#39;foobar&#39;)  # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/[[:lower:]]/</code> - Lowercase alphabetical character</p>
+<p><code>\B</code>: Matches non-word boundary:</p>
+
+<pre><code>/foo\B/.match(&#39;foobar&#39;)  # =&gt; #&lt;MatchData &quot;foo&quot;&gt;
+/foo\B/.match(&#39;foo bar&#39;) # =&gt; nil
+</code></pre>
 </li><li>
-<p><code>/[[:print:]]/</code> - Like [:graph:], but includes the space character</p>
-</li><li>
-<p><code>/[[:punct:]]/</code> - Punctuation character</p>
-</li><li>
-<p><code>/[[:space:]]/</code> - Whitespace character (<code>[:blank:]</code>, newline, carriage return, etc.)</p>
-</li><li>
-<p><code>/[[:upper:]]/</code> - Uppercase alphabetical</p>
-</li><li>
-<p><code>/[[:xdigit:]]/</code> - Digit allowed in a hexadecimal number (i.e., 0-9a-fA-F)</p>
+<p><code>\G</code>: Matches first matching position:</p>
+
+<p>In methods like <a href="String.html#method-i-gsub"><code>String#gsub</code></a> and <a href="String.html#method-i-scan"><code>String#scan</code></a>, it changes on each iteration. It initially matches the beginning of subject, and in each following iteration it matches where the last match finished.</p>
+
+<pre><code>&quot;    a b c&quot;.gsub(/ /, &#39;_&#39;)   # =&gt; &quot;____a_b_c&quot;
+&quot;    a b c&quot;.gsub(/\G /, &#39;_&#39;) # =&gt; &quot;____a b c&quot;
+</code></pre>
+
+<p>In methods like <a href="Regexp.html#method-i-match"><code>Regexp#match</code></a> and <a href="String.html#method-i-match"><code>String#match</code></a> that take an optional offset, it matches where the search begins.</p>
+
+<pre><code>&quot;hello, world&quot;.match(/,/, 3)   # =&gt; #&lt;MatchData &quot;,&quot;&gt;
+&quot;hello, world&quot;.match(/\G,/, 3) # =&gt; nil
+</code></pre>
 </li></ul>
 
-<p>Ruby also supports the following non-POSIX character classes:</p>
-<ul><li>
-<p><code>/[[:word:]]/</code> - A character in one of the following Unicode general categories <em>Letter</em>, <em>Mark</em>, <em>Number</em>, <em>Connector_Punctuation</em></p>
-</li><li>
-<p><code>/[[:ascii:]]/</code> - A character in the ASCII character set</p>
+<h4 id="class-Regexp-label-Lookaround+Anchors">Lookaround Anchors</h4>
 
-<pre><code># U+06F2 is &quot;EXTENDED ARABIC-INDIC DIGIT TWO&quot;
-/[[:digit:]]/.match(&quot;\u06F2&quot;)    #=&gt; #&lt;MatchData &quot;\u{06F2}&quot;&gt;
-/[[:upper:]][[:lower:]]/.match(&quot;Hello&quot;) #=&gt; #&lt;MatchData &quot;He&quot;&gt;
-/[[:xdigit:]][[:xdigit:]]/.match(&quot;A6&quot;)  #=&gt; #&lt;MatchData &quot;A6&quot;&gt;
+<p>Lookahead anchors:</p>
+<ul><li>
+<p><code>(?=<em>pat</em>)</code>: Positive lookahead assertion: ensures that the following characters match <em>pat</em>, but doesn’t include those characters in the matched substring.</p>
+</li><li>
+<p><code>(?!<em>pat</em>)</code>: Negative lookahead assertion: ensures that the following characters <em>do not</em> match <em>pat</em>, but doesn’t include those characters in the matched substring.</p>
+</li></ul>
+
+<p>Lookbehind anchors:</p>
+<ul><li>
+<p><code>(?&lt;=<em>pat</em>)</code>: Positive lookbehind assertion: ensures that the preceding characters match <em>pat</em>, but doesn’t include those characters in the matched substring.</p>
+</li><li>
+<p><code>(?&lt;!<em>pat</em>)</code>: Negative lookbehind assertion: ensures that the preceding characters do not match <em>pat</em>, but doesn’t include those characters in the matched substring.</p>
+</li></ul>
+
+<p>The pattern below uses positive lookahead and positive lookbehind to match text appearing in <strong>…</strong> tags without including the tags in the match:</p>
+
+<pre><code>/(?&lt;=&lt;b&gt;)\w+(?=&lt;\/b&gt;)/.match(&quot;Fortune favors the &lt;b&gt;bold&lt;/b&gt;.&quot;)
+# =&gt; #&lt;MatchData &quot;bold&quot;&gt;
+</code></pre>
+
+<h4 id="class-Regexp-label-Match-Reset+Anchor">Match-Reset Anchor</h4>
+<ul><li>
+<p><code>\K</code>: Match reset: the matched content preceding <code>\K</code> in the regexp is excluded from the result. For example, the following two regexps are almost equivalent:</p>
+
+<pre><code>/ab\Kc/.match(&#39;abc&#39;)    # =&gt; #&lt;MatchData &quot;c&quot;&gt;
+/(?&lt;=ab)c/.match(&#39;abc&#39;) # =&gt; #&lt;MatchData &quot;c&quot;&gt;
+</code></pre>
+
+<p>These match same string and <code>$&amp;</code> equals <code>&#39;c&#39;</code>, while the matched position is different.</p>
+
+<p>As are the following two regexps:</p>
+
+<pre><code>/(a)\K(b)\Kc/
+/(?&lt;=(?&lt;=(a))(b))c/
 </code></pre>
 </li></ul>
 
-<h2 id="class-Regexp-label-Repetition">Repetition</h2>
+<h3 id="class-Regexp-label-Alternation">Alternation</h3>
 
-<p>The constructs described so far match a single character. They can be followed by a repetition metacharacter to specify how many times they need to occur. Such metacharacters are called <em>quantifiers</em>.</p>
+<p>The vertical bar metacharacter (<code>|</code>) may be used within parentheses to express alternation: two or more subexpressions any of which may match the target string.</p>
+
+<p>Two alternatives:</p>
+
+<pre><code>re = /(a|b)/
+re.match(&#39;foo&#39;) # =&gt; nil
+re.match(&#39;bar&#39;) # =&gt; #&lt;MatchData &quot;b&quot; 1:&quot;b&quot;&gt;
+</code></pre>
+
+<p>Four alternatives:</p>
+
+<pre><code>re = /(a|b|c|d)/
+re.match(&#39;shazam&#39;) # =&gt; #&lt;MatchData &quot;a&quot; 1:&quot;a&quot;&gt;
+re.match(&#39;cold&#39;)   # =&gt; #&lt;MatchData &quot;c&quot; 1:&quot;c&quot;&gt;
+</code></pre>
+
+<p>Each alternative is a subexpression, and may be composed of other subexpressions:</p>
+
+<pre><code>re = /([a-c]|[x-z])/
+re.match(&#39;bar&#39;) # =&gt; #&lt;MatchData &quot;b&quot; 1:&quot;b&quot;&gt;
+re.match(&#39;ooz&#39;) # =&gt; #&lt;MatchData &quot;z&quot; 1:&quot;z&quot;&gt;
+</code></pre>
+
+<p>Method <a href="Regexp.html#method-c-union"><code>Regexp.union</code></a> provides a convenient way to construct a regexp with alternatives.</p>
+
+<h3 id="class-Regexp-label-Quantifiers">Quantifiers</h3>
+
+<p>A simple regexp matches one character:</p>
+
+<pre><code>/\w/.match(&#39;Hello&#39;)  # =&gt; #&lt;MatchData &quot;H&quot;&gt;
+</code></pre>
+
+<p>An added <em>quantifier</em> specifies how many matches are required or allowed:</p>
 <ul><li>
-<p><code>*</code> - Zero or more times</p>
+<p><code>*</code> - Matches zero or more times:</p>
+
+<pre><code>/\w*/.match(&#39;&#39;)
+# =&gt; #&lt;MatchData &quot;&quot;&gt;
+/\w*/.match(&#39;x&#39;)
+# =&gt; #&lt;MatchData &quot;x&quot;&gt;
+/\w*/.match(&#39;xyz&#39;)
+# =&gt; #&lt;MatchData &quot;yz&quot;&gt;
+</code></pre>
 </li><li>
-<p><code>+</code> - One or more times</p>
+<p><code>+</code> - Matches one or more times:</p>
+
+<pre><code>/\w+/.match(&#39;&#39;)    # =&gt; nil
+/\w+/.match(&#39;x&#39;)   # =&gt; #&lt;MatchData &quot;x&quot;&gt;
+/\w+/.match(&#39;xyz&#39;) # =&gt; #&lt;MatchData &quot;xyz&quot;&gt;
+</code></pre>
 </li><li>
-<p><code>?</code> - Zero or one times (optional)</p>
+<p><code>?</code> - Matches zero or one times:</p>
+
+<pre><code>/\w?/.match(&#39;&#39;)    # =&gt; #&lt;MatchData &quot;&quot;&gt;
+/\w?/.match(&#39;x&#39;)   # =&gt; #&lt;MatchData &quot;x&quot;&gt;
+/\w?/.match(&#39;xyz&#39;) # =&gt; #&lt;MatchData &quot;x&quot;&gt;
+</code></pre>
 </li><li>
-<p><code>{</code><em>n</em><code>}</code> - Exactly <em>n</em> times</p>
+<p><code>{</code><em>n</em><code>}</code> - Matches exactly <em>n</em> times:</p>
+
+<pre><code>/\w{2}/.match(&#39;&#39;)    # =&gt; nil
+/\w{2}/.match(&#39;x&#39;)   # =&gt; nil
+/\w{2}/.match(&#39;xyz&#39;) # =&gt; #&lt;MatchData &quot;xy&quot;&gt;
+</code></pre>
 </li><li>
-<p><code>{</code><em>n</em><code>,}</code> - <em>n</em> or more times</p>
+<p><code>{</code><em>min</em><code>,}</code> - Matches <em>min</em> or more times:</p>
+
+<pre><code>/\w{2,}/.match(&#39;&#39;)    # =&gt; nil
+/\w{2,}/.match(&#39;x&#39;)   # =&gt; nil
+/\w{2,}/.match(&#39;xy&#39;)  # =&gt; #&lt;MatchData &quot;xy&quot;&gt;
+/\w{2,}/.match(&#39;xyz&#39;) # =&gt; #&lt;MatchData &quot;xyz&quot;&gt;
+</code></pre>
 </li><li>
-<p><code>{,</code><em>m</em><code>}</code> - <em>m</em> or less times</p>
+<p><code>{,</code><em>max</em><code>}</code> - Matches <em>max</em> or fewer times:</p>
+
+<pre><code>/\w{,2}/.match(&#39;&#39;)    # =&gt; #&lt;MatchData &quot;&quot;&gt;
+/\w{,2}/.match(&#39;x&#39;)   # =&gt; #&lt;MatchData &quot;x&quot;&gt;
+/\w{,2}/.match(&#39;xyz&#39;) # =&gt; #&lt;MatchData &quot;xy&quot;&gt;
+</code></pre>
 </li><li>
-<p><code>{</code><em>n</em><code>,</code><em>m</em><code>}</code> - At least <em>n</em> and at most <em>m</em> times</p>
+<p><code>{</code><em>min</em><code>,</code><em>max</em><code>}</code> - Matches at least <em>min</em> times and at most <em>max</em> times:</p>
+
+<pre><code>/\w{1,2}/.match(&#39;&#39;)    # =&gt; nil
+/\w{1,2}/.match(&#39;x&#39;)   # =&gt; #&lt;MatchData &quot;x&quot;&gt;
+/\w{1,2}/.match(&#39;xyz&#39;) # =&gt; #&lt;MatchData &quot;xy&quot;&gt;
+</code></pre>
 </li></ul>
 
-<p>At least one uppercase character (‘H’), at least one lowercase character (‘e’), two ‘l’ characters, then one ‘o’:</p>
+<h4 id="class-Regexp-label-Greedy-2C+Lazy-2C+or+Possessive+Matching">Greedy, Lazy, or Possessive Matching</h4>
 
-<pre><code>&quot;Hello&quot;.match(/[[:upper:]]+[[:lower:]]+l{2}o/) #=&gt; #&lt;MatchData &quot;Hello&quot;&gt;
+<p>Quantifier matching may be greedy, lazy, or possessive:</p>
+<ul><li>
+<p>In <em>greedy</em> matching, as many occurrences as possible are matched while still allowing the overall match to succeed. Greedy quantifiers: <code>*</code>, <code>+</code>, <code>?</code>, <code>{min, max}</code> and its variants.</p>
+</li><li>
+<p>In <em>lazy</em> matching, the minimum number of occurrences are matched. Lazy quantifiers: <code>*?</code>, <code>+?</code>, <code>??</code>, <code>{min, max}?</code> and its variants.</p>
+</li><li>
+<p>In <em>possessive</em> matching, once a match is found, there is no backtracking; that match is retained, even if it jeopardises the overall match. Possessive quantifiers: <code>*+</code>, <code>++</code>, <code>?+</code>. Note that <code>{min, max}</code> and its variants do <em>not</em> support possessive matching.</p>
+</li></ul>
+
+<p>More:</p>
+<ul><li>
+<p>About greedy and lazy matching, see <a href="https://doc.lagout.org/programmation/Regular%20Expressions/Regular%20Expressions%20Cookbook_%20Detailed%20Solutions%20in%20Eight%20Programming%20Languages%20%282nd%20ed.%29%20%5BGoyvaerts%20%26%20Levithan%202012-09-06%5D.pdf#tutorial-backtrack">Choosing Minimal or Maximal Repetition</a>.</p>
+</li><li>
+<p>About possessive matching, see <a href="https://doc.lagout.org/programmation/Regular%20Expressions/Regular%20Expressions%20Cookbook_%20Detailed%20Solutions%20in%20Eight%20Programming%20Languages%20%282nd%20ed.%29%20%5BGoyvaerts%20%26%20Levithan%202012-09-06%5D.pdf#tutorial-backtrack">Eliminate Needless Backtracking</a>.</p>
+</li></ul>
+
+<h3 id="class-Regexp-label-Groups+and+Captures">Groups and Captures</h3>
+
+<p>A simple regexp has (at most) one match:</p>
+
+<pre><code>re = /\d\d\d\d-\d\d-\d\d/
+re.match(&#39;1943-02-04&#39;)      # =&gt; #&lt;MatchData &quot;1943-02-04&quot;&gt;
+re.match(&#39;1943-02-04&#39;).size # =&gt; 1
+re.match(&#39;foo&#39;)             # =&gt; nil
 </code></pre>
 
-<h3 id="class-Regexp-label-Greedy+match">Greedy match</h3>
+<p>Adding one or more pairs of parentheses, <code>(<em>subexpression</em>)</code>, defines <em>groups</em>, which may result in multiple matched substrings, called <em>captures</em>:</p>
 
-<p>Repetition is <em>greedy</em> by default: as many occurrences as possible are matched while still allowing the overall match to succeed. By contrast, <em>lazy</em> matching makes the minimal amount of matches necessary for overall success. Most greedy metacharacters can be made lazy by following them with <code>?</code>. For the <code>{n}</code> pattern, because it specifies an exact number of characters to match and not a variable number of characters, the <code>?</code> metacharacter instead makes the repeated pattern optional.</p>
-
-<p>Both patterns below match the string. The first uses a greedy quantifier so ‘.+’ matches ‘&lt;a&gt;&lt;b&gt;’; the second uses a lazy quantifier so ‘.+?’ matches ‘&lt;a&gt;’:</p>
-
-<pre><code>/&lt;.+&gt;/.match(&quot;&lt;a&gt;&lt;b&gt;&quot;)  #=&gt; #&lt;MatchData &quot;&lt;a&gt;&lt;b&gt;&quot;&gt;
-/&lt;.+?&gt;/.match(&quot;&lt;a&gt;&lt;b&gt;&quot;) #=&gt; #&lt;MatchData &quot;&lt;a&gt;&quot;&gt;
+<pre><code>re = /(\d\d\d\d)-(\d\d)-(\d\d)/
+re.match(&#39;1943-02-04&#39;)      # =&gt; #&lt;MatchData &quot;1943-02-04&quot; 1:&quot;1943&quot; 2:&quot;02&quot; 3:&quot;04&quot;&gt;
+re.match(&#39;1943-02-04&#39;).size # =&gt; 4
 </code></pre>
 
-<h3 id="class-Regexp-label-Possessive+match">Possessive match</h3>
+<p>The first capture is the entire matched string; the other captures are the matched substrings from the groups.</p>
 
-<p>A quantifier followed by <code>+</code> matches <em>possessively</em>: once it has matched it does not backtrack. They behave like greedy quantifiers, but having matched they refuse to “give up” their match even if this jeopardises the overall match.</p>
+<p>A group may have a <a href="Regexp.html#class-Regexp-label-Quantifiers">quantifier</a>:</p>
 
-<pre><code>/&lt;.*&gt;&lt;.+&gt;/.match(&quot;&lt;a&gt;&lt;b&gt;&quot;) #=&gt; #&lt;MatchData &quot;&lt;a&gt;&lt;b&gt;&quot;&gt;
-/&lt;.*+&gt;&lt;.+&gt;/.match(&quot;&lt;a&gt;&lt;b&gt;&quot;) #=&gt; nil
-/&lt;.*&gt;&lt;.++&gt;/.match(&quot;&lt;a&gt;&lt;b&gt;&quot;) #=&gt; nil
+<pre><code>re = /July 4(th)?/
+re.match(&#39;July 4&#39;)   # =&gt; #&lt;MatchData &quot;July 4&quot; 1:nil&gt;
+re.match(&#39;July 4th&#39;) # =&gt; #&lt;MatchData &quot;July 4th&quot; 1:&quot;th&quot;&gt;
+
+re = /(foo)*/
+re.match(&#39;&#39;)       # =&gt; #&lt;MatchData &quot;&quot; 1:nil&gt;
+re.match(&#39;foo&#39;)    # =&gt; #&lt;MatchData &quot;foo&quot; 1:&quot;foo&quot;&gt;
+re.match(&#39;foofoo&#39;) # =&gt; #&lt;MatchData &quot;foofoo&quot; 1:&quot;foo&quot;&gt;
+
+re = /(foo)+/
+re.match(&#39;&#39;)       # =&gt; nil
+re.match(&#39;foo&#39;)    # =&gt; #&lt;MatchData &quot;foo&quot; 1:&quot;foo&quot;&gt;
+re.match(&#39;foofoo&#39;) # =&gt; #&lt;MatchData &quot;foofoo&quot; 1:&quot;foo&quot;&gt;
 </code></pre>
 
-<h2 id="class-Regexp-label-Capturing">Capturing</h2>
+<p>The returned MatchData object gives access to the matched substrings:</p>
 
-<p>Parentheses can be used for <em>capturing</em>. The text enclosed by the <em>n</em>th group of parentheses can be subsequently referred to with <em>n</em>. Within a pattern use the <em>backreference</em> <code>\n</code> (e.g. <code>\1</code>); outside of the pattern use <code>MatchData[n]</code> (e.g. <code>MatchData[1]</code>).</p>
-
-<p>In this example, <code>&#39;at&#39;</code> is captured by the first group of parentheses, then referred to later with <code>\1</code>:</p>
-
-<pre><code>/[csh](..) [csh]\1 in/.match(&quot;The cat sat in the hat&quot;)
-    #=&gt; #&lt;MatchData &quot;cat sat in&quot; 1:&quot;at&quot;&gt;
+<pre><code>re = /(\d\d\d\d)-(\d\d)-(\d\d)/
+md = re.match(&#39;1943-02-04&#39;)
+# =&gt; #&lt;MatchData &quot;1943-02-04&quot; 1:&quot;1943&quot; 2:&quot;02&quot; 3:&quot;04&quot;&gt;
+md[0] # =&gt; &quot;1943-02-04&quot;
+md[1] # =&gt; &quot;1943&quot;
+md[2] # =&gt; &quot;02&quot;
+md[3] # =&gt; &quot;04&quot;
 </code></pre>
 
-<p><a href="Regexp.html#method-i-match"><code>Regexp#match</code></a> returns a <a href="MatchData.html"><code>MatchData</code></a> object which makes the captured text available with its [] method:</p>
+<h4 id="class-Regexp-label-Non-Capturing+Groups">Non-Capturing Groups</h4>
 
-<pre><code>/[csh](..) [csh]\1 in/.match(&quot;The cat sat in the hat&quot;)[1] #=&gt; &#39;at&#39;
+<p>A group may be made non-capturing; it is still a group (and, for example, can have a quantifier), but its matching substring is not included among the captures.</p>
+
+<p>A non-capturing group begins with <code>?:</code> (inside the parentheses):</p>
+
+<pre><code># Don&#39;t capture the year.
+re = /(?:\d\d\d\d)-(\d\d)-(\d\d)/
+md = re.match(&#39;1943-02-04&#39;) # =&gt; #&lt;MatchData &quot;1943-02-04&quot; 1:&quot;02&quot; 2:&quot;04&quot;&gt;
 </code></pre>
 
-<p>While Ruby supports an arbitrary number of numbered captured groups, only groups 1-9 are supported using the <code>\n</code> backreference syntax.</p>
+<h4 id="class-Regexp-label-Backreferences">Backreferences</h4>
 
-<p>Ruby also supports <code>\0</code> as a special backreference, which references the entire matched string.  This is also available at <code>MatchData[0]</code>.  Note that the <code>\0</code> backreference cannot be used inside the regexp, as backreferences can only be used after the end of the capture group, and the <code>\0</code> backreference uses the implicit capture group of the entire match.  However, you can use this backreference when doing substitution:</p>
+<p>A group match may also be referenced within the regexp itself; such a reference is called a <code>backreference</code>:</p>
 
-<pre><code>&quot;The cat sat in the hat&quot;.gsub(/[csh]at/, &#39;\0s&#39;)
-  # =&gt; &quot;The cats sats in the hats&quot;
+<pre><code>/[csh](..) [csh]\1 in/.match(&#39;The cat sat in the hat&#39;)
+# =&gt; #&lt;MatchData &quot;cat sat in&quot; 1:&quot;at&quot;&gt;
 </code></pre>
 
-<h3 id="class-Regexp-label-Named+captures">Named captures</h3>
+<p>This table shows how each subexpression in the regexp above matches a substring in the target string:</p>
 
-<p>Capture groups can be referred to by name when defined with the <code>(?&lt;</code><em>name</em><code>&gt;)</code> or <code>(?&#39;</code><em>name</em><code>&#39;)</code> constructs.</p>
-
-<pre><code>/\$(?&lt;dollars&gt;\d+)\.(?&lt;cents&gt;\d+)/.match(&quot;$3.67&quot;)
-    #=&gt; #&lt;MatchData &quot;$3.67&quot; dollars:&quot;3&quot; cents:&quot;67&quot;&gt;
-/\$(?&lt;dollars&gt;\d+)\.(?&lt;cents&gt;\d+)/.match(&quot;$3.67&quot;)[:dollars] #=&gt; &quot;3&quot;
+<pre><code>| Subexpression in Regexp   | Matching Substring in Target String |
+|---------------------------|-------------------------------------|
+|       First &#39;[csh]&#39;       |            Character &#39;c&#39;            |
+|          &#39;(..)&#39;           |        First substring &#39;at&#39;         |
+|      First space &#39; &#39;      |      First space character &#39; &#39;      |
+|       Second &#39;[csh]&#39;      |            Character &#39;s&#39;            |
+| &#39;\1&#39; (backreference &#39;at&#39;) |        Second substring &#39;at&#39;        |
+|           &#39; in&#39;           |            Substring &#39; in&#39;          |
 </code></pre>
 
-<p>Named groups can be backreferenced with <code>\k&lt;</code><em>name</em><code>&gt;</code>, where <em>name</em> is the group name.</p>
+<p>A regexp may contain any number of groups:</p>
+<ul><li>
+<p>For a large number of groups:</p>
+<ul><li>
+<p>The ordinary <code>\<em>n</em></code> notation applies only for <em>n</em> in range (1..9).</p>
+</li><li>
+<p>The <code>MatchData[<em>n</em>]</code> notation applies for any non-negative <em>n</em>.</p>
+</li></ul>
+</li><li>
+<p><code>\0</code> is a special backreference, referring to the entire matched string; it may not be used within the regexp itself, but may be used outside it (for example, in a substitution method call):</p>
+
+<pre><code>&#39;The cat sat in the hat&#39;.gsub(/[csh]at/, &#39;\0s&#39;)
+# =&gt; &quot;The cats sats in the hats&quot;
+</code></pre>
+</li></ul>
+
+<h4 id="class-Regexp-label-Named+Captures">Named Captures</h4>
+
+<p>As seen above, a capture can be referred to by its number. A capture can also have a name, prefixed as <code>?&lt;<em>name</em>&gt;</code> or <code>?&#39;<em>name</em>&#39;</code>, and the name (symbolized) may be used as an index in <code>MatchData[]</code>:</p>
+
+<pre><code>md = /\$(?&lt;dollars&gt;\d+)\.(?&#39;cents&#39;\d+)/.match(&quot;$3.67&quot;)
+# =&gt; #&lt;MatchData &quot;$3.67&quot; dollars:&quot;3&quot; cents:&quot;67&quot;&gt;
+md[:dollars]  # =&gt; &quot;3&quot;
+md[:cents]    # =&gt; &quot;67&quot;
+# The capture numbers are still valid.
+md[2]         # =&gt; &quot;67&quot;
+</code></pre>
+
+<p>When a regexp contains a named capture, there are no unnamed captures:</p>
+
+<pre><code>/\$(?&lt;dollars&gt;\d+)\.(\d+)/.match(&quot;$3.67&quot;)
+# =&gt; #&lt;MatchData &quot;$3.67&quot; dollars:&quot;3&quot;&gt;
+</code></pre>
+
+<p>A named group may be backreferenced as <code>\k&lt;<em>name</em>&gt;</code>:</p>
 
 <pre><code>/(?&lt;vowel&gt;[aeiou]).\k&lt;vowel&gt;.\k&lt;vowel&gt;/.match(&#39;ototomy&#39;)
-    #=&gt; #&lt;MatchData &quot;ototo&quot; vowel:&quot;o&quot;&gt;
+# =&gt; #&lt;MatchData &quot;ototo&quot; vowel:&quot;o&quot;&gt;
 </code></pre>
 
-<p><strong>Note</strong>: A regexp can’t use named backreferences and numbered backreferences simultaneously. Also, if a named capture is used in a regexp, then parentheses used for grouping which would otherwise result in a unnamed capture are treated as non-capturing.</p>
+<p>When (and only when) a regexp contains named capture groups and appears before the <code>=~</code> operator, the captured substrings are assigned to local variables with corresponding names:</p>
 
-<pre><code>/(\w)(\w)/.match(&quot;ab&quot;).captures # =&gt; [&quot;a&quot;, &quot;b&quot;]
-/(\w)(\w)/.match(&quot;ab&quot;).named_captures # =&gt; {}
-
-/(?&lt;c&gt;\w)(\w)/.match(&quot;ab&quot;).captures # =&gt; [&quot;a&quot;]
-/(?&lt;c&gt;\w)(\w)/.match(&quot;ab&quot;).named_captures # =&gt; {&quot;c&quot;=&gt;&quot;a&quot;}
+<pre><code>/\$(?&lt;dollars&gt;\d+)\.(?&lt;cents&gt;\d+)/ =~ &#39;$3.67&#39;
+dollars # =&gt; &quot;3&quot;
+cents   # =&gt; &quot;67&quot;
 </code></pre>
 
-<p>When named capture groups are used with a literal regexp on the left-hand side of an expression and the <code>=~</code> operator, the captured text is also assigned to local variables with corresponding names.</p>
+<p>Method <a href="Regexp.html#method-i-named_captures"><code>Regexp#named_captures</code></a> returns a hash of the capture names and substrings; method <a href="Regexp.html#method-i-names"><code>Regexp#names</code></a> returns an array of the capture names.</p>
 
-<pre><code>/\$(?&lt;dollars&gt;\d+)\.(?&lt;cents&gt;\d+)/ =~ &quot;$3.67&quot; #=&gt; 0
-dollars #=&gt; &quot;3&quot;
+<h4 id="class-Regexp-label-Atomic+Grouping">Atomic Grouping</h4>
+
+<p>A group may be made <em>atomic</em> with <code>(?&gt;</code><em>subexpression</em><code>)</code>.</p>
+
+<p>This causes the subexpression to be matched independently of the rest of the expression, so that the matched substring becomes fixed for the remainder of the match, unless the entire subexpression must be abandoned and subsequently revisited.</p>
+
+<p>In this way <em>subexpression</em> is treated as a non-divisible whole. Atomic grouping is typically used to optimise patterns to prevent needless backtracking .</p>
+
+<p>Example (without atomic grouping):</p>
+
+<pre><code>/&quot;.*&quot;/.match(&#39;&quot;Quote&quot;&#39;) # =&gt; #&lt;MatchData &quot;\&quot;Quote\&quot;&quot;&gt;
 </code></pre>
 
-<h2 id="class-Regexp-label-Grouping">Grouping</h2>
+<p>Analysis:</p>
+<ol><li>
+<p>The leading subexpression <code>&quot;</code> in the pattern matches the first character <code>&quot;</code> in the target string.</p>
+</li><li>
+<p>The next subexpression <code>.*</code> matches the next substring <code>Quote“</code> (including the trailing double-quote).</p>
+</li><li>
+<p>Now there is nothing left in the target string to match the trailing subexpression <code>&quot;</code> in the pattern; this would cause the overall match to fail.</p>
+</li><li>
+<p>The matched substring is backtracked by one position: <code>Quote</code>.</p>
+</li><li>
+<p>The final subexpression <code>&quot;</code> now matches the final substring <code>&quot;</code>, and the overall match succeeds.</p>
+</li></ol>
 
-<p>Parentheses also <em>group</em> the terms they enclose, allowing them to be quantified as one <em>atomic</em> whole.</p>
+<p>If subexpression <code>.*</code> is grouped atomically, the backtracking is disabled, and the overall match fails:</p>
 
-<p>The pattern below matches a vowel followed by 2 word characters:</p>
-
-<pre><code>/[aeiou]\w{2}/.match(&quot;Caenorhabditis elegans&quot;) #=&gt; #&lt;MatchData &quot;aen&quot;&gt;
+<pre><code>/&quot;(?&gt;.*)&quot;/.match(&#39;&quot;Quote&quot;&#39;) # =&gt; nil
 </code></pre>
 
-<p>Whereas the following pattern matches a vowel followed by a word character, twice, i.e. <code>[aeiou]\w[aeiou]\w</code>: ‘enor’.</p>
+<p>Atomic grouping can affect performance; see <a href="https://www.regular-expressions.info/atomic.html">Atomic Group</a>.</p>
 
-<pre><code>/([aeiou]\w){2}/.match(&quot;Caenorhabditis elegans&quot;)
-    #=&gt; #&lt;MatchData &quot;enor&quot; 1:&quot;or&quot;&gt;
-</code></pre>
+<h4 id="class-Regexp-label-Subexpression+Calls">Subexpression Calls</h4>
 
-<p>The <code>(?:</code>…<code>)</code> construct provides grouping without capturing. That is, it combines the terms it contains into an atomic whole without creating a backreference. This benefits performance at the slight expense of readability.</p>
+<p>As seen above, a backreference number (<code>\<em>n</em></code>) or name (<code>\k&lt;<em>name</em>&gt;</code>) gives access to a captured <em>substring</em>; the corresponding regexp <em>subexpression</em> may also be accessed, via the number (<code>\g<em>n</em></code>) or name (<code>\g&lt;<em>name</em>&gt;</code>):</p>
 
-<p>The first group of parentheses captures ‘n’ and the second ‘ti’. The second group is referred to later with the backreference <code>\2</code>:</p>
-
-<pre><code>/I(n)ves(ti)ga\2ons/.match(&quot;Investigations&quot;)
-    #=&gt; #&lt;MatchData &quot;Investigations&quot; 1:&quot;n&quot; 2:&quot;ti&quot;&gt;
-</code></pre>
-
-<p>The first group of parentheses is now made non-capturing with ‘?:’, so it still matches ‘n’, but doesn’t create the backreference. Thus, the backreference <code>\1</code> now refers to ‘ti’.</p>
-
-<pre><code>/I(?:n)ves(ti)ga\1ons/.match(&quot;Investigations&quot;)
-    #=&gt; #&lt;MatchData &quot;Investigations&quot; 1:&quot;ti&quot;&gt;
-</code></pre>
-
-<h3 id="class-Regexp-label-Atomic+Grouping">Atomic Grouping</h3>
-
-<p>Grouping can be made <em>atomic</em> with <code>(?&gt;</code><em>pat</em><code>)</code>. This causes the subexpression <em>pat</em> to be matched independently of the rest of the expression such that what it matches becomes fixed for the remainder of the match, unless the entire subexpression must be abandoned and subsequently revisited. In this way <em>pat</em> is treated as a non-divisible whole. Atomic grouping is typically used to optimise patterns so as to prevent the regular expression engine from backtracking needlessly.</p>
-
-<p>The <code>&quot;</code> in the pattern below matches the first character of the string, then <code>.*</code> matches <em>Quote“</em>. This causes the overall match to fail, so the text matched by <code>.*</code> is backtracked by one position, which leaves the final character of the string available to match <code>&quot;</code></p>
-
-<pre><code>/&quot;.*&quot;/.match(&#39;&quot;Quote&quot;&#39;)     #=&gt; #&lt;MatchData &quot;\&quot;Quote\&quot;&quot;&gt;
-</code></pre>
-
-<p>If <code>.*</code> is grouped atomically, it refuses to backtrack <em>Quote“</em>, even though this means that the overall match fails</p>
-
-<pre><code>/&quot;(?&gt;.*)&quot;/.match(&#39;&quot;Quote&quot;&#39;) #=&gt; nil
-</code></pre>
-
-<h2 id="class-Regexp-label-Subexpression+Calls">Subexpression Calls</h2>
-
-<p>The <code>\g&lt;</code><em>name</em><code>&gt;</code> syntax matches the previous subexpression named <em>name</em>, which can be a group name or number, again. This differs from backreferences in that it re-executes the group rather than simply trying to re-match the same text.</p>
-
-<p>This pattern matches a <em>(</em> character and assigns it to the <code>paren</code> group, tries to call that the <code>paren</code> sub-expression again but fails, then matches a literal <em>)</em>:</p>
-
-<pre><code>/\A(?&lt;paren&gt;\(\g&lt;paren&gt;*\))*\z/ =~ &#39;()&#39;
-
-/\A(?&lt;paren&gt;\(\g&lt;paren&gt;*\))*\z/ =~ &#39;(())&#39; #=&gt; 0
+<pre><code>/\A(?&lt;paren&gt;\(\g&lt;paren&gt;*\))*\z/.match(&#39;(())&#39;)
 # ^1
 #      ^2
 #           ^3
@@ -416,417 +853,624 @@ dollars #=&gt; &quot;3&quot;
 #                       ^9
 #                           ^10
 </code></pre>
+
+<p>The pattern:</p>
 <ol><li>
 <p>Matches at the beginning of the string, i.e. before the first character.</p>
 </li><li>
-<p>Enters a named capture group called <code>paren</code></p>
+<p>Enters a named group <code>paren</code>.</p>
 </li><li>
-<p>Matches a literal <em>(</em>, the first character in the string</p>
+<p>Matches the first character in the string, <code>&#39;(&#39;</code>.</p>
 </li><li>
-<p>Calls the <code>paren</code> group again, i.e. recurses back to the second step</p>
+<p>Calls the <code>paren</code> group again, i.e. recurses back to the  second step.</p>
 </li><li>
-<p>Re-enters the <code>paren</code> group</p>
+<p>Re-enters the <code>paren</code> group.</p>
 </li><li>
-<p>Matches a literal <em>(</em>, the second character in the string</p>
+<p>Matches the second character in the string, <code>&#39;(&#39;</code>.</p>
 </li><li>
-<p>Try to call <code>paren</code> a third time, but fail because doing so would prevent an overall successful match</p>
+<p>Attempts to call <code>paren</code> a third time, but fails because doing so would prevent an overall successful match.</p>
 </li><li>
-<p>Match a literal <em>)</em>, the third character in the string. Marks the end of the second recursive call</p>
+<p>Matches the third character in the string, <code>&#39;)&#39;</code>; marks the end of the second recursive call</p>
 </li><li>
-<p>Match a literal <em>)</em>, the fourth character in the string</p>
+<p>Matches the fourth character in the string, <code>&#39;)&#39;</code>.</p>
 </li><li>
-<p>Match the end of the string</p>
+<p>Matches the end of the string.</p>
 </li></ol>
 
-<h2 id="class-Regexp-label-Alternation">Alternation</h2>
+<p>See <a href="https://learnbyexample.github.io/Ruby_Regexp/groupings-and-backreferences.html?highlight=subexpression#subexpression-calls">Subexpression calls</a>.</p>
 
-<p>The vertical bar metacharacter (<code>|</code>) combines several expressions into a single one that matches any of the expressions. Each expression is an <em>alternative</em>.</p>
+<h4 id="class-Regexp-label-Conditionals">Conditionals</h4>
 
-<pre><code>/\w(and|or)\w/.match(&quot;Feliformia&quot;) #=&gt; #&lt;MatchData &quot;form&quot; 1:&quot;or&quot;&gt;
-/\w(and|or)\w/.match(&quot;furandi&quot;)    #=&gt; #&lt;MatchData &quot;randi&quot; 1:&quot;and&quot;&gt;
-/\w(and|or)\w/.match(&quot;dissemblance&quot;) #=&gt; nil
-</code></pre>
-
-<h2 id="class-Regexp-label-Character+Properties">Character Properties</h2>
-
-<p>The <code>\p{}</code> construct matches characters with the named property, much like POSIX bracket classes.</p>
+<p>The conditional construct takes the form <code>(?(<em>cond</em>)<em>yes</em>|<em>no</em>)</code>, where:</p>
 <ul><li>
-<p><code>/\p{Alnum}/</code> - Alphabetic and numeric character</p>
+<p><em>cond</em> may be a capture number or name.</p>
 </li><li>
-<p><code>/\p{Alpha}/</code> - Alphabetic character</p>
+<p>The match to be applied is <em>yes</em> if <em>cond</em> is captured; otherwise the match to be applied is <em>no</em>.</p>
 </li><li>
-<p><code>/\p{Blank}/</code> - Space or tab</p>
-</li><li>
-<p><code>/\p{Cntrl}/</code> - Control character</p>
-</li><li>
-<p><code>/\p{Digit}/</code> - Digit</p>
-</li><li>
-<p><code>/\p{Graph}/</code> - Non-blank character (excludes spaces, control characters, and similar)</p>
-</li><li>
-<p><code>/\p{Lower}/</code> - Lowercase alphabetical character</p>
-</li><li>
-<p><code>/\p{Print}/</code> - Like <code>\p{Graph}</code>, but includes the space character</p>
-</li><li>
-<p><code>/\p{Punct}/</code> - Punctuation character</p>
-</li><li>
-<p><code>/\p{Space}/</code> - Whitespace character (<code>[:blank:]</code>, newline, carriage return, etc.)</p>
-</li><li>
-<p><code>/\p{Upper}/</code> - Uppercase alphabetical</p>
-</li><li>
-<p><code>/\p{XDigit}/</code> - Digit allowed in a hexadecimal number (i.e., 0-9a-fA-F)</p>
-</li><li>
-<p><code>/\p{Word}/</code> - A member of one of the following Unicode general category <em>Letter</em>, <em>Mark</em>, <em>Number</em>, <em>Connector_Punctuation</em></p>
-</li><li>
-<p><code>/\p{ASCII}/</code> - A character in the ASCII character set</p>
-</li><li>
-<p><code>/\p{Any}/</code> - Any Unicode character (including unassigned characters)</p>
-</li><li>
-<p><code>/\p{Assigned}/</code> - An assigned character</p>
+<p>If not needed, <code>|<em>no</em></code> may be omitted.</p>
 </li></ul>
 
-<p>A Unicode character’s <em>General Category</em> value can also be matched with <code>\p{</code><em>Ab</em><code>}</code> where <em>Ab</em> is the category’s abbreviation as described below:</p>
+<p>Examples:</p>
+
+<pre><code>re = /\A(foo)?(?(1)(T)|(F))\z/
+re.match(&#39;fooT&#39;) # =&gt; #&lt;MatchData &quot;fooT&quot; 1:&quot;foo&quot; 2:&quot;T&quot; 3:nil&gt;
+re.match(&#39;F&#39;)    # =&gt; #&lt;MatchData &quot;F&quot; 1:nil 2:nil 3:&quot;F&quot;&gt;
+re.match(&#39;fooF&#39;) # =&gt; nil
+re.match(&#39;T&#39;)    # =&gt; nil
+
+re = /\A(?&lt;xyzzy&gt;foo)?(?(&lt;xyzzy&gt;)(T)|(F))\z/
+re.match(&#39;fooT&#39;) # =&gt; #&lt;MatchData &quot;fooT&quot; xyzzy:&quot;foo&quot;&gt;
+re.match(&#39;F&#39;)    # =&gt; #&lt;MatchData &quot;F&quot; xyzzy:nil&gt;
+re.match(&#39;fooF&#39;) # =&gt; nil
+re.match(&#39;T&#39;)    # =&gt; nil
+</code></pre>
+
+<h4 id="class-Regexp-label-Absence+Operator">Absence Operator</h4>
+
+<p>The absence operator is a special group that matches anything which does <em>not</em> match the contained subexpressions.</p>
+
+<pre><code>/(?~real)/.match(&#39;surrealist&#39;) # =&gt; #&lt;MatchData &quot;surrea&quot;&gt;
+/(?~real)ist/.match(&#39;surrealist&#39;) # =&gt; #&lt;MatchData &quot;ealist&quot;&gt;
+/sur(?~real)ist/.match(&#39;surrealist&#39;) # =&gt; nil
+</code></pre>
+
+<h3 id="class-Regexp-label-Unicode">Unicode</h3>
+
+<h4 id="class-Regexp-label-Unicode+Properties">Unicode Properties</h4>
+
+<p>The <code>/\p{<em>property_name</em>}/</code> construct (with lowercase <code>p</code>) matches characters using a Unicode property name, much like a character class; property <code>Alpha</code> specifies alphabetic characters:</p>
+
+<pre><code>/\p{Alpha}/.match(&#39;a&#39;) # =&gt; #&lt;MatchData &quot;a&quot;&gt;
+/\p{Alpha}/.match(&#39;1&#39;) # =&gt; nil
+</code></pre>
+
+<p>A property can be inverted by prefixing the name with a caret character (<code>^</code>):</p>
+
+<pre><code>/\p{^Alpha}/.match(&#39;1&#39;) # =&gt; #&lt;MatchData &quot;1&quot;&gt;
+/\p{^Alpha}/.match(&#39;a&#39;) # =&gt; nil
+</code></pre>
+
+<p>Or by using <code>\P</code> (uppercase <code>P</code>):</p>
+
+<pre><code>/\P{Alpha}/.match(&#39;1&#39;) # =&gt; #&lt;MatchData &quot;1&quot;&gt;
+/\P{Alpha}/.match(&#39;a&#39;) # =&gt; nil
+</code></pre>
+
+<p>See Unicode Properties for regexps based on the numerous properties.</p>
+
+<p>Some commonly-used properties correspond to POSIX bracket expressions:</p>
 <ul><li>
-<p><code>/\p{L}/</code> - ‘Letter’</p>
+<p><code>/\p{Alnum}/</code>: Alphabetic and numeric character</p>
 </li><li>
-<p><code>/\p{Ll}/</code> - ‘Letter: Lowercase’</p>
+<p><code>/\p{Alpha}/</code>: Alphabetic character</p>
 </li><li>
-<p><code>/\p{Lm}/</code> - ‘Letter: Mark’</p>
+<p><code>/\p{Blank}/</code>: Space or tab</p>
 </li><li>
-<p><code>/\p{Lo}/</code> - ‘Letter: Other’</p>
+<p><code>/\p{Cntrl}/</code>: Control character</p>
 </li><li>
-<p><code>/\p{Lt}/</code> - ‘Letter: Titlecase’</p>
+<p><code>/\p{Digit}/</code>: Digit characters, and similar)</p>
 </li><li>
-<p><code>/\p{Lu}/</code> - ‘Letter: Uppercase</p>
+<p><code>/\p{Lower}/</code>: Lowercase alphabetical character</p>
 </li><li>
-<p><code>/\p{Lo}/</code> - ‘Letter: Other’</p>
+<p><code>/\p{Print}/</code>: Like <code>\p{Graph}</code>, but includes the space character</p>
 </li><li>
-<p><code>/\p{M}/</code> - ‘Mark’</p>
+<p><code>/\p{Punct}/</code>: Punctuation character</p>
 </li><li>
-<p><code>/\p{Mn}/</code> - ‘Mark: Nonspacing’</p>
+<p><code>/\p{Space}/</code>: Whitespace character (<code>[:blank:]</code>, newline, carriage return, etc.)</p>
 </li><li>
-<p><code>/\p{Mc}/</code> - ‘Mark: Spacing Combining’</p>
+<p><code>/\p{Upper}/</code>: Uppercase alphabetical</p>
 </li><li>
-<p><code>/\p{Me}/</code> - ‘Mark: Enclosing’</p>
-</li><li>
-<p><code>/\p{N}/</code> - ‘Number’</p>
-</li><li>
-<p><code>/\p{Nd}/</code> - ‘Number: Decimal Digit’</p>
-</li><li>
-<p><code>/\p{Nl}/</code> - ‘Number: Letter’</p>
-</li><li>
-<p><code>/\p{No}/</code> - ‘Number: Other’</p>
-</li><li>
-<p><code>/\p{P}/</code> - ‘Punctuation’</p>
-</li><li>
-<p><code>/\p{Pc}/</code> - ‘Punctuation: Connector’</p>
-</li><li>
-<p><code>/\p{Pd}/</code> - ‘Punctuation: Dash’</p>
-</li><li>
-<p><code>/\p{Ps}/</code> - ‘Punctuation: Open’</p>
-</li><li>
-<p><code>/\p{Pe}/</code> - ‘Punctuation: Close’</p>
-</li><li>
-<p><code>/\p{Pi}/</code> - ‘Punctuation: Initial Quote’</p>
-</li><li>
-<p><code>/\p{Pf}/</code> - ‘Punctuation: Final Quote’</p>
-</li><li>
-<p><code>/\p{Po}/</code> - ‘Punctuation: Other’</p>
-</li><li>
-<p><code>/\p{S}/</code> - ‘Symbol’</p>
-</li><li>
-<p><code>/\p{Sm}/</code> - ‘Symbol: Math’</p>
-</li><li>
-<p><code>/\p{Sc}/</code> - ‘Symbol: Currency’</p>
-</li><li>
-<p><code>/\p{Sc}/</code> - ‘Symbol: Currency’</p>
-</li><li>
-<p><code>/\p{Sk}/</code> - ‘Symbol: Modifier’</p>
-</li><li>
-<p><code>/\p{So}/</code> - ‘Symbol: Other’</p>
-</li><li>
-<p><code>/\p{Z}/</code> - ‘Separator’</p>
-</li><li>
-<p><code>/\p{Zs}/</code> - ‘Separator: Space’</p>
-</li><li>
-<p><code>/\p{Zl}/</code> - ‘Separator: Line’</p>
-</li><li>
-<p><code>/\p{Zp}/</code> - ‘Separator: Paragraph’</p>
-</li><li>
-<p><code>/\p{C}/</code> - ‘Other’</p>
-</li><li>
-<p><code>/\p{Cc}/</code> - ‘Other: Control’</p>
-</li><li>
-<p><code>/\p{Cf}/</code> - ‘Other: Format’</p>
-</li><li>
-<p><code>/\p{Cn}/</code> - ‘Other: Not Assigned’</p>
-</li><li>
-<p><code>/\p{Co}/</code> - ‘Other: Private Use’</p>
-</li><li>
-<p><code>/\p{Cs}/</code> - ‘Other: Surrogate’</p>
+<p><code>/\p{XDigit}/</code>: Digit allowed in a hexadecimal number (i.e., 0-9a-fA-F)</p>
 </li></ul>
 
-<p>Lastly, <code>\p{}</code> matches a character’s Unicode <em>script</em>. The following scripts are supported: <em>Arabic</em>, <em>Armenian</em>, <em>Balinese</em>, <em>Bengali</em>, <em>Bopomofo</em>, <em>Braille</em>, <em>Buginese</em>, <em>Buhid</em>, <em>Canadian_Aboriginal</em>, <em>Carian</em>, <em>Cham</em>, <em>Cherokee</em>, <em>Common</em>, <em>Coptic</em>, <em>Cuneiform</em>, <em>Cypriot</em>, <em>Cyrillic</em>, <em>Deseret</em>, <em>Devanagari</em>, <em>Ethiopic</em>, <em>Georgian</em>, <em>Glagolitic</em>, <em>Gothic</em>, <em>Greek</em>, <em>Gujarati</em>, <em>Gurmukhi</em>, <em>Han</em>, <em>Hangul</em>, <em>Hanunoo</em>, <em>Hebrew</em>, <em>Hiragana</em>, <em>Inherited</em>, <em>Kannada</em>, <em>Katakana</em>, <em>Kayah_Li</em>, <em>Kharoshthi</em>, <em>Khmer</em>, <em>Lao</em>, <em>Latin</em>, <em>Lepcha</em>, <em>Limbu</em>, <em>Linear_B</em>, <em>Lycian</em>, <em>Lydian</em>, <em>Malayalam</em>, <em>Mongolian</em>, <em>Myanmar</em>, <em>New_Tai_Lue</em>, <em>Nko</em>, <em>Ogham</em>, <em>Ol_Chiki</em>, <em>Old_Italic</em>, <em>Old_Persian</em>, <em>Oriya</em>, <em>Osmanya</em>, <em>Phags_Pa</em>, <em>Phoenician</em>, <em>Rejang</em>, <em>Runic</em>, <em>Saurashtra</em>, <em>Shavian</em>, <em>Sinhala</em>, <em>Sundanese</em>, <em>Syloti_Nagri</em>, <em>Syriac</em>, <em>Tagalog</em>, <em>Tagbanwa</em>, <em>Tai_Le</em>, <em>Tamil</em>, <em>Telugu</em>, <em>Thaana</em>, <em>Thai</em>, <em>Tibetan</em>, <em>Tifinagh</em>, <em>Ugaritic</em>, <em>Vai</em>, and <em>Yi</em>.</p>
-
-<p>Unicode codepoint U+06E9 is named “ARABIC PLACE OF SAJDAH” and belongs to the Arabic script:</p>
-
-<pre><code>/\p{Arabic}/.match(&quot;\u06E9&quot;) #=&gt; #&lt;MatchData &quot;\u06E9&quot;&gt;
-</code></pre>
-
-<p>All character properties can be inverted by prefixing their name with a caret (<code>^</code>).</p>
-
-<p>Letter ‘A’ is not in the Unicode Ll (Letter; Lowercase) category, so this match succeeds:</p>
-
-<pre><code>/\p{^Ll}/.match(&quot;A&quot;) #=&gt; #&lt;MatchData &quot;A&quot;&gt;
-</code></pre>
-
-<h2 id="class-Regexp-label-Anchors">Anchors</h2>
-
-<p>Anchors are metacharacter that match the zero-width positions between characters, <em>anchoring</em> the match to a specific position.</p>
+<p>These are also commonly used:</p>
 <ul><li>
-<p><code>^</code> - Matches beginning of line</p>
+<p><code>/\p{Emoji}/</code>: Unicode emoji.</p>
 </li><li>
-<p><code>$</code> - Matches end of line</p>
+<p><code>/\p{Graph}/</code>: Non-blank character (excludes spaces, control characters, and similar).</p>
 </li><li>
-<p><code>\A</code> - Matches beginning of string.</p>
+<p><code>/\p{Word}/</code>: A member in one of these Unicode character categories (see below) or having one of these Unicode properties:</p>
+<ul><li>
+<p>Unicode categories:</p>
+<ul><li>
+<p><code>Mark</code> (<code>M</code>).</p>
 </li><li>
-<p><code>\Z</code> - Matches end of string. If string ends with a newline, it matches just before newline</p>
+<p><code>Decimal Number</code> (<code>Nd</code>)</p>
 </li><li>
-<p><code>\z</code> - Matches end of string</p>
+<p><code>Connector Punctuation</code> (<code>Pc</code>).</p>
+</li></ul>
 </li><li>
-<p><code>\G</code> - Matches first matching position:</p>
-
-<p>In methods like <code>String#gsub</code> and <code>String#scan</code>, it changes on each iteration. It initially matches the beginning of subject, and in each following iteration it matches where the last match finished.</p>
-
-<pre><code>&quot;    a b c&quot;.gsub(/ /, &#39;_&#39;)    #=&gt; &quot;____a_b_c&quot;
-&quot;    a b c&quot;.gsub(/\G /, &#39;_&#39;)  #=&gt; &quot;____a b c&quot;
-</code></pre>
-
-<p>In methods like <code>Regexp#match</code> and <code>String#match</code> that take an (optional) offset, it matches where the search begins.</p>
-
-<pre><code>&quot;hello, world&quot;.match(/,/, 3)    #=&gt; #&lt;MatchData &quot;,&quot;&gt;
-&quot;hello, world&quot;.match(/\G,/, 3)  #=&gt; nil
-</code></pre>
+<p>Unicode properties:</p>
+<ul><li>
+<p><code>Alpha</code></p>
 </li><li>
-<p><code>\b</code> - Matches word boundaries when outside brackets; backspace (0x08) when inside brackets</p>
+<p><code>Join_Control</code></p>
+</li></ul>
+</li></ul>
 </li><li>
-<p><code>\B</code> - Matches non-word boundaries</p>
+<p><code>/\p{ASCII}/</code>: A character in the ASCII character set.</p>
 </li><li>
-<p><code>(?=</code><em>pat</em><code>)</code> - <em>Positive lookahead</em> assertion: ensures that the following characters match <em>pat</em>, but doesn’t include those characters in the matched text</p>
+<p><code>/\p{Any}/</code>: Any Unicode character (including unassigned characters).</p>
 </li><li>
-<p><code>(?!</code><em>pat</em><code>)</code> - <em>Negative lookahead</em> assertion: ensures that the following characters do not match <em>pat</em>, but doesn’t include those characters in the matched text</p>
-</li><li>
-<p><code>(?&lt;=</code><em>pat</em><code>)</code> - <em>Positive lookbehind</em> assertion: ensures that the preceding characters match <em>pat</em>, but doesn’t include those characters in the matched text</p>
-</li><li>
-<p><code>(?&lt;!</code><em>pat</em><code>)</code> - <em>Negative lookbehind</em> assertion: ensures that the preceding characters do not match <em>pat</em>, but doesn’t include those characters in the matched text</p>
-</li><li>
-<p><code>\K</code> - Uses an positive lookbehind of the content preceding <code>\K</code> in the regexp.  For example, the following two regexps are almost equivalent:</p>
-
-<pre><code>/ab\Kc/
-/(?&lt;=ab)c/
-</code></pre>
-
-<p>As are the following two regexps:</p>
-
-<pre><code>/(a)\K(b)\Kc/
-/(?&lt;=(?&lt;=(a))(b))c/
-</code></pre>
+<p><code>/\p{Assigned}/</code>: An assigned character.</p>
 </li></ul>
 
-<p>If a pattern isn’t anchored it can begin at any point in the string:</p>
+<h4 id="class-Regexp-label-Unicode+Character+Categories">Unicode Character Categories</h4>
 
-<pre><code>/real/.match(&quot;surrealist&quot;) #=&gt; #&lt;MatchData &quot;real&quot;&gt;
-</code></pre>
-
-<p>Anchoring the pattern to the beginning of the string forces the match to start there. ‘real’ doesn’t occur at the beginning of the string, so now the match fails:</p>
-
-<pre><code>/\Areal/.match(&quot;surrealist&quot;) #=&gt; nil
-</code></pre>
-
-<p>The match below fails because although ‘Demand’ contains ‘and’, the pattern does not occur at a word boundary.</p>
-
-<pre><code>/\band/.match(&quot;Demand&quot;)
-</code></pre>
-
-<p>Whereas in the following example ‘and’ has been anchored to a non-word boundary so instead of matching the first ‘and’ it matches from the fourth letter of ‘demand’ instead:</p>
-
-<pre><code>/\Band.+/.match(&quot;Supply and demand curve&quot;) #=&gt; #&lt;MatchData &quot;and curve&quot;&gt;
-</code></pre>
-
-<p>The pattern below uses positive lookahead and positive lookbehind to match text appearing in  tags without including the tags in the match:</p>
-
-<pre><code>/(?&lt;=&lt;b&gt;)\w+(?=&lt;\/b&gt;)/.match(&quot;Fortune favours the &lt;b&gt;bold&lt;/b&gt;&quot;)
-    #=&gt; #&lt;MatchData &quot;bold&quot;&gt;
-</code></pre>
-
-<h2 id="class-Regexp-label-Options">Options</h2>
-
-<p>The end delimiter for a regexp can be followed by one or more single-letter options which control how the pattern can match.</p>
+<p>A Unicode character category name:</p>
 <ul><li>
-<p><code>/pat/i</code> - Ignore case</p>
+<p>May be either its full name or its abbreviated name.</p>
 </li><li>
-<p><code>/pat/m</code> - Treat a newline as a character matched by <code>.</code></p>
+<p>Is case-insensitive.</p>
 </li><li>
-<p><code>/pat/x</code> - Ignore whitespace and comments in the pattern</p>
-</li><li>
-<p><code>/pat/o</code> - Perform <code>#{}</code> interpolation only once</p>
+<p>Treats a space, a hyphen, and an underscore as equivalent.</p>
 </li></ul>
 
-<p><code>i</code>, <code>m</code>, and <code>x</code> can also be applied on the subexpression level with the <code>(?</code><em>on</em><code>-</code><em>off</em><code>)</code> construct, which enables options <em>on</em>, and disables options <em>off</em> for the expression enclosed by the parentheses:</p>
+<p>Examples:</p>
 
-<pre><code>/a(?i:b)c/.match(&#39;aBc&#39;)   #=&gt; #&lt;MatchData &quot;aBc&quot;&gt;
-/a(?-i:b)c/i.match(&#39;ABC&#39;) #=&gt; nil
+<pre><code>/\p{lu}/                # =&gt; /\p{lu}/
+/\p{LU}/                # =&gt; /\p{LU}/
+/\p{Uppercase Letter}/  # =&gt; /\p{Uppercase Letter}/
+/\p{Uppercase_Letter}/  # =&gt; /\p{Uppercase_Letter}/
+/\p{UPPERCASE-LETTER}/  # =&gt; /\p{UPPERCASE-LETTER}/
 </code></pre>
 
-<p>Additionally, these options can also be toggled for the remainder of the pattern:</p>
+<p>Below are the Unicode character category abbreviations and names. Enumerations of characters in each category are at the links.</p>
 
-<pre><code>/a(?i)bc/.match(&#39;abC&#39;) #=&gt; #&lt;MatchData &quot;abC&quot;&gt;
-</code></pre>
-
-<p>Options may also be used with <code>Regexp.new</code>:</p>
-
-<pre><code>Regexp.new(&quot;abc&quot;, Regexp::IGNORECASE)                     #=&gt; /abc/i
-Regexp.new(&quot;abc&quot;, Regexp::MULTILINE)                      #=&gt; /abc/m
-Regexp.new(&quot;abc # Comment&quot;, Regexp::EXTENDED)             #=&gt; /abc # Comment/x
-Regexp.new(&quot;abc&quot;, Regexp::IGNORECASE | Regexp::MULTILINE) #=&gt; /abc/mi
-</code></pre>
-
-<h2 id="class-Regexp-label-Free-Spacing+Mode+and+Comments">Free-Spacing Mode and Comments</h2>
-
-<p>As mentioned above, the <code>x</code> option enables <em>free-spacing</em> mode. Literal white space inside the pattern is ignored, and the octothorpe (<code>#</code>) character introduces a comment until the end of the line. This allows the components of the pattern to be organized in a potentially more readable fashion.</p>
-
-<p>A contrived pattern to match a number with optional decimal places:</p>
-
-<pre><code>float_pat = /\A
-    [[:digit:]]+ # 1 or more digits before the decimal point
-    (\.          # Decimal point
-        [[:digit:]]+ # 1 or more digits after the decimal point
-    )? # The decimal point and following digits are optional
-\Z/x
-float_pat.match(&#39;3.14&#39;) #=&gt; #&lt;MatchData &quot;3.14&quot; 1:&quot;.14&quot;&gt;
-</code></pre>
-
-<p>There are a number of strategies for matching whitespace:</p>
+<p>Letters:</p>
 <ul><li>
-<p>Use a pattern such as <code>\s</code> or <code>\p{Space}</code>.</p>
+<p><code>L</code>, <code>Letter</code>: <code>LC</code>, <code>Lm</code>, or <code>Lo</code>.</p>
 </li><li>
-<p>Use escaped whitespace such as <code>\ </code>, i.e. a space preceded by a backslash.</p>
+<p><code>LC</code>, <code>Cased_Letter</code>: <code>Ll</code>, <code>Lt</code>, or <code>Lu</code>.</p>
 </li><li>
-<p>Use a character class such as <code>[ ]</code>.</p>
+<p><a href="https://www.compart.com/en/unicode/category/Ll">Lu, Lowercase_Letter</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Lm">Lu, Modifier_Letter</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Lo">Lu, Other_Letter</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Lt">Lu, Titlecase_Letter</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Lu">Lu, Uppercase_Letter</a>.</p>
 </li></ul>
 
-<p>Comments can be included in a non-<code>x</code> pattern with the <code>(?#</code><em>comment</em><code>)</code> construct, where <em>comment</em> is arbitrary text ignored by the regexp engine.</p>
-
-<p>Comments in regexp literals cannot include unescaped terminator characters.</p>
-
-<h2 id="class-Regexp-label-Encoding"><a href="Encoding.html"><code>Encoding</code></a></h2>
-
-<p>Regular expressions are assumed to use the source encoding. This can be overridden with one of the following modifiers.</p>
+<p>Marks:</p>
 <ul><li>
-<p><code>/</code><em>pat</em><code>/u</code> - UTF-8</p>
+<p><code>M</code>, <code>Mark</code>: <code>Mc</code>, <code>Me</code>, or <code>Mn</code>.</p>
 </li><li>
-<p><code>/</code><em>pat</em><code>/e</code> - EUC-JP</p>
+<p><a href="https://www.compart.com/en/unicode/category/Mc">Mc, Spacing_Mark</a>.</p>
 </li><li>
-<p><code>/</code><em>pat</em><code>/s</code> - Windows-31J</p>
+<p><a href="https://www.compart.com/en/unicode/category/Me">Me, Enclosing_Mark</a>.</p>
 </li><li>
-<p><code>/</code><em>pat</em><code>/n</code> - ASCII-8BIT</p>
+<p><a href="https://www.compart.com/en/unicode/category/Mn">Mn, Nonapacing_Mark</a>.</p>
 </li></ul>
 
-<p>A regexp can be matched against a string when they either share an encoding, or the regexp’s encoding is <em>US-ASCII</em> and the string’s encoding is ASCII-compatible.</p>
+<p>Numbers:</p>
+<ul><li>
+<p><code>N</code>, <code>Number</code>: <code>Nd</code>, <code>Nl</code>, or <code>No</code>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Nd">Nd, Decimal_Number</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Nl">Nl, Letter_Number</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/No">No, Other_Number</a>.</p>
+</li></ul>
 
-<p>If a match between incompatible encodings is attempted an <code>Encoding::CompatibilityError</code> exception is raised.</p>
+<p>Punctation:</p>
+<ul><li>
+<p><code>P</code>, <code>Punctuation</code>: <code>Pc</code>, <code>Pd</code>, <code>Pe</code>, <code>Pf</code>, <code>Pi</code>, <code>Po</code>, or <code>Ps</code>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Pc">Pc, Connector_Punctuation</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Pd">Pd, Dash_Punctuation</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Pe">Pe, Close_Punctuation</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Pf">Pf, Final_Punctuation</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Pi">Pi, Initial_Punctuation</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Po">Po, Other_Punctuation</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Ps">Ps, Open_Punctuation</a>.</p>
+</li><li>
+<p><code>S</code>, <code>Symbol</code>: <code>Sc</code>, <code>Sk</code>, <code>Sm</code>, or <code>So</code>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Sc">Sc, Currency_Symbol</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Sk">Sk, Modifier_Symbol</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Sm">Sm, Math_Symbol</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/So">So, Other_Symbol</a>.</p>
+</li><li>
+<p><code>Z</code>, <code>Separator</code>: <code>Zl</code>, <code>Zp</code>, or <code>Zs</code>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Zl">Zl, Line_Separator</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Zp">Zp, Paragraph_Separator</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Zs">Zs, Space_Separator</a>.</p>
+</li><li>
+<p><code>C</code>, <code>Other</code>: <code>Cc</code>, <code>Cf</code>, <code>Cn</code>, <code>Co</code>, or <code>Cs</code>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Cc">Cc, Control</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Cf">Cf, Format</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Cn">Cn, Unassigned</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Co">Co, Private_Use</a>.</p>
+</li><li>
+<p><a href="https://www.compart.com/en/unicode/category/Cs">Cs, Surrogate</a>.</p>
+</li></ul>
 
-<p>The <code>Regexp#fixed_encoding?</code> predicate indicates whether the regexp has a <em>fixed</em> encoding, that is one incompatible with ASCII. A regexp’s encoding can be explicitly fixed by supplying <code>Regexp::FIXEDENCODING</code> as the second argument of <code>Regexp.new</code>:</p>
+<h4 id="class-Regexp-label-Unicode+Scripts+and+Blocks">Unicode Scripts and Blocks</h4>
 
-<pre><code>r = Regexp.new(&quot;a&quot;.force_encoding(&quot;iso-8859-1&quot;),Regexp::FIXEDENCODING)
-r =~ &quot;a\u3042&quot;
-   # raises Encoding::CompatibilityError: incompatible encoding regexp match
-   #         (ISO-8859-1 regexp with UTF-8 string)
+<p>Among the Unicode properties are:</p>
+<ul><li>
+<p><a href="https://en.wikipedia.org/wiki/Script_(Unicode)">Unicode scripts</a>; see <a href="https://www.unicode.org/standard/supported.html">supported scripts</a>.</p>
+</li><li>
+<p><a href="https://en.wikipedia.org/wiki/Unicode_block">Unicode blocks</a>; see <a href="http://www.unicode.org/Public/UNIDATA/Blocks.txt">supported blocks</a>.</p>
+</li></ul>
+
+<h3 id="class-Regexp-label-POSIX+Bracket+Expressions">POSIX Bracket Expressions</h3>
+
+<p>A POSIX <em>bracket expression</em> is also similar to a character class. These expressions provide a portable alternative to the above, with the added benefit of encompassing non-ASCII characters:</p>
+<ul><li>
+<p><code>/\d/</code> matches only ASCII decimal digits <code>0</code> through <code>9</code>.</p>
+</li><li>
+<p><code>/[[:digit:]]/</code> matches any character in the Unicode <code>Decimal Number</code> (<code>Nd</code>) category; see below.</p>
+</li></ul>
+
+<p>The POSIX bracket expressions:</p>
+<ul><li>
+<p><code>/[[:digit:]]/</code>: Matches a <a href="https://www.compart.com/en/unicode/category/Nd">Unicode digit</a>:</p>
+
+<pre><code>/[[:digit:]]/.match(&#39;9&#39;)       # =&gt; #&lt;MatchData &quot;9&quot;&gt;
+/[[:digit:]]/.match(&quot;\u1fbf9&quot;) # =&gt; #&lt;MatchData &quot;9&quot;&gt;
+</code></pre>
+</li><li>
+<p><code>/[[:xdigit:]]/</code>: Matches a digit allowed in a hexadecimal number; equivalent to <code>[0-9a-fA-F]</code>.</p>
+</li><li>
+<p><code>/[[:upper:]]/</code>: Matches a <a href="https://www.compart.com/en/unicode/category/Lu">Unicode uppercase letter</a>:</p>
+
+<pre><code>/[[:upper:]]/.match(&#39;A&#39;)      # =&gt; #&lt;MatchData &quot;A&quot;&gt;
+/[[:upper:]]/.match(&quot;\u00c6&quot;) # =&gt; #&lt;MatchData &quot;Æ&quot;&gt;
+</code></pre>
+</li><li>
+<p><code>/[[:lower:]]/</code>: Matches a <a href="https://www.compart.com/en/unicode/category/Ll">Unicode lowercase letter</a>:</p>
+
+<pre><code>/[[:lower:]]/.match(&#39;a&#39;)      # =&gt; #&lt;MatchData &quot;a&quot;&gt;
+/[[:lower:]]/.match(&quot;\u01fd&quot;) # =&gt; #&lt;MatchData &quot;ǽ&quot;&gt;
+</code></pre>
+</li><li>
+<p><code>/[[:alpha:]]/</code>: Matches <code>/[[:upper:]]/</code> or <code>/[[:lower:]]/</code>.</p>
+</li><li>
+<p><code>/[[:alnum:]]/</code>: Matches <code>/[[:alpha:]]/</code> or <code>/[[:digit:]]/</code>.</p>
+</li><li>
+<p><code>/[[:space:]]/</code>: Matches <a href="https://www.compart.com/en/unicode/category/Zs">Unicode space character</a>:</p>
+
+<pre><code>/[[:space:]]/.match(&#39; &#39;)      # =&gt; #&lt;MatchData &quot; &quot;&gt;
+/[[:space:]]/.match(&quot;\u2005&quot;) # =&gt; #&lt;MatchData &quot; &quot;&gt;
+</code></pre>
+</li><li>
+<p><code>/[[:blank:]]/</code>: Matches <code>/[[:space:]]/</code> or tab character:</p>
+
+<pre><code>/[[:blank:]]/.match(&#39; &#39;)      # =&gt; #&lt;MatchData &quot; &quot;&gt;
+/[[:blank:]]/.match(&quot;\u2005&quot;) # =&gt; #&lt;MatchData &quot; &quot;&gt;
+/[[:blank:]]/.match(&quot;\t&quot;)     # =&gt; #&lt;MatchData &quot;\t&quot;&gt;
+</code></pre>
+</li><li>
+<p><code>/[[:cntrl:]]/</code>: Matches <a href="https://www.compart.com/en/unicode/category/Cc">Unicode control character</a>:</p>
+
+<pre><code>/[[:cntrl:]]/.match(&quot;\u0000&quot;) # =&gt; #&lt;MatchData &quot;\u0000&quot;&gt;
+/[[:cntrl:]]/.match(&quot;\u009f&quot;) # =&gt; #&lt;MatchData &quot;\u009F&quot;&gt;
+</code></pre>
+</li><li>
+<p><code>/[[:graph:]]/</code>: Matches any character except <code>/[[:space:]]/</code> or <code>/[[:cntrl:]]/</code>.</p>
+</li><li>
+<p><code>/[[:print:]]/</code>: Matches <code>/[[:graph:]]/</code> or space character.</p>
+</li><li>
+<p><code>/[[:punct:]]/</code>: Matches any (Unicode punctuation character}[<a href="https://www.compart.com/en/unicode/category/Po">www.compart.com/en/unicode/category/Po</a>]:</p>
+</li></ul>
+
+<p>Ruby also supports these (non-POSIX) bracket expressions:</p>
+<ul><li>
+<p><code>/[[:ascii:]]/</code>: Matches a character in the ASCII character set.</p>
+</li><li>
+<p><code>/[[:word:]]/</code>: Matches a character in one of these Unicode character categories or having one of these Unicode properties:</p>
+<ul><li>
+<p>Unicode categories:</p>
+<ul><li>
+<p><code>Mark</code> (<code>M</code>).</p>
+</li><li>
+<p><code>Decimal Number</code> (<code>Nd</code>)</p>
+</li><li>
+<p><code>Connector Punctuation</code> (<code>Pc</code>).</p>
+</li></ul>
+</li><li>
+<p>Unicode properties:</p>
+<ul><li>
+<p><code>Alpha</code></p>
+</li><li>
+<p><code>Join_Control</code></p>
+</li></ul>
+</li></ul>
+</li></ul>
+
+<h3 id="class-Regexp-label-Comments">Comments</h3>
+
+<p>A comment may be included in a regexp pattern using the <code>(?#</code><em>comment</em><code>)</code> construct, where <em>comment</em> is a substring that is to be ignored. arbitrary text ignored by the regexp engine:</p>
+
+<pre><code>/foo(?#Ignore me)bar/.match(&#39;foobar&#39;) # =&gt; #&lt;MatchData &quot;foobar&quot;&gt;
 </code></pre>
 
-<h2 id="class-Regexp-label-Special+global+variables">Special global variables</h2>
+<p>The comment may not include an unescaped terminator character.</p>
 
-<p>Pattern matching sets some global variables :</p>
+<p>See also <a href="Regexp.html#class-Regexp-label-Extended+Mode">Extended Mode</a>.</p>
+
+<h2 id="class-Regexp-label-Modes">Modes</h2>
+
+<p>Each of these modifiers sets a mode for the regexp:</p>
 <ul><li>
-<p><code>$~</code> is equivalent to <a href="Regexp.html#method-c-last_match"><code>Regexp.last_match</code></a>;</p>
+<p><code>i</code>: <code>/<em>pattern</em>/i</code> sets <a href="Regexp.html#class-Regexp-label-Case-Insensitive+Mode">Case-Insensitive Mode</a>.</p>
 </li><li>
-<p><code>$&amp;</code> contains the complete matched text;</p>
+<p><code>m</code>: <code>/<em>pattern</em>/m</code> sets <a href="Regexp.html#class-Regexp-label-Multiline+Mode">Multiline Mode</a>.</p>
 </li><li>
-<p><code>$`</code> contains string before match;</p>
+<p><code>x</code>: <code>/<em>pattern</em>/x</code> sets <a href="Regexp.html#class-Regexp-label-Extended+Mode">Extended Mode</a>.</p>
 </li><li>
-<p><code>$&#39;</code> contains string after match;</p>
+<p><code>o</code>: <code>/<em>pattern</em>/o</code> sets <a href="Regexp.html#class-Regexp-label-Interpolation+Mode">Interpolation Mode</a>.</p>
+</li></ul>
+
+<p>Any, all, or none of these may be applied.</p>
+
+<p>Modifiers <code>i</code>, <code>m</code>, and <code>x</code> may be applied to subexpressions:</p>
+<ul><li>
+<p><code>(?<em>modifier</em>)</code> turns the mode “on” for ensuing subexpressions</p>
 </li><li>
-<p><code>$1</code>, <code>$2</code> and so on contain text matching first, second, etc capture group;</p>
+<p><code>(?-<em>modifier</em>)</code> turns the mode “off” for ensuing subexpressions</p>
 </li><li>
-<p><code>$+</code> contains last capture group.</p>
+<p><code>(?<em>modifier</em>:<em>subexp</em>)</code> turns the mode “on” for <em>subexp</em> within the group</p>
+</li><li>
+<p><code>(?-<em>modifier</em>:<em>subexp</em>)</code> turns the mode “off” for <em>subexp</em> within the group</p>
 </li></ul>
 
 <p>Example:</p>
 
-<pre><code>m = /s(\w{2}).*(c)/.match(&#39;haystack&#39;) #=&gt; #&lt;MatchData &quot;stac&quot; 1:&quot;ta&quot; 2:&quot;c&quot;&gt;
-$~                                    #=&gt; #&lt;MatchData &quot;stac&quot; 1:&quot;ta&quot; 2:&quot;c&quot;&gt;
-Regexp.last_match                     #=&gt; #&lt;MatchData &quot;stac&quot; 1:&quot;ta&quot; 2:&quot;c&quot;&gt;
+<pre><code>re = /(?i)te(?-i)st/
+re.match(&#39;test&#39;) # =&gt; #&lt;MatchData &quot;test&quot;&gt;
+re.match(&#39;TEst&#39;) # =&gt; #&lt;MatchData &quot;TEst&quot;&gt;
+re.match(&#39;TEST&#39;) # =&gt; nil
+re.match(&#39;teST&#39;) # =&gt; nil
 
-$&amp;      #=&gt; &quot;stac&quot;
-        # same as m[0]
-$`      #=&gt; &quot;hay&quot;
-        # same as m.pre_match
-$&#39;      #=&gt; &quot;k&quot;
-        # same as m.post_match
-$1      #=&gt; &quot;ta&quot;
-        # same as m[1]
-$2      #=&gt; &quot;c&quot;
-        # same as m[2]
-$3      #=&gt; nil
-        # no third group in pattern
-$+      #=&gt; &quot;c&quot;
-        # same as m[-1]
+re = /t(?i:e)st/
+re.match(&#39;test&#39;) # =&gt; #&lt;MatchData &quot;test&quot;&gt;
+re.match(&#39;tEst&#39;) # =&gt; #&lt;MatchData &quot;tEst&quot;&gt;
+re.match(&#39;tEST&#39;) # =&gt; nil
 </code></pre>
 
-<p>These global variables are thread-local and method-local variables.</p>
+<p>Method <a href="Regexp.html#method-i-options"><code>Regexp#options</code></a> returns an integer whose value showing the settings for case-insensitivity mode, multiline mode, and extended mode.</p>
 
-<h2 id="class-Regexp-label-Performance">Performance</h2>
+<h3 id="class-Regexp-label-Case-Insensitive+Mode">Case-Insensitive Mode</h3>
 
-<p>Certain pathological combinations of constructs can lead to abysmally bad performance.</p>
+<p>By default, a regexp is case-sensitive:</p>
 
-<p>Consider a string of 25 <em>a</em>s, a <em>d</em>, 4 <em>a</em>s, and a <em>c</em>.</p>
-
-<pre><code>s = &#39;a&#39; * 25 + &#39;d&#39; + &#39;a&#39; * 4 + &#39;c&#39;
-#=&gt; &quot;aaaaaaaaaaaaaaaaaaaaaaaaadaaaac&quot;
+<pre><code>/foo/.match(&#39;FOO&#39;)  # =&gt; nil
 </code></pre>
 
-<p>The following patterns match instantly as you would expect:</p>
+<p>Modifier <code>i</code> enables case-insensitive mode:</p>
 
-<pre><code>/(b|a)/ =~ s #=&gt; 0
-/(b|a+)/ =~ s #=&gt; 0
-/(b|a+)*/ =~ s #=&gt; 0
+<pre><code>/foo/i.match(&#39;FOO&#39;)
+# =&gt; #&lt;MatchData &quot;FOO&quot;&gt;
 </code></pre>
 
-<p>However, the following pattern takes appreciably longer:</p>
+<p>Method <a href="Regexp.html#method-i-casefold-3F"><code>Regexp#casefold?</code></a> returns whether the mode is case-insensitive.</p>
 
-<pre><code>/(b|a+)*c/ =~ s #=&gt; 26
+<h3 id="class-Regexp-label-Multiline+Mode">Multiline Mode</h3>
+
+<p>The multiline-mode in Ruby is what is commonly called a “dot-all mode”:</p>
+<ul><li>
+<p>Without the <code>m</code> modifier, the subexpression <code>.</code> does not match newlines:</p>
+
+<pre><code>/a.c/.match(&quot;a\nc&quot;)  # =&gt; nil
+</code></pre>
+</li><li>
+<p>With the modifier, it does match:</p>
+
+<pre><code>/a.c/m.match(&quot;a\nc&quot;) # =&gt; #&lt;MatchData &quot;a\nc&quot;&gt;
+</code></pre>
+</li></ul>
+
+<p>Unlike other languages, the modifier <code>m</code> does not affect the anchors <code>^</code> and <code>$</code>. These anchors always match at line-boundaries in Ruby.</p>
+
+<h3 id="class-Regexp-label-Extended+Mode">Extended Mode</h3>
+
+<p>Modifier <code>x</code> enables extended mode, which means that:</p>
+<ul><li>
+<p>Literal white space in the pattern is to be ignored.</p>
+</li><li>
+<p>Character <code>#</code> marks the remainder of its containing line as a comment, which is also to be ignored for matching purposes.</p>
+</li></ul>
+
+<p>In extended mode, whitespace and comments may be used to form a self-documented regexp.</p>
+
+<p><a href="Regexp.html"><code>Regexp</code></a> not in extended mode (matches some Roman numerals):</p>
+
+<pre><code>pattern = &#39;^M{0,3}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$&#39;
+re = /#{pattern}/
+re.match(&#39;MCMXLIII&#39;) # =&gt; #&lt;MatchData &quot;MCMXLIII&quot; 1:&quot;CM&quot; 2:&quot;XL&quot; 3:&quot;III&quot;&gt;
 </code></pre>
 
-<p>This happens because an atom in the regexp is quantified by both an immediate <code>+</code> and an enclosing <code>*</code> with nothing to differentiate which is in control of any particular character. The nondeterminism that results produces super-linear performance. (Consult <em>Mastering Regular Expressions</em> (3rd ed.), pp 222, by <em>Jeffery Friedl</em>, for an in-depth analysis). This particular case can be fixed by use of atomic grouping, which prevents the unnecessary backtracking:</p>
+<p><a href="Regexp.html"><code>Regexp</code></a> in extended mode:</p>
 
-<pre><code>(start = Time.now) &amp;&amp; /(b|a+)*c/ =~ s &amp;&amp; (Time.now - start)
-   #=&gt; 24.702736882
-(start = Time.now) &amp;&amp; /(?&gt;b|a+)*c/ =~ s &amp;&amp; (Time.now - start)
-   #=&gt; 0.000166571
+<pre><code>pattern = &lt;&lt;-EOT
+  ^                   # beginning of string
+  M{0,3}              # thousands - 0 to 3 Ms
+  (CM|CD|D?C{0,3})    # hundreds - 900 (CM), 400 (CD), 0-300 (0 to 3 Cs),
+                      #            or 500-800 (D, followed by 0 to 3 Cs)
+  (XC|XL|L?X{0,3})    # tens - 90 (XC), 40 (XL), 0-30 (0 to 3 Xs),
+                      #        or 50-80 (L, followed by 0 to 3 Xs)
+  (IX|IV|V?I{0,3})    # ones - 9 (IX), 4 (IV), 0-3 (0 to 3 Is),
+                      #        or 5-8 (V, followed by 0 to 3 Is)
+  $                   # end of string
+EOT
+re = /#{pattern}/x
+re.match(&#39;MCMXLIII&#39;) # =&gt; #&lt;MatchData &quot;MCMXLIII&quot; 1:&quot;CM&quot; 2:&quot;XL&quot; 3:&quot;III&quot;&gt;
 </code></pre>
 
-<p>A similar case is typified by the following example, which takes approximately 60 seconds to execute for me:</p>
+<h3 id="class-Regexp-label-Interpolation+Mode">Interpolation Mode</h3>
 
-<p>Match a string of 29 <em>a</em>s against a pattern of 29 optional <em>a</em>s followed by 29 mandatory <em>a</em>s:</p>
+<p>Modifier <code>o</code> means that the first time a literal regexp with interpolations is encountered, the generated <a href="Regexp.html"><code>Regexp</code></a> object is saved and used for all future evaluations of that literal regexp. Without modifier <code>o</code>, the generated <a href="Regexp.html"><code>Regexp</code></a> is not saved, so each evaluation of the literal regexp generates a new <a href="Regexp.html"><code>Regexp</code></a> object.</p>
 
-<pre><code>Regexp.new(&#39;a?&#39; * 29 + &#39;a&#39; * 29) =~ &#39;a&#39; * 29
+<p>Without modifier <code>o</code>:</p>
+
+<pre><code>def letters; sleep 5; /[A-Z][a-z]/; end
+words = %w[abc def xyz]
+start = Time.now
+words.each {|word| word.match(/\A[#{letters}]+\z/) }
+Time.now - start # =&gt; 15.0174892
 </code></pre>
 
-<p>The 29 optional <em>a</em>s match the string, but this prevents the 29 mandatory <em>a</em>s that follow from matching. Ruby must then backtrack repeatedly so as to satisfy as many of the optional matches as it can while still matching the mandatory 29. It is plain to us that none of the optional matches can succeed, but this fact unfortunately eludes Ruby.</p>
+<p>With modifier <code>o</code>:</p>
 
-<p>The best way to improve performance is to significantly reduce the amount of backtracking needed.  For this case, instead of individually matching 29 optional <em>a</em>s, a range of optional <em>a</em>s can be matched all at once with <em>a{0,29}</em>:</p>
-
-<pre><code>Regexp.new(&#39;a{0,29}&#39; + &#39;a&#39; * 29) =~ &#39;a&#39; * 29
+<pre><code>start = Time.now
+words.each {|word| word.match(/\A[#{letters}]+\z/o) }
+Time.now - start # =&gt; 5.0010866
 </code></pre>
+
+<p>Note that if the literal regexp does not have interpolations, the <code>o</code> behavior is the default.</p>
+
+<h2 id="class-Regexp-label-Encodings">Encodings</h2>
+
+<p>By default, a regexp with only US-ASCII characters has US-ASCII encoding:</p>
+
+<pre><code>re = /foo/
+re.source.encoding # =&gt; #&lt;Encoding:US-ASCII&gt;
+re.encoding        # =&gt; #&lt;Encoding:US-ASCII&gt;
+</code></pre>
+
+<p>A regular expression containing non-US-ASCII characters is assumed to use the source encoding. This can be overridden with one of the following modifiers.</p>
+<ul><li>
+<p><code>/<em>pat</em>/n</code>: US-ASCII if only containing US-ASCII characters, otherwise ASCII-8BIT:</p>
+
+<pre><code>/foo/n.encoding     # =&gt; #&lt;Encoding:US-ASCII&gt;
+/foo\xff/n.encoding # =&gt; #&lt;Encoding:ASCII-8BIT&gt;
+/foo\x7f/n.encoding # =&gt; #&lt;Encoding:US-ASCII&gt;
+</code></pre>
+</li><li>
+<p><code>/<em>pat</em>/u</code>: UTF-8</p>
+
+<pre><code>/foo/u.encoding # =&gt; #&lt;Encoding:UTF-8&gt;
+</code></pre>
+</li><li>
+<p><code>/<em>pat</em>/e</code>: EUC-JP</p>
+
+<pre><code>/foo/e.encoding # =&gt; #&lt;Encoding:EUC-JP&gt;
+</code></pre>
+</li><li>
+<p><code>/<em>pat</em>/s</code>: Windows-31J</p>
+
+<pre><code>/foo/s.encoding # =&gt; #&lt;Encoding:Windows-31J&gt;
+</code></pre>
+</li></ul>
+
+<p>A regexp can be matched against a target string when either:</p>
+<ul><li>
+<p>They have the same encoding.</p>
+</li><li>
+<p>The regexp’s encoding is a fixed encoding and the string contains only ASCII characters. <a href="Method.html"><code>Method</code></a> <a href="Regexp.html#method-i-fixed_encoding-3F"><code>Regexp#fixed_encoding?</code></a> returns whether the regexp has a <em>fixed</em> encoding.</p>
+</li></ul>
+
+<p>If a match between incompatible encodings is attempted an <code>Encoding::CompatibilityError</code> exception is raised.</p>
+
+<p>Example:</p>
+
+<pre><code>re = eval(&quot;# encoding: ISO-8859-1\n/foo\\xff?/&quot;)
+re.encoding                 # =&gt; #&lt;Encoding:ISO-8859-1&gt;
+re =~ &quot;foo&quot;.encode(&quot;UTF-8&quot;) # =&gt; 0
+re =~ &quot;foo\u0100&quot;           # Raises Encoding::CompatibilityError
+</code></pre>
+
+<p>The encoding may be explicitly fixed by including <a href="Regexp.html#FIXEDENCODING"><code>Regexp::FIXEDENCODING</code></a> in the second argument for <a href="Regexp.html#method-c-new"><code>Regexp.new</code></a>:</p>
+
+<pre><code># Regexp with encoding ISO-8859-1.
+re = Regexp.new(&quot;a&quot;.force_encoding(&#39;iso-8859-1&#39;), Regexp::FIXEDENCODING)
+re.encoding  # =&gt; #&lt;Encoding:ISO-8859-1&gt;
+# Target string with encoding UTF-8.
+s = &quot;a\u3042&quot;
+s.encoding   # =&gt; #&lt;Encoding:UTF-8&gt;
+re.match(s)  # Raises Encoding::CompatibilityError.
+</code></pre>
+
+<h2 id="class-Regexp-label-Timeouts">Timeouts</h2>
+
+<p>When either a regexp source or a target string comes from untrusted input, malicious values could become a denial-of-service attack; to prevent such an attack, it is wise to set a timeout.</p>
+
+<p>Regexp has two timeout values:</p>
+<ul><li>
+<p>A class default timeout, used for a regexp whose instance timeout is <code>nil</code>; this default is initially <code>nil</code>, and may be set by method <a href="Regexp.html#method-c-timeout-3D"><code>Regexp.timeout=</code></a>:</p>
+
+<pre><code>Regexp.timeout # =&gt; nil
+Regexp.timeout = 3.0
+Regexp.timeout # =&gt; 3.0
+</code></pre>
+</li><li>
+<p>An instance timeout, which defaults to <code>nil</code> and may be set in <a href="Regexp.html#method-c-new"><code>Regexp.new</code></a>:</p>
+
+<pre><code>re = Regexp.new(&#39;foo&#39;, timeout: 5.0)
+re.timeout # =&gt; 5.0
+</code></pre>
+</li></ul>
+
+<p>When regexp.timeout is <code>nil</code>, the timeout “falls through” to <a href="Regexp.html#method-c-timeout"><code>Regexp.timeout</code></a>; when regexp.timeout is non-<code>nil</code>, that value controls timing out:</p>
+
+<pre><code>| regexp.timeout Value | Regexp.timeout Value |            Result           |
+|----------------------|----------------------|-----------------------------|
+|         nil          |          nil         |       Never times out.      |
+|         nil          |         Float        | Times out in Float seconds. |
+|        Float         |          Any         | Times out in Float seconds. |
+</code></pre>
+
+<h2 id="class-Regexp-label-Optimization">Optimization</h2>
+
+<p>For certain values of the pattern and target string, matching time can grow polynomially or exponentially in relation to the input size; the potential vulnerability arising from this is the <a href="https://en.wikipedia.org/wiki/ReDoS">regular expression denial-of-service</a> (ReDoS) attack.</p>
+
+<p>Regexp matching can apply an optimization to prevent ReDoS attacks. When the optimization is applied, matching time increases linearly (not polynomially or exponentially) in relation to the input size, and a ReDoS attach is not possible.</p>
+
+<p>This optimization is applied if the pattern meets these criteria:</p>
+<ul><li>
+<p>No backreferences.</p>
+</li><li>
+<p>No subexpression calls.</p>
+</li><li>
+<p>No nested lookaround anchors or atomic groups.</p>
+</li><li>
+<p>No nested quantifiers with counting (i.e. no nested <code>{n}</code>, <code>{min,}</code>, <code>{,max}</code>, or <code>{min,max}</code> style quantifiers)</p>
+</li></ul>
+
+<p>You can use method <a href="Regexp.html#method-c-linear_time-3F"><code>Regexp.linear_time?</code></a> to determine whether a pattern meets these criteria:</p>
+
+<pre><code>Regexp.linear_time?(/a*/)     # =&gt; true
+Regexp.linear_time?(&#39;a*&#39;)     # =&gt; true
+Regexp.linear_time?(/(a*)\1/) # =&gt; false
+</code></pre>
+
+<p>However, an untrusted source may not be safe even if the method returns <code>true</code>, because the optimization uses memoization (which may invoke large memory consumption).</p>
+
+<h2 id="class-Regexp-label-References">References</h2>
+
+<p>Read (online PDF books):</p>
+<ul><li>
+<p><a href="https://ia902508.us.archive.org/10/items/allitebooks-02/Mastering%20Regular%20Expressions%2C%203rd%20Edition.pdf">Mastering Regular Expressions</a> by Jeffrey E.F. Friedl.</p>
+</li><li>
+<p><a href="https://doc.lagout.org/programmation/Regular%20Expressions/Regular%20Expressions%20Cookbook_%20Detailed%20Solutions%20in%20Eight%20Programming%20Languages%20%282nd%20ed.%29%20%5BGoyvaerts%20%26%20Levithan%202012-09-06%5D.pdf">Regular Expressions Cookbook</a> by Jan Goyvaerts &amp; Steven Levithan.</p>
+</li></ul>
+
+<p>Explore, test (interactive online editor):</p>
+<ul><li>
+<p><a href="https://rubular.com/">Rubular</a>.</p>
+</li></ul>
 
     </div>
   
@@ -839,6 +1483,17 @@ $+      #=&gt; &quot;c&quot;
   
 
 
+  
+    <!-- Namespace -->
+    <div class="sectiontitle">Namespace</div>
+    <ul>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Regexp/TimeoutError.html">Regexp::TimeoutError</a>
+        </li>
+      
+    </ul>
   
 
 
@@ -974,7 +1629,12 @@ $+      #=&gt; &quot;c&quot;
             
               
               <li>
-                <a href="#method-c-last_match">last_match</a>
+                <a href="#method-c-last_match">last_match</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-linear_time-3F">linear_time?</a>
               </li>
             
           </ul>
@@ -1058,6 +1718,21 @@ $+      #=&gt; &quot;c&quot;
         <dt>T</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-timeout">timeout</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-timeout">timeout</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-timeout-3D">timeout=</a>,
+              </li>
             
               
               <li>
@@ -1214,7 +1889,7 @@ $+      #=&gt; &quot;c&quot;
         <div class="method">
           <h3 class="title method-title" id="method-c-escape">
             
-              <b>Regexp.escape(str)   &rarr; string<br />Regexp.quote(str)    &rarr; string
+              <b>Regexp.escape(string) &rarr; new_string
 </b>
             
             <a href="../classes/Regexp.html#method-c-escape" name="method-c-escape" class="permalink">Link</a>
@@ -1222,9 +1897,15 @@ $+      #=&gt; &quot;c&quot;
 
           
             <div class="description">
-              <p>Escapes any characters that would have special meaning in a regular expression. Returns a new escaped string with the same or compatible encoding. For any string, <code>Regexp.new(Regexp.escape(<em>str</em>))=~<em>str</em></code> will be true.</p>
+              <p>Returns a new string that escapes any characters that have special meaning in a regular expression:</p>
 
-<pre><code>Regexp.escape(&#39;\*?{}.&#39;)   #=&gt; \\\*\?\{\}\.
+<pre><code>s = Regexp.escape(&#39;\*?{}.&#39;)      # =&gt; &quot;\\\\\\*\\?\\{\\}\\.&quot;
+</code></pre>
+
+<p>For any string <code>s</code>, this call returns a <a href="MatchData.html"><code>MatchData</code></a> object:</p>
+
+<pre><code>r = Regexp.new(Regexp.escape(s)) # =&gt; /\\\\\\\*\\\?\\\{\\\}\\\./
+r.match(s)                       # =&gt; #&lt;MatchData &quot;\\\\\\*\\?\\{\\}\\.&quot;&gt;
 </code></pre>
             </div>
           
@@ -1263,7 +1944,7 @@ rb_reg_s_quote(VALUE c, VALUE str)
 
           
             <div class="description">
-              <p>Deserializes <a href="JSON.html"><code>JSON</code></a> string by constructing new <a href="Regexp.html"><code>Regexp</code></a> object with source <code>s</code> (<a href="Regexp.html"><code>Regexp</code></a> or <a href="String.html"><code>String</code></a>) and options <code>o</code> serialized by <code>to_json</code></p>
+              <p>See <a href="Regexp.html#method-i-as_json"><code>as_json</code></a>.</p>
             </div>
           
 
@@ -1279,11 +1960,11 @@ rb_reg_s_quote(VALUE c, VALUE str)
                 Source:
                 <a href="javascript:toggleSource('method-c-json_create_source')" id="l_method-c-json_create_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/regexp.rb#L11" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/json/lib/json/add/regexp.rb#L9" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-json_create_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/regexp.rb, line 11</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/regexp.rb, line 9</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">json_create</span>(<span class="ruby-identifier">object</span>)
   <span class="ruby-identifier">new</span>(<span class="ruby-identifier">object</span>[<span class="ruby-string">&#39;s&#39;</span>], <span class="ruby-identifier">object</span>[<span class="ruby-string">&#39;o&#39;</span>])
 <span class="ruby-keyword">end</span></pre>
@@ -1295,7 +1976,7 @@ rb_reg_s_quote(VALUE c, VALUE str)
         <div class="method">
           <h3 class="title method-title" id="method-c-last_match">
             
-              <b>Regexp.last_match           &rarr; matchdata<br />Regexp.last_match(n)        &rarr; str
+              <b>Regexp.last_match &rarr; matchdata or nil<br />Regexp.last_match(n) &rarr; string or nil<br />Regexp.last_match(name) &rarr; string or nil
 </b>
             
             <a href="../classes/Regexp.html#method-c-last_match" name="method-c-last_match" class="permalink">Link</a>
@@ -1303,22 +1984,34 @@ rb_reg_s_quote(VALUE c, VALUE str)
 
           
             <div class="description">
-              <p>The first form returns the <a href="MatchData.html"><code>MatchData</code></a> object generated by the last successful pattern match.  Equivalent to reading the special global variable <code>$~</code> (see Special global variables in <a href="Regexp.html"><code>Regexp</code></a> for details).</p>
+              <p>With no argument, returns the value of <code>$!</code>, which is the result of the most recent pattern match (see <a href="Regexp.html#class-Regexp-label-Global+Variables">Regexp global variables</a>):</p>
 
-<p>The second form returns the <em>n</em>th field in this <a href="MatchData.html"><code>MatchData</code></a> object. <em>n</em> can be a string or symbol to reference a named capture.</p>
+<pre><code>/c(.)t/ =~ &#39;cat&#39;  # =&gt; 0
+Regexp.last_match # =&gt; #&lt;MatchData &quot;cat&quot; 1:&quot;a&quot;&gt;
+/a/ =~ &#39;foo&#39;      # =&gt; nil
+Regexp.last_match # =&gt; nil
+</code></pre>
 
-<p>Note that the <a href="Regexp.html#method-c-last_match"><code>last_match</code></a> is local to the thread and method scope of the method that did the pattern match.</p>
+<p>With non-negative integer argument <code>n</code>, returns the _n_th field in the matchdata, if any, or nil if none:</p>
 
-<pre><code>/c(.)t/ =~ &#39;cat&#39;        #=&gt; 0
-Regexp.last_match       #=&gt; #&lt;MatchData &quot;cat&quot; 1:&quot;a&quot;&gt;
-Regexp.last_match(0)    #=&gt; &quot;cat&quot;
-Regexp.last_match(1)    #=&gt; &quot;a&quot;
-Regexp.last_match(2)    #=&gt; nil
+<pre><code>/c(.)t/ =~ &#39;cat&#39;     # =&gt; 0
+Regexp.last_match(0) # =&gt; &quot;cat&quot;
+Regexp.last_match(1) # =&gt; &quot;a&quot;
+Regexp.last_match(2) # =&gt; nil
+</code></pre>
 
-/(?&lt;lhs&gt;\w+)\s*=\s*(?&lt;rhs&gt;\w+)/ =~ &quot;var = val&quot;
-Regexp.last_match       #=&gt; #&lt;MatchData &quot;var = val&quot; lhs:&quot;var&quot; rhs:&quot;val&quot;&gt;
-Regexp.last_match(:lhs) #=&gt; &quot;var&quot;
-Regexp.last_match(:rhs) #=&gt; &quot;val&quot;
+<p>With negative integer argument <code>n</code>, counts backwards from the last field:</p>
+
+<pre><code>Regexp.last_match(-1)       # =&gt; &quot;a&quot;
+</code></pre>
+
+<p>With string or symbol argument <code>name</code>, returns the string value for the named capture, if any:</p>
+
+<pre><code>/(?&lt;lhs&gt;\w+)\s*=\s*(?&lt;rhs&gt;\w+)/ =~ &#39;var = val&#39;
+Regexp.last_match        # =&gt; #&lt;MatchData &quot;var = val&quot; lhs:&quot;var&quot;rhs:&quot;val&quot;&gt;
+Regexp.last_match(:lhs)  # =&gt; &quot;var&quot;
+Regexp.last_match(&#39;rhs&#39;) # =&gt; &quot;val&quot;
+Regexp.last_match(&#39;foo&#39;) # Raises IndexError.
 </code></pre>
             </div>
           
@@ -1355,9 +2048,62 @@ rb_reg_s_last_match(int argc, VALUE *argv, VALUE _)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-c-linear_time-3F">
+            
+              <b>Regexp.linear_time?(re)<br />Regexp.linear_time?(string, options = 0)
+</b>
+            
+            <a href="../classes/Regexp.html#method-c-linear_time-3F" name="method-c-linear_time-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns <code>true</code> if matching against <code>re</code> can be done in linear time to the input string.</p>
+
+<pre><code>Regexp.linear_time?(/re/) # =&gt; true
+</code></pre>
+
+<p>Note that this is a property of the ruby interpreter, not of the argument regular expression.  Identical regexp can or cannot run in linear time depending on your ruby binary.  Neither forward nor backward compatibility is guaranteed about the return value of this method.  Our current algorithm is (*1) but this is subject to change in the future.  Alternative implementations can also behave differently.  They might always return false for everything.</p>
+
+<p>(*1): <a href="https://doi.org/10.1109/SP40001.2021.00032">doi.org/10.1109/SP40001.2021.00032</a></p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-linear_time-3F_source')" id="l_method-c-linear_time-3F_source">show</a>
+                
+              </p>
+              <div id="method-c-linear_time-3F_source" class="dyn-source">
+                <pre>static VALUE
+rb_reg_s_linear_time_p(int argc, VALUE *argv, VALUE self)
+{
+    struct reg_init_args args;
+    VALUE re = reg_extract_args(argc, argv, &amp;args);
+
+    if (NIL_P(re)) {
+        re = reg_init_args(rb_reg_alloc(), args.str, args.enc, args.flags);
+    }
+
+    return RBOOL(onig_check_linear_time(RREGEXP_PTR(re)));
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>Regexp.new(string, [options])       &rarr; regexp<br />Regexp.new(regexp)                  &rarr; regexp<br />Regexp.compile(string, [options])   &rarr; regexp<br />Regexp.compile(regexp)              &rarr; regexp
+              <b>Regexp.new(string, options = 0, timeout: nil) &rarr; regexp<br />Regexp.new(regexp, timeout: nil) &rarr; regexp
 </b>
             
             <a href="../classes/Regexp.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -1365,14 +2111,46 @@ rb_reg_s_last_match(int argc, VALUE *argv, VALUE _)
 
           
             <div class="description">
-              <p>Constructs a new regular expression from <code>pattern</code>, which can be either a <a href="String.html"><code>String</code></a> or a <a href="Regexp.html"><code>Regexp</code></a> (in which case that regexp’s options are propagated), and new options may not be specified (a change as of Ruby 1.8).</p>
+              <p>With argument <code>string</code> given, returns a new regexp with the given string and options:</p>
 
-<p>If <code>options</code> is an <a href="Integer.html"><code>Integer</code></a>, it should be one or more of the constants <a href="Regexp.html#EXTENDED"><code>Regexp::EXTENDED</code></a>, <a href="Regexp.html#IGNORECASE"><code>Regexp::IGNORECASE</code></a>, and <a href="Regexp.html#MULTILINE"><code>Regexp::MULTILINE</code></a>, <em>or</em>-ed together.  Otherwise, if <code>options</code> is not <code>nil</code> or <code>false</code>, the regexp will be case insensitive.</p>
+<pre><code>r = Regexp.new(&#39;foo&#39;) # =&gt; /foo/
+r.source              # =&gt; &quot;foo&quot;
+r.options             # =&gt; 0
+</code></pre>
 
-<pre><code>r1 = Regexp.new(&#39;^a-z+:\\s+\w+&#39;) #=&gt; /^a-z+:\s+\w+/
-r2 = Regexp.new(&#39;cat&#39;, true)     #=&gt; /cat/i
-r3 = Regexp.new(r2)              #=&gt; /cat/i
-r4 = Regexp.new(&#39;dog&#39;, Regexp::EXTENDED | Regexp::IGNORECASE) #=&gt; /dog/ix
+<p>Optional argument <code>options</code> is one of the following:</p>
+<ul><li>
+<p>A <a href="String.html"><code>String</code></a> of options:</p>
+
+<pre><code>Regexp.new(&#39;foo&#39;, &#39;i&#39;)  # =&gt; /foo/i
+Regexp.new(&#39;foo&#39;, &#39;im&#39;) # =&gt; /foo/im
+</code></pre>
+</li><li>
+<p>The bit-wise OR of one or more of the constants <a href="Regexp.html#EXTENDED"><code>Regexp::EXTENDED</code></a>, <a href="Regexp.html#IGNORECASE"><code>Regexp::IGNORECASE</code></a>, <a href="Regexp.html#MULTILINE"><code>Regexp::MULTILINE</code></a>, and <a href="Regexp.html#NOENCODING"><code>Regexp::NOENCODING</code></a>:</p>
+
+<pre><code>Regexp.new(&#39;foo&#39;, Regexp::IGNORECASE) # =&gt; /foo/i
+Regexp.new(&#39;foo&#39;, Regexp::EXTENDED)   # =&gt; /foo/x
+Regexp.new(&#39;foo&#39;, Regexp::MULTILINE)  # =&gt; /foo/m
+Regexp.new(&#39;foo&#39;, Regexp::NOENCODING)  # =&gt; /foo/n
+flags = Regexp::IGNORECASE | Regexp::EXTENDED |  Regexp::MULTILINE
+Regexp.new(&#39;foo&#39;, flags)              # =&gt; /foo/mix
+</code></pre>
+</li><li>
+<p><code>nil</code> or <code>false</code>, which is ignored.</p>
+</li><li>
+<p>Any other truthy value, in which case the regexp will be case-insensitive.</p>
+</li></ul>
+
+<p>If optional keyword argument <code>timeout</code> is given, its float value overrides the timeout interval for the class, <a href="Regexp.html#method-c-timeout"><code>Regexp.timeout</code></a>. If <code>nil</code> is passed as +timeout, it uses the timeout interval for the class, <a href="Regexp.html#method-c-timeout"><code>Regexp.timeout</code></a>.</p>
+
+<p>With argument <code>regexp</code> given, returns a new regexp. The source, options, timeout are the same as <code>regexp</code>. <code>options</code> and <code>n_flag</code> arguments are ineffective.  The timeout can be overridden by <code>timeout</code> keyword.</p>
+
+<pre><code>options = Regexp::MULTILINE
+r = Regexp.new(&#39;foo&#39;, options, timeout: 1.1) # =&gt; /foo/m
+r2 = Regexp.new(r)                           # =&gt; /foo/m
+r2.timeout                                   # =&gt; 1.1
+r3 = Regexp.new(r, timeout: 3.14)            # =&gt; /foo/m
+r3.timeout                                   # =&gt; 3.14
 </code></pre>
             </div>
           
@@ -1394,42 +2172,18 @@ r4 = Regexp.new(&#39;dog&#39;, Regexp::EXTENDED | Regexp::IGNORECASE) #=&gt; /do
                 <pre>static VALUE
 rb_reg_initialize_m(int argc, VALUE *argv, VALUE self)
 {
-    int flags = 0;
-    VALUE str;
-    rb_encoding *enc = 0;
+    struct reg_init_args args;
+    VALUE re = reg_extract_args(argc, argv, &amp;args);
 
-    rb_check_arity(argc, 1, 3);
-    if (RB_TYPE_P(argv[0], T_REGEXP)) {
-        VALUE re = argv[0];
-
-        if (argc &gt; 1) {
-            rb_warn(&quot;flags ignored&quot;);
-        }
-        rb_reg_check(re);
-        flags = rb_reg_options(re);
-        str = RREGEXP_SRC(re);
+    if (NIL_P(re)) {
+        reg_init_args(self, args.str, args.enc, args.flags);
     }
     else {
-        if (argc &gt;= 2) {
-            if (FIXNUM_P(argv[1])) flags = FIX2INT(argv[1]);
-            else if (RTEST(argv[1])) flags = ONIG_OPTION_IGNORECASE;
-        }
-        if (argc == 3 &amp;&amp; !NIL_P(argv[2])) {
-            char *kcode = StringValuePtr(argv[2]);
-            if (kcode[0] == &#39;n&#39; || kcode[0] == &#39;N&#39;) {
-                enc = rb_ascii8bit_encoding();
-                flags |= ARG_ENCODING_NONE;
-            }
-            else {
-                rb_category_warn(RB_WARN_CATEGORY_DEPRECATED, &quot;encoding option is ignored - %s&quot;, kcode);
-            }
-        }
-        str = StringValue(argv[0]);
+        reg_copy(self, re);
     }
-    if (enc &amp;&amp; rb_enc_get(str) != enc)
-        rb_reg_init_str_enc(self, str, enc, flags);
-    else
-        rb_reg_init_str(self, str, flags);
+
+    set_timeout(&amp;RREGEXP_PTR(self)-&gt;timelimit, args.timeout);
+
     return self;
 }</pre>
               </div>
@@ -1440,7 +2194,7 @@ rb_reg_initialize_m(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-c-quote">
             
-              <b>Regexp.escape(str)   &rarr; string<br />Regexp.quote(str)    &rarr; string
+              <b>Regexp.escape(string) &rarr; new_string
 </b>
             
             <a href="../classes/Regexp.html#method-c-quote" name="method-c-quote" class="permalink">Link</a>
@@ -1448,9 +2202,15 @@ rb_reg_initialize_m(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Escapes any characters that would have special meaning in a regular expression. Returns a new escaped string with the same or compatible encoding. For any string, <code>Regexp.new(Regexp.escape(<em>str</em>))=~<em>str</em></code> will be true.</p>
+              <p>Returns a new string that escapes any characters that have special meaning in a regular expression:</p>
 
-<pre><code>Regexp.escape(&#39;\*?{}.&#39;)   #=&gt; \\\*\?\{\}\.
+<pre><code>s = Regexp.escape(&#39;\*?{}.&#39;)      # =&gt; &quot;\\\\\\*\\?\\{\\}\\.&quot;
+</code></pre>
+
+<p>For any string <code>s</code>, this call returns a <a href="MatchData.html"><code>MatchData</code></a> object:</p>
+
+<pre><code>r = Regexp.new(Regexp.escape(s)) # =&gt; /\\\\\\\*\\\?\\\{\\\}\\\./
+r.match(s)                       # =&gt; #&lt;MatchData &quot;\\\\\\*\\?\\{\\}\\.&quot;&gt;
 </code></pre>
             </div>
           
@@ -1480,9 +2240,97 @@ rb_reg_s_quote(VALUE c, VALUE str)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-c-timeout">
+            
+              <b>Regexp.timeout  &rarr; float or nil
+</b>
+            
+            <a href="../classes/Regexp.html#method-c-timeout" name="method-c-timeout" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>It returns the current default timeout interval for <a href="Regexp.html"><code>Regexp</code></a> matching in second. <code>nil</code> means no default timeout configuration.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-timeout_source')" id="l_method-c-timeout_source">show</a>
+                
+              </p>
+              <div id="method-c-timeout_source" class="dyn-source">
+                <pre>static VALUE
+rb_reg_s_timeout_get(VALUE dummy)
+{
+    double d = hrtime2double(rb_reg_match_time_limit);
+    if (d == 0.0) return Qnil;
+    return DBL2NUM(d);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-timeout-3D">
+            
+              <b>Regexp.timeout = float or nil
+</b>
+            
+            <a href="../classes/Regexp.html#method-c-timeout-3D" name="method-c-timeout-3D" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>It sets the default timeout interval for <a href="Regexp.html"><code>Regexp</code></a> matching in second. <code>nil</code> means no default timeout configuration. This configuration is process-global. If you want to set timeout for each <a href="Regexp.html"><code>Regexp</code></a>, use <code>timeout</code> keyword for <code>Regexp.new</code>.</p>
+
+<pre><code>Regexp.timeout = 1
+/^a*b?a*$/ =~ &quot;a&quot; * 100000 + &quot;x&quot; #=&gt; regexp match timeout (RuntimeError)
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-timeout-3D_source')" id="l_method-c-timeout-3D_source">show</a>
+                
+              </p>
+              <div id="method-c-timeout-3D_source" class="dyn-source">
+                <pre>static VALUE
+rb_reg_s_timeout_set(VALUE dummy, VALUE timeout)
+{
+    rb_ractor_ensure_main_ractor(&quot;can not access Regexp.timeout from non-main Ractors&quot;);
+
+    set_timeout(&amp;rb_reg_match_time_limit, timeout);
+
+    return timeout;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-c-try_convert">
             
-              <b>Regexp.try_convert(obj) &rarr; re or nil
+              <b>Regexp.try_convert(object) &rarr; regexp or nil
 </b>
             
             <a href="../classes/Regexp.html#method-c-try_convert" name="method-c-try_convert" class="permalink">Link</a>
@@ -1490,16 +2338,19 @@ rb_reg_s_quote(VALUE c, VALUE str)
 
           
             <div class="description">
-              <p>Try to convert <em>obj</em> into a <a href="Regexp.html"><code>Regexp</code></a>, using to_regexp method. Returns converted regexp or nil if <em>obj</em> cannot be converted for any reason.</p>
+              <p>Returns <code>object</code> if it is a regexp:</p>
 
-<pre><code>Regexp.try_convert(/re/)         #=&gt; /re/
-Regexp.try_convert(&quot;re&quot;)         #=&gt; nil
-
-o = Object.new
-Regexp.try_convert(o)            #=&gt; nil
-def o.to_regexp() /foo/ end
-Regexp.try_convert(o)            #=&gt; /foo/
+<pre><code>Regexp.try_convert(/re/) # =&gt; /re/
 </code></pre>
+
+<p>Otherwise if <code>object</code> responds to <code>:to_regexp</code>, calls <code>object.to_regexp</code> and returns the result.</p>
+
+<p>Returns <code>nil</code> if <code>object</code> does not respond to <code>:to_regexp</code>.</p>
+
+<pre><code>Regexp.try_convert(&#39;re&#39;) # =&gt; nil
+</code></pre>
+
+<p>Raises an exception unless <code>object.to_regexp</code> returns a regexp.</p>
             </div>
           
 
@@ -1530,7 +2381,7 @@ rb_reg_s_try_convert(VALUE dummy, VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-c-union">
             
-              <b>Regexp.union(pat1, pat2, ...)            &rarr; new_regexp<br />Regexp.union(pats_ary)                   &rarr; new_regexp
+              <b>Regexp.union(*patterns) &rarr; regexp<br />Regexp.union(array_of_patterns) &rarr; regexp
 </b>
             
             <a href="../classes/Regexp.html#method-c-union" name="method-c-union" class="permalink">Link</a>
@@ -1538,17 +2389,36 @@ rb_reg_s_try_convert(VALUE dummy, VALUE re)
 
           
             <div class="description">
-              <p>Return a <a href="Regexp.html"><code>Regexp</code></a> object that is the union of the given <em>pattern</em>s, i.e., will match any of its parts. The <em>pattern</em>s can be <a href="Regexp.html"><code>Regexp</code></a> objects, in which case their options will be preserved, or Strings. If no patterns are given, returns <code>/(?!)/</code>.  The behavior is unspecified if any given <em>pattern</em> contains capture.</p>
+              <p>Returns a new regexp that is the union of the given patterns:</p>
 
-<pre><code>Regexp.union                         #=&gt; /(?!)/
-Regexp.union(&quot;penzance&quot;)             #=&gt; /penzance/
-Regexp.union(&quot;a+b*c&quot;)                #=&gt; /a\+b\*c/
-Regexp.union(&quot;skiing&quot;, &quot;sledding&quot;)   #=&gt; /skiing|sledding/
-Regexp.union([&quot;skiing&quot;, &quot;sledding&quot;]) #=&gt; /skiing|sledding/
-Regexp.union(/dogs/, /cats/i)        #=&gt; /(?-mix:dogs)|(?i-mx:cats)/
+<pre><code>r = Regexp.union(%w[cat dog])      # =&gt; /cat|dog/
+r.match(&#39;cat&#39;)      # =&gt; #&lt;MatchData &quot;cat&quot;&gt;
+r.match(&#39;dog&#39;)      # =&gt; #&lt;MatchData &quot;dog&quot;&gt;
+r.match(&#39;cog&#39;)      # =&gt; nil
 </code></pre>
 
-<p>Note: the arguments for <a href="Regexp.html#method-c-union"><code>::union</code></a> will try to be converted into a regular expression literal via to_regexp.</p>
+<p>For each pattern that is a string, <code>Regexp.new(pattern)</code> is used:</p>
+
+<pre><code>Regexp.union(&#39;penzance&#39;)             # =&gt; /penzance/
+Regexp.union(&#39;a+b*c&#39;)                # =&gt; /a\+b\*c/
+Regexp.union(&#39;skiing&#39;, &#39;sledding&#39;)   # =&gt; /skiing|sledding/
+Regexp.union([&#39;skiing&#39;, &#39;sledding&#39;]) # =&gt; /skiing|sledding/
+</code></pre>
+
+<p>For each pattern that is a regexp, it is used as is, including its flags:</p>
+
+<pre><code>Regexp.union(/foo/i, /bar/m, /baz/x)
+# =&gt; /(?i-mx:foo)|(?m-ix:bar)|(?x-mi:baz)/
+Regexp.union([/foo/i, /bar/m, /baz/x])
+# =&gt; /(?i-mx:foo)|(?m-ix:bar)|(?x-mi:baz)/
+</code></pre>
+
+<p>With no arguments, returns <code>/(?!)/</code>:</p>
+
+<pre><code>Regexp.union # =&gt; /(?!)/
+</code></pre>
+
+<p>If any regexp pattern contains captures, the behavior is unspecified.</p>
             </div>
           
 
@@ -1588,19 +2458,19 @@ rb_reg_s_union_m(VALUE self, VALUE args)
         <div class="method">
           <h3 class="title method-title" id="method-i-3D-3D">
             
-              <b>rxp == other_rxp      &rarr; true or false</b>
+              <b>regexp == object &rarr; true or false</b>
             
             <a href="../classes/Regexp.html#method-i-3D-3D" name="method-i-3D-3D" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Equality—Two regexps are equal if their patterns are identical, they have the same character set code, and their <code>casefold?</code> values are the same.</p>
+              <p>Returns <code>true</code> if <code>object</code> is another Regexp whose pattern, flags, and encoding are the same as <code>self</code>, <code>false</code> otherwise:</p>
 
-<pre><code>/abc/  == /abc/x   #=&gt; false
-/abc/  == /abc/i   #=&gt; false
-/abc/  == /abc/u   #=&gt; false
-/abc/u == /abc/n   #=&gt; false
+<pre><code>/foo/ == Regexp.new(&#39;foo&#39;)                          # =&gt; true
+/foo/ == /foo/i                                     # =&gt; false
+/foo/ == Regexp.new(&#39;food&#39;)                         # =&gt; false
+/foo/ == Regexp.new(&quot;abc&quot;.force_encoding(&quot;euc-jp&quot;)) # =&gt; false
 </code></pre>
             </div>
           
@@ -1619,7 +2489,7 @@ rb_reg_s_union_m(VALUE self, VALUE args)
         <div class="method">
           <h3 class="title method-title" id="method-i-3D-3D-3D">
             
-              <b>rxp === str   &rarr; true or false
+              <b>regexp === string &rarr; true or false
 </b>
             
             <a href="../classes/Regexp.html#method-i-3D-3D-3D" name="method-i-3D-3D-3D" class="permalink">Link</a>
@@ -1627,21 +2497,20 @@ rb_reg_s_union_m(VALUE self, VALUE args)
 
           
             <div class="description">
-              <p>Case Equality—Used in case statements.</p>
+              <p>Returns <code>true</code> if <code>self</code> finds a match in <code>string</code>:</p>
 
-<pre><code>a = &quot;HELLO&quot;
-case a
-when /\A[a-z]*\z/; print &quot;Lower case\n&quot;
-when /\A[A-Z]*\z/; print &quot;Upper case\n&quot;
-else;              print &quot;Mixed case\n&quot;
-end
-#=&gt; &quot;Upper case&quot;
+<pre><code>/^[a-z]*$/ === &#39;HELLO&#39; # =&gt; false
+/^[A-Z]*$/ === &#39;HELLO&#39; # =&gt; true
 </code></pre>
 
-<p>Following a regular expression literal with the <a href="Regexp.html#method-i-3D-3D-3D"><code>===</code></a> operator allows you to compare against a <a href="String.html"><code>String</code></a>.</p>
+<p>This method is called in case statements:</p>
 
-<pre><code>/^[a-z]*$/ === &quot;HELLO&quot; #=&gt; false
-/^[A-Z]*$/ === &quot;HELLO&quot; #=&gt; true
+<pre><code>s = &#39;HELLO&#39;
+case s
+when /\A[a-z]*\z/; print &quot;Lower case\n&quot;
+when /\A[A-Z]*\z/; print &quot;Upper case\n&quot;
+else               print &quot;Mixed case\n&quot;
+end # =&gt; &quot;Upper case&quot;
 </code></pre>
             </div>
           
@@ -1671,10 +2540,7 @@ rb_reg_eqq(VALUE re, VALUE str)
         return Qfalse;
     }
     start = rb_reg_search(re, str, 0, 0);
-    if (start &lt; 0) {
-        return Qfalse;
-    }
-    return Qtrue;
+    return RBOOL(start &gt;= 0);
 }</pre>
               </div>
             </div>
@@ -1684,7 +2550,7 @@ rb_reg_eqq(VALUE re, VALUE str)
         <div class="method">
           <h3 class="title method-title" id="method-i-3D~">
             
-              <b>rxp =~ str    &rarr; integer or nil
+              <b>regexp =~ string &rarr; integer or nil
 </b>
             
             <a href="../classes/Regexp.html#method-i-3D~" name="method-i-3D~" class="permalink">Link</a>
@@ -1692,47 +2558,56 @@ rb_reg_eqq(VALUE re, VALUE str)
 
           
             <div class="description">
-              <p>Match—Matches <em>rxp</em> against <em>str</em>.</p>
+              <p>Returns the integer index (in characters) of the first match for <code>self</code> and <code>string</code>, or <code>nil</code> if none; also sets the <a href="Regexp.html#class-Regexp-label-Global+Variables">rdoc-ref:Regexp global variables</a>:</p>
 
-<pre><code>/at/ =~ &quot;input data&quot;   #=&gt; 7
-/ax/ =~ &quot;input data&quot;   #=&gt; nil
+<pre><code>/at/ =~ &#39;input data&#39; # =&gt; 7
+$~                   # =&gt; #&lt;MatchData &quot;at&quot;&gt;
+/ax/ =~ &#39;input data&#39; # =&gt; nil
+$~                   # =&gt; nil
 </code></pre>
 
-<p>If <code>=~</code> is used with a regexp literal with named captures, captured strings (or nil) is assigned to local variables named by the capture names.</p>
+<p>Assigns named captures to local variables of the same names if and only if <code>self</code>:</p>
+<ul><li>
+<p>Is a regexp literal; see <a href="../files/ruby/doc/syntax/literals_rdoc.html#label-Regexp+Literals">Regexp Literals</a>.</p>
+</li><li>
+<p>Does not contain interpolations; see <a href="Regexp.html#class-Regexp-label-Interpolation+Mode">Regexp interpolation</a>.</p>
+</li><li>
+<p>Is at the left of the expression.</p>
+</li></ul>
 
-<pre><code>/(?&lt;lhs&gt;\w+)\s*=\s*(?&lt;rhs&gt;\w+)/ =~ &quot;  x = y  &quot;
-p lhs    #=&gt; &quot;x&quot;
-p rhs    #=&gt; &quot;y&quot;
+<p>Example:</p>
+
+<pre><code>/(?&lt;lhs&gt;\w+)\s*=\s*(?&lt;rhs&gt;\w+)/ =~ &#39;  x = y  &#39;
+p lhs # =&gt; &quot;x&quot;
+p rhs # =&gt; &quot;y&quot;
 </code></pre>
 
-<p>If it is not matched, nil is assigned for the variables.</p>
+<p>Assigns <code>nil</code> if not matched:</p>
 
-<pre><code>/(?&lt;lhs&gt;\w+)\s*=\s*(?&lt;rhs&gt;\w+)/ =~ &quot;  x = &quot;
-p lhs    #=&gt; nil
-p rhs    #=&gt; nil
+<pre><code>/(?&lt;lhs&gt;\w+)\s*=\s*(?&lt;rhs&gt;\w+)/ =~ &#39;  x = &#39;
+p lhs # =&gt; nil
+p rhs # =&gt; nil
 </code></pre>
 
-<p>This assignment is implemented in the Ruby parser. The parser detects ‘regexp-literal =~ expression’ for the assignment. The regexp must be a literal without interpolation and placed at left hand side.</p>
+<p>Does not make local variable assignments if <code>self</code> is not a regexp literal:</p>
 
-<p>The assignment does not occur if the regexp is not a literal.</p>
-
-<pre><code>re = /(?&lt;lhs&gt;\w+)\s*=\s*(?&lt;rhs&gt;\w+)/
-re =~ &quot;  x = y  &quot;
-p lhs    # undefined local variable
-p rhs    # undefined local variable
+<pre><code>r = /(?&lt;foo&gt;\w+)\s*=\s*(?&lt;foo&gt;\w+)/
+r =~ &#39;  x = y  &#39;
+p foo # Undefined local variable
+p bar # Undefined local variable
 </code></pre>
 
-<p>A regexp interpolation, <code>#{}</code>, also disables the assignment.</p>
+<p>The assignment does not occur if the regexp is not at the left:</p>
 
-<pre><code>rhs_pat = /(?&lt;rhs&gt;\w+)/
-/(?&lt;lhs&gt;\w+)\s*=\s*#{rhs_pat}/ =~ &quot;x = y&quot;
-p lhs    # undefined local variable
+<pre><code>&#39;  x = y  &#39; =~ /(?&lt;foo&gt;\w+)\s*=\s*(?&lt;foo&gt;\w+)/
+p foo, foo # Undefined local variables
 </code></pre>
 
-<p>The assignment does not occur if the regexp is placed at the right hand side.</p>
+<p>A regexp interpolation, <code>#{}</code>, also disables the assignment:</p>
 
-<pre><code>&quot;  x = y  &quot; =~ /(?&lt;lhs&gt;\w+)\s*=\s*(?&lt;rhs&gt;\w+)/
-p lhs, rhs # undefined local variable
+<pre><code>r = /(?&lt;foo&gt;\w+)/
+/(?&lt;foo&gt;\w+)\s*=\s*#{r}/ =~ &#39;x = y&#39;
+p foo # Undefined local variable
 </code></pre>
             </div>
           
@@ -1774,7 +2649,19 @@ rb_reg_match(VALUE re, VALUE str)
 
           
             <div class="description">
-              <p>Returns a hash, that will be turned into a <a href="JSON.html"><code>JSON</code></a> object and represent this object.</p>
+              <p>Methods <code>Regexp#as_json</code> and <code>Regexp.json_create</code> may be used to serialize and deserialize a Regexp object; see <a href="Marshal.html"><code>Marshal</code></a>.</p>
+
+<p>Method <code>Regexp#as_json</code> serializes <code>self</code>, returning a 2-element hash representing <code>self</code>:</p>
+
+<pre><code>require &#39;json/add/regexp&#39;
+x = /foo/.as_json
+# =&gt; {&quot;json_class&quot;=&gt;&quot;Regexp&quot;, &quot;o&quot;=&gt;0, &quot;s&quot;=&gt;&quot;foo&quot;}
+</code></pre>
+
+<p>Method <code>JSON.create</code> deserializes such a hash, returning a Regexp object:</p>
+
+<pre><code>Regexp.json_create(x) # =&gt; /foo/
+</code></pre>
             </div>
           
 
@@ -1790,11 +2677,11 @@ rb_reg_match(VALUE re, VALUE str)
                 Source:
                 <a href="javascript:toggleSource('method-i-as_json_source')" id="l_method-i-as_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/regexp.rb#L17" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/json/lib/json/add/regexp.rb#L28" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-as_json_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/regexp.rb, line 17</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/regexp.rb, line 28</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">as_json</span>(<span class="ruby-operator">*</span>)
   {
     <span class="ruby-constant">JSON</span>.<span class="ruby-identifier">create_id</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">name</span>,
@@ -1810,7 +2697,7 @@ rb_reg_match(VALUE re, VALUE str)
         <div class="method">
           <h3 class="title method-title" id="method-i-casefold-3F">
             
-              <b>rxp.casefold?   &rarr; true or false
+              <b>casefold?&rarr; true or false
 </b>
             
             <a href="../classes/Regexp.html#method-i-casefold-3F" name="method-i-casefold-3F" class="permalink">Link</a>
@@ -1818,11 +2705,11 @@ rb_reg_match(VALUE re, VALUE str)
 
           
             <div class="description">
-              <p>Returns the value of the case-insensitive flag.</p>
+              <p>Returns <code>true</code> if the case-insensitivity flag in <code>self</code> is set, <code>false</code> otherwise:</p>
 
-<pre><code>/a/.casefold?           #=&gt; false
-/a/i.casefold?          #=&gt; true
-/(?i:a)/.casefold?      #=&gt; false
+<pre><code>/a/.casefold?           # =&gt; false
+/a/i.casefold?          # =&gt; true
+/(?i:a)/.casefold?      # =&gt; false
 </code></pre>
             </div>
           
@@ -1886,7 +2773,7 @@ rb_obj_encoding(VALUE obj)
 {
     int idx = rb_enc_get_index(obj);
     if (idx &lt; 0) {
-	rb_raise(rb_eTypeError, &quot;unknown encoding&quot;);
+        rb_raise(rb_eTypeError, &quot;unknown encoding&quot;);
     }
     return rb_enc_from_encoding_index(idx &amp; ENC_INDEX_MASK);
 }</pre>
@@ -1898,19 +2785,19 @@ rb_obj_encoding(VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-i-eql-3F">
             
-              <b>rxp.eql?(other_rxp)   &rarr; true or false</b>
+              <b>eql?</b>(p1)
             
             <a href="../classes/Regexp.html#method-i-eql-3F" name="method-i-eql-3F" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Equality—Two regexps are equal if their patterns are identical, they have the same character set code, and their <code>casefold?</code> values are the same.</p>
+              <p>Returns <code>true</code> if <code>object</code> is another Regexp whose pattern, flags, and encoding are the same as <code>self</code>, <code>false</code> otherwise:</p>
 
-<pre><code>/abc/  == /abc/x   #=&gt; false
-/abc/  == /abc/i   #=&gt; false
-/abc/  == /abc/u   #=&gt; false
-/abc/u == /abc/n   #=&gt; false
+<pre><code>/foo/ == Regexp.new(&#39;foo&#39;)                          # =&gt; true
+/foo/ == /foo/i                                     # =&gt; false
+/foo/ == Regexp.new(&#39;food&#39;)                         # =&gt; false
+/foo/ == Regexp.new(&quot;abc&quot;.force_encoding(&quot;euc-jp&quot;)) # =&gt; false
 </code></pre>
             </div>
           
@@ -1953,7 +2840,7 @@ rb_reg_equal(VALUE re1, VALUE re2)
         <div class="method">
           <h3 class="title method-title" id="method-i-fixed_encoding-3F">
             
-              <b>rxp.fixed_encoding?   &rarr; true or false
+              <b>fixed_encoding?   &rarr; true or false
 </b>
             
             <a href="../classes/Regexp.html#method-i-fixed_encoding-3F" name="method-i-fixed_encoding-3F" class="permalink">Link</a>
@@ -1961,27 +2848,26 @@ rb_reg_equal(VALUE re1, VALUE re2)
 
           
             <div class="description">
-              <p>Returns false if rxp is applicable to a string with any ASCII compatible encoding. Returns true otherwise.</p>
+              <p>Returns <code>false</code> if <code>self</code> is applicable to a string with any ASCII-compatible encoding; otherwise returns <code>true</code>:</p>
 
-<pre><code>r = /a/
-r.fixed_encoding?                               #=&gt; false
-r =~ &quot;\u{6666} a&quot;                               #=&gt; 2
-r =~ &quot;\xa1\xa2 a&quot;.force_encoding(&quot;euc-jp&quot;)      #=&gt; 2
-r =~ &quot;abc&quot;.force_encoding(&quot;euc-jp&quot;)             #=&gt; 0
+<pre><code>r = /a/                                          # =&gt; /a/
+r.fixed_encoding?                               # =&gt; false
+r.match?(&quot;\u{6666} a&quot;)                          # =&gt; true
+r.match?(&quot;\xa1\xa2 a&quot;.force_encoding(&quot;euc-jp&quot;)) # =&gt; true
+r.match?(&quot;abc&quot;.force_encoding(&quot;euc-jp&quot;))        # =&gt; true
 
-r = /a/u
-r.fixed_encoding?                               #=&gt; true
-r.encoding                                      #=&gt; #&lt;Encoding:UTF-8&gt;
-r =~ &quot;\u{6666} a&quot;                               #=&gt; 2
-r =~ &quot;\xa1\xa2&quot;.force_encoding(&quot;euc-jp&quot;)        #=&gt; Encoding::CompatibilityError
-r =~ &quot;abc&quot;.force_encoding(&quot;euc-jp&quot;)             #=&gt; 0
+r = /a/u                                        # =&gt; /a/
+r.fixed_encoding?                               # =&gt; true
+r.match?(&quot;\u{6666} a&quot;)                          # =&gt; true
+r.match?(&quot;\xa1\xa2&quot;.force_encoding(&quot;euc-jp&quot;))   # Raises exception.
+r.match?(&quot;abc&quot;.force_encoding(&quot;euc-jp&quot;))        # =&gt; true
 
-r = /\u{6666}/
-r.fixed_encoding?                               #=&gt; true
-r.encoding                                      #=&gt; #&lt;Encoding:UTF-8&gt;
-r =~ &quot;\u{6666} a&quot;                               #=&gt; 0
-r =~ &quot;\xa1\xa2&quot;.force_encoding(&quot;euc-jp&quot;)        #=&gt; Encoding::CompatibilityError
-r =~ &quot;abc&quot;.force_encoding(&quot;euc-jp&quot;)             #=&gt; nil
+r = /\u{6666}/                                  # =&gt; /\u{6666}/
+r.fixed_encoding?                               # =&gt; true
+r.encoding                                      # =&gt; #&lt;Encoding:UTF-8&gt;
+r.match?(&quot;\u{6666} a&quot;)                          # =&gt; true
+r.match?(&quot;\xa1\xa2&quot;.force_encoding(&quot;euc-jp&quot;))   # Raises exception.
+r.match?(&quot;abc&quot;.force_encoding(&quot;euc-jp&quot;))        # =&gt; false
 </code></pre>
             </div>
           
@@ -2013,7 +2899,7 @@ rb_reg_fixed_encoding_p(VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-hash">
             
-              <b>rxp.hash   &rarr; integer
+              <b>hash &rarr; integer
 </b>
             
             <a href="../classes/Regexp.html#method-i-hash" name="method-i-hash" class="permalink">Link</a>
@@ -2021,9 +2907,9 @@ rb_reg_fixed_encoding_p(VALUE re)
 
           
             <div class="description">
-              <p>Produce a hash based on the text and options of this regular expression.</p>
+              <p>Returns the integer hash value for <code>self</code>.</p>
 
-<p>See also <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
+<p>Related: <a href="Object.html#method-i-hash"><code>Object#hash</code></a>.</p>
             </div>
           
 
@@ -2055,7 +2941,7 @@ rb_reg_hash(VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-inspect">
             
-              <b>rxp.inspect   &rarr; string
+              <b>inspect &rarr; string
 </b>
             
             <a href="../classes/Regexp.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
@@ -2063,10 +2949,12 @@ rb_reg_hash(VALUE re)
 
           
             <div class="description">
-              <p>Produce a nicely formatted string-version of <em>rxp</em>. Perhaps surprisingly, <code>#inspect</code> actually produces the more natural version of the string than <code>#to_s</code>.</p>
+              <p>Returns a nicely-formatted string representation of <code>self</code>:</p>
 
-<pre><code>/ab+c/ix.inspect        #=&gt; &quot;/ab+c/ix&quot;
+<pre><code>/ab+c/ix.inspect # =&gt; &quot;/ab+c/ix&quot;
 </code></pre>
+
+<p>Related: <a href="Regexp.html#method-i-to_s"><code>Regexp#to_s</code></a>.</p>
             </div>
           
 
@@ -2090,7 +2978,7 @@ rb_reg_inspect(VALUE re)
     if (!RREGEXP_PTR(re) || !RREGEXP_SRC(re) || !RREGEXP_SRC_PTR(re)) {
         return rb_any_to_s(re);
     }
-    return rb_reg_desc(RREGEXP_SRC_PTR(re), RREGEXP_SRC_LEN(re), re);
+    return rb_reg_desc(re);
 }</pre>
               </div>
             </div>
@@ -2100,7 +2988,7 @@ rb_reg_inspect(VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-match">
             
-              <b>rxp.match(str, pos=0)                   &rarr; matchdata or nil<br />rxp.match(str, pos=0) {|match| block }  &rarr; obj
+              <b>match(string, offset = 0) &rarr; matchdata or nil<br />match(string, offset = 0) {|matchdata| ... } &rarr; object
 </b>
             
             <a href="../classes/Regexp.html#method-i-match" name="method-i-match" class="permalink">Link</a>
@@ -2108,29 +2996,39 @@ rb_reg_inspect(VALUE re)
 
           
             <div class="description">
-              <p>Returns a <a href="MatchData.html"><code>MatchData</code></a> object describing the match, or <code>nil</code> if there was no match. This is equivalent to retrieving the value of the special variable <code>$~</code> following a normal match.  If the second parameter is present, it specifies the position in the string to begin the search.</p>
+              <p>With no block given, returns the <a href="MatchData.html"><code>MatchData</code></a> object that describes the match, if any, or <code>nil</code> if none; the search begins at the given character <code>offset</code> in <code>string</code>:</p>
 
-<pre><code>/(.)(.)(.)/.match(&quot;abc&quot;)[2]   #=&gt; &quot;b&quot;
-/(.)(.)/.match(&quot;abc&quot;, 1)[2]   #=&gt; &quot;c&quot;
+<pre><code>/abra/.match(&#39;abracadabra&#39;)      # =&gt; #&lt;MatchData &quot;abra&quot;&gt;
+/abra/.match(&#39;abracadabra&#39;, 4)   # =&gt; #&lt;MatchData &quot;abra&quot;&gt;
+/abra/.match(&#39;abracadabra&#39;, 8)   # =&gt; nil
+/abra/.match(&#39;abracadabra&#39;, 800) # =&gt; nil
+
+string = &quot;\u{5d0 5d1 5e8 5d0}cadabra&quot;
+/abra/.match(string, 7)          #=&gt; #&lt;MatchData &quot;abra&quot;&gt;
+/abra/.match(string, 8)          #=&gt; nil
+/abra/.match(string.b, 8)        #=&gt; #&lt;MatchData &quot;abra&quot;&gt;
 </code></pre>
 
-<p>If a block is given, invoke the block with <a href="MatchData.html"><code>MatchData</code></a> if match succeed, so that you can write</p>
+<p>With a block given, calls the block if and only if a match is found; returns the block’s value:</p>
 
-<pre><code>/M(.*)/.match(&quot;Matz&quot;) do |m|
-  puts m[0]
-  puts m[1]
-end
+<pre><code>/abra/.match(&#39;abracadabra&#39;) {|matchdata| p matchdata }
+# =&gt; #&lt;MatchData &quot;abra&quot;&gt;
+/abra/.match(&#39;abracadabra&#39;, 4) {|matchdata| p matchdata }
+# =&gt; #&lt;MatchData &quot;abra&quot;&gt;
+/abra/.match(&#39;abracadabra&#39;, 8) {|matchdata| p matchdata }
+# =&gt; nil
+/abra/.match(&#39;abracadabra&#39;, 8) {|marchdata| fail &#39;Cannot happen&#39; }
+# =&gt; nil
 </code></pre>
 
-<p>instead of</p>
+<p>Output (from the first two blocks above):</p>
 
-<pre><code>if m = /M(.*)/.match(&quot;Matz&quot;)
-  puts m[0]
-  puts m[1]
-end
+<pre><code>#&lt;MatchData &quot;abra&quot;&gt;
+#&lt;MatchData &quot;abra&quot;&gt;
+
+ /(.)(.)(.)/.match(&quot;abc&quot;)[2] # =&gt; &quot;b&quot;
+ /(.)(.)/.match(&quot;abc&quot;, 1)[2] # =&gt; &quot;c&quot;
 </code></pre>
-
-<p>The return value is a value from block execution in this case.</p>
             </div>
           
 
@@ -2180,7 +3078,7 @@ rb_reg_match_m(int argc, VALUE *argv, VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-match-3F">
             
-              <b>rxp.match?(str)          &rarr; true or false<br />rxp.match?(str, pos=0)   &rarr; true or false
+              <b>match?(string) &rarr; true or false<br />match?(string, offset = 0) &rarr; true or false
 </b>
             
             <a href="../classes/Regexp.html#method-i-match-3F" name="method-i-match-3F" class="permalink">Link</a>
@@ -2190,10 +3088,10 @@ rb_reg_match_m(int argc, VALUE *argv, VALUE re)
             <div class="description">
               <p>Returns <code>true</code> or <code>false</code> to indicate whether the regexp is matched or not without updating $~ and other related variables. If the second parameter is present, it specifies the position in the string to begin the search.</p>
 
-<pre><code>/R.../.match?(&quot;Ruby&quot;)    #=&gt; true
-/R.../.match?(&quot;Ruby&quot;, 1) #=&gt; false
-/P.../.match?(&quot;Ruby&quot;)    #=&gt; false
-$&amp;                       #=&gt; nil
+<pre><code>/R.../.match?(&quot;Ruby&quot;)    # =&gt; true
+/R.../.match?(&quot;Ruby&quot;, 1) # =&gt; false
+/P.../.match?(&quot;Ruby&quot;)    # =&gt; false
+$&amp;                       # =&gt; nil
 </code></pre>
             </div>
           
@@ -2226,7 +3124,7 @@ rb_reg_match_m_p(int argc, VALUE *argv, VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-named_captures">
             
-              <b>rxp.named_captures  &rarr; hash
+              <b>named_captures  &rarr; hash
 </b>
             
             <a href="../classes/Regexp.html#method-i-named_captures" name="method-i-named_captures" class="permalink">Link</a>
@@ -2234,21 +3132,18 @@ rb_reg_match_m_p(int argc, VALUE *argv, VALUE re)
 
           
             <div class="description">
-              <p>Returns a hash representing information about named captures of <em>rxp</em>.</p>
+              <p>Returns a hash representing named captures of <code>self</code> (see <a href="Regexp.html#class-Regexp-label-Named+Captures">Named Captures</a>):</p>
+<ul><li>
+<p>Each key is the name of a named capture.</p>
+</li><li>
+<p>Each value is an array of integer indexes for that named capture.</p>
+</li></ul>
 
-<p>A key of the hash is a name of the named captures. A value of the hash is an array which is list of indexes of corresponding named captures.</p>
+<p>Examples:</p>
 
-<pre><code>/(?&lt;foo&gt;.)(?&lt;bar&gt;.)/.named_captures
-#=&gt; {&quot;foo&quot;=&gt;[1], &quot;bar&quot;=&gt;[2]}
-
-/(?&lt;foo&gt;.)(?&lt;foo&gt;.)/.named_captures
-#=&gt; {&quot;foo&quot;=&gt;[1, 2]}
-</code></pre>
-
-<p>If there are no named captures, an empty hash is returned.</p>
-
-<pre><code>/(.)(.)/.named_captures
-#=&gt; {}
+<pre><code>/(?&lt;foo&gt;.)(?&lt;bar&gt;.)/.named_captures # =&gt; {&quot;foo&quot;=&gt;[1], &quot;bar&quot;=&gt;[2]}
+/(?&lt;foo&gt;.)(?&lt;foo&gt;.)/.named_captures # =&gt; {&quot;foo&quot;=&gt;[1, 2]}
+/(.)(.)/.named_captures             # =&gt; {}
 </code></pre>
             </div>
           
@@ -2283,7 +3178,7 @@ rb_reg_named_captures(VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-names">
             
-              <b>rxp.names   &rarr; [name1, name2, ...]
+              <b>names &rarr; array_of_names
 </b>
             
             <a href="../classes/Regexp.html#method-i-names" name="method-i-names" class="permalink">Link</a>
@@ -2291,16 +3186,11 @@ rb_reg_named_captures(VALUE re)
 
           
             <div class="description">
-              <p>Returns a list of names of captures as an array of strings.</p>
+              <p>Returns an array of names of captures (see <a href="Regexp.html#class-Regexp-label-Named+Captures">Named Captures</a>):</p>
 
-<pre><code>/(?&lt;foo&gt;.)(?&lt;bar&gt;.)(?&lt;baz&gt;.)/.names
-#=&gt; [&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;]
-
-/(?&lt;foo&gt;.)(?&lt;foo&gt;.)/.names
-#=&gt; [&quot;foo&quot;]
-
-/(.)(.)/.names
-#=&gt; []
+<pre><code>/(?&lt;foo&gt;.)(?&lt;bar&gt;.)(?&lt;baz&gt;.)/.names # =&gt; [&quot;foo&quot;, &quot;bar&quot;, &quot;baz&quot;]
+/(?&lt;foo&gt;.)(?&lt;foo&gt;.)/.names          # =&gt; [&quot;foo&quot;]
+/(.)(.)/.names                      # =&gt; []
 </code></pre>
             </div>
           
@@ -2336,7 +3226,7 @@ rb_reg_names(VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-options">
             
-              <b>rxp.options   &rarr; integer
+              <b>options &rarr; integer
 </b>
             
             <a href="../classes/Regexp.html#method-i-options" name="method-i-options" class="permalink">Link</a>
@@ -2344,19 +3234,32 @@ rb_reg_names(VALUE re)
 
           
             <div class="description">
-              <p>Returns the set of bits corresponding to the options used when creating this <a href="Regexp.html"><code>Regexp</code></a> (see <a href="Regexp.html#method-c-new"><code>Regexp::new</code></a> for details. Note that additional bits may be set in the returned options: these are used internally by the regular expression code. These extra bits are ignored if the options are passed to <a href="Regexp.html#method-c-new"><code>Regexp::new</code></a>.</p>
+              <p>Returns an integer whose bits show the options set in <code>self</code>.</p>
 
-<pre><code>Regexp::IGNORECASE                  #=&gt; 1
-Regexp::EXTENDED                    #=&gt; 2
-Regexp::MULTILINE                   #=&gt; 4
+<p>The option bits are:</p>
 
-/cat/.options                       #=&gt; 0
-/cat/ix.options                     #=&gt; 3
-Regexp.new(&#39;cat&#39;, true).options     #=&gt; 1
-/\xa1\xa2/e.options                 #=&gt; 16
+<pre><code>Regexp::IGNORECASE # =&gt; 1
+Regexp::EXTENDED   # =&gt; 2
+Regexp::MULTILINE  # =&gt; 4
+</code></pre>
 
-r = /cat/ix
-Regexp.new(r.source, r.options)     #=&gt; /cat/ix
+<p>Examples:</p>
+
+<pre><code>/foo/.options    # =&gt; 0
+/foo/i.options   # =&gt; 1
+/foo/x.options   # =&gt; 2
+/foo/m.options   # =&gt; 4
+/foo/mix.options # =&gt; 7
+</code></pre>
+
+<p>Note that additional bits may be set in the returned integer; these are maintained internally in <code>self</code>, are ignored if passed to <a href="Regexp.html#method-c-new"><code>Regexp.new</code></a>, and may be ignored by the caller:</p>
+
+<p>Returns the set of bits corresponding to the options used when creating this regexp (see <a href="Regexp.html#method-c-new"><code>Regexp::new</code></a> for details). Note that additional bits may be set in the returned options: these are used internally by the regular expression code. These extra bits are ignored if the options are passed to <a href="Regexp.html#method-c-new"><code>Regexp::new</code></a>:</p>
+
+<pre><code>r = /\xa1\xa2/e                 # =&gt; /\xa1\xa2/
+r.source                        # =&gt; &quot;\\xa1\\xa2&quot;
+r.options                       # =&gt; 16
+Regexp.new(r.source, r.options) # =&gt; /\xa1\xa2/
 </code></pre>
             </div>
           
@@ -2389,7 +3292,7 @@ rb_reg_options_m(VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-source">
             
-              <b>rxp.source   &rarr; str
+              <b>source &rarr; string
 </b>
             
             <a href="../classes/Regexp.html#method-i-source" name="method-i-source" class="permalink">Link</a>
@@ -2397,14 +3300,19 @@ rb_reg_options_m(VALUE re)
 
           
             <div class="description">
-              <p>Returns the original string of the pattern.</p>
+              <p>Returns the original string of <code>self</code>:</p>
 
-<pre><code>/ab+c/ix.source #=&gt; &quot;ab+c&quot;
+<pre><code>/ab+c/ix.source # =&gt; &quot;ab+c&quot;
 </code></pre>
 
-<p>Note that escape sequences are retained as is.</p>
+<p><a href="Regexp.html"><code>Regexp</code></a> escape sequences are retained:</p>
 
-<pre><code>/\x20\+/.source  #=&gt; &quot;\\x20\\+&quot;
+<pre><code>/\x20\+/.source  # =&gt; &quot;\\x20\\+&quot;
+</code></pre>
+
+<p>Lexer escape characters are not retained:</p>
+
+<pre><code>/\//.source  # =&gt; &quot;/&quot;
 </code></pre>
             </div>
           
@@ -2438,6 +3346,55 @@ rb_reg_source(VALUE re)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-timeout">
+            
+              <b>rxp.timeout  &rarr; float or nil
+</b>
+            
+            <a href="../classes/Regexp.html#method-i-timeout" name="method-i-timeout" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>It returns the timeout interval for <a href="Regexp.html"><code>Regexp</code></a> matching in second. <code>nil</code> means no default timeout configuration.</p>
+
+<p>This configuration is per-object. The global configuration set by <a href="Regexp.html#method-c-timeout-3D"><code>Regexp.timeout=</code></a> is ignored if per-object configuration is set.</p>
+
+<pre><code>re = Regexp.new(&quot;^a*b?a*$&quot;, timeout: 1)
+re.timeout               #=&gt; 1.0
+re =~ &quot;a&quot; * 100000 + &quot;x&quot; #=&gt; regexp match timeout (RuntimeError)
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-timeout_source')" id="l_method-i-timeout_source">show</a>
+                
+              </p>
+              <div id="method-i-timeout_source" class="dyn-source">
+                <pre>static VALUE
+rb_reg_timeout_get(VALUE re)
+{
+    rb_reg_check(re);
+    double d = hrtime2double(RREGEXP_PTR(re)-&gt;timelimit);
+    if (d == 0.0) return Qnil;
+    return DBL2NUM(d);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-to_json">
             
               <b>to_json</b>(*args)
@@ -2447,7 +3404,16 @@ rb_reg_source(VALUE re)
 
           
             <div class="description">
-              <p>Stores class name (<a href="Regexp.html"><code>Regexp</code></a>) with options <code>o</code> and source <code>s</code> (<a href="Regexp.html"><code>Regexp</code></a> or <a href="String.html"><code>String</code></a>) as <a href="JSON.html"><code>JSON</code></a> string</p>
+              <p>Returns a <a href="JSON.html"><code>JSON</code></a> string representing <code>self</code>:</p>
+
+<pre><code>require &#39;json/add/regexp&#39;
+puts /foo/.to_json
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>{&quot;json_class&quot;:&quot;Regexp&quot;,&quot;o&quot;:0,&quot;s&quot;:&quot;foo&quot;}
+</code></pre>
             </div>
           
 
@@ -2463,11 +3429,11 @@ rb_reg_source(VALUE re)
                 Source:
                 <a href="javascript:toggleSource('method-i-to_json_source')" id="l_method-i-to_json_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/add/regexp.rb#L27" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/json/lib/json/add/regexp.rb#L45" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_json_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/regexp.rb, line 27</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/add/regexp.rb, line 45</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_json</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
   <span class="ruby-identifier">as_json</span>.<span class="ruby-identifier">to_json</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -2479,7 +3445,7 @@ rb_reg_source(VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_s">
             
-              <b>rxp.to_s   &rarr; str
+              <b>to_s &rarr; string
 </b>
             
             <a href="../classes/Regexp.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
@@ -2487,15 +3453,26 @@ rb_reg_source(VALUE re)
 
           
             <div class="description">
-              <p>Returns a string containing the regular expression and its options (using the <code>(?opts:source)</code> notation. This string can be fed back in to <a href="Regexp.html#method-c-new"><code>Regexp::new</code></a> to a regular expression with the same semantics as the original. (However, <code>Regexp#==</code> may not return true when comparing the two, as the source of the regular expression itself may differ, as the example shows).  <a href="Regexp.html#method-i-inspect"><code>Regexp#inspect</code></a> produces a generally more readable version of <em>rxp</em>.</p>
+              <p>Returns a string showing the options and string of <code>self</code>:</p>
 
-<pre><code>r1 = /ab+c/ix           #=&gt; /ab+c/ix
-s1 = r1.to_s            #=&gt; &quot;(?ix-m:ab+c)&quot;
-r2 = Regexp.new(s1)     #=&gt; /(?ix-m:ab+c)/
-r1 == r2                #=&gt; false
-r1.source               #=&gt; &quot;ab+c&quot;
-r2.source               #=&gt; &quot;(?ix-m:ab+c)&quot;
+<pre><code>r0 = /ab+c/ix
+s0 = r0.to_s # =&gt; &quot;(?ix-m:ab+c)&quot;
 </code></pre>
+
+<p>The returned string may be used as an argument to <a href="Regexp.html#method-c-new"><code>Regexp.new</code></a>, or as interpolated text for a <a href="Regexp.html#class-Regexp-label-Interpolation+Mode">Regexp interpolation</a>:</p>
+
+<pre><code>r1 = Regexp.new(s0) # =&gt; /(?ix-m:ab+c)/
+r2 = /#{s0}/        # =&gt; /(?ix-m:ab+c)/
+</code></pre>
+
+<p>Note that <code>r1</code> and <code>r2</code> are not equal to <code>r0</code> because their original strings are different:</p>
+
+<pre><code>r0 == r1  # =&gt; false
+r0.source # =&gt; &quot;ab+c&quot;
+r1.source # =&gt; &quot;(?ix-m:ab+c)&quot;
+</code></pre>
+
+<p>Related: <a href="Regexp.html#method-i-inspect"><code>Regexp#inspect</code></a>.</p>
             </div>
           
 
@@ -2526,7 +3503,7 @@ rb_reg_to_s(VALUE re)
         <div class="method">
           <h3 class="title method-title" id="method-i-~">
             
-              <b>~ rxp   &rarr; integer or nil
+              <b>~ rxp &rarr; integer or nil
 </b>
             
             <a href="../classes/Regexp.html#method-i-~" name="method-i-~" class="permalink">Link</a>
@@ -2534,10 +3511,10 @@ rb_reg_to_s(VALUE re)
 
           
             <div class="description">
-              <p>Match—Matches <em>rxp</em> against the contents of <code>$_</code>. Equivalent to <code><em>rxp</em> =~ $_</code>.</p>
+              <p>Equivalent to <code><em>rxp</em> =~ $_</code>:</p>
 
 <pre><code>$_ = &quot;input data&quot;
-~ /at/   #=&gt; 7
+~ /at/ # =&gt; 7
 </code></pre>
             </div>
           

@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>ObjectSpace::WeakKeyMap</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+
+<meta name="data-rel-prefix" content="/">
+<meta name="data-tree-keys" content='["ObjectSpace", "WeakKeyMap"]'>
+
+
+    <meta property="og:title" value="ObjectSpace::WeakKeyMap">
+
+  
+    
+    <meta name="description" content="An ObjectSpace::WeakKeyMap is a key-value map that holds weak references to its keys, so they can be garbage collected when there is no more references.">
+    <meta property="og:description" content="An ObjectSpace::WeakKeyMap is a key-value map that holds weak references to its keys, so they can be garbage collected when there is no more references.">
+  
+
+    <meta name="keywords" content="ObjectSpace::WeakKeyMap class, []=, [], delete, getkey, key?, clear, inspect">
+</head>
+
+<body>
+    <a class="sr-only sr-only-focusable" href="#content" data-turbolinks="false">Skip to Content</a>
+    <a class="sr-only sr-only-focusable" href="#search" data-turbolinks="false">Skip to Search</a>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<nav class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search (/) for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</nav>
+
+
+    <div class="banner">
+        
+        <h2>
+            <span class="type">Class</span>
+            ObjectSpace::WeakKeyMap
+            
+                <span class="parent">&lt;
+                    
+                    <a href="../Object.html">Object</a>
+                    
+                </span>
+            
+        </h2>
+        <ul class="files">
+            
+            <li><a href="../../files/ruby/ext/objspace/objspace_c.html">ruby/ext/objspace/objspace.c</a></li>
+            
+        </ul>
+    </div>
+
+    <main id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p>An <a href="WeakKeyMap.html"><code>ObjectSpace::WeakKeyMap</code></a> is a key-value map that holds weak references to its keys, so they can be garbage collected when there is no more references.</p>
+
+<p>Unlike <a href="WeakMap.html"><code>ObjectSpace::WeakMap</code></a>:</p>
+<ul><li>
+<p>references to values are <em>strong</em>, so they aren’t garbage collected while they are in the map;</p>
+</li><li>
+<p>keys are compared by value (using <a href="../Object.html#method-i-eql-3F"><code>Object#eql?</code></a>), not by identity;</p>
+</li><li>
+<p>only garbage-collectable objects can be used as keys.</p>
+
+<pre><code>map = ObjectSpace::WeakKeyMap.new
+val = Time.new(2023, 12, 7)
+key = &quot;name&quot;
+map[key] = val
+
+# Value is fetched by equality: the instance of string &quot;name&quot; is
+# different here, but it is equal to the key
+map[&quot;name&quot;] #=&gt; 2023-12-07 00:00:00 +0200
+
+val = nil
+GC.start
+# There is no more references to `val`, yet the pair isn&#39;t
+# garbage-collected.
+map[&quot;name&quot;] #=&gt; 2023-12-07 00:00:00 +0200
+
+key = nil
+GC.start
+# There is no more references to `key`, key and value are
+# garbage-collected.
+map[&quot;name&quot;] #=&gt; nil
+</code></pre>
+</li></ul>
+
+<p>(Note that <a href="../GC.html#method-c-start"><code>GC.start</code></a> is used here only for demonstrational purposes and might not always lead to demonstrated results.)</p>
+
+<p>The collection is especially useful for implementing caches of lightweight value objects, so that only one copy of each value representation would be stored in memory, but the copies that aren’t used would be garbage-collected.</p>
+
+<pre><code>CACHE = ObjectSpace::WeakKeyMap
+
+def make_value(**)
+   val = ValueObject.new(**)
+   if (existing = @cache.getkey(val))
+      # if the object with this value exists, we return it
+      existing
+   else
+      # otherwise, put it in the cache
+      @cache[val] = true
+      val
+   end
+end
+</code></pre>
+
+<p>This will result in <code>make_value</code> returning the same object for same set of attributes always, but the values that aren’t needed anymore woudn’t be sitting in the cache forever.</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+    <!-- Method ref -->
+    <div class="sectiontitle">Methods</div>
+    <dl class="methods">
+      
+        <dt>#</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-5B-5D">[]</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-5B-5D-3D">[]=</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>C</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-clear">clear</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>D</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-delete">delete</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>G</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-getkey">getkey</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>I</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-inspect">inspect</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>K</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-key-3F">key?</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+    </dl>
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+      <h2 class="sectiontitle">Instance Public methods</h2>
+      
+        <div class="method">
+          <h3 class="title method-title" id="method-i-5B-5D">
+            
+              <b>map[key] &rarr; value
+</b>
+            
+            <a href="../../classes/ObjectSpace/WeakKeyMap.html#method-i-5B-5D" name="method-i-5B-5D" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the value associated with the given <code>key</code> if found.</p>
+
+<p>If <code>key</code> is not found, returns <code>nil</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
+                
+              </p>
+              <div id="method-i-5B-5D_source" class="dyn-source">
+                <pre>static VALUE
+wkmap_aref(VALUE self, VALUE key)
+{
+    VALUE obj = wkmap_lookup(self, key);
+    return obj != Qundef ? obj : Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-5B-5D-3D">
+            
+              <b>map[key] = value &rarr; value
+</b>
+            
+            <a href="../../classes/ObjectSpace/WeakKeyMap.html#method-i-5B-5D-3D" name="method-i-5B-5D-3D" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Associates the given <code>value</code> with the given <code>key</code></p>
+
+<p>The reference to <code>key</code> is weak, so when there is no other reference to <code>key</code> it may be garbage collected.</p>
+
+<p>If the given <code>key</code> exists, replaces its value with the given <code>value</code>; the ordering is not affected</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-5B-5D-3D_source')" id="l_method-i-5B-5D-3D_source">show</a>
+                
+              </p>
+              <div id="method-i-5B-5D-3D_source" class="dyn-source">
+                <pre>static VALUE
+wkmap_aset(VALUE self, VALUE key, VALUE val)
+{
+    struct weakkeymap *w;
+    TypedData_Get_Struct(self, struct weakkeymap, &amp;weakkeymap_type, w);
+
+    if (!FL_ABLE(key) || SYMBOL_P(key) || RB_BIGNUM_TYPE_P(key) || RB_TYPE_P(key, T_FLOAT)) {
+        rb_raise(rb_eArgError, &quot;WeakKeyMap must be garbage collectable&quot;);
+        UNREACHABLE_RETURN(Qnil);
+    }
+
+    struct wkmap_aset_args args = {
+        .new_key = key,
+        .new_val = val,
+    };
+
+    st_update(w-&gt;table, (st_data_t)&amp;key, wkmap_aset_replace, (st_data_t)&amp;args);
+
+    RB_OBJ_WRITTEN(self, Qundef, key);
+    RB_OBJ_WRITTEN(self, Qundef, val);
+
+    return val;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-clear">
+            
+              <b>map.clear &rarr; self
+</b>
+            
+            <a href="../../classes/ObjectSpace/WeakKeyMap.html#method-i-clear" name="method-i-clear" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Removes all map entries; returns <code>self</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-clear_source')" id="l_method-i-clear_source">show</a>
+                
+              </p>
+              <div id="method-i-clear_source" class="dyn-source">
+                <pre>static VALUE
+wkmap_clear(VALUE self)
+{
+    struct weakkeymap *w;
+    TypedData_Get_Struct(self, struct weakkeymap, &amp;weakkeymap_type, w);
+
+    st_foreach(w-&gt;table, wkmap_free_table_i, 0);
+    st_clear(w-&gt;table);
+
+    return self;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-delete">
+            
+              <b>map.delete(key) &rarr; value or nil<br />map.delete(key) {|key| ... } &rarr; object
+</b>
+            
+            <a href="../../classes/ObjectSpace/WeakKeyMap.html#method-i-delete" name="method-i-delete" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Deletes the entry for the given <code>key</code> and returns its associated value.</p>
+
+<p>If no block is given and <code>key</code> is found, deletes the entry and returns the associated value:</p>
+
+<pre><code>m = ObjectSpace::WeakKeyMap.new
+key = &quot;foo&quot; # to hold reference to the key
+m[key] = 1
+m.delete(&quot;foo&quot;) # =&gt; 1
+m[&quot;foo&quot;] # =&gt; nil
+</code></pre>
+
+<p>If no block given and <code>key</code> is not found, returns <code>nil</code>.</p>
+
+<p>If a block is given and <code>key</code> is found, ignores the block, deletes the entry, and returns the associated value:</p>
+
+<pre><code>m = ObjectSpace::WeakKeyMap.new
+key = &quot;foo&quot; # to hold reference to the key
+m[key] = 2
+m.delete(&quot;foo&quot;) { |key| raise &#39;Will never happen&#39;} # =&gt; 2
+</code></pre>
+
+<p>If a block is given and <code>key</code> is not found, yields the <code>key</code> to the block and returns the block’s return value:</p>
+
+<pre><code>m = ObjectSpace::WeakKeyMap.new
+m.delete(&quot;nosuch&quot;) { |key| &quot;Key #{key} not found&quot; } # =&gt; &quot;Key nosuch not found&quot;
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-delete_source')" id="l_method-i-delete_source">show</a>
+                
+              </p>
+              <div id="method-i-delete_source" class="dyn-source">
+                <pre>static VALUE
+wkmap_delete(VALUE self, VALUE key)
+{
+    struct weakkeymap *w;
+    TypedData_Get_Struct(self, struct weakkeymap, &amp;weakkeymap_type, w);
+
+    VALUE orig_key = key;
+    st_data_t orig_key_data = (st_data_t)&amp;orig_key;
+    st_data_t orig_val_data;
+    if (st_delete(w-&gt;table, &amp;orig_key_data, &amp;orig_val_data)) {
+        VALUE orig_val = (VALUE)orig_val_data;
+
+        rb_gc_remove_weak(self, (VALUE *)orig_key_data);
+
+        ruby_sized_xfree((VALUE *)orig_key_data, sizeof(VALUE));
+
+        return orig_val;
+    }
+
+    if (rb_block_given_p()) {
+        return rb_yield(key);
+    }
+    else {
+        return Qnil;
+    }
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-getkey">
+            
+              <b>map.getkey(key) &rarr; existing_key or nil
+</b>
+            
+            <a href="../../classes/ObjectSpace/WeakKeyMap.html#method-i-getkey" name="method-i-getkey" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the existing equal key if it exists, otherwise returns <code>nil</code>.</p>
+
+<p>This might be useful for implementing caches, so that only one copy of some object would be used everywhere in the program:</p>
+
+<pre><code>value = {amount: 1, currency: &#39;USD&#39;}
+
+# Now if we put this object in a cache:
+cache = ObjectSpace::WeakKeyMap.new
+cache[value] = true
+
+# ...we can always extract from there and use the same object:
+copy = cache.getkey({amount: 1, currency: &#39;USD&#39;})
+copy.object_id == value.object_id #=&gt; true
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-getkey_source')" id="l_method-i-getkey_source">show</a>
+                
+              </p>
+              <div id="method-i-getkey_source" class="dyn-source">
+                <pre>static VALUE
+wkmap_getkey(VALUE self, VALUE key)
+{
+    struct weakkeymap *w;
+    TypedData_Get_Struct(self, struct weakkeymap, &amp;weakkeymap_type, w);
+
+    st_data_t orig_key;
+    if (!st_get_key(w-&gt;table, (st_data_t)&amp;key, &amp;orig_key)) return Qnil;
+
+    return *(VALUE *)orig_key;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-inspect">
+            
+              <b>map.inspect &rarr; new_string
+</b>
+            
+            <a href="../../classes/ObjectSpace/WeakKeyMap.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a new <a href="../String.html"><code>String</code></a> containing informations about the map:</p>
+
+<pre><code>m = ObjectSpace::WeakKeyMap.new
+m[key] = value
+m.inspect # =&gt; &quot;#&lt;ObjectSpace::WeakKeyMap:0x00000001028dcba8 size=1&gt;&quot;
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
+                
+              </p>
+              <div id="method-i-inspect_source" class="dyn-source">
+                <pre>static VALUE
+wkmap_inspect(VALUE self)
+{
+    struct weakkeymap *w;
+    TypedData_Get_Struct(self, struct weakkeymap, &amp;weakkeymap_type, w);
+
+    st_index_t n = st_table_size(w-&gt;table);
+
+#if SIZEOF_ST_INDEX_T &lt;= SIZEOF_LONG
+    const char * format = &quot;#&lt;%&quot;PRIsVALUE&quot;:%p size=%lu&gt;&quot;;
+#else
+    const char * format = &quot;#&lt;%&quot;PRIsVALUE&quot;:%p size=%llu&gt;&quot;;
+#endif
+
+    VALUE str = rb_sprintf(format, rb_class_name(CLASS_OF(self)), (void *)self, n);
+    return str;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-key-3F">
+            
+              <b>map.key?(key) &rarr; true or false
+</b>
+            
+            <a href="../../classes/ObjectSpace/WeakKeyMap.html#method-i-key-3F" name="method-i-key-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns <code>true</code> if <code>key</code> is a key in <code>self</code>, otherwise <code>false</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-key-3F_source')" id="l_method-i-key-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-key-3F_source" class="dyn-source">
+                <pre>static VALUE
+wkmap_has_key(VALUE self, VALUE key)
+{
+    return RBOOL(wkmap_lookup(self, key) != Qundef);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+      
+    
+  
+</div>
+
+    </main>
+  </body>
+</html>

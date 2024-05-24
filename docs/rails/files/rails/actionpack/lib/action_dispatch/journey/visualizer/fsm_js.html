@@ -56,10 +56,10 @@
             <li>
                 rails/actionpack/lib/action_dispatch/journey/visualizer/fsm.js
                 
-                    <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/actionpack/lib/action_dispatch/journey/visualizer/fsm.js" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actionpack/lib/action_dispatch/journey/visualizer/fsm.js" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2022-09-06 00:52:05 +0300</li>
+            <li>Last modified: 2024-05-24 23:57:09 +0300</li>
         </ul>
     </div>
 
@@ -155,7 +155,7 @@ svg_nodes[index].select(&#39;ellipse&#39;)
 
 <p>function highlight_finish(index) {</p>
 
-<pre><code>svg_nodes[index].select(&#39;polygon&#39;)
+<pre><code>svg_nodes[index].select(&#39;ellipse&#39;)
   .style(&quot;fill&quot;, &quot;while&quot;)
   .transition().duration(500)
   .style(&quot;fill&quot;, &quot;blue&quot;);
@@ -166,54 +166,79 @@ svg_nodes[index].select(&#39;ellipse&#39;)
 <p>function match(input) {</p>
 
 <pre><code>reset_graph();
-var table         = tt();
-var states        = [0];
-var regexp_states = table[&#39;regexp_states&#39;];
-var string_states = table[&#39;string_states&#39;];
-var accepting     = table[&#39;accepting&#39;];
+var table           = tt();
+var states          = [[0, null]];
+var regexp_states   = table[&#39;regexp_states&#39;];
+var string_states   = table[&#39;string_states&#39;];
+var stdparam_states = table[&#39;stdparam_states&#39;];
+var accepting       = table[&#39;accepting&#39;];
+var default_re      = new RegExp(&quot;^[^.\/?]+$&quot;);
+var start_index     = 0;
 
 highlight_state(0);
 
 tokenize(input, function(token) {
+  var end_index = start_index + token.length;
+
   var new_states = [];
   for(var key in states) {
-    var state = states[key];
+    var state_parts = states[key];
+    var state = state_parts[0];
+    var previous_start = state_parts[1];
 
-    if(string_states[state] &amp;&amp; string_states[state][token]) {
-      var new_state = string_states[state][token];
-      highlight_edge(state, new_state);
-      highlight_state(new_state);
-      new_states.push(new_state);
-    }
+    if(previous_start == null) {
+      if(string_states[state] &amp;&amp; string_states[state][token]) {
+        var new_state = string_states[state][token];
+        highlight_edge(state, new_state);
+        highlight_state(new_state);
+        new_states.push([new_state, null]);
+      }
 
-    if(regexp_states[state]) {
-      for(var key in regexp_states[state]) {
-        var re = new RegExp(&quot;^&quot; + key + &quot;$&quot;);
-        if(re.test(token)) {
-          var new_state = regexp_states[state][key];
+      if(stdparam_states[state] &amp;&amp; default_re.test(token)) {
+        for(var key in stdparam_states[state]) {
+          var new_state = stdparam_states[state][key];
           highlight_edge(state, new_state);
           highlight_state(new_state);
-          new_states.push(new_state);
+          new_states.push([new_state, null]);
         }
       }
     }
+
+    if(regexp_states[state]) {
+      var slice_start = previous_start != null ? previous_start : start_index;
+
+      for(var key in regexp_states[state]) {
+        var re = new RegExp(&quot;^&quot; + key + &quot;$&quot;);
+
+        var accumulation = input.slice(slice_start, end_index);
+
+        if(re.test(accumulation)) {
+          var new_state = regexp_states[state][key];
+          highlight_edge(state, new_state);
+          highlight_state(new_state);
+          new_states.push([new_state, null]);
+        }
+
+        // retry the same regexp with the accumulated data either way
+        new_states.push([state, slice_start]);
+      }
+    }
   }
 
-  if(new_states.length == 0) {
-    return;
-  }
   states = new_states;
+  start_index = end_index;
 });
 
 for(var key in states) {
-  var state = states[key];
+  var state_parts = states[key];
+  var state = state_parts[0];
+  var slice_start = state_parts[1];
+
+  // we must ignore ones that are still accepting more data
+  if (slice_start != null) continue;
+
   if(accepting[state]) {
-    for(var mkey in svg_edges[state]) {
-      if(!regexp_states[mkey] &amp;&amp; !string_states[mkey]) {
-        highlight_edge(state, mkey);
-        highlight_finish(mkey);
-      }
-    }
+    highlight_finish(state);
   } else {
     highlight_state(state, &quot;red&quot;);
   }

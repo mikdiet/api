@@ -176,11 +176,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/error_highlight/base.rb#L27" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/error_highlight/base.rb#L79" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/error_highlight/base.rb, line 27</span>
+                <pre><span class="ruby-comment"># File ruby/lib/error_highlight/base.rb, line 79</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">node</span>, <span class="ruby-value">point_type:</span> <span class="ruby-value">:name</span>, <span class="ruby-value">name:</span> <span class="ruby-keyword">nil</span>)
   <span class="ruby-ivar">@node</span> = <span class="ruby-identifier">node</span>
   <span class="ruby-ivar">@point_type</span> = <span class="ruby-identifier">point_type</span>
@@ -237,13 +237,41 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-spot_source')" id="l_method-i-spot_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/error_highlight/base.rb#L49" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/error_highlight/base.rb#L104" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-spot_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/error_highlight/base.rb, line 49</span>
+                <pre><span class="ruby-comment"># File ruby/lib/error_highlight/base.rb, line 104</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">spot</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@node</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-constant">OPT_GETCONSTANT_PATH</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-ivar">@node</span>.<span class="ruby-identifier">type</span> <span class="ruby-operator">==</span> <span class="ruby-value">:COLON2</span>
+    <span class="ruby-comment"># In Ruby 3.2 or later, a nested constant access (like `Foo::Bar::Baz`)</span>
+    <span class="ruby-comment"># is compiled to one instruction (opt_getconstant_path).</span>
+    <span class="ruby-comment"># @node points to the node of the whole `Foo::Bar::Baz` even if `Foo`</span>
+    <span class="ruby-comment"># or `Foo::Bar` causes NameError.</span>
+    <span class="ruby-comment"># So we try to spot the sub-node that causes the NameError by using</span>
+    <span class="ruby-comment"># `NameError#name`.</span>
+    <span class="ruby-identifier">subnodes</span> = []
+    <span class="ruby-identifier">node</span> = <span class="ruby-ivar">@node</span>
+    <span class="ruby-keyword">while</span> <span class="ruby-identifier">node</span>.<span class="ruby-identifier">type</span> <span class="ruby-operator">==</span> <span class="ruby-value">:COLON2</span>
+      <span class="ruby-identifier">node2</span>, <span class="ruby-identifier">const</span> = <span class="ruby-identifier">node</span>.<span class="ruby-identifier">children</span>
+      <span class="ruby-identifier">subnodes</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">node</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">const</span> <span class="ruby-operator">==</span> <span class="ruby-ivar">@name</span>
+      <span class="ruby-identifier">node</span> = <span class="ruby-identifier">node2</span>
+    <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">node</span>.<span class="ruby-identifier">type</span> <span class="ruby-operator">==</span> <span class="ruby-value">:CONST</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">node</span>.<span class="ruby-identifier">type</span> <span class="ruby-operator">==</span> <span class="ruby-value">:COLON3</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">node</span>.<span class="ruby-identifier">children</span>.<span class="ruby-identifier">first</span> <span class="ruby-operator">==</span> <span class="ruby-ivar">@name</span>
+        <span class="ruby-identifier">subnodes</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">node</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-comment"># If we found only one sub-node whose name is equal to @name, use it</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">subnodes</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">!=</span> <span class="ruby-value">1</span>
+      <span class="ruby-ivar">@node</span> = <span class="ruby-identifier">subnodes</span>.<span class="ruby-identifier">first</span>
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-comment"># Do nothing; opt_getconstant_path is used only when the const base is</span>
+      <span class="ruby-comment"># NODE_CONST (`Foo`) or NODE_COLON3 (`::Foo`)</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
 
   <span class="ruby-keyword">case</span> <span class="ruby-ivar">@node</span>.<span class="ruby-identifier">type</span>
 
@@ -318,6 +346,7 @@
       <span class="ruby-value">last_lineno:</span> <span class="ruby-ivar">@end_lineno</span>,
       <span class="ruby-value">last_column:</span> <span class="ruby-ivar">@end_column</span>,
       <span class="ruby-value">snippet:</span> <span class="ruby-ivar">@snippet</span>,
+      <span class="ruby-value">script_lines:</span> <span class="ruby-ivar">@node</span>.<span class="ruby-identifier">script_lines</span>,
     }
   <span class="ruby-keyword">else</span>
     <span class="ruby-keyword">return</span> <span class="ruby-keyword">nil</span>

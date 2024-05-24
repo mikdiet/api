@@ -26,11 +26,11 @@
 
   
     
-    <meta name="description" content="Objects of class Dir are directory streams representing directories in the underlying file system. They provide a variety of ways to list directories and their contents. See also File.">
-    <meta property="og:description" content="Objects of class Dir are directory streams representing directories in the underlying file system. They provide a variety of ways to list directories and their contents. See also File.">
+    <meta name="description" content="An object of class Dir represents a directory in the underlying file system.">
+    <meta property="og:description" content="An object of class Dir represents a directory in the underlying file system.">
   
 
-    <meta name="keywords" content="Dir class, foreach, entries, each_child, children, fileno, path, to_path, inspect, read, each, each_child, children, rewind, tell, seek, pos, pos=, close, chdir, getwd, pwd, chroot, mkdir, rmdir, delete, unlink, home, exist?, empty?, open, new, [], glob, tmpdir, mktmpdir">
+    <meta name="keywords" content="Dir class, for_fd, foreach, entries, each_child, children, fileno, path, to_path, inspect, read, each, each_child, children, rewind, tell, seek, pos, pos=, close, chdir, fchdir, chdir, getwd, pwd, chroot, mkdir, rmdir, delete, unlink, home, exist?, empty?, open, new, [], glob, tmpdir, mktmpdir">
 </head>
 
 <body>
@@ -91,9 +91,86 @@
   
     <div class="description">
       
-<p>Objects of class <a href="Dir.html"><code>Dir</code></a> are directory streams representing directories in the underlying file system. They provide a variety of ways to list directories and their contents. See also <a href="File.html"><code>File</code></a>.</p>
+<p>An object of class Dir represents a directory in the underlying file system.</p>
 
-<p>The directory used in these examples contains the two regular files (<code>config.h</code> and <code>main.rb</code>), the parent directory (<code>..</code>), and the directory itself (<code>.</code>).</p>
+<p>It consists mainly of:</p>
+<ul><li>
+<p>A string <em>path</em>, given when the object is created, that specifies a directory in the underlying file system; method <a href="Dir.html#method-i-path"><code>path</code></a> returns the path.</p>
+</li><li>
+<p>A collection of string <em>entry names</em>, each of which is the name of a directory or file in the underlying file system; the entry names may be retrieved in an <a href="Dir.html#class-Dir-label-Dir+As+Array-Like">array-like fashion</a> or in a <a href="Dir.html#class-Dir-label-Dir+As+Stream-Like">stream-like fashion</a>.</p>
+</li></ul>
+
+<h2 id="class-Dir-label-About+the+Examples">About the Examples</h2>
+
+<p>Some examples on this page use this simple file tree:</p>
+
+<pre><code>example/
+├── config.h
+├── lib/
+│   ├── song/
+│   │   └── karaoke.rb
+│   └── song.rb
+└── main.rb
+</code></pre>
+
+<p>Others use the file tree for the <a href="https://github.com/ruby/ruby">Ruby project itself</a>.</p>
+
+<h2 id="class-Dir-label-Dir+As+Array-Like">Dir As Array-Like</h2>
+
+<p>A Dir object is in some ways array-like:</p>
+<ul><li>
+<p>It has instance methods <a href="Dir.html#method-i-children"><code>children</code></a>, <a href="Dir.html#method-i-each"><code>each</code></a>, and <a href="Dir.html#method-i-each_child"><code>each_child</code></a>.</p>
+</li><li>
+<p>It includes <a href="Enumerable.html#module-Enumerable-label-What-27s+Here">module Enumerable</a>.</p>
+</li></ul>
+
+<h2 id="class-Dir-label-Dir+As+Stream-Like">Dir As Stream-Like</h2>
+
+<p>A Dir object is in some ways stream-like.</p>
+
+<p>The stream is initially open for reading, but may be closed manually (using method <a href="Dir.html#method-i-close"><code>close</code></a>), and will be closed on block exit if created by <a href="Dir.html#method-c-open"><code>Dir.open</code></a> called with a block. The closed stream may not be further manipulated, and may not be reopened.</p>
+
+<p>The stream has a <em>position</em>, which is the index of an entry in the directory:</p>
+<ul><li>
+<p>The initial position is zero (before the first entry).</p>
+</li><li>
+<p>Method <a href="Dir.html#method-i-tell"><code>tell</code></a> (aliased as <a href="Dir.html#method-i-pos"><code>pos</code></a>) returns the position.</p>
+</li><li>
+<p>Method <a href="Dir.html#method-i-pos-3D"><code>pos=</code></a> sets the position (but ignores a value outside the stream), and returns the position.</p>
+</li><li>
+<p>Method <a href="Dir.html#method-i-seek"><code>seek</code></a> is like <a href="Dir.html#method-i-pos-3D"><code>pos=</code></a>, but returns <code>self</code> (convenient for chaining).</p>
+</li><li>
+<p>Method <a href="Dir.html#method-i-read"><code>read</code></a>, if not at end-of-stream, reads the next entry and increments the position; if at end-of-stream, does not increment the position.</p>
+</li><li>
+<p>Method <a href="Dir.html#method-i-rewind"><code>rewind</code></a> sets the position to zero.</p>
+</li></ul>
+
+<p>Examples (using the <a href="Dir.html#class-Dir-label-About+the+Examples">simple file tree</a>):</p>
+
+<pre><code>dir = Dir.new(&#39;example&#39;) # =&gt; #&lt;Dir:example&gt;
+dir.pos                  # =&gt; 0
+
+dir.read # =&gt; &quot;.&quot;
+dir.read # =&gt; &quot;..&quot;
+dir.read # =&gt; &quot;config.h&quot;
+dir.read # =&gt; &quot;lib&quot;
+dir.read # =&gt; &quot;main.rb&quot;
+dir.pos  # =&gt; 5
+dir.read # =&gt; nil
+dir.pos  # =&gt; 5
+
+dir.rewind # =&gt; #&lt;Dir:example&gt;
+dir.pos    # =&gt; 0
+
+dir.pos = 3 # =&gt; 3
+dir.pos     # =&gt; 3
+
+dir.seek(4) # =&gt; #&lt;Dir:example&gt;
+dir.pos     # =&gt; 4
+
+dir.close # =&gt; nil
+dir.read  # Raises IOError.
+</code></pre>
 
 <h2 id="class-Dir-label-What-27s+Here">What’s Here</h2>
 
@@ -106,142 +183,86 @@
 
 <p>Here, class Dir provides methods that are useful for:</p>
 <ul><li>
-<p><a href="#class-Dir-label-Reading">Reading</a></p>
+<p><a href="Dir.html#class-Dir-label-Reading">Reading</a></p>
 </li><li>
-<p><a href="#class-Dir-label-Setting">Setting</a></p>
+<p><a href="Dir.html#class-Dir-label-Setting">Setting</a></p>
 </li><li>
-<p><a href="#class-Dir-label-Querying">Querying</a></p>
+<p><a href="Dir.html#class-Dir-label-Querying">Querying</a></p>
 </li><li>
-<p><a href="#class-Dir-label-Iterating">Iterating</a></p>
+<p><a href="Dir.html#class-Dir-label-Iterating">Iterating</a></p>
 </li><li>
-<p><a href="#class-Dir-label-Other">Other</a></p>
+<p><a href="Dir.html#class-Dir-label-Other">Other</a></p>
 </li></ul>
 
 <h3 id="class-Dir-label-Reading">Reading</h3>
-<ul><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-close"><code>close</code></a>
-<dd>
-<p>Closes the directory stream for <code>self</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-pos-3D"><code>pos=</code></a>
-<dd>
-<p>Sets the position in the directory stream for <code>self</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-read"><code>read</code></a>
-<dd>
-<p>Reads and returns the next entry in the directory stream for <code>self</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-rewind"><code>rewind</code></a>
-<dd>
-<p>Sets the position in the directory stream for <code>self</code> to the first entry.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-seek"><code>seek</code></a>
-<dd>
-<p>Sets the position in the directory stream for <code>self</code> the entry at the given offset.</p>
-</dd></dl>
+<ul><li>
+<p><a href="Dir.html#method-i-close"><code>close</code></a>: Closes the directory stream for <code>self</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-i-pos-3D"><code>pos=</code></a>: Sets the position in the directory stream for <code>self</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-i-read"><code>read</code></a>: Reads and returns the next entry in the directory stream for <code>self</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-i-rewind"><code>rewind</code></a>: Sets the position in the directory stream for <code>self</code> to the first entry.</p>
+</li><li>
+<p><a href="Dir.html#method-i-seek"><code>seek</code></a>: Sets the position in the directory stream for <code>self</code> the entry at the given offset.</p>
 </li></ul>
 
 <h3 id="class-Dir-label-Setting">Setting</h3>
-<ul><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-chdir"><code>::chdir</code></a>
-<dd>
-<p>Changes the working directory of the current process to the given directory.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-chroot"><code>::chroot</code></a>
-<dd>
-<p>Changes the file-system root for the current process to the given directory.</p>
-</dd></dl>
+<ul><li>
+<p><a href="Dir.html#method-c-chdir"><code>::chdir</code></a>: Changes the working directory of the current process to the given directory.</p>
+</li><li>
+<p><a href="Dir.html#method-c-chroot"><code>::chroot</code></a>: Changes the file-system root for the current process to the given directory.</p>
 </li></ul>
 
 <h3 id="class-Dir-label-Querying">Querying</h3>
-<ul><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-5B-5D"><code>::[]</code></a>
-<dd>
-<p>Same as <a href="Dir.html#method-c-glob"><code>::glob</code></a> without the ability to pass flags.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-children"><code>::children</code></a>
-<dd>
-<p>Returns an array of names of the children (both files and directories) of the given directory, but not including <code>.</code> or <code>..</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-empty-3F"><code>::empty?</code></a>
-<dd>
-<p>Returns whether the given path is an empty directory.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-entries"><code>::entries</code></a>
-<dd>
-<p>Returns an array of names of the children (both files and directories) of the given directory, including <code>.</code> and <code>..</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-exist-3F"><code>::exist?</code></a>
-<dd>
-<p>Returns whether the given path is a directory.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-getwd"><code>::getwd</code></a> (aliased as pwd)
-<dd>
-<p>Returns the path to the current working directory.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-glob"><code>::glob</code></a>
-<dd>
-<p>Returns an array of file paths matching the given pattern and flags.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-home"><code>::home</code></a>
-<dd>
-<p>Returns the home directory path for a given user or the current user.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-children"><code>children</code></a>
-<dd>
-<p>Returns an array of names of the children (both files and directories) of <code>self</code>, but not including <code>.</code> or <code>..</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-fileno"><code>fileno</code></a>
-<dd>
-<p>Returns the integer file descriptor for <code>self</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-path"><code>path</code></a> (aliased as <a href="Dir.html#method-i-to_path"><code>to_path</code></a>)
-<dd>
-<p>Returns the path used to create <code>self</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-tell"><code>tell</code></a> (aliased as <a href="Dir.html#method-i-pos"><code>pos</code></a>)
-<dd>
-<p>Returns the integer position in the directory stream for <code>self</code>.</p>
-</dd></dl>
+<ul><li>
+<p><a href="Dir.html#method-c-5B-5D"><code>::[]</code></a>: Same as <a href="Dir.html#method-c-glob"><code>::glob</code></a> without the ability to pass flags.</p>
+</li><li>
+<p><a href="Dir.html#method-c-children"><code>::children</code></a>: Returns an array of names of the children (both files and directories) of the given directory, but not including <code>.</code> or <code>..</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-c-empty-3F"><code>::empty?</code></a>: Returns whether the given path is an empty directory.</p>
+</li><li>
+<p><a href="Dir.html#method-c-entries"><code>::entries</code></a>: Returns an array of names of the children (both files and directories) of the given directory, including <code>.</code> and <code>..</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-c-exist-3F"><code>::exist?</code></a>: Returns whether the given path is a directory.</p>
+</li><li>
+<p><a href="Dir.html#method-c-getwd"><code>::getwd</code></a> (aliased as pwd): Returns the path to the current working directory.</p>
+</li><li>
+<p><a href="Dir.html#method-c-glob"><code>::glob</code></a>: Returns an array of file paths matching the given pattern and flags.</p>
+</li><li>
+<p><a href="Dir.html#method-c-home"><code>::home</code></a>: Returns the home directory path for a given user or the current user.</p>
+</li><li>
+<p><a href="Dir.html#method-i-children"><code>children</code></a>: Returns an array of names of the children (both files and directories) of <code>self</code>, but not including <code>.</code> or <code>..</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-i-fileno"><code>fileno</code></a>: Returns the integer file descriptor for <code>self</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-i-path"><code>path</code></a> (aliased as <a href="Dir.html#method-i-to_path"><code>to_path</code></a>): Returns the path used to create <code>self</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-i-tell"><code>tell</code></a> (aliased as <a href="Dir.html#method-i-pos"><code>pos</code></a>): Returns the integer position in the directory stream for <code>self</code>.</p>
 </li></ul>
 
 <h3 id="class-Dir-label-Iterating">Iterating</h3>
-<ul><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-each_child"><code>::each_child</code></a>
-<dd>
-<p>Calls the given block with each entry in the given directory, but not including <code>.</code> or <code>..</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-foreach"><code>::foreach</code></a>
-<dd>
-<p>Calls the given block with each entryin the given directory, including <code>.</code> and <code>..</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-each"><code>each</code></a>
-<dd>
-<p>Calls the given block with each entry in <code>self</code>, including <code>.</code> and <code>..</code>.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-each_child"><code>each_child</code></a>
-<dd>
-<p>Calls the given block with each entry in <code>self</code>, but not including <code>.</code> or <code>..</code>.</p>
-</dd></dl>
+<ul><li>
+<p><a href="Dir.html#method-c-each_child"><code>::each_child</code></a>: Calls the given block with each entry in the given directory, but not including <code>.</code> or <code>..</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-c-foreach"><code>::foreach</code></a>: Calls the given block with each entry in the given directory, including <code>.</code> and <code>..</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-i-each"><code>each</code></a>: Calls the given block with each entry in <code>self</code>, including <code>.</code> and <code>..</code>.</p>
+</li><li>
+<p><a href="Dir.html#method-i-each_child"><code>each_child</code></a>: Calls the given block with each entry in <code>self</code>, but not including <code>.</code> or <code>..</code>.</p>
 </li></ul>
 
 <h3 id="class-Dir-label-Other">Other</h3>
-<ul><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-mkdir"><code>::mkdir</code></a>
-<dd>
-<p>Creates a directory at the given path, with optional permissions.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-new"><code>::new</code></a>
-<dd>
-<p>Returns a new Dir for the given path, with optional encoding.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-open"><code>::open</code></a>
-<dd>
-<p>Same as <a href="Dir.html#method-c-new"><code>::new</code></a>, but if a block is given, yields the Dir to the block, closing it upon block exit.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-c-unlink"><code>::unlink</code></a> (aliased as <a href="Dir.html#method-c-delete"><code>::delete</code></a> and <a href="Dir.html#method-c-rmdir"><code>::rmdir</code></a>)
-<dd>
-<p>Removes the given directory.</p>
-</dd></dl>
-</li><li><dl class="rdoc-list note-list"><dt><a href="Dir.html#method-i-inspect"><code>inspect</code></a>
-<dd>
-<p>Returns a string description of <code>self</code>.</p>
-</dd></dl>
+<ul><li>
+<p><a href="Dir.html#method-c-mkdir"><code>::mkdir</code></a>: Creates a directory at the given path, with optional permissions.</p>
+</li><li>
+<p><a href="Dir.html#method-c-new"><code>::new</code></a>: Returns a new Dir for the given path, with optional encoding.</p>
+</li><li>
+<p><a href="Dir.html#method-c-open"><code>::open</code></a>: Same as <a href="Dir.html#method-c-new"><code>::new</code></a>, but if a block is given, yields the Dir to the block, closing it upon block exit.</p>
+</li><li>
+<p><a href="Dir.html#method-c-unlink"><code>::unlink</code></a> (aliased as <a href="Dir.html#method-c-delete"><code>::delete</code></a> and <a href="Dir.html#method-c-rmdir"><code>::rmdir</code></a>): Removes the given directory.</p>
+</li><li>
+<p><a href="Dir.html#method-i-inspect"><code>inspect</code></a>: Returns a string description of <code>self</code>.</p>
 </li></ul>
 
     </div>
@@ -278,6 +299,11 @@
         <dt>C</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-chdir">chdir</a>,
+              </li>
             
               
               <li>
@@ -330,12 +356,12 @@
             
               
               <li>
-                <a href="#method-i-each_child">each_child</a>,
+                <a href="#method-c-each_child">each_child</a>,
               </li>
             
               
               <li>
-                <a href="#method-c-each_child">each_child</a>,
+                <a href="#method-i-each_child">each_child</a>,
               </li>
             
               
@@ -362,7 +388,17 @@
             
               
               <li>
+                <a href="#method-c-fchdir">fchdir</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-fileno">fileno</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-for_fd">for_fd</a>,
               </li>
             
               
@@ -590,7 +626,7 @@
         <div class="method">
           <h3 class="title method-title" id="method-c-5B-5D">
             
-              <b>Dir[ string [, string ...] [, base: path] [, sort: true] ] &rarr; array
+              <b>Dir[*patterns, base: nil, sort: true] &rarr; array
 </b>
             
             <a href="../classes/Dir.html#method-c-5B-5D" name="method-c-5B-5D" class="permalink">Link</a>
@@ -598,7 +634,7 @@
 
           
             <div class="description">
-              <p>Equivalent to calling <code>Dir.glob([</code><em>string,…</em><code>], 0)</code>.</p>
+              <p>Calls <a href="Dir.html#method-c-glob"><code>Dir.glob</code></a> with argument <code>patterns</code> and the values of keyword arguments <code>base</code> and <code>sort</code>; returns the array of selected entry names.</p>
             </div>
           
 
@@ -614,11 +650,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-5B-5D_source')" id="l_method-c-5B-5D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/dir.rb#L127" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/dir.rb#L222" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-5B-5D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/dir.rb, line 127</span>
+                <pre><span class="ruby-comment"># File ruby/dir.rb, line 222</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">[]</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-value">base:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">sort:</span> <span class="ruby-keyword">true</span>)
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">dir_s_aref</span>(<span class="ruby-identifier">args</span>, <span class="ruby-identifier">base</span>, <span class="ruby-identifier">sort</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -630,7 +666,7 @@
         <div class="method">
           <h3 class="title method-title" id="method-c-chdir">
             
-              <b>Dir.chdir( [ string] ) &rarr; 0<br />Dir.chdir( [ string] ) {| path | block }  &rarr; anObject
+              <b>Dir.chdir(new_dirpath) &rarr; 0<br />Dir.chdir &rarr; 0<br />Dir.chdir(new_dirpath) {|new_dirpath| ... } &rarr; object<br />Dir.chdir {|cur_dirpath| ... } &rarr; object
 </b>
             
             <a href="../classes/Dir.html#method-c-chdir" name="method-c-chdir" class="permalink">Link</a>
@@ -638,30 +674,66 @@
 
           
             <div class="description">
-              <p>Changes the current working directory of the process to the given string. When called without an argument, changes the directory to the value of the environment variable <code>HOME</code>, or <code>LOGDIR</code>. <a href="SystemCallError.html"><code>SystemCallError</code></a> (probably Errno::ENOENT) if the target directory does not exist.</p>
+              <p>Changes the current working directory.</p>
 
-<p>If a block is given, it is passed the name of the new current directory, and the block is executed with that as the current directory. The original working directory is restored when the block exits. The return value of <code>chdir</code> is the value of the block. <code>chdir</code> blocks can be nested, but in a multi-threaded program an error will be raised if a thread attempts to open a <code>chdir</code> block while another thread has one open or a call to <code>chdir</code> without a block occurs inside a block passed to <code>chdir</code> (even in the same thread).</p>
+<p>With argument <code>new_dirpath</code> and no block, changes to the given <code>dirpath</code>:</p>
 
-<pre><code>Dir.chdir(&quot;/var/spool/mail&quot;)
-puts Dir.pwd
-Dir.chdir(&quot;/tmp&quot;) do
-  puts Dir.pwd
-  Dir.chdir(&quot;/usr&quot;) do
-    puts Dir.pwd
-  end
-  puts Dir.pwd
+<pre><code>Dir.pwd         # =&gt; &quot;/example&quot;
+Dir.chdir(&#39;..&#39;) # =&gt; 0
+Dir.pwd         # =&gt; &quot;/&quot;
+</code></pre>
+
+<p>With no argument and no block:</p>
+<ul><li>
+<p>Changes to the value of environment variable <code>HOME</code> if defined.</p>
+</li><li>
+<p>Otherwise changes to the value of environment variable <code>LOGDIR</code> if defined.</p>
+</li><li>
+<p>Otherwise makes no change.</p>
+</li></ul>
+
+<p>With argument <code>new_dirpath</code> and a block, temporarily changes the working directory:</p>
+<ul><li>
+<p>Calls the block with the argument.</p>
+</li><li>
+<p>Changes to the given directory.</p>
+</li><li>
+<p>Executes the block (yielding the new path).</p>
+</li><li>
+<p>Restores the previous working directory.</p>
+</li><li>
+<p>Returns the block’s return value.</p>
+</li></ul>
+
+<p>Example:</p>
+
+<pre><code>Dir.chdir(&#39;/var/spool/mail&#39;)
+Dir.pwd   # =&gt; &quot;/var/spool/mail&quot;
+Dir.chdir(&#39;/tmp&#39;) do
+  Dir.pwd # =&gt; &quot;/tmp&quot;
 end
-puts Dir.pwd
+Dir.pwd   # =&gt; &quot;/var/spool/mail&quot;
 </code></pre>
 
-<p><em>produces:</em></p>
+<p>With no argument and a block, calls the block with the current working directory (string) and returns the block’s return value.</p>
 
-<pre><code>/var/spool/mail
-/tmp
-/usr
-/tmp
-/var/spool/mail
+<p>Calls to Dir.chdir with blocks may be nested:</p>
+
+<pre><code>Dir.chdir(&#39;/var/spool/mail&#39;)
+Dir.pwd     # =&gt; &quot;/var/spool/mail&quot;
+Dir.chdir(&#39;/tmp&#39;) do
+  Dir.pwd   # =&gt; &quot;/tmp&quot;
+  Dir.chdir(&#39;/usr&#39;) do
+    Dir.pwd # =&gt; &quot;/usr&quot;
+  end
+  Dir.pwd   # =&gt; &quot;/tmp&quot;
+end
+Dir.pwd     # =&gt; &quot;/var/spool/mail&quot;
 </code></pre>
+
+<p>In a multi-threaded program an error is raised if a thread attempts to open a <code>chdir</code> block while another thread has one open, or a call to <code>chdir</code> without a block occurs inside a block passed to <code>chdir</code> (even in the same thread).</p>
+
+<p>Raises an exception if the target directory does not exist.</p>
             </div>
           
 
@@ -696,30 +768,7 @@ dir_s_chdir(int argc, VALUE *argv, VALUE obj)
         path = rb_str_new2(dist);
     }
 
-    if (chdir_blocking &gt; 0) {
-        if (rb_thread_current() != chdir_thread)
-            rb_raise(rb_eRuntimeError, &quot;conflicting chdir during another chdir block&quot;);
-        if (!rb_block_given_p())
-            rb_warn(&quot;conflicting chdir during another chdir block&quot;);
-    }
-
-    if (rb_block_given_p()) {
-        struct chdir_data args;
-
-        args.old_path = rb_str_encode_ospath(rb_dir_getwd());
-        args.new_path = path;
-        args.done = FALSE;
-        return rb_ensure(chdir_yield, (VALUE)&amp;args, chdir_restore, (VALUE)&amp;args);
-    }
-    else {
-        char *p = RSTRING_PTR(path);
-        int r = (int)(VALUE)rb_thread_call_without_gvl(nogvl_chdir, p,
-                                                        RUBY_UBF_IO, 0);
-        if (r &lt; 0)
-            rb_sys_fail_path(path);
-    }
-
-    return INT2FIX(0);
+    return chdir_path(path, true);
 }</pre>
               </div>
             </div>
@@ -729,7 +778,7 @@ dir_s_chdir(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-c-children">
             
-              <b>Dir.children( dirname )                &rarr; array<br />Dir.children( dirname, encoding: enc ) &rarr; array
+              <b>Dir.children(dirpath) &rarr; array<br />Dir.children(dirpath, encoding: 'UTF-8') &rarr; array
 </b>
             
             <a href="../classes/Dir.html#method-c-children" name="method-c-children" class="permalink">Link</a>
@@ -737,12 +786,18 @@ dir_s_chdir(int argc, VALUE *argv, VALUE obj)
 
           
             <div class="description">
-              <p>Returns an array containing all of the filenames except for “.” and “..” in the given directory. Will raise a <a href="SystemCallError.html"><code>SystemCallError</code></a> if the named directory doesn’t exist.</p>
+              <p>Returns an array of the entry names in the directory at <code>dirpath</code> except for <code>&#39;.&#39;</code> and <code>&#39;..&#39;</code>; sets the given encoding onto each returned entry name:</p>
 
-<p>The optional <em>encoding</em> keyword argument specifies the encoding of the directory. If not specified, the filesystem encoding is used.</p>
-
-<pre><code>Dir.children(&quot;testdir&quot;)   #=&gt; [&quot;config.h&quot;, &quot;main.rb&quot;]
+<pre><code>Dir.children(&#39;/example&#39;) # =&gt; [&quot;config.h&quot;, &quot;lib&quot;, &quot;main.rb&quot;]
+Dir.children(&#39;/example&#39;).first.encoding
+# =&gt; #&lt;Encoding:UTF-8&gt;
+Dir.children(&#39;/example&#39;, encoding: &#39;US-ASCII&#39;).first.encoding
+# =&gt; #&lt;Encoding:US-ASCII&gt;
 </code></pre>
+
+<p>See <a href="../files/ruby/doc/encodings_rdoc.html#label-String+Encoding">String Encoding</a>.</p>
+
+<p>Raises an exception if the directory does not exist.</p>
             </div>
           
 
@@ -776,7 +831,7 @@ dir_s_children(int argc, VALUE *argv, VALUE io)
         <div class="method">
           <h3 class="title method-title" id="method-c-chroot">
             
-              <b>Dir.chroot( string ) &rarr; 0
+              <b>Dir.chroot(dirpath) &rarr; 0
 </b>
             
             <a href="../classes/Dir.html#method-c-chroot" name="method-c-chroot" class="permalink">Link</a>
@@ -784,7 +839,11 @@ dir_s_children(int argc, VALUE *argv, VALUE io)
 
           
             <div class="description">
-              <p>Changes this process’s idea of the file system root. Only a privileged process may make this call. Not available on all platforms. On Unix systems, see <code>chroot(2)</code> for more information.</p>
+              <p>Changes the root directory of the calling process to that specified in <code>dirpath</code>. The new root directory is used for pathnames beginning with <code>&#39;/&#39;</code>. The root directory is inherited by all children of the calling process.</p>
+
+<p>Only a privileged process may call <code>chroot</code>.</p>
+
+<p>See <a href="https://man7.org/linux/man-pages/man2/chroot.2.html">Linux chroot</a>.</p>
             </div>
           
 
@@ -819,7 +878,7 @@ dir_s_chroot(VALUE dir, VALUE path)
         <div class="method">
           <h3 class="title method-title" id="method-c-delete">
             
-              <b>Dir.delete( string ) &rarr; 0<br />Dir.rmdir( string ) &rarr; 0<br />Dir.unlink( string ) &rarr; 0
+              <b>Dir.rmdir(dirpath) &rarr; 0
 </b>
             
             <a href="../classes/Dir.html#method-c-delete" name="method-c-delete" class="permalink">Link</a>
@@ -827,7 +886,12 @@ dir_s_chroot(VALUE dir, VALUE path)
 
           
             <div class="description">
-              <p>Deletes the named directory. Raises a subclass of <a href="SystemCallError.html"><code>SystemCallError</code></a> if the directory isn’t empty.</p>
+              <p>Removes the directory at <code>dirpath</code> from the underlying file system:</p>
+
+<pre><code>Dir.rmdir(&#39;foo&#39;) # =&gt; 0
+</code></pre>
+
+<p>Raises an exception if the directory is not empty.</p>
             </div>
           
 
@@ -867,7 +931,7 @@ dir_s_rmdir(VALUE obj, VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-c-each_child">
             
-              <b>Dir.each_child( dirname ) {| filename | block }                 &rarr; nil<br />Dir.each_child( dirname, encoding: enc ) {| filename | block }  &rarr; nil<br />Dir.each_child( dirname )                                       &rarr; an_enumerator<br />Dir.each_child( dirname, encoding: enc )                        &rarr; an_enumerator
+              <b>Dir.each_child(dirpath) {|entry_name| ... } &rarr; nil<br />Dir.each_child(dirpath, encoding: 'UTF-8') {|entry_name| ... }  &rarr; nil
 </b>
             
             <a href="../classes/Dir.html#method-c-each_child" name="method-c-each_child" class="permalink">Link</a>
@@ -875,18 +939,7 @@ dir_s_rmdir(VALUE obj, VALUE dir)
 
           
             <div class="description">
-              <p>Calls the block once for each entry except for “.” and “..” in the named directory, passing the filename of each entry as a parameter to the block.</p>
-
-<p>If no block is given, an enumerator is returned instead.</p>
-
-<pre><code>Dir.each_child(&quot;testdir&quot;) {|x| puts &quot;Got #{x}&quot; }
-</code></pre>
-
-<p><em>produces:</em></p>
-
-<pre><code>Got config.h
-Got main.rb
-</code></pre>
+              <p>Like <a href="Dir.html#method-c-foreach"><code>Dir.foreach</code></a>, except that entries <code>&#39;.&#39;</code> and <code>&#39;..&#39;</code> are not included.</p>
             </div>
           
 
@@ -922,7 +975,7 @@ dir_s_each_child(int argc, VALUE *argv, VALUE io)
         <div class="method">
           <h3 class="title method-title" id="method-c-empty-3F">
             
-              <b>Dir.empty?(path_name)  &rarr;  true or false
+              <b>Dir.empty?(dirpath) &rarr;  true or false
 </b>
             
             <a href="../classes/Dir.html#method-c-empty-3F" name="method-c-empty-3F" class="permalink">Link</a>
@@ -930,7 +983,16 @@ dir_s_each_child(int argc, VALUE *argv, VALUE io)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if the named file is an empty directory, <code>false</code> if it is not a directory or non-empty.</p>
+              <p>Returns whether <code>dirpath</code> specifies an empty directory:</p>
+
+<pre><code>dirpath = &#39;/tmp/foo&#39;
+Dir.mkdir(dirpath)
+Dir.empty?(dirpath)            # =&gt; true
+Dir.empty?(&#39;/example&#39;)         # =&gt; false
+Dir.empty?(&#39;/example/main.rb&#39;) # =&gt; false
+</code></pre>
+
+<p>Raises an exception if <code>dirpath</code> does not specify a directory or file in the underlying file system.</p>
             </div>
           
 
@@ -972,7 +1034,7 @@ rb_dir_s_empty_p(VALUE obj, VALUE dirname)
             al.dirattr = ATTR_DIR_ENTRYCOUNT;
             if (getattrlist(path, &amp;al, attrbuf, sizeof(attrbuf), 0) == 0) {
                 if (attrbuf[0] &gt;= 2 * sizeof(u_int32_t))
-                    return attrbuf[1] ? Qfalse : Qtrue;
+                    return RBOOL(attrbuf[1] == 0);
                 if (false_on_notdir) return Qfalse;
             }
             rb_sys_fail_path(orig);
@@ -982,8 +1044,8 @@ rb_dir_s_empty_p(VALUE obj, VALUE dirname)
 
     result = (VALUE)rb_thread_call_without_gvl(nogvl_dir_empty_p, (void *)path,
                                             RUBY_UBF_IO, 0);
-    if (result == Qundef) {
-        rb_sys_fail_path(orig);
+    if (FIXNUM_P(result)) {
+        rb_syserr_fail_path((int)FIX2LONG(result), orig);
     }
     return result;
 }</pre>
@@ -995,7 +1057,7 @@ rb_dir_s_empty_p(VALUE obj, VALUE dirname)
         <div class="method">
           <h3 class="title method-title" id="method-c-entries">
             
-              <b>Dir.entries( dirname )                &rarr; array<br />Dir.entries( dirname, encoding: enc ) &rarr; array
+              <b>Dir.entries(dirname, encoding: 'UTF-8') &rarr; array
 </b>
             
             <a href="../classes/Dir.html#method-c-entries" name="method-c-entries" class="permalink">Link</a>
@@ -1003,12 +1065,18 @@ rb_dir_s_empty_p(VALUE obj, VALUE dirname)
 
           
             <div class="description">
-              <p>Returns an array containing all of the filenames in the given directory. Will raise a <a href="SystemCallError.html"><code>SystemCallError</code></a> if the named directory doesn’t exist.</p>
+              <p>Returns an array of the entry names in the directory at <code>dirpath</code>; sets the given encoding onto each returned entry name:</p>
 
-<p>The optional <em>encoding</em> keyword argument specifies the encoding of the directory. If not specified, the filesystem encoding is used.</p>
-
-<pre><code>Dir.entries(&quot;testdir&quot;)   #=&gt; [&quot;.&quot;, &quot;..&quot;, &quot;config.h&quot;, &quot;main.rb&quot;]
+<pre><code>Dir.entries(&#39;/example&#39;) # =&gt; [&quot;config.h&quot;, &quot;lib&quot;, &quot;main.rb&quot;, &quot;..&quot;, &quot;.&quot;]
+Dir.entries(&#39;/example&#39;).first.encoding
+# =&gt; #&lt;Encoding:UTF-8&gt;
+Dir.entries(&#39;/example&#39;, encoding: &#39;US-ASCII&#39;).first.encoding
+# =&gt; #&lt;Encoding:US-ASCII&gt;
 </code></pre>
+
+<p>See <a href="../files/ruby/doc/encodings_rdoc.html#label-String+Encoding">String Encoding</a>.</p>
+
+<p>Raises an exception if the directory does not exist.</p>
             </div>
           
 
@@ -1042,7 +1110,7 @@ dir_entries(int argc, VALUE *argv, VALUE io)
         <div class="method">
           <h3 class="title method-title" id="method-c-exist-3F">
             
-              <b>Dir.exist?(file_name)   &rarr;  true or false
+              <b>Dir.exist?(dirpath) &rarr;  true or false
 </b>
             
             <a href="../classes/Dir.html#method-c-exist-3F" name="method-c-exist-3F" class="permalink">Link</a>
@@ -1050,7 +1118,14 @@ dir_entries(int argc, VALUE *argv, VALUE io)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if the named file is a directory, <code>false</code> otherwise.</p>
+              <p>Returns whether <code>dirpath</code> is a directory in the underlying file system:</p>
+
+<pre><code>Dir.exist?(&#39;/example&#39;)         # =&gt; true
+Dir.exist?(&#39;/nosuch&#39;)          # =&gt; false
+Dir.exist?(&#39;/example/main.rb&#39;) # =&gt; false
+</code></pre>
+
+<p>Same as <a href="File.html#method-c-directory-3F"><code>File.directory?</code></a>.</p>
             </div>
           
 
@@ -1078,9 +1153,175 @@ rb_file_directory_p(void)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-c-fchdir">
+            
+              <b>Dir.fchdir(fd) &rarr; 0<br />Dir.fchdir(fd) { ... } &rarr; object
+</b>
+            
+            <a href="../classes/Dir.html#method-c-fchdir" name="method-c-fchdir" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Changes the current working directory to the directory specified by the integer file descriptor <code>fd</code>.</p>
+
+<p>When passing a file descriptor over a UNIX socket or to a child process, using <code>fchdir</code> instead of <code>chdir</code> avoids the <a href="https://en.wikipedia.org/wiki/Time-of-check_to_time-of-use">time-of-check to time-of-use vulnerability</a></p>
+
+<p>With no block, changes to the directory given by <code>fd</code>:</p>
+
+<pre><code>Dir.chdir(&#39;/var/spool/mail&#39;)
+Dir.pwd # =&gt; &quot;/var/spool/mail&quot;
+dir  = Dir.new(&#39;/usr&#39;)
+fd = dir.fileno
+Dir.fchdir(fd)
+Dir.pwd # =&gt; &quot;/usr&quot;
+</code></pre>
+
+<p>With a block, temporarily changes the working directory:</p>
+<ul><li>
+<p>Calls the block with the argument.</p>
+</li><li>
+<p>Changes to the given directory.</p>
+</li><li>
+<p>Executes the block (yields no args).</p>
+</li><li>
+<p>Restores the previous working directory.</p>
+</li><li>
+<p>Returns the block’s return value.</p>
+</li></ul>
+
+<p>Example:</p>
+
+<pre><code>Dir.chdir(&#39;/var/spool/mail&#39;)
+Dir.pwd # =&gt; &quot;/var/spool/mail&quot;
+dir  = Dir.new(&#39;/tmp&#39;)
+fd = dir.fileno
+Dir.fchdir(fd) do
+  Dir.pwd # =&gt; &quot;/tmp&quot;
+end
+Dir.pwd # =&gt; &quot;/var/spool/mail&quot;
+</code></pre>
+
+<p>This method uses the <a href="https://www.man7.org/linux/man-pages/man3/fchdir.3p.html">fchdir()</a> function defined by POSIX 2008; the method is not implemented on non-POSIX platforms (raises <a href="NotImplementedError.html"><code>NotImplementedError</code></a>).</p>
+
+<p>Raises an exception if the file descriptor is not valid.</p>
+
+<p>In a multi-threaded program an error is raised if a thread attempts to open a <code>chdir</code> block while another thread has one open, or a call to <code>chdir</code> without a block occurs inside a block passed to <code>chdir</code> (even in the same thread).</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-fchdir_source')" id="l_method-c-fchdir_source">show</a>
+                
+              </p>
+              <div id="method-c-fchdir_source" class="dyn-source">
+                <pre>static VALUE
+dir_s_fchdir(VALUE klass, VALUE fd_value)
+{
+    int fd = RB_NUM2INT(fd_value);
+
+    if (chdir_blocking &gt; 0) {
+        if (rb_thread_current() != chdir_thread)
+            rb_raise(rb_eRuntimeError, &quot;conflicting chdir during another chdir block&quot;);
+        if (!rb_block_given_p())
+            rb_warn(&quot;conflicting chdir during another chdir block&quot;);
+    }
+
+    if (rb_block_given_p()) {
+        struct fchdir_data args;
+        args.old_dir = dir_s_alloc(klass);
+        dir_initialize(NULL, args.old_dir, rb_fstring_cstr(&quot;.&quot;), Qnil);
+        args.fd = fd;
+        args.done = FALSE;
+        return rb_ensure(fchdir_yield, (VALUE)&amp;args, fchdir_restore, (VALUE)&amp;args);
+    }
+    else {
+        int r = (int)(VALUE)rb_thread_call_without_gvl(nogvl_fchdir, &amp;fd,
+                                                       RUBY_UBF_IO, 0);
+        if (r &lt; 0)
+            rb_sys_fail(&quot;fchdir&quot;);
+    }
+
+    return INT2FIX(0);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-for_fd">
+            
+              <b>Dir.for_fd(fd) &rarr; dir
+</b>
+            
+            <a href="../classes/Dir.html#method-c-for_fd" name="method-c-for_fd" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns a new Dir object representing the directory specified by the given integer directory file descriptor <code>fd</code>:</p>
+
+<pre><code>d0 = Dir.new(&#39;..&#39;)
+d1 = Dir.for_fd(d0.fileno)
+</code></pre>
+
+<p>Note that the returned <code>d1</code> does not have an associated path:</p>
+
+<pre><code>d0.path # =&gt; &#39;..&#39;
+d1.path # =&gt; nil
+</code></pre>
+
+<p>This method uses the <a href="https://www.man7.org/linux/man-pages/man3/fdopendir.3p.html">fdopendir()</a> function defined by POSIX 2008; the method is not implemented on non-POSIX platforms (raises <a href="NotImplementedError.html"><code>NotImplementedError</code></a>).</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-for_fd_source')" id="l_method-c-for_fd_source">show</a>
+                
+              </p>
+              <div id="method-c-for_fd_source" class="dyn-source">
+                <pre>static VALUE
+dir_s_for_fd(VALUE klass, VALUE fd)
+{
+    struct dir_data *dp;
+    VALUE dir = TypedData_Make_Struct(klass, struct dir_data, &amp;dir_data_type, dp);
+
+    if (!(dp-&gt;dir = fdopendir(NUM2INT(fd)))) {
+        rb_sys_fail(&quot;fdopendir&quot;);
+        UNREACHABLE_RETURN(Qnil);
+    }
+
+    RB_OBJ_WRITE(dir, &amp;dp-&gt;path, Qnil);
+    return dir;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-c-foreach">
             
-              <b>Dir.foreach( dirname ) {| filename | block }                 &rarr; nil<br />Dir.foreach( dirname, encoding: enc ) {| filename | block }  &rarr; nil<br />Dir.foreach( dirname )                                       &rarr; an_enumerator<br />Dir.foreach( dirname, encoding: enc )                        &rarr; an_enumerator
+              <b>Dir.foreach(dirpath, encoding: 'UTF-8') {|entry_name| ... }  &rarr; nil
 </b>
             
             <a href="../classes/Dir.html#method-c-foreach" name="method-c-foreach" class="permalink">Link</a>
@@ -1088,20 +1329,35 @@ rb_file_directory_p(void)
 
           
             <div class="description">
-              <p>Calls the block once for each entry in the named directory, passing the filename of each entry as a parameter to the block.</p>
+              <p>Calls the block with each entry name in the directory at <code>dirpath</code>; sets the given encoding onto each passed <code>entry_name</code>:</p>
 
-<p>If no block is given, an enumerator is returned instead.</p>
-
-<pre><code>Dir.foreach(&quot;testdir&quot;) {|x| puts &quot;Got #{x}&quot; }
+<pre><code>Dir.foreach(&#39;/example&#39;) {|entry_name| p entry_name }
 </code></pre>
 
-<p><em>produces:</em></p>
+<p>Output:</p>
 
-<pre><code>Got .
-Got ..
-Got config.h
-Got main.rb
+<pre><code>&quot;config.h&quot;
+&quot;lib&quot;
+&quot;main.rb&quot;
+&quot;..&quot;
+&quot;.&quot;
 </code></pre>
+
+<p>Encoding:</p>
+
+<pre><code>Dir.foreach(&#39;/example&#39;) {|entry_name| p entry_name.encoding; break }
+Dir.foreach(&#39;/example&#39;, encoding: &#39;US-ASCII&#39;) {|entry_name| p entry_name.encoding; break }
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>#&lt;Encoding:UTF-8&gt;
+#&lt;Encoding:US-ASCII&gt;
+</code></pre>
+
+<p>See <a href="../files/ruby/doc/encodings_rdoc.html#label-String+Encoding">String Encoding</a>.</p>
+
+<p>Returns an enumerator if no block is given.</p>
             </div>
           
 
@@ -1137,7 +1393,7 @@ dir_foreach(int argc, VALUE *argv, VALUE io)
         <div class="method">
           <h3 class="title method-title" id="method-c-getwd">
             
-              <b>Dir.getwd &rarr; string<br />Dir.pwd &rarr; string
+              <b>Dir.pwd &rarr; string
 </b>
             
             <a href="../classes/Dir.html#method-c-getwd" name="method-c-getwd" class="permalink">Link</a>
@@ -1145,11 +1401,10 @@ dir_foreach(int argc, VALUE *argv, VALUE io)
 
           
             <div class="description">
-              <p>Returns the path to the current working directory of this process as a string.</p>
+              <p>Returns the path to the current working directory:</p>
 
-<pre><code>Dir.chdir(&quot;/tmp&quot;)   #=&gt; 0
-Dir.getwd           #=&gt; &quot;/tmp&quot;
-Dir.pwd             #=&gt; &quot;/tmp&quot;
+<pre><code>Dir.chdir(&quot;/tmp&quot;) # =&gt; 0
+Dir.pwd           # =&gt; &quot;/tmp&quot;
 </code></pre>
             </div>
           
@@ -1181,7 +1436,7 @@ dir_s_getwd(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-c-glob">
             
-              <b>Dir.glob( pattern, [flags], [base: path] [, sort: true] )                       &rarr; array<br />Dir.glob( pattern, [flags], [base: path] [, sort: true] ) { |filename| block }  &rarr; nil
+              <b>Dir.glob(*patterns, flags: 0, base: nil, sort: true) &rarr; array<br />Dir.glob(*patterns, flags: 0, base: nil, sort: true) {|entry_name| ... } &rarr; nil
 </b>
             
             <a href="../classes/Dir.html#method-c-glob" name="method-c-glob" class="permalink">Link</a>
@@ -1189,77 +1444,162 @@ dir_s_getwd(VALUE dir)
 
           
             <div class="description">
-              <p>Expands <code>pattern</code>, which is a pattern string or an <a href="Array.html"><code>Array</code></a> of pattern strings, and returns an array containing the matching filenames. If a block is given, calls the block once for each matching filename, passing the filename as a parameter to the block.</p>
+              <p>Forms an array <em>entry_names</em> of the entry names selected by the arguments.</p>
 
-<p>The optional <code>base</code> keyword argument specifies the base directory for interpreting relative pathnames instead of the current working directory. As the results are not prefixed with the base directory name in this case, you will need to prepend the base directory name if you want real paths.</p>
+<p>Argument <code>patterns</code> is a string pattern or an array of string patterns; note that these are not regexps; see below.</p>
 
-<p>The results which matched single wildcard or character set are sorted in binary ascending order, unless <code>false</code> is given as the optional <code>sort</code> keyword argument.  The order of an <a href="Array.html"><code>Array</code></a> of pattern strings and braces are preserved.</p>
+<p>Notes for the following examples:</p>
+<ul><li>
+<p><code>&#39;*&#39;</code> is the pattern that matches any entry name except those that begin with <code>&#39;.&#39;</code>.</p>
+</li><li>
+<p>We use method <a href="Array.html#method-i-take"><code>Array#take</code></a> to shorten returned arrays that otherwise would be very large.</p>
+</li></ul>
 
-<p>Note that the pattern is not a regexp, it’s closer to a shell glob. See <a href="File.html#method-c-fnmatch"><code>File::fnmatch</code></a> for the meaning of the <code>flags</code> parameter. Case sensitivity depends on your system (<code>File::FNM_CASEFOLD</code> is ignored).</p>
-<dl class="rdoc-list note-list"><dt><code>*</code>
-<dd>
-<p>Matches any file. Can be restricted by other values in the glob. Equivalent to <code>/.*/mx</code> in regexp.</p>
-<dl class="rdoc-list note-list"><dt><code>*</code>
-<dd>
-<p>Matches all files</p>
-</dd><dt><code>c*</code>
-<dd>
-<p>Matches all files beginning with <code>c</code></p>
-</dd><dt><code>*c</code>
-<dd>
-<p>Matches all files ending with <code>c</code></p>
-</dd><dt><code>*c*</code>
-<dd>
-<p>Match all files that have <code>c</code> in them (including at the beginning or end).</p>
-</dd></dl>
+<p>With no block, returns array <em>entry_names</em>; example (using the <a href="Dir.html#class-Dir-label-About+the+Examples">simple file tree</a>):</p>
 
-<p>Note, this will not match Unix-like hidden files (dotfiles).  In order to include those in the match results, you must use the File::FNM_DOTMATCH flag or something like <code>&quot;{*,.*}&quot;</code>.</p>
-</dd><dt><code>**</code>
-<dd>
-<p>Matches directories recursively if followed by <code>/</code>.  If this path segment contains any other characters, it is the same as the usual <code>*</code>.</p>
-</dd><dt><code>?</code>
-<dd>
-<p>Matches any one character. Equivalent to <code>/.{1}/</code> in regexp.</p>
-</dd><dt><code>[set]</code>
-<dd>
-<p>Matches any one character in <code>set</code>.  Behaves exactly like character sets in <a href="Regexp.html"><code>Regexp</code></a>, including set negation (<code>[^a-z]</code>).</p>
-</dd><dt><code>{p,q}</code>
-<dd>
-<p>Matches either literal <code>p</code> or literal <code>q</code>. Equivalent to pattern alternation in regexp.</p>
-
-<p>Matching literals may be more than one character in length.  More than two literals may be specified.</p>
-</dd><dt><code>\</code>
-<dd>
-<p>Escapes the next metacharacter.</p>
-
-<p>Note that this means you cannot use backslash on windows as part of a glob, i.e.  <code>Dir[&quot;c:\foo*&quot;]</code> will not work, use <code>Dir[&quot;c:/foo*&quot;]</code> instead.</p>
-</dd></dl>
-
-<p>Examples:</p>
-
-<pre><code>Dir[&quot;config.?&quot;]                     #=&gt; [&quot;config.h&quot;]
-Dir.glob(&quot;config.?&quot;)                #=&gt; [&quot;config.h&quot;]
-Dir.glob(&quot;*.[a-z][a-z]&quot;)            #=&gt; [&quot;main.rb&quot;]
-Dir.glob(&quot;*.[^r]*&quot;)                 #=&gt; [&quot;config.h&quot;]
-Dir.glob(&quot;*.{rb,h}&quot;)                #=&gt; [&quot;main.rb&quot;, &quot;config.h&quot;]
-Dir.glob(&quot;*&quot;)                       #=&gt; [&quot;config.h&quot;, &quot;main.rb&quot;]
-Dir.glob(&quot;*&quot;, File::FNM_DOTMATCH)   #=&gt; [&quot;.&quot;, &quot;config.h&quot;, &quot;main.rb&quot;]
-Dir.glob([&quot;*.rb&quot;, &quot;*.h&quot;])           #=&gt; [&quot;main.rb&quot;, &quot;config.h&quot;]
-
-Dir.glob(&quot;**/*.rb&quot;)                 #=&gt; [&quot;main.rb&quot;,
-                                    #    &quot;lib/song.rb&quot;,
-                                    #    &quot;lib/song/karaoke.rb&quot;]
-
-Dir.glob(&quot;**/*.rb&quot;, base: &quot;lib&quot;)    #=&gt; [&quot;song.rb&quot;,
-                                    #    &quot;song/karaoke.rb&quot;]
-
-Dir.glob(&quot;**/lib&quot;)                  #=&gt; [&quot;lib&quot;]
-
-Dir.glob(&quot;**/lib/**/*.rb&quot;)          #=&gt; [&quot;lib/song.rb&quot;,
-                                    #    &quot;lib/song/karaoke.rb&quot;]
-
-Dir.glob(&quot;**/lib/*.rb&quot;)             #=&gt; [&quot;lib/song.rb&quot;]
+<pre><code>Dir.glob(&#39;*&#39;) # =&gt; [&quot;config.h&quot;, &quot;lib&quot;, &quot;main.rb&quot;]
 </code></pre>
+
+<p>With a block, calls the block with each of the <em>entry_names</em> and returns <code>nil</code>:</p>
+
+<pre><code>Dir.glob(&#39;*&#39;) {|entry_name| puts entry_name } # =&gt; nil
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>config.h
+lib
+main.rb
+</code></pre>
+
+<p>If optional keyword argument <code>flags</code> is given, the value modifies the matching; see below.</p>
+
+<p>If optional keyword argument <code>base</code> is given, its value specifies the base directory. Each pattern string specifies entries relative to the base directory; the default is <code>&#39;.&#39;</code>. The base directory is not prepended to the entry names in the result:</p>
+
+<pre><code>Dir.glob(pattern, base: &#39;lib&#39;).take(5)
+# =&gt; [&quot;abbrev.gemspec&quot;, &quot;abbrev.rb&quot;, &quot;base64.gemspec&quot;, &quot;base64.rb&quot;, &quot;benchmark.gemspec&quot;]
+Dir.glob(pattern, base: &#39;lib/irb&#39;).take(5)
+# =&gt; [&quot;cmd&quot;, &quot;color.rb&quot;, &quot;color_printer.rb&quot;, &quot;completion.rb&quot;, &quot;context.rb&quot;]
+</code></pre>
+
+<p>If optional keyword <code>sort</code> is given, its value specifies whether the array is to be sorted; the default is <code>true</code>. Passing value <code>false</code> with that keyword disables sorting (though the underlying file system may already have sorted the array).</p>
+
+<p><strong>Patterns</strong></p>
+
+<p>Each pattern string is expanded according to certain metacharacters; examples below use the <a href="Dir.html#class-Dir-label-About+the+Examples">Ruby file tree</a>:</p>
+<ul><li>
+<p><code>&#39;*&#39;</code>: Matches any substring in an entry name, similar in meaning to regexp <code>/.*/mx</code>; may be restricted by other values in the pattern strings:</p>
+<ul><li>
+<p><code>&#39;*&#39;</code> matches all entry names:</p>
+
+<pre><code>Dir.glob(&#39;*&#39;).take(3)  # =&gt; [&quot;BSDL&quot;, &quot;CONTRIBUTING.md&quot;, &quot;COPYING&quot;]
+</code></pre>
+</li><li>
+<p><code>&#39;c*&#39;</code> matches entry names beginning with <code>&#39;c&#39;</code>:</p>
+
+<pre><code>Dir.glob(&#39;c*&#39;).take(3) # =&gt; [&quot;CONTRIBUTING.md&quot;, &quot;COPYING&quot;, &quot;COPYING.ja&quot;]
+</code></pre>
+</li><li>
+<p><code>&#39;*c&#39;</code> matches entry names ending with <code>&#39;c&#39;</code>:</p>
+
+<pre><code>Dir.glob(&#39;*c&#39;).take(3) # =&gt; [&quot;addr2line.c&quot;, &quot;array.c&quot;, &quot;ast.c&quot;]
+</code></pre>
+</li><li>
+<p><code>&#39;*c*&#39;</code> matches entry names that contain <code>&#39;c&#39;</code>, even at the beginning or end:</p>
+
+<pre><code>Dir.glob(&#39;*c*&#39;).take(3) # =&gt; [&quot;CONTRIBUTING.md&quot;, &quot;COPYING&quot;, &quot;COPYING.ja&quot;]
+</code></pre>
+</li></ul>
+
+<p>Does not match Unix-like hidden entry names (“dot files”). To include those in the matched entry names, use flag IO::FNM_DOTMATCH or something like <code>&#39;{*,.*}&#39;</code>.</p>
+</li><li>
+<p><code>&#39;**&#39;</code>: Matches entry names recursively if followed by  the slash character <code>&#39;/&#39;</code>:</p>
+
+<pre><code>Dir.glob(&#39;**/&#39;).take(3) # =&gt; [&quot;basictest/&quot;, &quot;benchmark/&quot;, &quot;benchmark/gc/&quot;]
+</code></pre>
+
+<p>If the string pattern contains other characters or is not followed by a slash character, it is equivalent to <code>&#39;*&#39;</code>.</p>
+</li><li>
+<p><code>&#39;?&#39;</code> Matches any single character; similar in meaning to regexp <code>/./</code>:</p>
+
+<pre><code>Dir.glob(&#39;io.?&#39;) # =&gt; [&quot;io.c&quot;]
+</code></pre>
+</li><li>
+<p><code>&#39;[<em>set</em>]&#39;</code>: Matches any one character in the string <em>set</em>; behaves like a <a href="Regexp.html#class-Regexp-label-Character+Classes">Regexp character class</a>, including set negation (<code>&#39;[^a-z]&#39;</code>):</p>
+
+<pre><code>Dir.glob(&#39;*.[a-z][a-z]&#39;).take(3)
+# =&gt; [&quot;CONTRIBUTING.md&quot;, &quot;COPYING.ja&quot;, &quot;KNOWNBUGS.rb&quot;]
+</code></pre>
+</li><li>
+<p><code>&#39;{<em>abc</em>,<em>xyz</em>}&#39;</code>: Matches either string <em>abc</em> or string <em>xyz</em>; behaves like {Regexp alternation}[rdoc-ref:Regexp@Alternation]:</p>
+
+<pre><code>Dir.glob(&#39;{LEGAL,BSDL}&#39;) # =&gt; [&quot;LEGAL&quot;, &quot;BSDL&quot;]
+</code></pre>
+
+<p>More than two alternatives may be given.</p>
+</li><li>
+<p><code>\</code>: Escapes the following metacharacter.</p>
+
+<p>Note that on Windows, the backslash character may not be used in a string pattern: <code>Dir[&#39;c:\foo*&#39;]</code> will not work, use <code>Dir[&#39;c:/foo*&#39;]</code> instead.</p>
+</li></ul>
+
+<p>More examples (using the <a href="Dir.html#class-Dir-label-About+the+Examples">simple file tree</a>):</p>
+
+<pre><code># We&#39;re in the example directory.
+File.basename(Dir.pwd) # =&gt; &quot;example&quot;
+Dir.glob(&#39;config.?&#39;)              # =&gt; [&quot;config.h&quot;]
+Dir.glob(&#39;*.[a-z][a-z]&#39;)          # =&gt; [&quot;main.rb&quot;]
+Dir.glob(&#39;*.[^r]*&#39;)               # =&gt; [&quot;config.h&quot;]
+Dir.glob(&#39;*.{rb,h}&#39;)              # =&gt; [&quot;main.rb&quot;, &quot;config.h&quot;]
+Dir.glob(&#39;*&#39;)                     # =&gt; [&quot;config.h&quot;, &quot;lib&quot;, &quot;main.rb&quot;]
+Dir.glob(&#39;*&#39;, File::FNM_DOTMATCH) # =&gt; [&quot;.&quot;, &quot;config.h&quot;, &quot;lib&quot;, &quot;main.rb&quot;]
+Dir.glob([&quot;*.rb&quot;, &quot;*.h&quot;])         # =&gt; [&quot;main.rb&quot;, &quot;config.h&quot;]
+
+Dir.glob(&#39;**/*.rb&#39;)
+=&gt; [&quot;lib/song/karaoke.rb&quot;, &quot;lib/song.rb&quot;, &quot;main.rb&quot;]
+
+Dir.glob(&#39;**/*.rb&#39;, base: &#39;lib&#39;)  #   =&gt; [&quot;song/karaoke.rb&quot;, &quot;song.rb&quot;]
+
+Dir.glob(&#39;**/lib&#39;)                # =&gt; [&quot;lib&quot;]
+
+Dir.glob(&#39;**/lib/**/*.rb&#39;)        # =&gt; [&quot;lib/song/karaoke.rb&quot;, &quot;lib/song.rb&quot;]
+
+Dir.glob(&#39;**/lib/*.rb&#39;)           # =&gt; [&quot;lib/song.rb&quot;]
+</code></pre>
+
+<p><strong>Flags</strong></p>
+
+<p>If optional keyword argument <code>flags</code> is given (the default is zero – no flags), its value should be the bitwise OR of one or more of the constants defined in module <a href="File/File/Constants.html"><code>File::Constants</code></a>.</p>
+
+<p>Example:</p>
+
+<pre><code>flags = File::FNM_EXTGLOB | File::FNM_DOTMATCH
+</code></pre>
+
+<p>Specifying flags can extend, restrict, or otherwise modify the matching.</p>
+
+<p>The flags for this method (other constants in <a href="File/File/Constants.html"><code>File::Constants</code></a> do not apply):</p>
+<ul><li>
+<p>File::FNM_DOTMATCH: specifies that entry names beginning with <code>&#39;.&#39;</code> should be considered for matching:</p>
+
+<pre><code>Dir.glob(&#39;*&#39;).take(5)
+# =&gt; [&quot;BSDL&quot;, &quot;CONTRIBUTING.md&quot;, &quot;COPYING&quot;, &quot;COPYING.ja&quot;, &quot;GPL&quot;]
+Dir.glob(&#39;*&#39;, flags: File::FNM_DOTMATCH).take(5)
+# =&gt; [&quot;.&quot;, &quot;.appveyor.yml&quot;, &quot;.cirrus.yml&quot;, &quot;.dir-locals.el&quot;, &quot;.document&quot;]
+</code></pre>
+</li><li>
+<p>File::FNM_EXTGLOB: enables the pattern extension <code>&#39;{<em>a</em>,<em>b</em>}&#39;</code>, which matches pattern <em>a</em> and pattern <em>b</em>; behaves like a {regexp union}[rdoc-ref:Regexp.union] (e.g., <code>&#39;(?:<em>a</em>|<em>b</em>)&#39;</code>):</p>
+
+<pre><code>pattern = &#39;{LEGAL,BSDL}&#39;
+Dir.glob(pattern)      # =&gt; [&quot;LEGAL&quot;, &quot;BSDL&quot;]
+</code></pre>
+</li><li>
+<p>File::FNM_NOESCAPE: specifies that escaping with the backslash character <code>&#39;\&#39;</code> is disabled; the character is not an escape character.</p>
+</li><li>
+<p>File::FNM_PATHNAME: specifies that metacharacters <code>&#39;*&#39;</code> and <code>&#39;?&#39;</code> do not match directory separators.</p>
+</li><li>
+<p>File::FNM_SHORTNAME: specifies that patterns may match short names if they exist; Windows only.</p>
+</li></ul>
             </div>
           
 
@@ -1275,11 +1615,11 @@ Dir.glob(&quot;**/lib/*.rb&quot;)             #=&gt; [&quot;lib/song.rb&quot;]
                 Source:
                 <a href="javascript:toggleSource('method-c-glob_source')" id="l_method-c-glob_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/dir.rb#L219" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/dir.rb#L410" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-glob_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/dir.rb, line 219</span>
+                <pre><span class="ruby-comment"># File ruby/dir.rb, line 410</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">glob</span>(<span class="ruby-identifier">pattern</span>, <span class="ruby-identifier">_flags</span> = <span class="ruby-value">0</span>, <span class="ruby-value">flags:</span> <span class="ruby-identifier">_flags</span>, <span class="ruby-value">base:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">sort:</span> <span class="ruby-keyword">true</span>)
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">dir_s_glob</span>(<span class="ruby-identifier">pattern</span>, <span class="ruby-identifier">flags</span>, <span class="ruby-identifier">base</span>, <span class="ruby-identifier">sort</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1291,7 +1631,7 @@ Dir.glob(&quot;**/lib/*.rb&quot;)             #=&gt; [&quot;lib/song.rb&quot;]
         <div class="method">
           <h3 class="title method-title" id="method-c-home">
             
-              <b>Dir.home()       &rarr; "/home/me"<br />Dir.home("root") &rarr; "/root"
+              <b>Dir.home(user_name = nil) &rarr; dirpath
 </b>
             
             <a href="../classes/Dir.html#method-c-home" name="method-c-home" class="permalink">Link</a>
@@ -1299,7 +1639,13 @@ Dir.glob(&quot;**/lib/*.rb&quot;)             #=&gt; [&quot;lib/song.rb&quot;]
 
           
             <div class="description">
-              <p>Returns the home directory of the current user or the named user if given.</p>
+              <p>Retruns the home directory path of the user specified with <code>user_name</code> if it is not <code>nil</code>, or the current login user:</p>
+
+<pre><code>Dir.home         # =&gt; &quot;/home/me&quot;
+Dir.home(&#39;root&#39;) # =&gt; &quot;/root&quot;
+</code></pre>
+
+<p>Raises <a href="ArgumentError.html"><code>ArgumentError</code></a> if <code>user_name</code> is not a user name.</p>
             </div>
           
 
@@ -1344,7 +1690,7 @@ dir_s_home(int argc, VALUE *argv, VALUE obj)
         <div class="method">
           <h3 class="title method-title" id="method-c-mkdir">
             
-              <b>Dir.mkdir( string [, integer] ) &rarr; 0
+              <b>Dir.mkdir(dirpath, permissions = 0775) &rarr; 0
 </b>
             
             <a href="../classes/Dir.html#method-c-mkdir" name="method-c-mkdir" class="permalink">Link</a>
@@ -1352,10 +1698,15 @@ dir_s_home(int argc, VALUE *argv, VALUE obj)
 
           
             <div class="description">
-              <p>Makes a new directory named by <em>string</em>, with permissions specified by the optional parameter <em>anInteger</em>. The permissions may be modified by the value of <a href="File.html#method-c-umask"><code>File::umask</code></a>, and are ignored on NT. Raises a <a href="SystemCallError.html"><code>SystemCallError</code></a> if the directory cannot be created. See also the discussion of permissions in the class documentation for <a href="File.html"><code>File</code></a>.</p>
+              <p>Creates a directory in the underlying file system at <code>dirpath</code> with the given <code>permissions</code>; returns zero:</p>
 
-<pre><code>Dir.mkdir(File.join(Dir.home, &quot;.foo&quot;), 0700) #=&gt; 0
+<pre><code>Dir.mkdir(&#39;foo&#39;)
+File.stat(Dir.new(&#39;foo&#39;)).mode.to_s(8)[1..4] # =&gt; &quot;0755&quot;
+Dir.mkdir(&#39;bar&#39;, 0644)
+File.stat(Dir.new(&#39;bar&#39;)).mode.to_s(8)[1..4] # =&gt; &quot;0644&quot;
 </code></pre>
+
+<p>See <a href="File.html#class-File-label-File+Permissions">File Permissions</a>. Note that argument <code>permissions</code> is ignored on Windows.</p>
             </div>
           
 
@@ -1468,11 +1819,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-c-mktmpdir_source')" id="l_method-c-mktmpdir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tmpdir.rb#L88" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/tmpdir.rb#L91" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-mktmpdir_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tmpdir.rb, line 88</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tmpdir.rb, line 91</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">mktmpdir</span>(<span class="ruby-identifier">prefix_suffix</span>=<span class="ruby-keyword">nil</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">rest</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">base</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-identifier">path</span> = <span class="ruby-constant">Tmpname</span>.<span class="ruby-identifier">create</span>(<span class="ruby-identifier">prefix_suffix</span> <span class="ruby-operator">||</span> <span class="ruby-string">&quot;d&quot;</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">rest</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>) {<span class="ruby-operator">|</span><span class="ruby-identifier">path</span>, <span class="ruby-identifier">_</span>, <span class="ruby-identifier">_</span>, <span class="ruby-identifier">d</span><span class="ruby-operator">|</span>
@@ -1503,7 +1854,7 @@ end
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>Dir.new( string ) &rarr; aDir<br />Dir.new( string, encoding: enc ) &rarr; aDir
+              <b>Dir.new(dirpath) &rarr; dir<br />Dir.new(dirpath, encoding: nil) &rarr; dir
 </b>
             
             <a href="../classes/Dir.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -1511,9 +1862,16 @@ end
 
           
             <div class="description">
-              <p>Returns a new directory object for the named directory.</p>
+              <p>Returns a new Dir object for the directory at <code>dirpath</code>:</p>
 
-<p>The optional <em>encoding</em> keyword argument specifies the encoding of the directory. If not specified, the filesystem encoding is used.</p>
+<pre><code>Dir.new(&#39;.&#39;) # =&gt; #&lt;Dir:.&gt;
+</code></pre>
+
+<p>The value given with optional keyword argument <code>encoding</code> specifies the encoding for the directory entry names; if <code>nil</code> (the default), the file system’s encoding is used:</p>
+
+<pre><code>Dir.new(&#39;.&#39;).read.encoding                       # =&gt; #&lt;Encoding:UTF-8&gt;
+Dir.new(&#39;.&#39;, encoding: &#39;US-ASCII&#39;).read.encoding # =&gt; #&lt;Encoding:US-ASCII&gt;
+</code></pre>
             </div>
           
 
@@ -1529,11 +1887,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/dir.rb#L118" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/dir.rb#L211" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/dir.rb, line 118</span>
+                <pre><span class="ruby-comment"># File ruby/dir.rb, line 211</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">name</span>, <span class="ruby-value">encoding:</span> <span class="ruby-keyword">nil</span>)
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">dir_initialize</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">encoding</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1545,7 +1903,7 @@ end
         <div class="method">
           <h3 class="title method-title" id="method-c-open">
             
-              <b>Dir.open( string ) &rarr; aDir<br />Dir.open( string, encoding: enc ) &rarr; aDir<br />Dir.open( string ) {| aDir | block } &rarr; anObject<br />Dir.open( string, encoding: enc ) {| aDir | block } &rarr; anObject
+              <b>Dir.open(dirpath) &rarr; dir<br />Dir.open(dirpath, encoding: nil) &rarr; dir<br />Dir.open(dirpath) {|dir| ... } &rarr; object<br />Dir.open(dirpath, encoding: nil) {|dir| ... } &rarr; object
 </b>
             
             <a href="../classes/Dir.html#method-c-open" name="method-c-open" class="permalink">Link</a>
@@ -1553,9 +1911,23 @@ end
 
           
             <div class="description">
-              <p>The optional <em>encoding</em> keyword argument specifies the encoding of the directory. If not specified, the filesystem encoding is used.</p>
+              <p>Creates a new Dir object <em>dir</em> for the directory at <code>dirpath</code>.</p>
 
-<p>With no block, <code>open</code> is a synonym for <a href="Dir.html#method-c-new"><code>Dir::new</code></a>. If a block is present, it is passed <em>aDir</em> as a parameter. The directory is closed at the end of the block, and <a href="Dir.html#method-c-open"><code>Dir::open</code></a> returns the value of the block.</p>
+<p>With no block, the method equivalent to <a href="Dir.html#method-c-new"><code>Dir.new</code></a>(dirpath, encoding):</p>
+
+<pre><code>Dir.open(&#39;.&#39;) # =&gt; #&lt;Dir:.&gt;
+</code></pre>
+
+<p>With a block given, the block is called with the created <em>dir</em>; on block exit <em>dir</em> is closed and the block’s value is returned:</p>
+
+<pre><code>Dir.open(&#39;.&#39;) {|dir| dir.inspect } # =&gt; &quot;#&lt;Dir:.&gt;&quot;
+</code></pre>
+
+<p>The value given with optional keyword argument <code>encoding</code> specifies the encoding for the directory entry names; if <code>nil</code> (the default), the file system’s encoding is used:</p>
+
+<pre><code>Dir.open(&#39;.&#39;).read.encoding                       # =&gt; #&lt;Encoding:UTF-8&gt;
+Dir.open(&#39;.&#39;, encoding: &#39;US-ASCII&#39;).read.encoding # =&gt; #&lt;Encoding:US-ASCII&gt;
+</code></pre>
             </div>
           
 
@@ -1571,11 +1943,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-c-open_source')" id="l_method-c-open_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/dir.rb#L97" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/dir.rb#L183" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-open_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/dir.rb, line 97</span>
+                <pre><span class="ruby-comment"># File ruby/dir.rb, line 183</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">open</span>(<span class="ruby-identifier">name</span>, <span class="ruby-value">encoding:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-identifier">dir</span> = <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">dir_s_open</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">encoding</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">block</span>
@@ -1596,7 +1968,7 @@ end
         <div class="method">
           <h3 class="title method-title" id="method-c-pwd">
             
-              <b>Dir.getwd &rarr; string<br />Dir.pwd &rarr; string
+              <b>Dir.pwd &rarr; string
 </b>
             
             <a href="../classes/Dir.html#method-c-pwd" name="method-c-pwd" class="permalink">Link</a>
@@ -1604,11 +1976,10 @@ end
 
           
             <div class="description">
-              <p>Returns the path to the current working directory of this process as a string.</p>
+              <p>Returns the path to the current working directory:</p>
 
-<pre><code>Dir.chdir(&quot;/tmp&quot;)   #=&gt; 0
-Dir.getwd           #=&gt; &quot;/tmp&quot;
-Dir.pwd             #=&gt; &quot;/tmp&quot;
+<pre><code>Dir.chdir(&quot;/tmp&quot;) # =&gt; 0
+Dir.pwd           # =&gt; &quot;/tmp&quot;
 </code></pre>
             </div>
           
@@ -1640,7 +2011,7 @@ dir_s_getwd(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-c-rmdir">
             
-              <b>Dir.delete( string ) &rarr; 0<br />Dir.rmdir( string ) &rarr; 0<br />Dir.unlink( string ) &rarr; 0
+              <b>Dir.rmdir(dirpath) &rarr; 0
 </b>
             
             <a href="../classes/Dir.html#method-c-rmdir" name="method-c-rmdir" class="permalink">Link</a>
@@ -1648,7 +2019,12 @@ dir_s_getwd(VALUE dir)
 
           
             <div class="description">
-              <p>Deletes the named directory. Raises a subclass of <a href="SystemCallError.html"><code>SystemCallError</code></a> if the directory isn’t empty.</p>
+              <p>Removes the directory at <code>dirpath</code> from the underlying file system:</p>
+
+<pre><code>Dir.rmdir(&#39;foo&#39;) # =&gt; 0
+</code></pre>
+
+<p>Raises an exception if the directory is not empty.</p>
             </div>
           
 
@@ -1711,15 +2087,16 @@ dir_s_rmdir(VALUE obj, VALUE dir)
                 Source:
                 <a href="javascript:toggleSource('method-c-tmpdir_source')" id="l_method-c-tmpdir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/tmpdir.rb#L21" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/tmpdir.rb#L26" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-tmpdir_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/tmpdir.rb, line 21</span>
+                <pre><span class="ruby-comment"># File ruby/lib/tmpdir.rb, line 26</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">tmpdir</span>
-  <span class="ruby-identifier">tmp</span> = <span class="ruby-keyword">nil</span>
-  [<span class="ruby-string">&#39;TMPDIR&#39;</span>, <span class="ruby-string">&#39;TMP&#39;</span>, <span class="ruby-string">&#39;TEMP&#39;</span>, [<span class="ruby-string">&#39;system temporary path&#39;</span>, <span class="ruby-identifier">@@systmpdir</span>], [<span class="ruby-string">&#39;/tmp&#39;</span>]<span class="ruby-operator">*</span><span class="ruby-value">2</span>, [<span class="ruby-string">&#39;.&#39;</span>]<span class="ruby-operator">*</span><span class="ruby-value">2</span>].<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name</span>, <span class="ruby-identifier">dir</span> = <span class="ruby-constant">ENV</span>[<span class="ruby-identifier">name</span>]<span class="ruby-operator">|</span>
-    <span class="ruby-keyword">next</span> <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span><span class="ruby-identifier">dir</span>
+  [<span class="ruby-string">&#39;TMPDIR&#39;</span>, <span class="ruby-string">&#39;TMP&#39;</span>, <span class="ruby-string">&#39;TEMP&#39;</span>, [<span class="ruby-string">&#39;system temporary path&#39;</span>, <span class="ruby-constant">SYSTMPDIR</span>], [<span class="ruby-string">&#39;/tmp&#39;</span>]<span class="ruby-operator">*</span><span class="ruby-value">2</span>, [<span class="ruby-string">&#39;.&#39;</span>]<span class="ruby-operator">*</span><span class="ruby-value">2</span>].<span class="ruby-identifier">find</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">name</span>, <span class="ruby-identifier">dir</span><span class="ruby-operator">|</span>
+    <span class="ruby-keyword">unless</span> <span class="ruby-identifier">dir</span>
+      <span class="ruby-keyword">next</span> <span class="ruby-keyword">if</span> <span class="ruby-operator">!</span>(<span class="ruby-identifier">dir</span> = <span class="ruby-constant">ENV</span>[<span class="ruby-identifier">name</span>] <span class="ruby-keyword">rescue</span> <span class="ruby-keyword">next</span>) <span class="ruby-keyword">or</span> <span class="ruby-identifier">dir</span>.<span class="ruby-identifier">empty?</span>
+    <span class="ruby-keyword">end</span>
     <span class="ruby-identifier">dir</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">expand_path</span>(<span class="ruby-identifier">dir</span>)
     <span class="ruby-identifier">stat</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">stat</span>(<span class="ruby-identifier">dir</span>) <span class="ruby-keyword">rescue</span> <span class="ruby-keyword">next</span>
     <span class="ruby-keyword">case</span>
@@ -1730,12 +2107,9 @@ dir_s_rmdir(VALUE obj, VALUE dir)
     <span class="ruby-keyword">when</span> <span class="ruby-identifier">stat</span>.<span class="ruby-identifier">world_writable?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">stat</span>.<span class="ruby-identifier">sticky?</span>
       <span class="ruby-identifier">warn</span> <span class="ruby-node">&quot;#{name} is world-writable: #{dir}&quot;</span>
     <span class="ruby-keyword">else</span>
-      <span class="ruby-identifier">tmp</span> = <span class="ruby-identifier">dir</span>
-      <span class="ruby-keyword">break</span>
+      <span class="ruby-keyword">break</span> <span class="ruby-identifier">dir</span>
     <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">end</span>
-  <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-string">&quot;could not find a temporary directory&quot;</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">tmp</span>
-  <span class="ruby-identifier">tmp</span>
+  <span class="ruby-keyword">end</span> <span class="ruby-keyword">or</span> <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-string">&quot;could not find a temporary directory&quot;</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1745,7 +2119,7 @@ dir_s_rmdir(VALUE obj, VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-c-unlink">
             
-              <b>Dir.delete( string ) &rarr; 0<br />Dir.rmdir( string ) &rarr; 0<br />Dir.unlink( string ) &rarr; 0
+              <b>Dir.rmdir(dirpath) &rarr; 0
 </b>
             
             <a href="../classes/Dir.html#method-c-unlink" name="method-c-unlink" class="permalink">Link</a>
@@ -1753,7 +2127,12 @@ dir_s_rmdir(VALUE obj, VALUE dir)
 
           
             <div class="description">
-              <p>Deletes the named directory. Raises a subclass of <a href="SystemCallError.html"><code>SystemCallError</code></a> if the directory isn’t empty.</p>
+              <p>Removes the directory at <code>dirpath</code> from the underlying file system:</p>
+
+<pre><code>Dir.rmdir(&#39;foo&#39;) # =&gt; 0
+</code></pre>
+
+<p>Raises an exception if the directory is not empty.</p>
             </div>
           
 
@@ -1795,9 +2174,73 @@ dir_s_rmdir(VALUE obj, VALUE dir)
       <h2 class="sectiontitle">Instance Public methods</h2>
       
         <div class="method">
+          <h3 class="title method-title" id="method-i-chdir">
+            
+              <b>chdir &rarr; 0<br />chdir { ... } &rarr; object
+</b>
+            
+            <a href="../classes/Dir.html#method-i-chdir" name="method-i-chdir" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Changes the current working directory to <code>self</code>:</p>
+
+<pre><code>Dir.pwd # =&gt; &quot;/&quot;
+dir = Dir.new(&#39;example&#39;)
+dir.chdir
+Dir.pwd # =&gt; &quot;/example&quot;
+</code></pre>
+
+<p>With a block, temporarily changes the working directory:</p>
+<ul><li>
+<p>Calls the block.</p>
+</li><li>
+<p>Changes to the given directory.</p>
+</li><li>
+<p>Executes the block (yields no args).</p>
+</li><li>
+<p>Restores the previous working directory.</p>
+</li><li>
+<p>Returns the block’s return value.</p>
+</li></ul>
+
+<p>Uses <a href="Dir.html#method-c-fchdir"><code>Dir.fchdir</code></a> if available, and <a href="Dir.html#method-c-chdir"><code>Dir.chdir</code></a> if not, see those methods for caveats.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-chdir_source')" id="l_method-i-chdir_source">show</a>
+                
+              </p>
+              <div id="method-i-chdir_source" class="dyn-source">
+                <pre>static VALUE
+dir_chdir(VALUE dir)
+{
+#if defined(HAVE_FCHDIR) &amp;&amp; defined(HAVE_DIRFD) &amp;&amp; HAVE_FCHDIR &amp;&amp; HAVE_DIRFD
+    return dir_s_fchdir(rb_cDir, dir_fileno(dir));
+#else
+    return chdir_path(dir_get(dir)-&gt;path, false);
+#endif
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-children">
             
-              <b>dir.children  &rarr; array
+              <b>children &rarr; array
 </b>
             
             <a href="../classes/Dir.html#method-i-children" name="method-i-children" class="permalink">Link</a>
@@ -1805,10 +2248,10 @@ dir_s_rmdir(VALUE obj, VALUE dir)
 
           
             <div class="description">
-              <p>Returns an array containing all of the filenames except for “.” and “..” in this directory.</p>
+              <p>Returns an array of the entry names in <code>self</code> except for <code>&#39;.&#39;</code> and <code>&#39;..&#39;</code>:</p>
 
-<pre><code>d = Dir.new(&quot;testdir&quot;)
-d.children   #=&gt; [&quot;config.h&quot;, &quot;main.rb&quot;]
+<pre><code>dir = Dir.new(&#39;/example&#39;)
+dir.children # =&gt; [&quot;config.h&quot;, &quot;lib&quot;, &quot;main.rb&quot;]
 </code></pre>
             </div>
           
@@ -1842,7 +2285,7 @@ dir_collect_children(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-i-close">
             
-              <b>dir.close &rarr; nil
+              <b>close &rarr; nil
 </b>
             
             <a href="../classes/Dir.html#method-i-close" name="method-i-close" class="permalink">Link</a>
@@ -1850,10 +2293,13 @@ dir_collect_children(VALUE dir)
 
           
             <div class="description">
-              <p>Closes the directory stream. Calling this method on closed <a href="Dir.html"><code>Dir</code></a> object is ignored since Ruby 2.3.</p>
+              <p>Closes the stream in <code>self</code>, if it is open, and returns <code>nil</code>; ignored if <code>self</code> is already closed:</p>
 
-<pre><code>d = Dir.new(&quot;testdir&quot;)
-d.close   #=&gt; nil
+<pre><code>dir = Dir.new(&#39;example&#39;)
+dir.read     # =&gt; &quot;.&quot;
+dir.close     # =&gt; nil
+dir.close     # =&gt; nil
+dir.read # Raises IOError.
 </code></pre>
             </div>
           
@@ -1892,7 +2338,7 @@ dir_close(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-i-each">
             
-              <b>dir.each { |filename| block }  &rarr; dir<br />dir.each                       &rarr; an_enumerator
+              <b>each {|entry_name| ... } &rarr; self
 </b>
             
             <a href="../classes/Dir.html#method-i-each" name="method-i-each" class="permalink">Link</a>
@@ -1900,21 +2346,21 @@ dir_close(VALUE dir)
 
           
             <div class="description">
-              <p>Calls the block once for each entry in this directory, passing the filename of each entry as a parameter to the block.</p>
+              <p>Calls the block with each entry name in <code>self</code>:</p>
 
-<p>If no block is given, an enumerator is returned instead.</p>
-
-<pre><code>d = Dir.new(&quot;testdir&quot;)
-d.each  {|x| puts &quot;Got #{x}&quot; }
+<pre><code>Dir.new(&#39;example&#39;).each {|entry_name| p entry_name }
 </code></pre>
 
-<p><em>produces:</em></p>
+<p>Output:</p>
 
-<pre><code>Got .
-Got ..
-Got config.h
-Got main.rb
+<pre><code>&quot;.&quot;
+&quot;..&quot;
+&quot;config.h&quot;
+&quot;lib&quot;
+&quot;main.rb&quot;
 </code></pre>
+
+<p>With no block given, returns an <a href="Enumerator.html"><code>Enumerator</code></a>.</p>
             </div>
           
 
@@ -1946,7 +2392,7 @@ dir_each(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-i-each_child">
             
-              <b>dir.each_child {| filename | block }  &rarr; dir<br />dir.each_child                        &rarr; an_enumerator
+              <b>each_child {|entry_name| ... } &rarr; self
 </b>
             
             <a href="../classes/Dir.html#method-i-each_child" name="method-i-each_child" class="permalink">Link</a>
@@ -1954,19 +2400,20 @@ dir_each(VALUE dir)
 
           
             <div class="description">
-              <p>Calls the block once for each entry except for “.” and “..” in this directory, passing the filename of each entry as a parameter to the block.</p>
+              <p>Calls the block with each entry name in <code>self</code> except <code>&#39;.&#39;</code> and <code>&#39;..&#39;</code>:</p>
 
-<p>If no block is given, an enumerator is returned instead.</p>
-
-<pre><code>d = Dir.new(&quot;testdir&quot;)
-d.each_child  {|x| puts &quot;Got #{x}&quot; }
+<pre><code>dir = Dir.new(&#39;/example&#39;)
+dir.each_child {|entry_name| p entry_name }
 </code></pre>
 
-<p><em>produces:</em></p>
+<p>Output:</p>
 
-<pre><code>Got config.h
-Got main.rb
+<pre><code>&quot;config.h&quot;
+&quot;lib&quot;
+&quot;main.rb&quot;
 </code></pre>
+
+<p>If no block is given, returns an enumerator.</p>
             </div>
           
 
@@ -1998,7 +2445,7 @@ dir_each_child_m(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-i-fileno">
             
-              <b>dir.fileno &rarr; integer
+              <b>fileno &rarr; integer
 </b>
             
             <a href="../classes/Dir.html#method-i-fileno" name="method-i-fileno" class="permalink">Link</a>
@@ -2008,11 +2455,11 @@ dir_each_child_m(VALUE dir)
             <div class="description">
               <p>Returns the file descriptor used in <em>dir</em>.</p>
 
-<pre><code>d = Dir.new(&quot;..&quot;)
-d.fileno   #=&gt; 8
+<pre><code>d = Dir.new(&#39;..&#39;)
+d.fileno # =&gt; 8
 </code></pre>
 
-<p>This method uses dirfd() function defined by POSIX 2008. <a href="NotImplementedError.html"><code>NotImplementedError</code></a> is raised on other platforms, such as Windows, which doesn’t provide the function.</p>
+<p>This method uses the <a href="https://www.man7.org/linux/man-pages/man3/dirfd.3.html">dirfd()</a> function defined by POSIX 2008; the method is not implemented on non-POSIX platforms (raises <a href="NotImplementedError.html"><code>NotImplementedError</code></a>).</p>
             </div>
           
 
@@ -2050,7 +2497,7 @@ dir_fileno(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-i-inspect">
             
-              <b>dir.inspect &rarr; string
+              <b>inspect &rarr; string
 </b>
             
             <a href="../classes/Dir.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
@@ -2058,7 +2505,10 @@ dir_fileno(VALUE dir)
 
           
             <div class="description">
-              <p>Return a string describing this <a href="Dir.html"><code>Dir</code></a> object.</p>
+              <p>Returns a string description of <code>self</code>:</p>
+
+<pre><code>Dir.new(&#39;example&#39;).inspect # =&gt; &quot;#&lt;Dir:example&gt;&quot;
+</code></pre>
             </div>
           
 
@@ -2100,17 +2550,16 @@ dir_inspect(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-i-path">
             
-              <b>dir.path &rarr; string or nil</b>
+              <b>path &rarr; string or nil</b>
             
             <a href="../classes/Dir.html#method-i-path" name="method-i-path" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns the path parameter passed to <em>dir</em>’s constructor.</p>
+              <p>Returns the <code>dirpath</code> string that was used to create <code>self</code> (or <code>nil</code> if created by method <a href="Dir.html#method-c-for_fd"><code>Dir.for_fd</code></a>):</p>
 
-<pre><code>d = Dir.new(&quot;..&quot;)
-d.path   #=&gt; &quot;..&quot;
+<pre><code>Dir.new(&#39;example&#39;).path # =&gt; &quot;example&quot;
 </code></pre>
             </div>
           
@@ -2150,19 +2599,19 @@ dir_path(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-i-pos">
             
-              <b>dir.pos &rarr; integer</b>
+              <b>pos</b>()
             
             <a href="../classes/Dir.html#method-i-pos" name="method-i-pos" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns the current position in <em>dir</em>. See also <a href="Dir.html#method-i-seek"><code>Dir#seek</code></a>.</p>
+              <p>Returns the current position of <code>self</code>; see <a href="Dir.html#class-Dir-label-Dir+As+Stream-Like">Dir As Stream-Like</a>:</p>
 
-<pre><code>d = Dir.new(&quot;testdir&quot;)
-d.tell   #=&gt; 0
-d.read   #=&gt; &quot;.&quot;
-d.tell   #=&gt; 12
+<pre><code>dir = Dir.new(&#39;example&#39;)
+dir.tell  # =&gt; 0
+dir.read  # =&gt; &quot;.&quot;
+dir.tell  # =&gt; 1
 </code></pre>
             </div>
           
@@ -2181,7 +2630,7 @@ d.tell   #=&gt; 12
         <div class="method">
           <h3 class="title method-title" id="method-i-pos-3D">
             
-              <b>dir.pos = integer  &rarr; integer
+              <b>pos = position &rarr; integer
 </b>
             
             <a href="../classes/Dir.html#method-i-pos-3D" name="method-i-pos-3D" class="permalink">Link</a>
@@ -2189,14 +2638,18 @@ d.tell   #=&gt; 12
 
           
             <div class="description">
-              <p>Synonym for <a href="Dir.html#method-i-seek"><code>Dir#seek</code></a>, but returns the position parameter.</p>
+              <p>Sets the position in <code>self</code> and returns <code>position</code>. The value of <code>position</code> should have been returned from an earlier call to <a href="Dir.html#method-i-tell"><code>tell</code></a>; if not, the return values from subsequent calls to <a href="Dir.html#method-i-read"><code>read</code></a> are unspecified.</p>
 
-<pre><code>d = Dir.new(&quot;testdir&quot;)   #=&gt; #&lt;Dir:0x401b3c40&gt;
-d.read                   #=&gt; &quot;.&quot;
-i = d.pos                #=&gt; 12
-d.read                   #=&gt; &quot;..&quot;
-d.pos = i                #=&gt; 12
-d.read                   #=&gt; &quot;..&quot;
+<p>See <a href="Dir.html#class-Dir-label-Dir+As+Stream-Like">Dir As Stream-Like</a>.</p>
+
+<p>Examples:</p>
+
+<pre><code>dir = Dir.new(&#39;example&#39;)
+dir.pos      # =&gt; 0
+dir.pos = 3  # =&gt; 3
+dir.pos      # =&gt; 3
+dir.pos = 30 # =&gt; 30
+dir.pos      # =&gt; 5
 </code></pre>
             </div>
           
@@ -2229,7 +2682,7 @@ dir_set_pos(VALUE dir, VALUE pos)
         <div class="method">
           <h3 class="title method-title" id="method-i-read">
             
-              <b>dir.read &rarr; string or nil
+              <b>read &rarr; string or nil
 </b>
             
             <a href="../classes/Dir.html#method-i-read" name="method-i-read" class="permalink">Link</a>
@@ -2237,12 +2690,12 @@ dir_set_pos(VALUE dir, VALUE pos)
 
           
             <div class="description">
-              <p>Reads the next entry from <em>dir</em> and returns it as a string. Returns <code>nil</code> at the end of the stream.</p>
+              <p>Reads and returns the next entry name from <code>self</code>; returns <code>nil</code> if at end-of-stream; see <a href="Dir.html#class-Dir-label-Dir+As+Stream-Like">Dir As Stream-Like</a>:</p>
 
-<pre><code>d = Dir.new(&quot;testdir&quot;)
-d.read   #=&gt; &quot;.&quot;
-d.read   #=&gt; &quot;..&quot;
-d.read   #=&gt; &quot;config.h&quot;
+<pre><code>dir = Dir.new(&#39;example&#39;)
+dir.read # =&gt; &quot;.&quot;
+dir.read # =&gt; &quot;..&quot;
+dir.read # =&gt; &quot;config.h&quot;
 </code></pre>
             </div>
           
@@ -2268,14 +2721,14 @@ dir_read(VALUE dir)
     struct dirent *dp;
 
     GetDIR(dir, dirp);
-    errno = 0;
+    rb_errno_set(0);
     if ((dp = READDIR(dirp-&gt;dir, dirp-&gt;enc)) != NULL) {
         return rb_external_str_new_with_enc(dp-&gt;d_name, NAMLEN(dp), dirp-&gt;enc);
     }
     else {
         int e = errno;
         if (e != 0) rb_syserr_fail(e, 0);
-        return Qnil;           /* end of stream */
+        return Qnil;            /* end of stream */
     }
 }</pre>
               </div>
@@ -2286,7 +2739,7 @@ dir_read(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-i-rewind">
             
-              <b>dir.rewind &rarr; dir
+              <b>rewind &rarr; self
 </b>
             
             <a href="../classes/Dir.html#method-i-rewind" name="method-i-rewind" class="permalink">Link</a>
@@ -2294,12 +2747,14 @@ dir_read(VALUE dir)
 
           
             <div class="description">
-              <p>Repositions <em>dir</em> to the first entry.</p>
+              <p>Sets the position in <code>self</code> to zero; see <a href="Dir.html#class-Dir-label-Dir+As+Stream-Like">Dir As Stream-Like</a>:</p>
 
-<pre><code>d = Dir.new(&quot;testdir&quot;)
-d.read     #=&gt; &quot;.&quot;
-d.rewind   #=&gt; #&lt;Dir:0x401b3fb0&gt;
-d.read     #=&gt; &quot;.&quot;
+<pre><code>dir = Dir.new(&#39;example&#39;)
+dir.read    # =&gt; &quot;.&quot;
+dir.read    # =&gt; &quot;..&quot;
+dir.pos     # =&gt; 2
+dir.rewind  # =&gt; #&lt;Dir:example&gt;
+dir.pos     # =&gt; 0
 </code></pre>
             </div>
           
@@ -2335,7 +2790,7 @@ dir_rewind(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-i-seek">
             
-              <b>dir.seek( integer ) &rarr; dir
+              <b>seek(position) &rarr; self
 </b>
             
             <a href="../classes/Dir.html#method-i-seek" name="method-i-seek" class="permalink">Link</a>
@@ -2343,14 +2798,18 @@ dir_rewind(VALUE dir)
 
           
             <div class="description">
-              <p>Seeks to a particular location in <em>dir</em>. <em>integer</em> must be a value returned by <a href="Dir.html#method-i-tell"><code>Dir#tell</code></a>.</p>
+              <p>Sets the position in <code>self</code> and returns <code>self</code>. The value of <code>position</code> should have been returned from an earlier call to <a href="Dir.html#method-i-tell"><code>tell</code></a>; if not, the return values from subsequent calls to <a href="Dir.html#method-i-read"><code>read</code></a> are unspecified.</p>
 
-<pre><code>d = Dir.new(&quot;testdir&quot;)   #=&gt; #&lt;Dir:0x401b3c40&gt;
-d.read                   #=&gt; &quot;.&quot;
-i = d.tell               #=&gt; 12
-d.read                   #=&gt; &quot;..&quot;
-d.seek(i)                #=&gt; #&lt;Dir:0x401b3c40&gt;
-d.read                   #=&gt; &quot;..&quot;
+<p>See <a href="Dir.html#class-Dir-label-Dir+As+Stream-Like">Dir As Stream-Like</a>.</p>
+
+<p>Examples:</p>
+
+<pre><code>dir = Dir.new(&#39;example&#39;)
+dir.pos      # =&gt; 0
+dir.seek(3)  # =&gt; #&lt;Dir:example&gt;
+dir.pos      # =&gt; 3
+dir.seek(30) # =&gt; #&lt;Dir:example&gt;
+dir.pos      # =&gt; 5
 </code></pre>
             </div>
           
@@ -2387,19 +2846,19 @@ dir_seek(VALUE dir, VALUE pos)
         <div class="method">
           <h3 class="title method-title" id="method-i-tell">
             
-              <b>dir.tell &rarr; integer</b>
+              <b>tell &rarr; integer</b>
             
             <a href="../classes/Dir.html#method-i-tell" name="method-i-tell" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns the current position in <em>dir</em>. See also <a href="Dir.html#method-i-seek"><code>Dir#seek</code></a>.</p>
+              <p>Returns the current position of <code>self</code>; see <a href="Dir.html#class-Dir-label-Dir+As+Stream-Like">Dir As Stream-Like</a>:</p>
 
-<pre><code>d = Dir.new(&quot;testdir&quot;)
-d.tell   #=&gt; 0
-d.read   #=&gt; &quot;.&quot;
-d.tell   #=&gt; 12
+<pre><code>dir = Dir.new(&#39;example&#39;)
+dir.tell  # =&gt; 0
+dir.read  # =&gt; &quot;.&quot;
+dir.tell  # =&gt; 1
 </code></pre>
             </div>
           
@@ -2440,17 +2899,16 @@ dir_tell(VALUE dir)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_path">
             
-              <b>dir.to_path &rarr; string or nil</b>
+              <b>to_path</b>()
             
             <a href="../classes/Dir.html#method-i-to_path" name="method-i-to_path" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns the path parameter passed to <em>dir</em>’s constructor.</p>
+              <p>Returns the <code>dirpath</code> string that was used to create <code>self</code> (or <code>nil</code> if created by method <a href="Dir.html#method-c-for_fd"><code>Dir.for_fd</code></a>):</p>
 
-<pre><code>d = Dir.new(&quot;..&quot;)
-d.path   #=&gt; &quot;..&quot;
+<pre><code>Dir.new(&#39;example&#39;).path # =&gt; &quot;example&quot;
 </code></pre>
             </div>
           

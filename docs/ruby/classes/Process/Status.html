@@ -26,8 +26,8 @@
 
   
     
-    <meta name="description" content="Process::Status encapsulates the information on the status of a running or terminated system process. The built-in variable $? is either nil or a Process::Status object.">
-    <meta property="og:description" content="Process::Status encapsulates the information on the status of a running or terminated system process. The built-in variable $? is either nil or a Process::Status object.">
+    <meta name="description" content="A Process::Status contains information about a system process.  Thread-local variable $? is initially nil.">
+    <meta property="og:description" content="A Process::Status contains information about a system process.  Thread-local variable $? is initially nil.">
   
 
     <meta name="keywords" content="Process::Status class, wait, ==, &, >>, to_i, to_s, inspect, pid, stopped?, stopsig, signaled?, termsig, exited?, exitstatus, success?, coredump?">
@@ -81,19 +81,18 @@
   
     <div class="description">
       
-<p><a href="Status.html"><code>Process::Status</code></a> encapsulates the information on the status of a running or terminated system process. The built-in variable <code>$?</code> is either <code>nil</code> or a <a href="Status.html"><code>Process::Status</code></a> object.</p>
+<p>A <a href="Status.html"><code>Process::Status</code></a> contains information about a system process.</p>
 
-<pre><code>fork { exit 99 }   #=&gt; 26557
-Process.wait       #=&gt; 26557
-$?.class           #=&gt; Process::Status
-$?.to_i            #=&gt; 25344
-$? &gt;&gt; 8            #=&gt; 99
-$?.stopped?        #=&gt; false
-$?.exited?         #=&gt; true
-$?.exitstatus      #=&gt; 99
+<p>Thread-local variable <code>$?</code> is initially <code>nil</code>. Some methods assign to it a <a href="Status.html"><code>Process::Status</code></a> object that represents a system process (either running or terminated):</p>
+
+<pre><code>`ruby -e &quot;exit 99&quot;`
+stat = $?       # =&gt; #&lt;Process::Status: pid 1262862 exit 99&gt;
+stat.class      # =&gt; Process::Status
+stat.to_i       # =&gt; 25344
+stat.stopped?   # =&gt; false
+stat.exited?    # =&gt; true
+stat.exitstatus # =&gt; 99
 </code></pre>
-
-<p>Posix systems record information on processes using a 16-bit integer.  The lower bits record the process status (stopped, exited, signaled) and the upper bits possibly contain additional information (for example the program’s return code in the case of exited processes). Pre Ruby 1.8, these bits were exposed directly to the Ruby program. Ruby now encapsulates these in a <a href="Status.html"><code>Process::Status</code></a> object. To maximize compatibility, however, these objects retain a bit-oriented interface. In the descriptions that follow, when we talk about the integer value of <em>stat</em>, we’re referring to this 16 bit value.</p>
 
     </div>
   
@@ -276,7 +275,7 @@ $?.exitstatus      #=&gt; 99
         <div class="method">
           <h3 class="title method-title" id="method-c-wait">
             
-              <b>Process::Status.wait(pid=-1, flags=0)      &rarr; Process::Status
+              <b>Process::Status.wait(pid = -1, flags = 0) &rarr; Process::Status
 </b>
             
             <a href="../../classes/Process/Status.html#method-c-wait" name="method-c-wait" class="permalink">Link</a>
@@ -284,40 +283,24 @@ $?.exitstatus      #=&gt; 99
 
           
             <div class="description">
-              <p>Waits for a child process to exit and returns a <a href="Status.html"><code>Process::Status</code></a> object containing information on that process. Which child it waits on depends on the value of <em>pid</em>:</p>
-<dl class="rdoc-list note-list"><dt>&gt; 0
-<dd>
-<p>Waits for the child whose process ID equals <em>pid</em>.</p>
-</dd><dt>0
-<dd>
-<p>Waits for any child whose process group ID equals that of the calling process.</p>
-</dd><dt>-1
-<dd>
-<p>Waits for any child process (the default if no <em>pid</em> is given).</p>
-</dd><dt>&lt; -1
-<dd>
-<p>Waits for any child whose process group ID equals the absolute value of <em>pid</em>.</p>
-</dd></dl>
+              <p>Like <a href="../Process.html#method-c-wait"><code>Process.wait</code></a>, but returns a <a href="Status.html"><code>Process::Status</code></a> object (instead of an integer pid or nil); see <a href="../Process.html#method-c-wait"><code>Process.wait</code></a> for the values of <code>pid</code> and <code>flags</code>.</p>
 
-<p>The <em>flags</em> argument may be a logical or of the flag values Process::WNOHANG (do not block if no child available) or Process::WUNTRACED (return stopped children that haven’t been reported). Not all flags are available on all platforms, but a flag value of zero will work on all platforms.</p>
+<p>If there are child processes, waits for a child process to exit and returns a <a href="Status.html"><code>Process::Status</code></a> object containing information on that process; sets thread-local variable <code>$?</code>:</p>
 
-<p>Returns <code>nil</code> if there are no child processes. Not available on all platforms.</p>
-
-<p>May invoke the scheduler hook <em>process_wait</em>.</p>
-
-<pre><code>fork { exit 99 }                              #=&gt; 27429
-Process::Status.wait                          #=&gt; pid 27429 exit 99
-$?                                            #=&gt; nil
-
-pid = fork { sleep 3 }                        #=&gt; 27440
-Time.now                                      #=&gt; 2008-03-08 19:56:16 +0900
-Process::Status.wait(pid, Process::WNOHANG)   #=&gt; nil
-Time.now                                      #=&gt; 2008-03-08 19:56:16 +0900
-Process::Status.wait(pid, 0)                  #=&gt; pid 27440 exit 99
-Time.now                                      #=&gt; 2008-03-08 19:56:19 +0900
+<pre><code>Process.spawn(&#39;cat /nop&#39;) # =&gt; 1155880
+Process::Status.wait      # =&gt; #&lt;Process::Status: pid 1155880 exit 1&gt;
+$?                        # =&gt; #&lt;Process::Status: pid 1155508 exit 1&gt;
 </code></pre>
 
-<p>This is an EXPERIMENTAL FEATURE.</p>
+<p>If there is no child process, returns an “empty” <a href="Status.html"><code>Process::Status</code></a> object that does not represent an actual process; does not set thread-local variable <code>$?</code>:</p>
+
+<pre><code>Process::Status.wait # =&gt; #&lt;Process::Status: pid -1 exit 0&gt;
+$?                   # =&gt; #&lt;Process::Status: pid 1155508 exit 1&gt; # Unchanged.
+</code></pre>
+
+<p>May invoke the scheduler hook <a href="../Fiber/Scheduler.html#method-i-process_wait"><code>Fiber::Scheduler#process_wait</code></a>.</p>
+
+<p>Not available on all platforms.</p>
             </div>
           
 
@@ -335,7 +318,7 @@ Time.now                                      #=&gt; 2008-03-08 19:56:19 +0900
                 
               </p>
               <div id="method-c-wait_source" class="dyn-source">
-                <pre>VALUE
+                <pre>static VALUE
 rb_process_status_waitv(int argc, VALUE *argv, VALUE _)
 {
     rb_check_arity(argc, 0, 2);
@@ -365,7 +348,7 @@ rb_process_status_waitv(int argc, VALUE *argv, VALUE _)
         <div class="method">
           <h3 class="title method-title" id="method-i-26">
             
-              <b>stat & num   &rarr; integer
+              <b>stat & mask &rarr; integer
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-26" name="method-i-26" class="permalink">Link</a>
@@ -373,13 +356,17 @@ rb_process_status_waitv(int argc, VALUE *argv, VALUE _)
 
           
             <div class="description">
-              <p>Logical AND of the bits in <em>stat</em> with <em>num</em>.</p>
+              <p>This method is deprecated as <a href="Status.html#method-i-to_i"><code>to_i</code></a> value is system-specific; use predicate methods like <a href="Status.html#method-i-exited-3F"><code>exited?</code></a> or <a href="Status.html#method-i-stopped-3F"><code>stopped?</code></a>, or getters like <a href="Status.html#method-i-exitstatus"><code>exitstatus</code></a> or <a href="Status.html#method-i-stopsig"><code>stopsig</code></a>.</p>
 
-<pre><code>fork { exit 0x37 }
-Process.wait
-sprintf(&#39;%04x&#39;, $?.to_i)       #=&gt; &quot;3700&quot;
-sprintf(&#39;%04x&#39;, $? &amp; 0x1e00)   #=&gt; &quot;1600&quot;
+<p>Returns the logical AND of the value of <a href="Status.html#method-i-to_i"><code>to_i</code></a> with <code>mask</code>:</p>
+
+<pre><code>`cat /nop`
+stat = $?                 # =&gt; #&lt;Process::Status: pid 1155508 exit 1&gt;
+sprintf(&#39;%x&#39;, stat.to_i)  # =&gt; &quot;100&quot;
+stat &amp; 0x00               # =&gt; 0
 </code></pre>
+
+<p><a href="../ArgumentError.html"><code>ArgumentError</code></a> is raised if <code>mask</code> is negative.</p>
             </div>
           
 
@@ -400,7 +387,34 @@ sprintf(&#39;%04x&#39;, $? &amp; 0x1e00)   #=&gt; &quot;1600&quot;
                 <pre>static VALUE
 pst_bitand(VALUE st1, VALUE st2)
 {
-    int status = PST2INT(st1) &amp; NUM2INT(st2);
+    int status = PST2INT(st1);
+    int mask = NUM2INT(st2);
+
+    if (mask &lt; 0) {
+        rb_raise(rb_eArgError, &quot;negative mask value: %d&quot;, mask);
+    }
+#define WARN_SUGGEST(suggest) \
+    rb_warn_deprecated_to_remove_at(3.4, &quot;Process::Status#&amp;&quot;, suggest)
+
+    switch (mask) {
+      case 0x80:
+        WARN_SUGGEST(&quot;Process::Status#coredump?&quot;);
+        break;
+      case 0x7f:
+        WARN_SUGGEST(&quot;Process::Status#signaled? or Process::Status#termsig&quot;);
+        break;
+      case 0xff:
+        WARN_SUGGEST(&quot;Process::Status#exited?, Process::Status#stopped? or Process::Status#coredump?&quot;);
+        break;
+      case 0xff00:
+        WARN_SUGGEST(&quot;Process::Status#exitstatus or Process::Status#stopsig&quot;);
+        break;
+      default:
+        WARN_SUGGEST(&quot;other Process::Status predicates&quot;);
+        break;
+    }
+#undef WARN_SUGGEST
+    status &amp;= mask;
 
     return INT2NUM(status);
 }</pre>
@@ -412,7 +426,7 @@ pst_bitand(VALUE st1, VALUE st2)
         <div class="method">
           <h3 class="title method-title" id="method-i-3D-3D">
             
-              <b>stat == other   &rarr; true or false
+              <b>stat == other &rarr; true or false
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-3D-3D" name="method-i-3D-3D" class="permalink">Link</a>
@@ -420,7 +434,13 @@ pst_bitand(VALUE st1, VALUE st2)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if the integer value of <em>stat</em> equals <em>other</em>.</p>
+              <p>Returns whether the value of <a href="Status.html#method-i-to_i"><code>to_i</code></a> == <code>other</code>:</p>
+
+<pre><code>`cat /nop`
+stat = $?                # =&gt; #&lt;Process::Status: pid 1170366 exit 1&gt;
+sprintf(&#39;%x&#39;, stat.to_i) # =&gt; &quot;100&quot;
+stat == 0x100            # =&gt; true
+</code></pre>
             </div>
           
 
@@ -452,7 +472,7 @@ pst_equal(VALUE st1, VALUE st2)
         <div class="method">
           <h3 class="title method-title" id="method-i-3E-3E">
             
-              <b>stat >> num   &rarr; integer
+              <b>stat >> places &rarr; integer
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-3E-3E" name="method-i-3E-3E" class="permalink">Link</a>
@@ -460,13 +480,18 @@ pst_equal(VALUE st1, VALUE st2)
 
           
             <div class="description">
-              <p>Shift the bits in <em>stat</em> right <em>num</em> places.</p>
+              <p>This method is deprecated as <a href="Status.html#method-i-to_i"><code>to_i</code></a> value is system-specific; use predicate methods like <a href="Status.html#method-i-exited-3F"><code>exited?</code></a> or <a href="Status.html#method-i-stopped-3F"><code>stopped?</code></a>, or getters like <a href="Status.html#method-i-exitstatus"><code>exitstatus</code></a> or <a href="Status.html#method-i-stopsig"><code>stopsig</code></a>.</p>
 
-<pre><code>fork { exit 99 }   #=&gt; 26563
-Process.wait       #=&gt; 26563
-$?.to_i            #=&gt; 25344
-$? &gt;&gt; 8            #=&gt; 99
+<p>Returns the value of <a href="Status.html#method-i-to_i"><code>to_i</code></a>, shifted <code>places</code> to the right:</p>
+
+<pre><code>`cat /nop`
+stat = $?                 # =&gt; #&lt;Process::Status: pid 1155508 exit 1&gt;
+stat.to_i                 # =&gt; 256
+stat &gt;&gt; 1                 # =&gt; 128
+stat &gt;&gt; 2                 # =&gt; 64
 </code></pre>
+
+<p><a href="../ArgumentError.html"><code>ArgumentError</code></a> is raised if <code>places</code> is negative.</p>
             </div>
           
 
@@ -487,7 +512,28 @@ $? &gt;&gt; 8            #=&gt; 99
                 <pre>static VALUE
 pst_rshift(VALUE st1, VALUE st2)
 {
-    int status = PST2INT(st1) &gt;&gt; NUM2INT(st2);
+    int status = PST2INT(st1);
+    int places = NUM2INT(st2);
+
+    if (places &lt; 0) {
+        rb_raise(rb_eArgError, &quot;negative shift value: %d&quot;, places);
+    }
+#define WARN_SUGGEST(suggest) \
+    rb_warn_deprecated_to_remove_at(3.4, &quot;Process::Status#&gt;&gt;&quot;, suggest)
+
+    switch (places) {
+      case 7:
+        WARN_SUGGEST(&quot;Process::Status#coredump?&quot;);
+        break;
+      case 8:
+        WARN_SUGGEST(&quot;Process::Status#exitstatus or Process::Status#stopsig&quot;);
+        break;
+      default:
+        WARN_SUGGEST(&quot;other Process::Status attributes&quot;);
+        break;
+    }
+#undef WARN_SUGGEST
+    status &gt;&gt;= places;
 
     return INT2NUM(status);
 }</pre>
@@ -499,7 +545,7 @@ pst_rshift(VALUE st1, VALUE st2)
         <div class="method">
           <h3 class="title method-title" id="method-i-coredump-3F">
             
-              <b>stat.coredump?   &rarr; true or false
+              <b>coredump? &rarr; true or false
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-coredump-3F" name="method-i-coredump-3F" class="permalink">Link</a>
@@ -507,7 +553,9 @@ pst_rshift(VALUE st1, VALUE st2)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>stat</em> generated a coredump when it terminated. Not available on all platforms.</p>
+              <p>Returns <code>true</code> if the process generated a coredump when it terminated, <code>false</code> if not.</p>
+
+<p>Not available on all platforms.</p>
             </div>
           
 
@@ -544,7 +592,7 @@ pst_wcoredump(VALUE st)
         <div class="method">
           <h3 class="title method-title" id="method-i-exited-3F">
             
-              <b>stat.exited?   &rarr; true or false
+              <b>exited? &rarr; true or false
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-exited-3F" name="method-i-exited-3F" class="permalink">Link</a>
@@ -552,7 +600,7 @@ pst_wcoredump(VALUE st)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>stat</em> exited normally (for example using an <code>exit()</code> call or finishing the program).</p>
+              <p>Returns <code>true</code> if the process exited normally (for example using an <code>exit()</code> call or finishing the program), <code>false</code> if not.</p>
             </div>
           
 
@@ -585,7 +633,7 @@ pst_wifexited(VALUE st)
         <div class="method">
           <h3 class="title method-title" id="method-i-exitstatus">
             
-              <b>stat.exitstatus   &rarr; integer or nil
+              <b>exitstatus &rarr; integer or nil
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-exitstatus" name="method-i-exitstatus" class="permalink">Link</a>
@@ -593,17 +641,10 @@ pst_wifexited(VALUE st)
 
           
             <div class="description">
-              <p>Returns the least significant eight bits of the return code of <em>stat</em>. Only available if <a href="Status.html#method-i-exited-3F"><code>exited?</code></a> is <code>true</code>.</p>
+              <p>Returns the least significant eight bits of the return code of the process if it has exited; <code>nil</code> otherwise:</p>
 
-<pre><code>fork { }           #=&gt; 26572
-Process.wait       #=&gt; 26572
-$?.exited?         #=&gt; true
-$?.exitstatus      #=&gt; 0
-
-fork { exit 99 }   #=&gt; 26573
-Process.wait       #=&gt; 26573
-$?.exited?         #=&gt; true
-$?.exitstatus      #=&gt; 99
+<pre><code>`exit 99`
+$?.exitstatus # =&gt; 99
 </code></pre>
             </div>
           
@@ -639,7 +680,7 @@ pst_wexitstatus(VALUE st)
         <div class="method">
           <h3 class="title method-title" id="method-i-inspect">
             
-              <b>stat.inspect   &rarr; string
+              <b>inspect &rarr; string
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-inspect" name="method-i-inspect" class="permalink">Link</a>
@@ -647,10 +688,10 @@ pst_wexitstatus(VALUE st)
 
           
             <div class="description">
-              <p>Override the inspection method.</p>
+              <p>Returns a string representation of <code>self</code>:</p>
 
 <pre><code>system(&quot;false&quot;)
-p $?.inspect #=&gt; &quot;#&lt;Process::Status: pid 12861 exit 1&gt;&quot;
+$?.inspect # =&gt; &quot;#&lt;Process::Status: pid 1303494 exit 1&gt;&quot;
 </code></pre>
             </div>
           
@@ -695,7 +736,7 @@ pst_inspect(VALUE st)
         <div class="method">
           <h3 class="title method-title" id="method-i-pid">
             
-              <b>stat.pid   &rarr; integer
+              <b>pid &rarr; integer
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-pid" name="method-i-pid" class="permalink">Link</a>
@@ -703,11 +744,10 @@ pst_inspect(VALUE st)
 
           
             <div class="description">
-              <p>Returns the process ID that this status object represents.</p>
+              <p>Returns the process ID of the process:</p>
 
-<pre><code>fork { exit }   #=&gt; 26569
-Process.wait    #=&gt; 26569
-$?.pid          #=&gt; 26569
+<pre><code>system(&quot;false&quot;)
+$?.pid # =&gt; 1247002
 </code></pre>
             </div>
           
@@ -740,7 +780,7 @@ pst_pid_m(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-signaled-3F">
             
-              <b>stat.signaled?   &rarr; true or false
+              <b>signaled? &rarr; true or false
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-signaled-3F" name="method-i-signaled-3F" class="permalink">Link</a>
@@ -748,7 +788,7 @@ pst_pid_m(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>stat</em> terminated because of an uncaught signal.</p>
+              <p>Returns <code>true</code> if the process terminated because of an uncaught signal, <code>false</code> otherwise.</p>
             </div>
           
 
@@ -781,7 +821,7 @@ pst_wifsignaled(VALUE st)
         <div class="method">
           <h3 class="title method-title" id="method-i-stopped-3F">
             
-              <b>stat.stopped?   &rarr; true or false
+              <b>stopped? &rarr; true or false
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-stopped-3F" name="method-i-stopped-3F" class="permalink">Link</a>
@@ -789,7 +829,7 @@ pst_wifsignaled(VALUE st)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if this process is stopped. This is only returned if the corresponding wait call had the Process::WUNTRACED flag set.</p>
+              <p>Returns <code>true</code> if this process is stopped, and if the corresponding wait call had the Process::WUNTRACED flag set, <code>false</code> otherwise.</p>
             </div>
           
 
@@ -822,7 +862,7 @@ pst_wifstopped(VALUE st)
         <div class="method">
           <h3 class="title method-title" id="method-i-stopsig">
             
-              <b>stat.stopsig   &rarr; integer or nil
+              <b>stopsig &rarr; integer or nil
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-stopsig" name="method-i-stopsig" class="permalink">Link</a>
@@ -830,7 +870,7 @@ pst_wifstopped(VALUE st)
 
           
             <div class="description">
-              <p>Returns the number of the signal that caused <em>stat</em> to stop (or <code>nil</code> if self is not stopped).</p>
+              <p>Returns the number of the signal that caused the process to stop, or <code>nil</code> if the process is not stopped.</p>
             </div>
           
 
@@ -865,7 +905,7 @@ pst_wstopsig(VALUE st)
         <div class="method">
           <h3 class="title method-title" id="method-i-success-3F">
             
-              <b>stat.success?   &rarr; true, false or nil
+              <b>success? &rarr; true, false, or nil
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-success-3F" name="method-i-success-3F" class="permalink">Link</a>
@@ -873,7 +913,14 @@ pst_wstopsig(VALUE st)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <em>stat</em> is successful, <code>false</code> if not. Returns <code>nil</code> if <a href="Status.html#method-i-exited-3F"><code>exited?</code></a> is not <code>true</code>.</p>
+              <p>Returns:</p>
+<ul><li>
+<p><code>true</code> if the process has completed successfully and exited.</p>
+</li><li>
+<p><code>false</code> if the process has completed unsuccessfully and exited.</p>
+</li><li>
+<p><code>nil</code> if the process has not exited.</p>
+</li></ul>
             </div>
           
 
@@ -908,7 +955,7 @@ pst_success_p(VALUE st)
         <div class="method">
           <h3 class="title method-title" id="method-i-termsig">
             
-              <b>stat.termsig   &rarr; integer or nil
+              <b>termsig &rarr; integer or nil
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-termsig" name="method-i-termsig" class="permalink">Link</a>
@@ -916,7 +963,7 @@ pst_success_p(VALUE st)
 
           
             <div class="description">
-              <p>Returns the number of the signal that caused <em>stat</em> to terminate (or <code>nil</code> if self was not terminated by an uncaught signal).</p>
+              <p>Returns the number of the signal that caused the process to terminate or <code>nil</code> if the process was not terminated by an uncaught signal.</p>
             </div>
           
 
@@ -951,7 +998,7 @@ pst_wtermsig(VALUE st)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_i">
             
-              <b>stat.to_i     &rarr; integer
+              <b>to_i     &rarr; integer
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-to_i" name="method-i-to_i" class="permalink">Link</a>
@@ -959,11 +1006,10 @@ pst_wtermsig(VALUE st)
 
           
             <div class="description">
-              <p>Returns the bits in <em>stat</em> as an <a href="../Integer.html"><code>Integer</code></a>. Poking around in these bits is platform dependent.</p>
+              <p>Returns the system-dependent integer status of <code>self</code>:</p>
 
-<pre><code>fork { exit 0xab }         #=&gt; 26566
-Process.wait               #=&gt; 26566
-sprintf(&#39;%04x&#39;, $?.to_i)   #=&gt; &quot;ab00&quot;
+<pre><code>`cat /nop`
+$?.to_i # =&gt; 256
 </code></pre>
             </div>
           
@@ -996,7 +1042,7 @@ pst_to_i(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-to_s">
             
-              <b>stat.to_s   &rarr; string
+              <b>to_s &rarr; string
 </b>
             
             <a href="../../classes/Process/Status.html#method-i-to_s" name="method-i-to_s" class="permalink">Link</a>
@@ -1004,10 +1050,10 @@ pst_to_i(VALUE self)
 
           
             <div class="description">
-              <p>Show pid and exit status as a string.</p>
+              <p>Returns a string representation of <code>self</code>:</p>
 
-<pre><code>system(&quot;false&quot;)
-p $?.to_s         #=&gt; &quot;pid 12766 exit 1&quot;
+<pre><code>`cat /nop`
+$?.to_s # =&gt; &quot;pid 1262141 exit 1&quot;
 </code></pre>
             </div>
           

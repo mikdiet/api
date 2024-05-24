@@ -30,7 +30,7 @@
     <meta property="og:description" content="Represents the schema of an SQL table in an abstract way. This class provides methods for manipulating the schema representation.">
   
 
-    <meta name="keywords" content="ActiveRecord::ConnectionAdapters::TableDefinition class, new, columns, [], column, remove_column, index, check_constraint, timestamps, references, belongs_to">
+    <meta name="keywords" content="ActiveRecord::ConnectionAdapters::TableDefinition class, new, columns, [], column, remove_column, index, foreign_key, check_constraint, timestamps, references, belongs_to">
 </head>
 
 <body>
@@ -85,7 +85,7 @@
 
 <p>Inside migration files, the <code>t</code> object in <a href="SchemaStatements.html#method-i-create_table">create_table</a> is actually of this type:</p>
 
-<pre><code>class SomeMigration &lt; ActiveRecord::Migration[6.0]
+<pre><code>class SomeMigration &lt; ActiveRecord::Migration[7.0]
   def up
     create_table :foo do |t|
       puts t.class  # =&gt; &quot;ActiveRecord::ConnectionAdapters::TableDefinition&quot;
@@ -158,6 +158,18 @@ end
               
               <li>
                 <a href="#method-i-columns">columns</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>F</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-foreign_key">foreign_key</a>
               </li>
             
           </ul>
@@ -357,11 +369,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L301" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L306" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 301</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 306</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(
   <span class="ruby-identifier">conn</span>,
   <span class="ruby-identifier">name</span>,
@@ -420,11 +432,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-5B-5D_source')" id="l_method-i-5B-5D_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L334" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L339" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-5B-5D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 334</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 339</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-ivar">@columns_hash</span>[<span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_s</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -484,13 +496,13 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-check_constraint_source')" id="l_method-i-check_constraint_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L445" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L443" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-check_constraint_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 445</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 443</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">check_constraint</span>(<span class="ruby-identifier">expression</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
-  <span class="ruby-identifier">check_constraints</span> <span class="ruby-operator">&lt;&lt;</span> [<span class="ruby-identifier">expression</span>, <span class="ruby-identifier">options</span>]
+  <span class="ruby-identifier">check_constraints</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">new_check_constraint_definition</span>(<span class="ruby-identifier">expression</span>, <span class="ruby-identifier">options</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -586,23 +598,16 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-column_source')" id="l_method-i-column_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L405" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L410" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-column_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 405</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 410</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">column</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">type</span>, <span class="ruby-value">index:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">name</span> = <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_s</span>
   <span class="ruby-identifier">type</span> = <span class="ruby-identifier">type</span>.<span class="ruby-identifier">to_sym</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">type</span>
 
-  <span class="ruby-keyword">if</span> <span class="ruby-ivar">@columns_hash</span>[<span class="ruby-identifier">name</span>]
-    <span class="ruby-keyword">if</span> <span class="ruby-ivar">@columns_hash</span>[<span class="ruby-identifier">name</span>].<span class="ruby-identifier">primary_key?</span>
-      <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;you can&#39;t redefine the primary key column &#39;#{name}&#39;. To define a custom primary key, pass { id: false } to create_table.&quot;</span>
-    <span class="ruby-keyword">else</span>
-      <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-node">&quot;you can&#39;t define an already defined column &#39;#{name}&#39;.&quot;</span>
-    <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">end</span>
-
+  <span class="ruby-identifier">raise_on_duplicate_column</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-ivar">@columns_hash</span>[<span class="ruby-identifier">name</span>] = <span class="ruby-identifier">new_column_definition</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">type</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">index</span>
@@ -643,12 +648,51 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-columns_source')" id="l_method-i-columns_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L331" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L336" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-columns_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 331</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 336</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">columns</span>; <span class="ruby-ivar">@columns_hash</span>.<span class="ruby-identifier">values</span>; <span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-foreign_key">
+            
+              <b>foreign_key</b>(to_table, **options)
+            
+            <a href="../../../classes/ActiveRecord/ConnectionAdapters/TableDefinition.html#method-i-foreign_key" name="method-i-foreign_key" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-foreign_key_source')" id="l_method-i-foreign_key_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L439" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-foreign_key_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 439</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">foreign_key</span>(<span class="ruby-identifier">to_table</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
+  <span class="ruby-identifier">foreign_keys</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">new_foreign_key_definition</span>(<span class="ruby-identifier">to_table</span>, <span class="ruby-identifier">options</span>)
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -683,11 +727,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-index_source')" id="l_method-i-index_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L437" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L435" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-index_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 437</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 435</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">index</span>(<span class="ruby-identifier">column_name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">indexes</span> <span class="ruby-operator">&lt;&lt;</span> [<span class="ruby-identifier">column_name</span>, <span class="ruby-identifier">options</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -733,11 +777,11 @@ t.belongs_to(:supplier, foreign_key: true, type: :integer)
                 Source:
                 <a href="javascript:toggleSource('method-i-references_source')" id="l_method-i-references_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L471" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L469" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-references_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 471</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 469</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">references</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">args</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">ref_name</span><span class="ruby-operator">|</span>
     <span class="ruby-constant">ReferenceDefinition</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">ref_name</span>, <span class="ruby-operator">**</span><span class="ruby-identifier">options</span>).<span class="ruby-identifier">add_to</span>(<span class="ruby-keyword">self</span>)
@@ -777,11 +821,11 @@ t.belongs_to(:supplier, foreign_key: true, type: :integer)
                 Source:
                 <a href="javascript:toggleSource('method-i-remove_column_source')" id="l_method-i-remove_column_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L429" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L427" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-remove_column_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 429</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 427</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">remove_column</span>(<span class="ruby-identifier">name</span>)
   <span class="ruby-ivar">@columns_hash</span>.<span class="ruby-identifier">delete</span> <span class="ruby-identifier">name</span>.<span class="ruby-identifier">to_s</span>
 <span class="ruby-keyword">end</span></pre>
@@ -819,11 +863,11 @@ t.belongs_to(:supplier, foreign_key: true, type: :integer)
                 Source:
                 <a href="javascript:toggleSource('method-i-timestamps_source')" id="l_method-i-timestamps_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L453" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb#L451" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-timestamps_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 453</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/schema_definitions.rb, line 451</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">timestamps</span>(<span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">options</span>[<span class="ruby-value">:null</span>] = <span class="ruby-keyword">false</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:null</span>].<span class="ruby-identifier">nil?</span>
 

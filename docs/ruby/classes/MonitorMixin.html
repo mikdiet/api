@@ -25,6 +25,10 @@
     <meta property="og:title" value="MonitorMixin">
 
   
+    
+    <meta name="description" content="In concurrent programming, a monitor is an object or module intended to be used safely by more than one thread.">
+    <meta property="og:description" content="In concurrent programming, a monitor is an object or module intended to be used safely by more than one thread.">
+  
 
     <meta name="keywords" content="MonitorMixin class, extend_object, mon_try_enter, try_mon_enter, mon_enter, mon_exit, mon_locked?, mon_owned?, mon_synchronize, synchronize, new_cond, new">
 </head>
@@ -68,6 +72,78 @@
 
     <main id="bodyContent">
         <div id="content">
+  
+    <div class="description">
+      
+<p>In concurrent programming, a monitor is an object or module intended to be used safely by more than one thread. The defining characteristic of a monitor is that its methods are executed with mutual exclusion. That is, at each point in time, at most one thread may be executing any of its methods. This mutual exclusion greatly simplifies reasoning about the implementation of monitors compared to reasoning about parallel code that updates a data structure.</p>
+
+<p>You can read more about the general principles on the Wikipedia page for <a href="https://en.wikipedia.org/wiki/Monitor_%28synchronization%29">Monitors</a>.</p>
+
+<h2 id="module-MonitorMixin-label-Examples">Examples</h2>
+
+<h3 id="module-MonitorMixin-label-Simple+object.extend">Simple object.extend</h3>
+
+<pre><code>require &#39;monitor.rb&#39;
+
+buf = []
+buf.extend(MonitorMixin)
+empty_cond = buf.new_cond
+
+# consumer
+Thread.start do
+  loop do
+    buf.synchronize do
+      empty_cond.wait_while { buf.empty? }
+      print buf.shift
+    end
+  end
+end
+
+# producer
+while line = ARGF.gets
+  buf.synchronize do
+    buf.push(line)
+    empty_cond.signal
+  end
+end
+</code></pre>
+
+<p>The consumer thread waits for the producer thread to push a line to buf while <code>buf.empty?</code>. The producer thread (main thread) reads a line from <a href="ARGF.html"><code>ARGF</code></a> and pushes it into buf then calls <code>empty_cond.signal</code> to notify the consumer thread of new data.</p>
+
+<h3 id="module-MonitorMixin-label-Simple+Class+include">Simple <a href="Class.html"><code>Class</code></a> include</h3>
+
+<pre><code>require &#39;monitor&#39;
+
+class SynchronizedArray &lt; Array
+
+  include MonitorMixin
+
+  def initialize(*args)
+    super(*args)
+  end
+
+  alias :old_shift :shift
+  alias :old_unshift :unshift
+
+  def shift(n=1)
+    self.synchronize do
+      self.old_shift(n)
+    end
+  end
+
+  def unshift(item)
+    self.synchronize do
+      self.old_unshift(item)
+    end
+  end
+
+  # other methods ...
+end
+</code></pre>
+
+<p><code>SynchronizedArray</code> implements an <a href="Array.html"><code>Array</code></a> with synchronized access to items. This <a href="Class.html"><code>Class</code></a> is implemented as subclass of <a href="Array.html"><code>Array</code></a> which includes the <a href="MonitorMixin.html"><code>MonitorMixin</code></a> module.</p>
+
+    </div>
   
 
 
@@ -236,11 +312,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-extend_object_source')" id="l_method-c-extend_object_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/monitor/lib/monitor.rb#L153" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/monitor/lib/monitor.rb#L152" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-extend_object_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 153</span>
+                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 152</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">extend_object</span>(<span class="ruby-identifier">obj</span>)
   <span class="ruby-keyword">super</span>(<span class="ruby-identifier">obj</span>)
   <span class="ruby-identifier">obj</span>.<span class="ruby-identifier">__send__</span>(<span class="ruby-value">:mon_initialize</span>)
@@ -276,11 +352,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/monitor/lib/monitor.rb#L223" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/monitor/lib/monitor.rb#L222" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 223</span>
+                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 222</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-operator">...</span>)
   <span class="ruby-keyword">super</span>
   <span class="ruby-identifier">mon_initialize</span>
@@ -320,11 +396,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-mon_enter_source')" id="l_method-i-mon_enter_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/monitor/lib/monitor.rb#L170" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/monitor/lib/monitor.rb#L169" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mon_enter_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 170</span>
+                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 169</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_enter</span>
   <span class="ruby-ivar">@mon_data</span>.<span class="ruby-identifier">enter</span>
 <span class="ruby-keyword">end</span></pre>
@@ -359,11 +435,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-mon_exit_source')" id="l_method-i-mon_exit_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/monitor/lib/monitor.rb#L177" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/monitor/lib/monitor.rb#L176" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mon_exit_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 177</span>
+                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 176</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_exit</span>
   <span class="ruby-identifier">mon_check_owner</span>
   <span class="ruby-ivar">@mon_data</span>.<span class="ruby-identifier">exit</span>
@@ -399,11 +475,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-mon_locked-3F_source')" id="l_method-i-mon_locked-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/monitor/lib/monitor.rb#L185" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/monitor/lib/monitor.rb#L184" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mon_locked-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 185</span>
+                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 184</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_locked?</span>
   <span class="ruby-ivar">@mon_data</span>.<span class="ruby-identifier">mon_locked?</span>
 <span class="ruby-keyword">end</span></pre>
@@ -438,11 +514,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-mon_owned-3F_source')" id="l_method-i-mon_owned-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/monitor/lib/monitor.rb#L192" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/monitor/lib/monitor.rb#L191" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mon_owned-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 192</span>
+                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 191</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_owned?</span>
   <span class="ruby-ivar">@mon_data</span>.<span class="ruby-identifier">mon_owned?</span>
 <span class="ruby-keyword">end</span></pre>
@@ -481,11 +557,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-mon_synchronize_source')" id="l_method-i-mon_synchronize_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/monitor/lib/monitor.rb#L201" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/monitor/lib/monitor.rb#L200" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mon_synchronize_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 201</span>
+                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 200</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_synchronize</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>)
   <span class="ruby-ivar">@mon_data</span>.<span class="ruby-identifier">synchronize</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">b</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -524,11 +600,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-mon_try_enter_source')" id="l_method-i-mon_try_enter_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/monitor/lib/monitor.rb#L161" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/monitor/lib/monitor.rb#L160" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-mon_try_enter_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 161</span>
+                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 160</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">mon_try_enter</span>
   <span class="ruby-ivar">@mon_data</span>.<span class="ruby-identifier">try_enter</span>
 <span class="ruby-keyword">end</span></pre>
@@ -563,11 +639,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-new_cond_source')" id="l_method-i-new_cond_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/monitor/lib/monitor.rb#L210" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/monitor/lib/monitor.rb#L209" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-new_cond_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 210</span>
+                <pre><span class="ruby-comment"># File ruby/ext/monitor/lib/monitor.rb, line 209</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">new_cond</span>
   <span class="ruby-keyword">unless</span> <span class="ruby-keyword">defined?</span>(<span class="ruby-ivar">@mon_data</span>)
     <span class="ruby-identifier">mon_initialize</span>

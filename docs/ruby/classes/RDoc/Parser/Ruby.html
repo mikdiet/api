@@ -25,8 +25,12 @@
     <meta property="og:title" value="RDoc::Parser::Ruby">
 
   
+    
+    <meta name="description" content="Extracts code elements from a source file returning a TopLevel object containing the constituent file elements.">
+    <meta property="og:description" content="Extracts code elements from a source file returning a TopLevel object containing the constituent file elements.">
+  
 
-    <meta name="keywords" content="RDoc::Parser::Ruby class, new, tk_nl?, collect_first_comment, error, get_bool, get_class_or_module, get_class_specification, get_constant, get_included_module_with_optional_parens, get_symbol_or_name, look_for_directives_in, make_message, new_comment, parse_attr, parse_attr_accessor, parse_alias, parse_call_parameters, parse_class, parse_constant, parse_comment, parse_comment_tomdoc, parse_meta_attr, parse_meta_method, parse_method, parse_method_params_and_body, parse_method_dummy, parse_method_or_yield_parameters, parse_method_parameters, parse_module, parse_require, parse_rescue, retrieve_comment_body, parse_statements, parse_symbol_arg, parse_symbol_in_arg, parse_top_level_statements, parse_visibility, parse_constant_visibility, parse_yield, read_directive, read_documentation_modifiers, scan, skip_optional_do_after_expression, skip_for_variable, skip_method, skip_tkspace_comment, warn">
+    <meta name="keywords" content="RDoc::Parser::Ruby class, new, tk_nl?, collect_first_comment, error, get_bool, get_class_or_module, skip_parentheses, get_class_specification, get_constant, get_included_module_with_optional_parens, get_symbol_or_name, look_for_directives_in, make_message, new_comment, parse_attr, parse_attr_accessor, parse_alias, parse_call_parameters, parse_class, parse_constant, parse_comment, parse_comment_tomdoc, parse_meta_attr, parse_meta_method, parse_method, parse_method_params_and_body, parse_method_dummy, parse_method_or_yield_parameters, parse_method_parameters, parse_module, parse_require, parse_rescue, retrieve_comment_body, parse_statements, parse_symbol_arg, parse_symbol_in_arg, parse_top_level_statements, parse_visibility, parse_constant_visibility, parse_yield, read_directive, read_documentation_modifiers, scan, skip_optional_do_after_expression, skip_for_variable, skip_method, skip_tkspace_comment, warn">
 </head>
 
 <body>
@@ -74,6 +78,128 @@
 
     <main id="bodyContent">
         <div id="content">
+  
+    <div class="description">
+      
+<p>Extracts code elements from a source file returning a TopLevel object containing the constituent file elements.</p>
+
+<p>This file is based on rtags</p>
+
+<p>RubyParser understands how to document:</p>
+<ul><li>
+<p>classes</p>
+</li><li>
+<p>modules</p>
+</li><li>
+<p>methods</p>
+</li><li>
+<p>constants</p>
+</li><li>
+<p>aliases</p>
+</li><li>
+<p>private, public, protected</p>
+</li><li>
+<p>private_class_function, public_class_function</p>
+</li><li>
+<p>private_constant, public_constant</p>
+</li><li>
+<p>module_function</p>
+</li><li>
+<p>attr, attr_reader, attr_writer, attr_accessor</p>
+</li><li>
+<p>extra accessors given on the command line</p>
+</li><li>
+<p>metaprogrammed methods</p>
+</li><li>
+<p>require</p>
+</li><li>
+<p>include</p>
+</li></ul>
+
+<h2 id="class-RDoc::Parser::Ruby-label-Method+Arguments"><a href="../../Method.html"><code>Method</code></a> Arguments</h2>
+
+<p>The parser extracts the arguments from the method definition.  You can override this with a custom argument definition using the :call-seq: directive:</p>
+
+<pre><code>##
+# This method can be called with a range or an offset and length
+#
+# :call-seq:
+#   my_method(Range)
+#   my_method(offset, length)
+
+def my_method(*args)
+end
+</code></pre>
+
+<p>The parser extracts <code>yield</code> expressions from method bodies to gather the yielded argument names.  If your method manually calls a block instead of yielding or you want to override the discovered argument names use the :yields: directive:</p>
+
+<pre><code>##
+# My method is awesome
+
+def my_method(&amp;block) # :yields: happy, times
+  block.call 1, 2
+end
+</code></pre>
+
+<h2 id="class-RDoc::Parser::Ruby-label-Metaprogrammed+Methods">Metaprogrammed Methods</h2>
+
+<p>To pick up a metaprogrammed method, the parser looks for a comment starting with ‘##’ before an identifier:</p>
+
+<pre><code>##
+# This is a meta-programmed method!
+
+add_my_method :meta_method, :arg1, :arg2
+</code></pre>
+
+<p>The parser looks at the token after the identifier to determine the name, in this example, :meta_method.  If a name cannot be found, a warning is printed and ‘unknown is used.</p>
+
+<p>You can force the name of a method using the :method: directive:</p>
+
+<pre><code>##
+# :method: some_method!
+</code></pre>
+
+<p>By default, meta-methods are instance methods.  To indicate that a method is a singleton method instead use the :singleton-method: directive:</p>
+
+<pre><code>##
+# :singleton-method:
+</code></pre>
+
+<p>You can also use the :singleton-method: directive with a name:</p>
+
+<pre><code>##
+# :singleton-method: some_method!
+</code></pre>
+
+<p>You can define arguments for metaprogrammed methods via either the :call-seq:, :arg: or :args: directives.</p>
+
+<p>Additionally you can mark a method as an attribute by using :attr:, :attr_reader:, :attr_writer: or :attr_accessor:.  Just like for :method:, the name is optional.</p>
+
+<pre><code>##
+# :attr_reader: my_attr_name
+</code></pre>
+
+<h2 id="class-RDoc::Parser::Ruby-label-Hidden+methods+and+attributes">Hidden methods and attributes</h2>
+
+<p>You can provide documentation for methods that don’t appear using the :method:, :singleton-method: and :attr: directives:</p>
+
+<pre><code>##
+# :attr_writer: ghost_writer
+# There is an attribute here, but you can&#39;t see it!
+
+##
+# :method: ghost_method
+# There is a method here, but you can&#39;t see it!
+
+##
+# this is a comment for a regular method
+
+def regular_method() end
+</code></pre>
+
+<p>Note that by default, the :method: directive will be ignored if there is a standard rdocable item following it.</p>
+
+    </div>
   
 
 
@@ -374,6 +500,11 @@
             
               
               <li>
+                <a href="#method-i-skip_parentheses">skip_parentheses</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-skip_tkspace_comment">skip_tkspace_comment</a>
               </li>
             
@@ -505,7 +636,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L164" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L164" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
@@ -513,15 +644,7 @@
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">top_level</span>, <span class="ruby-identifier">file_name</span>, <span class="ruby-identifier">content</span>, <span class="ruby-identifier">options</span>, <span class="ruby-identifier">stats</span>)
   <span class="ruby-keyword">super</span>
 
-  <span class="ruby-keyword">if</span> <span class="ruby-regexp">/\t/</span> <span class="ruby-operator">=~</span> <span class="ruby-identifier">content</span> <span class="ruby-keyword">then</span>
-    <span class="ruby-identifier">tab_width</span> = <span class="ruby-ivar">@options</span>.<span class="ruby-identifier">tab_width</span>
-    <span class="ruby-identifier">content</span> = <span class="ruby-identifier">content</span>.<span class="ruby-identifier">split</span>(<span class="ruby-regexp">/\n/</span>).<span class="ruby-identifier">map</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">line</span><span class="ruby-operator">|</span>
-      <span class="ruby-value">1</span> <span class="ruby-keyword">while</span> <span class="ruby-identifier">line</span>.<span class="ruby-identifier">gsub!</span>(<span class="ruby-regexp">/\t+/</span>) {
-        <span class="ruby-string">&#39; &#39;</span> <span class="ruby-operator">*</span> (<span class="ruby-identifier">tab_width</span><span class="ruby-operator">*</span><span class="ruby-node">$&amp;</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">-</span> <span class="ruby-node">$`</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">%</span> <span class="ruby-identifier">tab_width</span>)
-      }  <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">$~</span>
-      <span class="ruby-identifier">line</span>
-    <span class="ruby-keyword">end</span>.<span class="ruby-identifier">join</span>(<span class="ruby-string">&quot;\n&quot;</span>)
-  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">content</span> = <span class="ruby-identifier">handle_tab_width</span>(<span class="ruby-identifier">content</span>)
 
   <span class="ruby-ivar">@size</span> = <span class="ruby-value">0</span>
   <span class="ruby-ivar">@token_listeners</span> = <span class="ruby-keyword">nil</span>
@@ -571,11 +694,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-collect_first_comment_source')" id="l_method-i-collect_first_comment_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L241" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L236" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-collect_first_comment_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 241</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 236</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">collect_first_comment</span>
   <span class="ruby-identifier">skip_tkspace</span>
   <span class="ruby-identifier">comment</span> = <span class="ruby-string">&#39;&#39;</span>.<span class="ruby-identifier">dup</span>
@@ -646,11 +769,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-error_source')" id="l_method-i-error_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L318" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L313" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-error_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 318</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 313</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">error</span>(<span class="ruby-identifier">msg</span>)
   <span class="ruby-identifier">msg</span> = <span class="ruby-identifier">make_message</span> <span class="ruby-identifier">msg</span>
 
@@ -687,11 +810,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-get_bool_source')" id="l_method-i-get_bool_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L327" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L322" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-get_bool_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 327</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 322</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">get_bool</span>
   <span class="ruby-identifier">skip_tkspace</span>
   <span class="ruby-identifier">tk</span> = <span class="ruby-identifier">get_tk</span>
@@ -743,11 +866,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-get_class_or_module_source')" id="l_method-i-get_class_or_module_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L345" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L340" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-get_class_or_module_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 345</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 340</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">get_class_or_module</span> <span class="ruby-identifier">container</span>, <span class="ruby-identifier">ignore_constants</span> = <span class="ruby-keyword">false</span>
   <span class="ruby-identifier">skip_tkspace</span>
   <span class="ruby-identifier">name_t</span> = <span class="ruby-identifier">get_tk</span>
@@ -835,11 +958,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-get_class_specification_source')" id="l_method-i-get_class_specification_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L405" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L423" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-get_class_specification_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 405</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 423</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">get_class_specification</span>
   <span class="ruby-identifier">tk</span> = <span class="ruby-identifier">peek_tk</span>
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">tk</span>.<span class="ruby-identifier">nil?</span>
@@ -899,11 +1022,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-get_constant_source')" id="l_method-i-get_constant_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L438" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L456" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-get_constant_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 438</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 456</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">get_constant</span>
   <span class="ruby-identifier">res</span> = <span class="ruby-string">&quot;&quot;</span>
   <span class="ruby-identifier">skip_tkspace_without_nl</span>
@@ -948,11 +1071,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-get_included_module_with_optional_parens_source')" id="l_method-i-get_included_module_with_optional_parens_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L455" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L473" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-get_included_module_with_optional_parens_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 455</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 473</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">get_included_module_with_optional_parens</span>
   <span class="ruby-identifier">skip_tkspace_without_nl</span>
   <span class="ruby-identifier">get_tkread</span>
@@ -1060,11 +1183,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-get_symbol_or_name_source')" id="l_method-i-get_symbol_or_name_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L603" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L621" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-get_symbol_or_name_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 603</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 621</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">get_symbol_or_name</span>
   <span class="ruby-identifier">tk</span> = <span class="ruby-identifier">get_tk</span>
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:kind</span>]
@@ -1123,11 +1246,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-look_for_directives_in_source')" id="l_method-i-look_for_directives_in_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L643" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L661" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-look_for_directives_in_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 643</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 661</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">look_for_directives_in</span> <span class="ruby-identifier">container</span>, <span class="ruby-identifier">comment</span>
   <span class="ruby-ivar">@preprocess</span>.<span class="ruby-identifier">handle</span> <span class="ruby-identifier">comment</span>, <span class="ruby-identifier">container</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">directive</span>, <span class="ruby-identifier">param</span><span class="ruby-operator">|</span>
     <span class="ruby-keyword">case</span> <span class="ruby-identifier">directive</span>
@@ -1175,11 +1298,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-make_message_source')" id="l_method-i-make_message_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L663" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L681" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-make_message_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 663</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 681</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">make_message</span> <span class="ruby-identifier">message</span>
   <span class="ruby-identifier">prefix</span> = <span class="ruby-node">&quot;#{@file_name}:&quot;</span>.<span class="ruby-identifier">dup</span>
 
@@ -1219,11 +1342,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-new_comment_source')" id="l_method-i-new_comment_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L675" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L693" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-new_comment_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 675</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 693</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">new_comment</span> <span class="ruby-identifier">comment</span>, <span class="ruby-identifier">line_no</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-identifier">c</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span>.<span class="ruby-identifier">new</span> <span class="ruby-identifier">comment</span>, <span class="ruby-ivar">@top_level</span>, <span class="ruby-value">:ruby</span>
   <span class="ruby-identifier">c</span>.<span class="ruby-identifier">line</span> = <span class="ruby-identifier">line_no</span>
@@ -1261,11 +1384,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_alias_source')" id="l_method-i-parse_alias_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L744" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L762" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_alias_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 744</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 762</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_alias</span>(<span class="ruby-identifier">context</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>)
   <span class="ruby-identifier">line_no</span> = <span class="ruby-identifier">tk</span>[<span class="ruby-value">:line_no</span>]
 
@@ -1332,11 +1455,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_attr_source')" id="l_method-i-parse_attr_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L686" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L704" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_attr_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 686</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 704</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_attr</span>(<span class="ruby-identifier">context</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>)
   <span class="ruby-identifier">line_no</span> = <span class="ruby-identifier">tk</span>[<span class="ruby-value">:line_no</span>]
 
@@ -1392,11 +1515,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_attr_accessor_source')" id="l_method-i-parse_attr_accessor_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L715" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L733" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_attr_accessor_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 715</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 733</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_attr_accessor</span>(<span class="ruby-identifier">context</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>)
   <span class="ruby-identifier">line_no</span> = <span class="ruby-identifier">tk</span>[<span class="ruby-value">:line_no</span>]
 
@@ -1453,11 +1576,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_call_parameters_source')" id="l_method-i-parse_call_parameters_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L783" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L801" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_call_parameters_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 783</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 801</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_call_parameters</span>(<span class="ruby-identifier">tk</span>)
   <span class="ruby-identifier">end_token</span> = <span class="ruby-keyword">case</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:kind</span>]
               <span class="ruby-keyword">when</span> <span class="ruby-value">:on_lparen</span>
@@ -1528,11 +1651,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_class_source')" id="l_method-i-parse_class_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L826" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L844" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_class_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 826</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 844</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_class</span> <span class="ruby-identifier">container</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>
   <span class="ruby-identifier">line_no</span> = <span class="ruby-identifier">tk</span>[<span class="ruby-value">:line_no</span>]
 
@@ -1543,7 +1666,7 @@
     <span class="ruby-identifier">cls</span> = <span class="ruby-identifier">parse_class_regular</span> <span class="ruby-identifier">container</span>, <span class="ruby-identifier">declaration_context</span>, <span class="ruby-identifier">single</span>,
       <span class="ruby-identifier">name_t</span>, <span class="ruby-identifier">given_name</span>, <span class="ruby-identifier">comment</span>
   <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">name_t</span>[<span class="ruby-value">:kind</span>] <span class="ruby-operator">==</span> <span class="ruby-value">:on_op</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">name_t</span>[<span class="ruby-value">:text</span>] <span class="ruby-operator">==</span> <span class="ruby-string">&#39;&lt;&lt;&#39;</span>
-    <span class="ruby-keyword">case</span> <span class="ruby-identifier">name</span> = <span class="ruby-identifier">get_class_specification</span>
+    <span class="ruby-keyword">case</span> <span class="ruby-identifier">name</span> = <span class="ruby-identifier">skip_parentheses</span> { <span class="ruby-identifier">get_class_specification</span> }
     <span class="ruby-keyword">when</span> <span class="ruby-string">&#39;self&#39;</span>, <span class="ruby-identifier">container</span>.<span class="ruby-identifier">name</span>
       <span class="ruby-identifier">read_documentation_modifiers</span> <span class="ruby-identifier">cls</span>, <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">CLASS_MODIFIERS</span>
       <span class="ruby-identifier">parse_statements</span> <span class="ruby-identifier">container</span>, <span class="ruby-constant">SINGLE</span>
@@ -1594,11 +1717,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_comment_source')" id="l_method-i-parse_comment_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1065" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1083" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_comment_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1065</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1083</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_comment</span> <span class="ruby-identifier">container</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">parse_comment_tomdoc</span> <span class="ruby-identifier">container</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@markup</span> <span class="ruby-operator">==</span> <span class="ruby-string">&#39;tomdoc&#39;</span>
   <span class="ruby-identifier">column</span>  = <span class="ruby-identifier">tk</span>[<span class="ruby-value">:char_no</span>]
@@ -1653,11 +1776,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_comment_tomdoc_source')" id="l_method-i-parse_comment_tomdoc_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1144" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1162" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_comment_tomdoc_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1144</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1162</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_comment_tomdoc</span> <span class="ruby-identifier">container</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">signature</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">TomDoc</span>.<span class="ruby-identifier">signature</span>(<span class="ruby-identifier">comment</span>)
   <span class="ruby-identifier">column</span>  = <span class="ruby-identifier">tk</span>[<span class="ruby-value">:char_no</span>]
@@ -1719,11 +1842,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_constant_source')" id="l_method-i-parse_constant_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L939" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L957" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_constant_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 939</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 957</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_constant</span> <span class="ruby-identifier">container</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>, <span class="ruby-identifier">ignore_constants</span> = <span class="ruby-keyword">false</span>
   <span class="ruby-identifier">line_no</span> = <span class="ruby-identifier">tk</span>[<span class="ruby-value">:line_no</span>]
 
@@ -1821,11 +1944,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_constant_visibility_source')" id="l_method-i-parse_constant_visibility_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2076" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2094" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_constant_visibility_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2076</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2094</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_constant_visibility</span>(<span class="ruby-identifier">container</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>)
   <span class="ruby-identifier">args</span> = <span class="ruby-identifier">parse_symbol_arg</span>
   <span class="ruby-keyword">case</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:text</span>]
@@ -1897,11 +2020,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_meta_attr_source')" id="l_method-i-parse_meta_attr_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1281" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1299" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_meta_attr_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1281</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1299</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_meta_attr</span>(<span class="ruby-identifier">context</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>)
   <span class="ruby-identifier">args</span> = <span class="ruby-identifier">parse_symbol_arg</span>
   <span class="ruby-identifier">rw</span> = <span class="ruby-string">&quot;?&quot;</span>
@@ -1963,11 +2086,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_meta_method_source')" id="l_method-i-parse_meta_method_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1315" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1333" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_meta_method_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1315</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1333</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_meta_method</span>(<span class="ruby-identifier">container</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>)
   <span class="ruby-identifier">column</span>  = <span class="ruby-identifier">tk</span>[<span class="ruby-value">:char_no</span>]
   <span class="ruby-identifier">line_no</span> = <span class="ruby-identifier">tk</span>[<span class="ruby-value">:line_no</span>]
@@ -2039,11 +2162,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_method_source')" id="l_method-i-parse_method_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1417" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1435" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_method_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1417</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1435</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_method</span>(<span class="ruby-identifier">container</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>)
   <span class="ruby-identifier">singleton</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-identifier">added_container</span> = <span class="ruby-keyword">false</span>
@@ -2120,11 +2243,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_method_dummy_source')" id="l_method-i-parse_method_dummy_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1496" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1514" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_method_dummy_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1496</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1514</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_method_dummy</span> <span class="ruby-identifier">container</span>
   <span class="ruby-identifier">dummy</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Context</span>.<span class="ruby-identifier">new</span>
   <span class="ruby-identifier">dummy</span>.<span class="ruby-identifier">parent</span> = <span class="ruby-identifier">container</span>
@@ -2162,11 +2285,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_method_or_yield_parameters_source')" id="l_method-i-parse_method_or_yield_parameters_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1598" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1616" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_method_or_yield_parameters_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1598</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1616</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_method_or_yield_parameters</span>(<span class="ruby-identifier">method</span> = <span class="ruby-keyword">nil</span>,
                                      <span class="ruby-identifier">modifiers</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">METHOD_MODIFIERS</span>)
   <span class="ruby-identifier">skip_tkspace_without_nl</span>
@@ -2261,11 +2384,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_method_parameters_source')" id="l_method-i-parse_method_parameters_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1665" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1683" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_method_parameters_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1665</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1683</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_method_parameters</span> <span class="ruby-identifier">method</span>
   <span class="ruby-identifier">res</span> = <span class="ruby-identifier">parse_method_or_yield_parameters</span> <span class="ruby-identifier">method</span>
 
@@ -2308,11 +2431,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_method_params_and_body_source')" id="l_method-i-parse_method_params_and_body_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1466" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1484" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_method_params_and_body_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1466</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1484</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_method_params_and_body</span> <span class="ruby-identifier">container</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">meth</span>, <span class="ruby-identifier">added_container</span>
   <span class="ruby-identifier">token_listener</span> <span class="ruby-identifier">meth</span> <span class="ruby-keyword">do</span>
     <span class="ruby-identifier">parse_method_parameters</span> <span class="ruby-identifier">meth</span>
@@ -2370,11 +2493,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_module_source')" id="l_method-i-parse_module_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1680" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1698" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_module_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1680</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1698</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_module</span> <span class="ruby-identifier">container</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">comment</span>
   <span class="ruby-identifier">container</span>, <span class="ruby-identifier">name_t</span>, = <span class="ruby-identifier">get_class_or_module</span> <span class="ruby-identifier">container</span>
 
@@ -2424,11 +2547,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_require_source')" id="l_method-i-parse_require_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1702" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1720" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_require_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1702</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1720</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_require</span>(<span class="ruby-identifier">context</span>, <span class="ruby-identifier">comment</span>)
   <span class="ruby-identifier">skip_tkspace_comment</span>
   <span class="ruby-identifier">tk</span> = <span class="ruby-identifier">get_tk</span>
@@ -2477,11 +2600,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_rescue_source')" id="l_method-i-parse_rescue_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1723" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1741" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_rescue_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1723</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1741</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_rescue</span>
   <span class="ruby-identifier">skip_tkspace_without_nl</span>
 
@@ -2529,11 +2652,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_statements_source')" id="l_method-i-parse_statements_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1754" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1772" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_statements_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1754</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1772</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_statements</span>(<span class="ruby-identifier">container</span>, <span class="ruby-identifier">single</span> = <span class="ruby-constant">NORMAL</span>, <span class="ruby-identifier">current_method</span> = <span class="ruby-keyword">nil</span>,
                      <span class="ruby-identifier">comment</span> = <span class="ruby-identifier">new_comment</span>(<span class="ruby-string">&#39;&#39;</span>))
   <span class="ruby-identifier">raise</span> <span class="ruby-string">&#39;no&#39;</span> <span class="ruby-keyword">unless</span> <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">Comment</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">comment</span>
@@ -2751,11 +2874,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_symbol_arg_source')" id="l_method-i-parse_symbol_arg_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1944" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1962" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_symbol_arg_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1944</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1962</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_symbol_arg</span>(<span class="ruby-identifier">no</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-identifier">skip_tkspace_comment</span>
 
@@ -2797,11 +2920,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_symbol_in_arg_source')" id="l_method-i-parse_symbol_in_arg_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2018" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2036" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_symbol_in_arg_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2018</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2036</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_symbol_in_arg</span>
   <span class="ruby-identifier">tk</span> = <span class="ruby-identifier">get_tk</span>
   <span class="ruby-keyword">if</span> <span class="ruby-value">:on_symbol</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:kind</span>] <span class="ruby-keyword">then</span>
@@ -2846,11 +2969,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_top_level_statements_source')" id="l_method-i-parse_top_level_statements_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2035" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2053" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_top_level_statements_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2035</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2053</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_top_level_statements</span> <span class="ruby-identifier">container</span>
   <span class="ruby-identifier">comment</span> = <span class="ruby-identifier">collect_first_comment</span>
 
@@ -2896,11 +3019,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_visibility_source')" id="l_method-i-parse_visibility_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2053" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2071" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_visibility_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2053</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2071</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_visibility</span>(<span class="ruby-identifier">container</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>)
   <span class="ruby-identifier">vis_type</span>, <span class="ruby-identifier">vis</span>, <span class="ruby-identifier">singleton</span> = <span class="ruby-identifier">get_visibility_information</span> <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">single</span>
 
@@ -2951,11 +3074,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-parse_yield_source')" id="l_method-i-parse_yield_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2092" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2110" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parse_yield_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2092</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2110</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_yield</span>(<span class="ruby-identifier">context</span>, <span class="ruby-identifier">single</span>, <span class="ruby-identifier">tk</span>, <span class="ruby-identifier">method</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">method</span>.<span class="ruby-identifier">block_params</span>
 
@@ -3003,11 +3126,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-read_directive_source')" id="l_method-i-read_directive_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2113" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2131" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-read_directive_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2113</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2131</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">read_directive</span> <span class="ruby-identifier">allowed</span>
   <span class="ruby-identifier">tokens</span> = []
 
@@ -3017,7 +3140,7 @@ end
     <span class="ruby-keyword">if</span> <span class="ruby-value">:on_nl</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:kind</span>] <span class="ruby-keyword">or</span> (<span class="ruby-value">:on_kw</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:kind</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-string">&#39;def&#39;</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:text</span>]) <span class="ruby-keyword">then</span>
       <span class="ruby-keyword">return</span>
     <span class="ruby-keyword">elsif</span> <span class="ruby-value">:on_comment</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:kind</span>] <span class="ruby-keyword">or</span> <span class="ruby-value">:on_embdoc</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:kind</span>] <span class="ruby-keyword">then</span>
-      <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:text</span>] <span class="ruby-operator">=~</span> <span class="ruby-regexp">/\s*:?([\w-]+):\s*(.*)/</span>
+      <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:text</span>] <span class="ruby-operator">=~</span> <span class="ruby-regexp">/:?\b([\w-]+):\s*(.*)/</span>
 
       <span class="ruby-identifier">directive</span> = <span class="ruby-node">$1</span>.<span class="ruby-identifier">downcase</span>
 
@@ -3066,11 +3189,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-read_documentation_modifiers_source')" id="l_method-i-read_documentation_modifiers_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2145" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2163" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-read_documentation_modifiers_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2145</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2163</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">read_documentation_modifiers</span> <span class="ruby-identifier">context</span>, <span class="ruby-identifier">allowed</span>
   <span class="ruby-identifier">skip_tkspace_without_nl</span>
   <span class="ruby-identifier">directive</span>, <span class="ruby-identifier">value</span> = <span class="ruby-identifier">read_directive</span> <span class="ruby-identifier">allowed</span>
@@ -3116,11 +3239,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-retrieve_comment_body_source')" id="l_method-i-retrieve_comment_body_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L1743" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L1761" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-retrieve_comment_body_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1743</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 1761</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">retrieve_comment_body</span>(<span class="ruby-identifier">tk</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-value">:on_embdoc</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:kind</span>]
     <span class="ruby-identifier">tk</span>[<span class="ruby-value">:text</span>].<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/\A=begin.*\n/</span>, <span class="ruby-string">&#39;&#39;</span>).<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/=end\n?\z/</span>, <span class="ruby-string">&#39;&#39;</span>)
@@ -3159,11 +3282,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-scan_source')" id="l_method-i-scan_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2176" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2194" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-scan_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2176</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2194</span>
   <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">scan</span>
     <span class="ruby-identifier">reset</span>
 
@@ -3238,11 +3361,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-skip_for_variable_source')" id="l_method-i-skip_for_variable_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2264" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2282" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-skip_for_variable_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2264</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2282</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">skip_for_variable</span>
   <span class="ruby-identifier">skip_tkspace_without_nl</span>
   <span class="ruby-identifier">get_tk</span>
@@ -3281,11 +3404,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-skip_method_source')" id="l_method-i-skip_method_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2275" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2293" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-skip_method_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2275</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2293</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">skip_method</span> <span class="ruby-identifier">container</span>
   <span class="ruby-identifier">meth</span> = <span class="ruby-constant">RDoc</span><span class="ruby-operator">::</span><span class="ruby-constant">AnyMethod</span>.<span class="ruby-identifier">new</span> <span class="ruby-string">&quot;&quot;</span>, <span class="ruby-string">&quot;anon&quot;</span>
   <span class="ruby-identifier">parse_method_parameters</span> <span class="ruby-identifier">meth</span>
@@ -3322,11 +3445,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-skip_optional_do_after_expression_source')" id="l_method-i-skip_optional_do_after_expression_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2223" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2241" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-skip_optional_do_after_expression_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2223</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2241</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">skip_optional_do_after_expression</span>
   <span class="ruby-identifier">skip_tkspace_without_nl</span>
   <span class="ruby-identifier">tk</span> = <span class="ruby-identifier">get_tk</span>
@@ -3370,6 +3493,60 @@ end
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-skip_parentheses">
+            
+              <b>skip_parentheses</b>(&amp;block)
+            
+            <a href="../../../classes/RDoc/Parser/Ruby.html#method-i-skip_parentheses" name="method-i-skip_parentheses" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Skip opening parentheses and yield the block. Skip closing parentheses too when exists.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-skip_parentheses_source')" id="l_method-i-skip_parentheses_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L401" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-skip_parentheses_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 401</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">skip_parentheses</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+  <span class="ruby-identifier">left_tk</span> = <span class="ruby-identifier">peek_tk</span>
+
+  <span class="ruby-keyword">if</span> <span class="ruby-value">:on_lparen</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">left_tk</span>[<span class="ruby-value">:kind</span>]
+    <span class="ruby-identifier">get_tk</span>
+
+    <span class="ruby-identifier">ret</span> = <span class="ruby-identifier">skip_parentheses</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
+
+    <span class="ruby-identifier">right_tk</span> = <span class="ruby-identifier">peek_tk</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-value">:on_rparen</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">right_tk</span>[<span class="ruby-value">:kind</span>]
+      <span class="ruby-identifier">get_tk</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">ret</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-keyword">yield</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-skip_tkspace_comment">
             
               <b>skip_tkspace_comment</b>(skip_nl = true)
@@ -3395,11 +3572,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-skip_tkspace_comment_source')" id="l_method-i-skip_tkspace_comment_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2284" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2302" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-skip_tkspace_comment_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2284</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2302</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">skip_tkspace_comment</span>(<span class="ruby-identifier">skip_nl</span> = <span class="ruby-keyword">true</span>)
   <span class="ruby-identifier">loop</span> <span class="ruby-keyword">do</span>
     <span class="ruby-identifier">skip_nl</span> <span class="ruby-operator">?</span> <span class="ruby-identifier">skip_tkspace</span> <span class="ruby-operator">:</span> <span class="ruby-identifier">skip_tkspace_without_nl</span>
@@ -3423,7 +3600,7 @@ end
 
           
             <div class="description">
-              
+              <p>Return <code>true</code> if <code>tk</code> is a newline.</p>
             </div>
           
 
@@ -3439,11 +3616,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-tk_nl-3F_source')" id="l_method-i-tk_nl-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L191" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L186" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-tk_nl-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 191</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 186</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">tk_nl?</span>(<span class="ruby-identifier">tk</span>)
   <span class="ruby-value">:on_nl</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:kind</span>] <span class="ruby-keyword">or</span> <span class="ruby-value">:on_ignored_nl</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">tk</span>[<span class="ruby-value">:kind</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -3478,11 +3655,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-warn_source')" id="l_method-i-warn_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/rdoc/parser/ruby.rb#L2341" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rdoc/parser/ruby.rb#L2359" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-warn_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2341</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rdoc/parser/ruby.rb, line 2359</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">warn</span> <span class="ruby-identifier">message</span>
   <span class="ruby-ivar">@options</span>.<span class="ruby-identifier">warn</span> <span class="ruby-identifier">make_message</span> <span class="ruby-identifier">message</span>
 <span class="ruby-keyword">end</span></pre>

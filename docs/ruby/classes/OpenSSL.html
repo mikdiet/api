@@ -30,7 +30,7 @@
     <meta property="og:description" content="OpenSSL provides SSL, TLS and general purpose cryptography.  It wraps the OpenSSL library.">
   
 
-    <meta name="keywords" content="OpenSSL class, secure_compare, Digest, fixed_length_secure_compare, fips_mode, fips_mode=, debug, debug=, errors, mem_check_start, print_mem_leaks">
+    <meta name="keywords" content="OpenSSL class, secure_compare, Digest, fixed_length_secure_compare, fips_mode, fips_mode=, debug, debug=, errors">
 </head>
 
 <body>
@@ -196,22 +196,20 @@
 
 <pre><code>key = OpenSSL::PKey::RSA.new 2048
 
-open &#39;private_key.pem&#39;, &#39;w&#39; do |io| io.write key.to_pem end
-open &#39;public_key.pem&#39;, &#39;w&#39; do |io| io.write key.public_key.to_pem end
+File.write &#39;private_key.pem&#39;, key.private_to_pem
+File.write &#39;public_key.pem&#39;, key.public_to_pem
 </code></pre>
 
 <h3 id="module-OpenSSL-label-Exporting+a+Key">Exporting a Key</h3>
 
-<p>Keys saved to disk without encryption are not secure as anyone who gets ahold of the key may use it unless it is encrypted.  In order to securely export a key you may export it with a pass phrase.</p>
+<p>Keys saved to disk without encryption are not secure as anyone who gets ahold of the key may use it unless it is encrypted.  In order to securely export a key you may export it with a password.</p>
 
 <pre><code>cipher = OpenSSL::Cipher.new &#39;aes-256-cbc&#39;
-pass_phrase = &#39;my secure pass phrase goes here&#39;
+password = &#39;my secure password goes here&#39;
 
-key_secure = key.export cipher, pass_phrase
+key_secure = key.private_to_pem cipher, password
 
-open &#39;private.secure.pem&#39;, &#39;w&#39; do |io|
-  io.write key_secure
-end
+File.write &#39;private.secure.pem&#39;, key_secure
 </code></pre>
 
 <p><a href="OpenSSL/Cipher.html#method-c-ciphers"><code>OpenSSL::Cipher.ciphers</code></a> returns a list of available ciphers.</p>
@@ -234,11 +232,11 @@ key3.private? # =&gt; false
 
 <h3 id="module-OpenSSL-label-Loading+an+Encrypted+Key">Loading an Encrypted Key</h3>
 
-<p><a href="OpenSSL.html"><code>OpenSSL</code></a> will prompt you for your pass phrase when loading an encrypted key. If you will not be able to type in the pass phrase you may provide it when loading the key:</p>
+<p><a href="OpenSSL.html"><code>OpenSSL</code></a> will prompt you for your password when loading an encrypted key. If you will not be able to type in the password you may provide it when loading the key:</p>
 
 <pre><code>key4_pem = File.read &#39;private.secure.pem&#39;
-pass_phrase = &#39;my secure pass phrase goes here&#39;
-key4 = OpenSSL::PKey.read key4_pem, pass_phrase
+password = &#39;my secure password goes here&#39;
+key4 = OpenSSL::PKey.read key4_pem, password
 </code></pre>
 
 <h2 id="module-OpenSSL-label-RSA+Encryption">RSA Encryption</h2>
@@ -329,46 +327,6 @@ decrypted = cipher.update encrypted
 decrypted &lt;&lt; cipher.final
 </code></pre>
 
-<h2 id="module-OpenSSL-label-PKCS+-235+Password-based+Encryption">PKCS #5 Password-based Encryption</h2>
-
-<p>PKCS #5 is a password-based encryption standard documented at <a href="http://www.ietf.org/rfc/rfc2898.txt">RFC2898</a>.  It allows a short password or passphrase to be used to create a secure encryption key. If possible, PBKDF2 as described above should be used if the circumstances allow it.</p>
-
-<p>PKCS #5 uses a <a href="OpenSSL/Cipher.html"><code>Cipher</code></a>, a pass phrase and a salt to generate an encryption key.</p>
-
-<pre><code>pass_phrase = &#39;my secure pass phrase goes here&#39;
-salt = &#39;8 octets&#39;
-</code></pre>
-
-<h3 id="module-OpenSSL-label-Encryption">Encryption</h3>
-
-<p>First set up the cipher for encryption</p>
-
-<pre><code>encryptor = OpenSSL::Cipher.new &#39;aes-256-cbc&#39;
-encryptor.encrypt
-encryptor.pkcs5_keyivgen pass_phrase, salt
-</code></pre>
-
-<p>Then pass the data you want to encrypt through</p>
-
-<pre><code>encrypted = encryptor.update &#39;top secret document&#39;
-encrypted &lt;&lt; encryptor.final
-</code></pre>
-
-<h3 id="module-OpenSSL-label-Decryption">Decryption</h3>
-
-<p>Use a new <a href="OpenSSL/Cipher.html"><code>Cipher</code></a> instance set up for decryption</p>
-
-<pre><code>decryptor = OpenSSL::Cipher.new &#39;aes-256-cbc&#39;
-decryptor.decrypt
-decryptor.pkcs5_keyivgen pass_phrase, salt
-</code></pre>
-
-<p>Then pass the data you want to decrypt through</p>
-
-<pre><code>plain = decryptor.update encrypted
-plain &lt;&lt; decryptor.final
-</code></pre>
-
 <h2 id="module-OpenSSL-label-X509+Certificates"><a href="OpenSSL/X509.html"><code>X509</code></a> Certificates</h2>
 
 <h3 id="module-OpenSSL-label-Creating+a+Certificate">Creating a Certificate</h3>
@@ -440,12 +398,12 @@ open &#39;certificate.pem&#39;, &#39;w&#39; do |io| io.write cert.to_pem end
 <p>CA keys are valuable, so we encrypt and save it to disk and make sure it is not readable by other users.</p>
 
 <pre><code>ca_key = OpenSSL::PKey::RSA.new 2048
-pass_phrase = &#39;my secure pass phrase goes here&#39;
+password = &#39;my secure password goes here&#39;
 
-cipher = OpenSSL::Cipher.new &#39;aes-256-cbc&#39;
+cipher = &#39;aes-256-cbc&#39;
 
 open &#39;ca_key.pem&#39;, &#39;w&#39;, 0400 do |io|
-  io.write ca_key.export(cipher, pass_phrase)
+  io.write ca_key.private_to_pem(cipher, password)
 end
 </code></pre>
 
@@ -661,11 +619,6 @@ puts ssl_client.gets
       
         <li>
           <span class="type">MODULE</span>
-          <a href="OpenSSL/ExtConfig.html">OpenSSL::ExtConfig</a>
-        </li>
-      
-        <li>
-          <span class="type">MODULE</span>
           <a href="OpenSSL/KDF.html">OpenSSL::KDF</a>
         </li>
       
@@ -839,30 +792,6 @@ puts ssl_client.gets
           </ul>
         </dd>
       
-        <dt>M</dt>
-        <dd>
-          <ul>
-            
-              
-              <li>
-                <a href="#method-c-mem_check_start">mem_check_start</a>
-              </li>
-            
-          </ul>
-        </dd>
-      
-        <dt>P</dt>
-        <dd>
-          <ul>
-            
-              
-              <li>
-                <a href="#method-c-print_mem_leaks">print_mem_leaks</a>
-              </li>
-            
-          </ul>
-        </dd>
-      
         <dt>S</dt>
         <dd>
           <ul>
@@ -894,9 +823,26 @@ puts ssl_client.gets
       <table border='0' cellpadding='5'>
         
           <tr valign='top'>
+            <td class="attr-name">LIBRESSL_VERSION_NUMBER</td>
+            <td>=</td>
+            <td class="attr-value">INT2NUM(LIBRESSL_VERSION_NUMBER)</td>
+          </tr>
+          
+            <tr valign='top'>
+              <td>&nbsp;</td>
+              <td colspan="2" class="attr-desc"><p>Version number of LibreSSL the ruby <a href="OpenSSL.html"><code>OpenSSL</code></a> extension was built with (base 16). The format is <code>0xMNNFF00f (major minor fix 00 status)</code>. This constant is only defined in LibreSSL cases.</p>
+
+<p>See also the man page <a href="OpenSSL.html#LIBRESSL_VERSION_NUMBER"><code>LIBRESSL_VERSION_NUMBER</code></a>(3).</p></td>
+            </tr>
+          
+        
+          <tr valign='top'>
             <td class="attr-name">OPENSSL_FIPS</td>
             <td>=</td>
-            <td class="attr-value">#ifdef OPENSSL_FIPS
+            <td class="attr-value">/* OpenSSL 3 is FIPS-capable even when it is installed without fips option */
+#if OSSL_OPENSSL_PREREQ(3, 0, 0)
+                    Qtrue
+#elif defined(OPENSSL_FIPS)
                     Qtrue
 #else
                     Qfalse
@@ -941,14 +887,26 @@ puts ssl_client.gets
           
             <tr valign='top'>
               <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"><p>Version number of <a href="OpenSSL.html"><code>OpenSSL</code></a> the ruby <a href="OpenSSL.html"><code>OpenSSL</code></a> extension was built with (base 16)</p></td>
+              <td colspan="2" class="attr-desc"><p>Version number of <a href="OpenSSL.html"><code>OpenSSL</code></a> the ruby <a href="OpenSSL.html"><code>OpenSSL</code></a> extension was built with (base 16). The formats are below.</p>
+<dl class="rdoc-list label-list"><dt><a href="OpenSSL.html"><code>OpenSSL</code></a> 3
+<dd>
+<p><code>0xMNN00PP0 (major minor 00 patch 0)</code></p>
+</dd><dt><a href="OpenSSL.html"><code>OpenSSL</code></a> before 3
+<dd>
+<p><code>0xMNNFFPPS (major minor fix patch status)</code></p>
+</dd><dt>LibreSSL
+<dd>
+<p><code>0x20000000 (fixed value)</code></p>
+</dd></dl>
+
+<p>See also the man page <a href="OpenSSL.html#OPENSSL_VERSION_NUMBER"><code>OPENSSL_VERSION_NUMBER</code></a>(3).</p></td>
             </tr>
           
         
           <tr valign='top'>
             <td class="attr-name">VERSION</td>
             <td>=</td>
-            <td class="attr-value">&quot;3.0.0&quot;</td>
+            <td class="attr-value">&quot;3.2.0&quot;</td>
           </tr>
           
             <tr valign='top'>
@@ -1003,11 +961,11 @@ Digest(&quot;Foo&quot;)
                 Source:
                 <a href="javascript:toggleSource('method-c-Digest_source')" id="l_method-c-Digest_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/digest.rb#L67" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/digest.rb#L63" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-Digest_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/digest.rb, line 67</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/digest.rb, line 63</span>
 <span class="ruby-keyword">def</span> <span class="ruby-constant">Digest</span>(<span class="ruby-identifier ruby-title">name</span>)
   <span class="ruby-constant">OpenSSL</span><span class="ruby-operator">::</span><span class="ruby-constant">Digest</span>.<span class="ruby-identifier">const_get</span>(<span class="ruby-identifier">name</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1176,7 +1134,11 @@ ossl_get_errors(VALUE _)
 ossl_fips_mode_get(VALUE self)
 {
 
-#ifdef OPENSSL_FIPS
+#if OSSL_OPENSSL_PREREQ(3, 0, 0)
+    VALUE enabled;
+    enabled = EVP_default_properties_is_fips_enabled(NULL) ? Qtrue : Qfalse;
+    return enabled;
+#elif defined(OPENSSL_FIPS)
     VALUE enabled;
     enabled = FIPS_mode() ? Qtrue : Qfalse;
     return enabled;
@@ -1227,8 +1189,18 @@ OpenSSL.fips_mode = false  # and off again
                 <pre>static VALUE
 ossl_fips_mode_set(VALUE self, VALUE enabled)
 {
-
-#ifdef OPENSSL_FIPS
+#if OSSL_OPENSSL_PREREQ(3, 0, 0)
+    if (RTEST(enabled)) {
+        if (!EVP_default_properties_enable_fips(NULL, 1)) {
+            ossl_raise(eOSSLError, &quot;Turning on FIPS mode failed&quot;);
+        }
+    } else {
+        if (!EVP_default_properties_enable_fips(NULL, 0)) {
+            ossl_raise(eOSSLError, &quot;Turning off FIPS mode failed&quot;);
+        }
+    }
+    return enabled;
+#elif defined(OPENSSL_FIPS)
     if (RTEST(enabled)) {
         int mode = FIPS_mode();
         if(!mode &amp;&amp; !FIPS_mode_set(1)) /* turning on twice leads to an error */
@@ -1303,120 +1275,6 @@ ossl_crypto_fixed_length_secure_compare(VALUE dummy, VALUE str1, VALUE str2)
           </div>
         
         <div class="method">
-          <h3 class="title method-title" id="method-c-mem_check_start">
-            
-              <b>OpenSSL.mem_check_start &rarr; nil
-</b>
-            
-            <a href="../classes/OpenSSL.html#method-c-mem_check_start" name="method-c-mem_check_start" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Calls CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON). Starts tracking memory allocations. See also <a href="OpenSSL.html#method-c-print_mem_leaks"><code>OpenSSL.print_mem_leaks</code></a>.</p>
-
-<p>This is available only when built with a capable <a href="OpenSSL.html"><code>OpenSSL</code></a> and –enable-debug configure option.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-c-mem_check_start_source')" id="l_method-c-mem_check_start_source">show</a>
-                
-              </p>
-              <div id="method-c-mem_check_start_source" class="dyn-source">
-                <pre>static VALUE
-mem_check_start(VALUE self)
-{
-        CRYPTO_mem_ctrl(CRYPTO_MEM_CHECK_ON);
-        return Qnil;
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-c-print_mem_leaks">
-            
-              <b>OpenSSL.print_mem_leaks &rarr; true | false
-</b>
-            
-            <a href="../classes/OpenSSL.html#method-c-print_mem_leaks" name="method-c-print_mem_leaks" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>For debugging the Ruby/OpenSSL library. Calls CRYPTO_mem_leaks_fp(stderr). Prints detected memory leaks to standard error. This cleans the global state up thus you cannot use any methods of the library after calling this.</p>
-
-<p>Returns <code>true</code> if leaks detected, <code>false</code> otherwise.</p>
-
-<p>This is available only when built with a capable <a href="OpenSSL.html"><code>OpenSSL</code></a> and –enable-debug configure option.</p>
-
-<h3 id="method-c-print_mem_leaks-label-Example">Example</h3>
-
-<pre><code>OpenSSL.mem_check_start
-NOT_GCED = OpenSSL::PKey::RSA.new(256)
-
-END {
-  GC.start
-  OpenSSL.print_mem_leaks # will print the leakage
-}
-</code></pre>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-c-print_mem_leaks_source')" id="l_method-c-print_mem_leaks_source">show</a>
-                
-              </p>
-              <div id="method-c-print_mem_leaks_source" class="dyn-source">
-                <pre>static VALUE
-print_mem_leaks(VALUE self)
-{
-#if OPENSSL_VERSION_NUMBER &gt;= 0x10100000
-    int ret;
-#endif
-
-#ifndef HAVE_RB_EXT_RACTOR_SAFE
-    // for Ruby 2.x
-    void ossl_bn_ctx_free(void); // ossl_bn.c
-    ossl_bn_ctx_free();
-#endif
-
-#if OPENSSL_VERSION_NUMBER &gt;= 0x10100000
-    ret = CRYPTO_mem_leaks_fp(stderr);
-    if (ret &lt; 0)
-        ossl_raise(eOSSLError, &quot;CRYPTO_mem_leaks_fp&quot;);
-    return ret ? Qfalse : Qtrue;
-#else
-    CRYPTO_mem_leaks_fp(stderr);
-    return Qnil;
-#endif
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
           <h3 class="title method-title" id="method-c-secure_compare">
             
               <b>OpenSSL.secure_compare(string, string) &rarr; boolean
@@ -1443,7 +1301,7 @@ print_mem_leaks(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-secure_compare_source')" id="l_method-c-secure_compare_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl.rb#L32" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl.rb#L32" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-secure_compare_source" class="dyn-source">

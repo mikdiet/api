@@ -133,7 +133,7 @@ proc3 = make_proc {|x| x**2 }
 <pre><code>lambda1 = lambda {|x| x**2 }
 </code></pre>
 </li><li>
-<p>Use the <a href="doc/syntax/literals_rdoc.html#label-Lambda+Proc+Literals">Lambda proc literal</a> syntax (also constructs a proc with lambda semantics):</p>
+<p>Use the Lambda proc literal syntax (also constructs a proc with lambda semantics):</p>
 
 <pre><code>lambda2 = -&gt;(x) { x**2 }
 </code></pre>
@@ -640,7 +640,7 @@ proc.call   #=&gt; &quot;hello&quot;
                 <pre>static VALUE
 rb_proc_s_new(int argc, VALUE *argv, VALUE klass)
 {
-    VALUE block = proc_new(klass, FALSE, FALSE);
+    VALUE block = proc_new(klass, FALSE);
 
     rb_obj_call_init_kw(block, argc, argv, RB_PASS_CALLED_KEYWORDS);
     return block;
@@ -1121,8 +1121,8 @@ proc_binding(VALUE self)
 
     if (iseq) {
         rb_iseq_check(iseq);
-        RB_OBJ_WRITE(bindval, &amp;bind-&gt;pathobj, iseq-&gt;body-&gt;location.pathobj);
-        bind-&gt;first_lineno = FIX2INT(rb_iseq_first_lineno(iseq));
+        RB_OBJ_WRITE(bindval, &amp;bind-&gt;pathobj, ISEQ_BODY(iseq)-&gt;location.pathobj);
+        bind-&gt;first_lineno = ISEQ_BODY(iseq)-&gt;location.first_lineno;
     }
     else {
         RB_OBJ_WRITE(bindval, &amp;bind-&gt;pathobj,
@@ -1211,6 +1211,8 @@ proc_call(int argc, VALUE *argv, VALUE procval)
           
             <div class="description">
               <p>Returns a curried proc. If the optional <em>arity</em> argument is given, it determines the number of arguments. A curried proc receives some arguments. If a sufficient number of arguments are supplied, it passes the supplied arguments to the original proc and returns the result. Otherwise, returns another curried proc that takes the rest of arguments.</p>
+
+<p>The optional <em>arity</em> argument should be supplied when currying procs with variable arguments to determine how many arguments are needed before the proc is called.</p>
 
 <pre><code>b = proc {|x, y, z| (x||0) + (y||0) + (z||0) }
 p b.curry[1][2][3]           #=&gt; 6
@@ -1542,7 +1544,7 @@ rb_proc_lambda_p(VALUE procval)
         <div class="method">
           <h3 class="title method-title" id="method-i-parameters">
             
-              <b>prc.parameters  &rarr; array
+              <b>prc.parameters(lambda: nil)  &rarr; array
 </b>
             
             <a href="../classes/Proc.html#method-i-parameters" name="method-i-parameters" class="permalink">Link</a>
@@ -1550,10 +1552,16 @@ rb_proc_lambda_p(VALUE procval)
 
           
             <div class="description">
-              <p>Returns the parameter information of this proc.</p>
+              <p>Returns the parameter information of this proc.  If the lambda keyword is provided and not nil, treats the proc as a lambda if true and as a non-lambda if false.</p>
 
-<pre><code>prc = lambda{|x, y=42, *other|}
+<pre><code>prc = proc{|x, y=42, *other|}
+prc.parameters  #=&gt; [[:opt, :x], [:opt, :y], [:rest, :other]]
+prc = lambda{|x, y=42, *other|}
 prc.parameters  #=&gt; [[:req, :x], [:opt, :y], [:rest, :other]]
+prc = proc{|x, y=42, *other|}
+prc.parameters(lambda: true)  #=&gt; [[:req, :x], [:opt, :y], [:rest, :other]]
+prc = lambda{|x, y=42, *other|}
+prc.parameters(lambda: false) #=&gt; [[:opt, :x], [:opt, :y], [:rest, :other]]
 </code></pre>
             </div>
           
@@ -1573,10 +1581,29 @@ prc.parameters  #=&gt; [[:req, :x], [:opt, :y], [:rest, :other]]
               </p>
               <div id="method-i-parameters_source" class="dyn-source">
                 <pre>static VALUE
-rb_proc_parameters(VALUE self)
+rb_proc_parameters(int argc, VALUE *argv, VALUE self)
 {
-    int is_proc;
-    const rb_iseq_t *iseq = rb_proc_get_iseq(self, &amp;is_proc);
+    static ID keyword_ids[1];
+    VALUE opt, lambda;
+    VALUE kwargs[1];
+    int is_proc ;
+    const rb_iseq_t *iseq;
+
+    iseq = rb_proc_get_iseq(self, &amp;is_proc);
+
+    if (!keyword_ids[0]) {
+        CONST_ID(keyword_ids[0], &quot;lambda&quot;);
+    }
+
+    rb_scan_args(argc, argv, &quot;0:&quot;, &amp;opt);
+    if (!NIL_P(opt)) {
+        rb_get_kwargs(opt, keyword_ids, 0, 1, kwargs);
+        lambda = kwargs[0];
+        if (!NIL_P(lambda)) {
+            is_proc = !RTEST(lambda);
+        }
+    }
+
     if (!iseq) {
         return rb_unnamed_parameters(rb_proc_arity(self));
     }
@@ -1643,10 +1670,10 @@ proc_ruby2_keywords(VALUE procval)
 
     switch (proc-&gt;block.type) {
       case block_type_iseq:
-        if (proc-&gt;block.as.captured.code.iseq-&gt;body-&gt;param.flags.has_rest &amp;&amp;
-                !proc-&gt;block.as.captured.code.iseq-&gt;body-&gt;param.flags.has_kw &amp;&amp;
-                !proc-&gt;block.as.captured.code.iseq-&gt;body-&gt;param.flags.has_kwrest) {
-            proc-&gt;block.as.captured.code.iseq-&gt;body-&gt;param.flags.ruby2_keywords = 1;
+        if (ISEQ_BODY(proc-&gt;block.as.captured.code.iseq)-&gt;param.flags.has_rest &amp;&amp;
+                !ISEQ_BODY(proc-&gt;block.as.captured.code.iseq)-&gt;param.flags.has_kw &amp;&amp;
+                !ISEQ_BODY(proc-&gt;block.as.captured.code.iseq)-&gt;param.flags.has_kwrest) {
+            ISEQ_BODY(proc-&gt;block.as.captured.code.iseq)-&gt;param.flags.ruby2_keywords = 1;
         }
         else {
             rb_warn(&quot;Skipping set of ruby2_keywords flag for proc (proc accepts keywords or proc does not accept argument splat)&quot;);

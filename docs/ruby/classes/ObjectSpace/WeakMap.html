@@ -26,11 +26,11 @@
 
   
     
-    <meta name="description" content="An ObjectSpace::WeakMap object holds references to any objects, but those objects can get garbage collected.  This class is mostly used internally by WeakRef, please use lib/weakref.">
-    <meta property="og:description" content="An ObjectSpace::WeakMap object holds references to any objects, but those objects can get garbage collected.  This class is mostly used internally by WeakRef, please use lib/weakref.">
+    <meta name="description" content="An ObjectSpace::WeakMap is a key-value map that holds weak references to its keys and values, so they can be garbage-collected when there are no more references left.">
+    <meta property="og:description" content="An ObjectSpace::WeakMap is a key-value map that holds weak references to its keys and values, so they can be garbage-collected when there are no more references left.">
   
 
-    <meta name="keywords" content="ObjectSpace::WeakMap class, []=, [], include?, member?, key?, inspect, each, each_pair, each_key, each_value, keys, values, size, length">
+    <meta name="keywords" content="ObjectSpace::WeakMap class, []=, [], delete, include?, member?, key?, inspect, each, each_pair, each_key, each_value, keys, values, size, length">
 </head>
 
 <body>
@@ -81,9 +81,38 @@
   
     <div class="description">
       
-<p>An <a href="WeakMap.html"><code>ObjectSpace::WeakMap</code></a> object holds references to any objects, but those objects can get garbage collected.</p>
+<p>An <a href="WeakMap.html"><code>ObjectSpace::WeakMap</code></a> is a key-value map that holds weak references to its keys and values, so they can be garbage-collected when there are no more references left.</p>
 
-<p>This class is mostly used internally by <a href="../WeakRef.html"><code>WeakRef</code></a>, please use <code>lib/weakref.rb</code> for the public interface.</p>
+<p>Keys in the map are compared by identity.</p>
+
+<pre><code>m = ObjectSpace::WeekMap.new
+key1 = &quot;foo&quot;
+val1 = Object.new
+m[key1] = val1
+
+key2 = &quot;foo&quot;
+val2 = Object.new
+m[key2] = val2
+
+m[key1] #=&gt; #&lt;Object:0x0...&gt;
+m[key2] #=&gt; #&lt;Object:0x0...&gt;
+
+val1 = nil # remove the other reference to value
+GC.start
+
+m[key1] #=&gt; nil
+m.keys #=&gt; [&quot;bar&quot;]
+
+key2 = nil # remove the other reference to key
+GC.start
+
+m[key2] #=&gt; nil
+m.keys #=&gt; []
+</code></pre>
+
+<p>(Note that <a href="../GC.html#method-c-start"><code>GC.start</code></a> is used here only for demonstrational purposes and might not always lead to demonstrated results.)</p>
+
+<p>See also <a href="WeakKeyMap.html"><code>ObjectSpace::WeakKeyMap</code></a> map class, which compares keys by value, and holds weak references only to the keys.</p>
 
     </div>
   
@@ -116,6 +145,18 @@
               
               <li>
                 <a href="#method-i-5B-5D-3D">[]=</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>D</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-delete">delete</a>
               </li>
             
           </ul>
@@ -271,14 +312,17 @@
         <div class="method">
           <h3 class="title method-title" id="method-i-5B-5D">
             
-              <b>[]</b>(p1)
+              <b>map[key] &rarr; value
+</b>
             
             <a href="../../classes/ObjectSpace/WeakMap.html#method-i-5B-5D" name="method-i-5B-5D" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Retrieves a weakly referenced object with the given key</p>
+              <p>Returns the value associated with the given <code>key</code> if found.</p>
+
+<p>If <code>key</code> is not found, returns <code>nil</code>.</p>
             </div>
           
 
@@ -300,7 +344,7 @@
 wmap_aref(VALUE self, VALUE key)
 {
     VALUE obj = wmap_lookup(self, key);
-    return obj != Qundef ? obj : Qnil;
+    return !UNDEF_P(obj) ? obj : Qnil;
 }</pre>
               </div>
             </div>
@@ -310,14 +354,17 @@ wmap_aref(VALUE self, VALUE key)
         <div class="method">
           <h3 class="title method-title" id="method-i-5B-5D-3D">
             
-              <b>[]=</b>(p1, p2)
+              <b>map[key] = value &rarr; value
+</b>
             
             <a href="../../classes/ObjectSpace/WeakMap.html#method-i-5B-5D-3D" name="method-i-5B-5D-3D" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Creates a weak reference from the given key to the given value</p>
+              <p>Associates the given <code>value</code> with the given <code>key</code>.</p>
+
+<p>If the given <code>key</code> exists, replaces its value with the given <code>value</code>; the ordering is not affected.</p>
             </div>
           
 
@@ -336,21 +383,107 @@ wmap_aref(VALUE self, VALUE key)
               </p>
               <div id="method-i-5B-5D-3D_source" class="dyn-source">
                 <pre>static VALUE
-wmap_aset(VALUE self, VALUE key, VALUE value)
+wmap_aset(VALUE self, VALUE key, VALUE val)
 {
     struct weakmap *w;
-
     TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
-    if (FL_ABLE(value)) {
-        define_final0(value, w-&gt;final);
-    }
-    if (FL_ABLE(key)) {
-        define_final0(key, w-&gt;final);
+
+    VALUE pair[2] = { key, val };
+
+    st_update(w-&gt;table, (st_data_t)pair, wmap_aset_replace, (st_data_t)pair);
+
+    RB_OBJ_WRITTEN(self, Qundef, key);
+    RB_OBJ_WRITTEN(self, Qundef, val);
+
+    return nonspecial_obj_id(val);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-delete">
+            
+              <b>map.delete(key) &rarr; value or nil<br />map.delete(key) {|key| ... } &rarr; object
+</b>
+            
+            <a href="../../classes/ObjectSpace/WeakMap.html#method-i-delete" name="method-i-delete" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Deletes the entry for the given <code>key</code> and returns its associated value.</p>
+
+<p>If no block is given and <code>key</code> is found, deletes the entry and returns the associated value:</p>
+
+<pre><code>m = ObjectSpace::WeakMap.new
+key = &quot;foo&quot;
+m[key] = 1
+m.delete(key) # =&gt; 1
+m[key] # =&gt; nil
+</code></pre>
+
+<p>If no block is given and <code>key</code> is not found, returns <code>nil</code>.</p>
+
+<p>If a block is given and <code>key</code> is found, ignores the block, deletes the entry, and returns the associated value:</p>
+
+<pre><code>m = ObjectSpace::WeakMap.new
+key = &quot;foo&quot;
+m[key] = 2
+m.delete(key) { |key| raise &#39;Will never happen&#39;} # =&gt; 2
+</code></pre>
+
+<p>If a block is given and <code>key</code> is not found, yields the <code>key</code> to the block and returns the block’s return value:</p>
+
+<pre><code>m = ObjectSpace::WeakMap.new
+m.delete(&quot;nosuch&quot;) { |key| &quot;Key #{key} not found&quot; } # =&gt; &quot;Key nosuch not found&quot;
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-delete_source')" id="l_method-i-delete_source">show</a>
+                
+              </p>
+              <div id="method-i-delete_source" class="dyn-source">
+                <pre>static VALUE
+wmap_delete(VALUE self, VALUE key)
+{
+    struct weakmap *w;
+    TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
+
+    VALUE orig_key = key;
+    st_data_t orig_key_data = (st_data_t)&amp;orig_key;
+    st_data_t orig_val_data;
+    if (st_delete(w-&gt;table, &amp;orig_key_data, &amp;orig_val_data)) {
+        VALUE orig_val = *(VALUE *)orig_val_data;
+
+        rb_gc_remove_weak(self, (VALUE *)orig_key_data);
+        rb_gc_remove_weak(self, (VALUE *)orig_val_data);
+
+        wmap_free_entry((VALUE *)orig_key_data, (VALUE *)orig_val_data);
+
+        if (wmap_live_p(orig_val)) {
+            return orig_val;
+        }
     }
 
-    st_update(w-&gt;obj2wmap, (st_data_t)value, wmap_aset_update, key);
-    st_insert(w-&gt;wmap2obj, (st_data_t)key, (st_data_t)value);
-    return nonspecial_obj_id(value);
+    if (rb_block_given_p()) {
+        return rb_yield(key);
+    }
+    else {
+        return Qnil;
+    }
 }</pre>
               </div>
             </div>
@@ -360,14 +493,14 @@ wmap_aset(VALUE self, VALUE key, VALUE value)
         <div class="method">
           <h3 class="title method-title" id="method-i-each">
             
-              <b>each</b>()
+              <b>map.each {|key, val| ... } &rarr; self</b>
             
             <a href="../../classes/ObjectSpace/WeakMap.html#method-i-each" name="method-i-each" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Iterates over keys and objects in a weakly referenced object</p>
+              <p>Iterates over keys and values. Note that unlike other collections, <code>each</code> without block isn’t supported.</p>
             </div>
           
 
@@ -393,10 +526,10 @@ wmap_aset(VALUE self, VALUE key, VALUE value)
 wmap_each(VALUE self)
 {
     struct weakmap *w;
-    rb_objspace_t *objspace = &amp;rb_objspace;
-
     TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
-    st_foreach(w-&gt;wmap2obj, wmap_each_i, (st_data_t)objspace);
+
+    wmap_foreach(w, wmap_each_i, (st_data_t)0);
+
     return self;
 }</pre>
               </div>
@@ -407,14 +540,15 @@ wmap_each(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-each_key">
             
-              <b>each_key</b>()
+              <b>map.each_key {|key| ... } &rarr; self
+</b>
             
             <a href="../../classes/ObjectSpace/WeakMap.html#method-i-each_key" name="method-i-each_key" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Iterates over keys and objects in a weakly referenced object</p>
+              <p>Iterates over keys. Note that unlike other collections, <code>each_key</code> without block isn’t supported.</p>
             </div>
           
 
@@ -436,10 +570,10 @@ wmap_each(VALUE self)
 wmap_each_key(VALUE self)
 {
     struct weakmap *w;
-    rb_objspace_t *objspace = &amp;rb_objspace;
-
     TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
-    st_foreach(w-&gt;wmap2obj, wmap_each_key_i, (st_data_t)objspace);
+
+    wmap_foreach(w, wmap_each_key_i, (st_data_t)0);
+
     return self;
 }</pre>
               </div>
@@ -457,7 +591,7 @@ wmap_each_key(VALUE self)
 
           
             <div class="description">
-              <p>Iterates over keys and objects in a weakly referenced object</p>
+              <p>Iterates over keys and values. Note that unlike other collections, <code>each</code> without block isn’t supported.</p>
             </div>
           
 
@@ -475,14 +609,15 @@ wmap_each_key(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-each_value">
             
-              <b>each_value</b>()
+              <b>map.each_value {|val| ... } &rarr; self
+</b>
             
             <a href="../../classes/ObjectSpace/WeakMap.html#method-i-each_value" name="method-i-each_value" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Iterates over keys and objects in a weakly referenced object</p>
+              <p>Iterates over values. Note that unlike other collections, <code>each_value</code> without block isn’t supported.</p>
             </div>
           
 
@@ -504,10 +639,10 @@ wmap_each_key(VALUE self)
 wmap_each_value(VALUE self)
 {
     struct weakmap *w;
-    rb_objspace_t *objspace = &amp;rb_objspace;
-
     TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
-    st_foreach(w-&gt;wmap2obj, wmap_each_value_i, (st_data_t)objspace);
+
+    wmap_foreach(w, wmap_each_value_i, (st_data_t)0);
+
     return self;
 }</pre>
               </div>
@@ -525,7 +660,7 @@ wmap_each_value(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>key</code> is registered</p>
+              <p>Returns <code>true</code> if <code>key</code> is a key in <code>self</code>, otherwise <code>false</code>.</p>
             </div>
           
 
@@ -550,7 +685,7 @@ wmap_each_value(VALUE self)
                 <pre>static VALUE
 wmap_has_key(VALUE self, VALUE key)
 {
-    return wmap_lookup(self, key) == Qundef ? Qfalse : Qtrue;
+    return RBOOL(!UNDEF_P(wmap_lookup(self, key)));
 }</pre>
               </div>
             </div>
@@ -588,20 +723,17 @@ wmap_has_key(VALUE self, VALUE key)
                 <pre>static VALUE
 wmap_inspect(VALUE self)
 {
-    VALUE str;
     VALUE c = rb_class_name(CLASS_OF(self));
     struct weakmap *w;
-    struct wmap_iter_arg args;
-
     TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
-    str = rb_sprintf(&quot;-&lt;%&quot;PRIsVALUE&quot;:%p&quot;, c, (void *)self);
-    if (w-&gt;wmap2obj) {
-        args.objspace = &amp;rb_objspace;
-        args.value = str;
-        st_foreach(w-&gt;wmap2obj, wmap_inspect_i, (st_data_t)&amp;args);
-    }
+
+    VALUE str = rb_sprintf(&quot;-&lt;%&quot;PRIsVALUE&quot;:%p&quot;, c, (void *)self);
+
+    wmap_foreach(w, wmap_inspect_i, (st_data_t)str);
+
     RSTRING_PTR(str)[0] = &#39;#&#39;;
     rb_str_cat2(str, &quot;&gt;&quot;);
+
     return str;
 }</pre>
               </div>
@@ -612,14 +744,14 @@ wmap_inspect(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-key-3F">
             
-              <b>key?</b>(p1)
+              <b>map.key?(key) &rarr; true or false</b>
             
             <a href="../../classes/ObjectSpace/WeakMap.html#method-i-key-3F" name="method-i-key-3F" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>key</code> is registered</p>
+              <p>Returns <code>true</code> if <code>key</code> is a key in <code>self</code>, otherwise <code>false</code>.</p>
             </div>
           
 
@@ -637,14 +769,15 @@ wmap_inspect(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-keys">
             
-              <b>keys</b>()
+              <b>map.keys &rarr; new_array
+</b>
             
             <a href="../../classes/ObjectSpace/WeakMap.html#method-i-keys" name="method-i-keys" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Iterates over keys and objects in a weakly referenced object</p>
+              <p>Returns a new <a href="../Array.html"><code>Array</code></a> containing all keys in the map.</p>
             </div>
           
 
@@ -666,13 +799,12 @@ wmap_inspect(VALUE self)
 wmap_keys(VALUE self)
 {
     struct weakmap *w;
-    struct wmap_iter_arg args;
-
     TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
-    args.objspace = &amp;rb_objspace;
-    args.value = rb_ary_new();
-    st_foreach(w-&gt;wmap2obj, wmap_keys_i, (st_data_t)&amp;args);
-    return args.value;
+
+    VALUE ary = rb_ary_new();
+    wmap_foreach(w, wmap_keys_i, (st_data_t)ary);
+
+    return ary;
 }</pre>
               </div>
             </div>
@@ -714,7 +846,7 @@ wmap_keys(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>key</code> is registered</p>
+              <p>Returns <code>true</code> if <code>key</code> is a key in <code>self</code>, otherwise <code>false</code>.</p>
             </div>
           
 
@@ -732,7 +864,7 @@ wmap_keys(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-size">
             
-              <b>size</b>()
+              <b>map.size &rarr; number</b>
             
             <a href="../../classes/ObjectSpace/WeakMap.html#method-i-size" name="method-i-size" class="permalink">Link</a>
           </h3>
@@ -765,10 +897,10 @@ wmap_keys(VALUE self)
 wmap_size(VALUE self)
 {
     struct weakmap *w;
-    st_index_t n;
-
     TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
-    n = w-&gt;wmap2obj-&gt;num_entries;
+
+    st_index_t n = st_table_size(w-&gt;table);
+
 #if SIZEOF_ST_INDEX_T &lt;= SIZEOF_LONG
     return ULONG2NUM(n);
 #else
@@ -783,14 +915,15 @@ wmap_size(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-values">
             
-              <b>values</b>()
+              <b>map.values &rarr; new_array
+</b>
             
             <a href="../../classes/ObjectSpace/WeakMap.html#method-i-values" name="method-i-values" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Iterates over values and objects in a weakly referenced object</p>
+              <p>Returns a new <a href="../Array.html"><code>Array</code></a> containing all values in the map.</p>
             </div>
           
 
@@ -812,13 +945,12 @@ wmap_size(VALUE self)
 wmap_values(VALUE self)
 {
     struct weakmap *w;
-    struct wmap_iter_arg args;
-
     TypedData_Get_Struct(self, struct weakmap, &amp;weakmap_type, w);
-    args.objspace = &amp;rb_objspace;
-    args.value = rb_ary_new();
-    st_foreach(w-&gt;wmap2obj, wmap_values_i, (st_data_t)&amp;args);
-    return args.value;
+
+    VALUE ary = rb_ary_new();
+    wmap_foreach(w, wmap_values_i, (st_data_t)ary);
+
+    return ary;
 }</pre>
               </div>
             </div>

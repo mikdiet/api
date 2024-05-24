@@ -26,11 +26,11 @@
 
   
     
-    <meta name="description" content="Pseudo I/O on String object, with interface corresponding to IO.  Commonly used to simulate $stdio or $stderr  Examples  require &#39;stringio&#39;  # Writing stream emulation io = StringIO.new io.">
-    <meta property="og:description" content="Pseudo I/O on String object, with interface corresponding to IO.  Commonly used to simulate $stdio or $stderr  Examples  require &#39;stringio&#39;  # Writing stream emulation io = StringIO.new io.">
+    <meta name="description" content="IO streams for strings, with access similar to IO; see IO.">
+    <meta property="og:description" content="IO streams for strings, with access similar to IO; see IO.">
   
 
-    <meta name="keywords" content="StringIO class, open, new, reopen, string, string=, lineno, lineno=, binmode, close, close_read, close_write, closed?, closed_read?, closed_write?, eof, eof?, fcntl, flush, fsync, pos, pos=, rewind, seek, sync, sync=, tell, each, each_line, each_byte, each_char, each_codepoint, getc, ungetc, ungetbyte, getbyte, gets, readlines, read, write, putc, isatty, tty?, pid, fileno, size, length, truncate, external_encoding, internal_encoding, set_encoding, set_encoding_by_bom">
+    <meta name="keywords" content="StringIO class, open, new, reopen, string, string=, lineno, lineno=, binmode, close, close_read, close_write, closed?, closed_read?, closed_write?, eof, eof?, fcntl, flush, fsync, pos, pos=, rewind, seek, sync, sync=, tell, each, each_line, each_byte, each_char, each_codepoint, getc, ungetc, ungetbyte, getbyte, gets, readlines, read, pread, write, putc, isatty, tty?, pid, fileno, size, length, truncate, external_encoding, internal_encoding, set_encoding, set_encoding_by_bom">
 </head>
 
 <body>
@@ -81,24 +81,13 @@
   
     <div class="description">
       
-<p>Pseudo I/O on <a href="String.html"><code>String</code></a> object, with interface corresponding to <a href="IO.html"><code>IO</code></a>.</p>
+<p>IO streams for strings, with access similar to <a href="IO.html"><code>IO</code></a>; see <a href="IO.html"><code>IO</code></a>.</p>
 
-<p>Commonly used to simulate <code>$stdio</code> or <code>$stderr</code></p>
+<h3 id="class-StringIO-label-About+the+Examples">About the Examples</h3>
 
-<h3 id="class-StringIO-label-Examples">Examples</h3>
+<p>Examples on this page assume that StringIO has been required:</p>
 
 <pre><code>require &#39;stringio&#39;
-
-# Writing stream emulation
-io = StringIO.new
-io.puts &quot;Hello World&quot;
-io.string #=&gt; &quot;Hello World\n&quot;
-
-# Reading stream emulation
-io = StringIO.new &quot;first\nsecond\nlast\n&quot;
-io.getc #=&gt; &quot;f&quot;
-io.gets #=&gt; &quot;irst\n&quot;
-io.read #=&gt; &quot;second\nlast\n&quot;
 </code></pre>
 
     </div>
@@ -349,6 +338,11 @@ io.read #=&gt; &quot;second\nlast\n&quot;
             
               
               <li>
+                <a href="#method-i-pread">pread</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-i-putc">putc</a>
               </li>
             
@@ -554,7 +548,7 @@ io.read #=&gt; &quot;second\nlast\n&quot;
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>StringIO.new(string=""[, mode])
+              <b>StringIO.new(string = '', mode = 'r+') &rarr; new_stringio
 </b>
             
             <a href="../classes/StringIO.html#method-c-new" name="method-c-new" class="permalink">Link</a>
@@ -562,7 +556,17 @@ io.read #=&gt; &quot;second\nlast\n&quot;
 
           
             <div class="description">
-              <p>Creates new <a href="StringIO.html"><code>StringIO</code></a> instance from with <em>string</em> and <em>mode</em>.</p>
+              <p>Note that <code>mode</code> defaults to <code>&#39;r&#39;</code> if <code>string</code> is frozen.</p>
+
+<p>Returns a new StringIO instance formed from <code>string</code> and <code>mode</code>; see <a href="File.html#class-File-label-Access+Modes">Access Modes</a>:</p>
+
+<pre><code>strio = StringIO.new # =&gt; #&lt;StringIO&gt;
+strio.close
+</code></pre>
+
+<p>The instance should be closed when no longer needed.</p>
+
+<p>Related: <a href="StringIO.html#method-c-open"><code>StringIO.open</code></a> (accepts block; closes automatically).</p>
             </div>
           
 
@@ -599,7 +603,7 @@ strio_initialize(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-c-open">
             
-              <b>StringIO.open(string=""[, mode]) {|strio| ...}
+              <b>StringIO.open(string = '', mode = 'r+') {|strio| ... }
 </b>
             
             <a href="../classes/StringIO.html#method-c-open" name="method-c-open" class="permalink">Link</a>
@@ -607,7 +611,22 @@ strio_initialize(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Equivalent to <a href="StringIO.html#method-c-new"><code>StringIO.new</code></a> except that when it is called with a block, it yields with the new instance and closes it, and returns the result which returned from the block.</p>
+              <p>Note that <code>mode</code> defaults to <code>&#39;r&#39;</code> if <code>string</code> is frozen.</p>
+
+<p>Creates a new StringIO instance formed from <code>string</code> and <code>mode</code>; see <a href="File.html#class-File-label-Access+Modes">Access Modes</a>.</p>
+
+<p>With no block, returns the new instance:</p>
+
+<pre><code>strio = StringIO.open # =&gt; #&lt;StringIO&gt;
+</code></pre>
+
+<p>With a block, calls the block with the new instance and returns the block’s value; closes the instance on block exit.</p>
+
+<pre><code>StringIO.open {|strio| p strio }
+# =&gt; #&lt;StringIO&gt;
+</code></pre>
+
+<p>Related: <a href="StringIO.html#method-c-new"><code>StringIO.new</code></a>.</p>
             </div>
           
 
@@ -644,7 +663,7 @@ strio_s_open(int argc, VALUE *argv, VALUE klass)
         <div class="method">
           <h3 class="title method-title" id="method-i-binmode">
             
-              <b>strio.binmode    &rarr; stringio
+              <b>binmode &rarr; self
 </b>
             
             <a href="../classes/StringIO.html#method-i-binmode" name="method-i-binmode" class="permalink">Link</a>
@@ -652,7 +671,7 @@ strio_s_open(int argc, VALUE *argv, VALUE klass)
 
           
             <div class="description">
-              <p>Puts stream into binary mode. See <a href="IO.html#method-i-binmode"><code>IO#binmode</code></a>.</p>
+              <p>Sets the data mode in <code>self</code> to binary mode; see <a href="File.html#class-File-label-Data+Mode">Data Mode</a>.</p>
             </div>
           
 
@@ -690,7 +709,7 @@ strio_binmode(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-close">
             
-              <b>strio.close  &rarr; nil
+              <b>close &rarr; nil
 </b>
             
             <a href="../classes/StringIO.html#method-i-close" name="method-i-close" class="permalink">Link</a>
@@ -698,7 +717,11 @@ strio_binmode(VALUE self)
 
           
             <div class="description">
-              <p>Closes a <a href="StringIO.html"><code>StringIO</code></a>. The stream is unavailable for any further data operations; an <code>IOError</code> is raised if such an attempt is made.</p>
+              <p>Closes <code>self</code> for both reading and writing.</p>
+
+<p>Raises <a href="IOError.html"><code>IOError</code></a> if reading or writing is attempted.</p>
+
+<p>Related: <a href="StringIO.html#method-i-close_read"><code>StringIO#close_read</code></a>, <a href="StringIO.html#method-i-close_write"><code>StringIO#close_write</code></a>.</p>
             </div>
           
 
@@ -731,7 +754,7 @@ strio_close(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-close_read">
             
-              <b>strio.close_read    &rarr; nil
+              <b>close_read &rarr; nil
 </b>
             
             <a href="../classes/StringIO.html#method-i-close_read" name="method-i-close_read" class="permalink">Link</a>
@@ -739,7 +762,11 @@ strio_close(VALUE self)
 
           
             <div class="description">
-              <p>Closes the read end of a <a href="StringIO.html"><code>StringIO</code></a>.  Will raise an <code>IOError</code> if the receiver is not readable.</p>
+              <p>Closes <code>self</code> for reading; closed-write setting remains unchanged.</p>
+
+<p>Raises <a href="IOError.html"><code>IOError</code></a> if reading is attempted.</p>
+
+<p>Related: <a href="StringIO.html#method-i-close"><code>StringIO#close</code></a>, <a href="StringIO.html#method-i-close_write"><code>StringIO#close_write</code></a>.</p>
             </div>
           
 
@@ -775,7 +802,7 @@ strio_close_read(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-close_write">
             
-              <b>strio.close_write    &rarr; nil
+              <b>close_write &rarr; nil
 </b>
             
             <a href="../classes/StringIO.html#method-i-close_write" name="method-i-close_write" class="permalink">Link</a>
@@ -783,7 +810,11 @@ strio_close_read(VALUE self)
 
           
             <div class="description">
-              <p>Closes the write end of a <a href="StringIO.html"><code>StringIO</code></a>.  Will raise an  <code>IOError</code> if the receiver is not writeable.</p>
+              <p>Closes <code>self</code> for writing; closed-read setting remains unchanged.</p>
+
+<p>Raises <a href="IOError.html"><code>IOError</code></a> if writing is attempted.</p>
+
+<p>Related: <a href="StringIO.html#method-i-close"><code>StringIO#close</code></a>, <a href="StringIO.html#method-i-close_read"><code>StringIO#close_read</code></a>.</p>
             </div>
           
 
@@ -819,7 +850,7 @@ strio_close_write(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-closed-3F">
             
-              <b>strio.closed?    &rarr; true or false
+              <b>closed? &rarr; true or false
 </b>
             
             <a href="../classes/StringIO.html#method-i-closed-3F" name="method-i-closed-3F" class="permalink">Link</a>
@@ -827,7 +858,7 @@ strio_close_write(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if the stream is completely closed, <code>false</code> otherwise.</p>
+              <p>Returns <code>true</code> if <code>self</code> is closed for both reading and writing, <code>false</code> otherwise.</p>
             </div>
           
 
@@ -860,7 +891,7 @@ strio_closed(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-closed_read-3F">
             
-              <b>strio.closed_read?    &rarr; true or false
+              <b>closed_read? &rarr; true or false
 </b>
             
             <a href="../classes/StringIO.html#method-i-closed_read-3F" name="method-i-closed_read-3F" class="permalink">Link</a>
@@ -868,7 +899,7 @@ strio_closed(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if the stream is not readable, <code>false</code> otherwise.</p>
+              <p>Returns <code>true</code> if <code>self</code> is closed for reading, <code>false</code> otherwise.</p>
             </div>
           
 
@@ -901,7 +932,7 @@ strio_closed_read(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-closed_write-3F">
             
-              <b>strio.closed_write?    &rarr; true or false
+              <b>closed_write? &rarr; true or false
 </b>
             
             <a href="../classes/StringIO.html#method-i-closed_write-3F" name="method-i-closed_write-3F" class="permalink">Link</a>
@@ -909,7 +940,7 @@ strio_closed_read(VALUE self)
 
           
             <div class="description">
-              <p>Returns <code>true</code> if the stream is not writable, <code>false</code> otherwise.</p>
+              <p>Returns <code>true</code> if <code>self</code> is closed for writing, <code>false</code> otherwise.</p>
             </div>
           
 
@@ -942,14 +973,14 @@ strio_closed_write(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-each">
             
-              <b>strio.each(sep=$/, chomp: false) {|line| block }         &rarr; strio<br />strio.each(limit, chomp: false) {|line| block }          &rarr; strio<br />strio.each(sep, limit, chomp: false) {|line| block }     &rarr; strio<br />strio.each(...)                                          &rarr; anEnumerator</b>
+              <b>each</b>(*args)
             
             <a href="../classes/StringIO.html#method-i-each" name="method-i-each" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>See <a href="IO.html#method-i-each"><code>IO#each</code></a>.</p>
+              <p>Calls the block with each remaining line read from the stream; does nothing if already at end-of-file; returns <code>self</code>. See <a href="IO.html#class-IO-label-Line+IO">Line IO</a>.</p>
             </div>
           
 
@@ -975,16 +1006,16 @@ strio_closed_write(VALUE self)
 strio_each(int argc, VALUE *argv, VALUE self)
 {
     VALUE line;
+    struct StringIO *ptr = readable(self);
     struct getline_arg arg;
 
-    StringIO(self);
     RETURN_ENUMERATOR(self, argc, argv);
 
-    if (prepare_getline_args(&amp;arg, argc, argv)-&gt;limit == 0) {
+    if (prepare_getline_args(ptr, &amp;arg, argc, argv)-&gt;limit == 0) {
         rb_raise(rb_eArgError, &quot;invalid limit: 0 for each_line&quot;);
     }
 
-    while (!NIL_P(line = strio_getline(&amp;arg, readable(self)))) {
+    while (!NIL_P(line = strio_getline(&amp;arg, ptr))) {
         rb_yield(line);
     }
     return self;
@@ -997,7 +1028,7 @@ strio_each(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-each_byte">
             
-              <b>strio.each_byte {|byte| block }  &rarr; strio<br />strio.each_byte                  &rarr; anEnumerator
+              <b>each_byte {|byte| ... } &rarr; self
 </b>
             
             <a href="../classes/StringIO.html#method-i-each_byte" name="method-i-each_byte" class="permalink">Link</a>
@@ -1005,7 +1036,9 @@ strio_each(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>See <a href="IO.html#method-i-each_byte"><code>IO#each_byte</code></a>.</p>
+              <p>With a block given, calls the block with each remaining byte in the stream; see <a href="IO.html#class-IO-label-Byte+IO">Byte IO</a>.</p>
+
+<p>With no block given, returns an enumerator.</p>
             </div>
           
 
@@ -1044,7 +1077,7 @@ strio_each_byte(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-each_char">
             
-              <b>strio.each_char {|char| block }  &rarr; strio<br />strio.each_char                  &rarr; anEnumerator
+              <b>each_char {|c| ... } &rarr; self
 </b>
             
             <a href="../classes/StringIO.html#method-i-each_char" name="method-i-each_char" class="permalink">Link</a>
@@ -1052,7 +1085,9 @@ strio_each_byte(VALUE self)
 
           
             <div class="description">
-              <p>See <a href="IO.html#method-i-each_char"><code>IO#each_char</code></a>.</p>
+              <p>With a block given, calls the block with each remaining character in the stream; see <a href="IO.html#class-IO-label-Character+IO">Character IO</a>.</p>
+
+<p>With no block given, returns an enumerator.</p>
             </div>
           
 
@@ -1090,7 +1125,7 @@ strio_each_char(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-each_codepoint">
             
-              <b>strio.each_codepoint {|c| block }  &rarr; strio<br />strio.each_codepoint               &rarr; anEnumerator
+              <b>each_codepoint {|codepoint| ... } &rarr; self
 </b>
             
             <a href="../classes/StringIO.html#method-i-each_codepoint" name="method-i-each_codepoint" class="permalink">Link</a>
@@ -1098,7 +1133,9 @@ strio_each_char(VALUE self)
 
           
             <div class="description">
-              <p>See <a href="IO.html#method-i-each_codepoint"><code>IO#each_codepoint</code></a>.</p>
+              <p>With a block given, calls the block with each remaining codepoint in the stream; see <a href="IO.html#class-IO-label-Codepoint+IO">Codepoint IO</a>.</p>
+
+<p>With no block given, returns an enumerator.</p>
             </div>
           
 
@@ -1151,7 +1188,7 @@ strio_each_codepoint(VALUE self)
 
           
             <div class="description">
-              <p>See <a href="IO.html#method-i-each"><code>IO#each</code></a>.</p>
+              <p>Calls the block with each remaining line read from the stream; does nothing if already at end-of-file; returns <code>self</code>. See <a href="IO.html#class-IO-label-Line+IO">Line IO</a>.</p>
             </div>
           
 
@@ -1169,14 +1206,16 @@ strio_each_codepoint(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-eof">
             
-              <b>strio.eof     &rarr; true or false</b>
+              <b>eof</b>()
             
             <a href="../classes/StringIO.html#method-i-eof" name="method-i-eof" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns true if the stream is at the end of the data (underlying string). The stream must be opened for reading or an <code>IOError</code> will be raised.</p>
+              <p>Returns <code>true</code> if positioned at end-of-stream, <code>false</code> otherwise; see <a href="IO.html#class-IO-label-Position">Position</a>.</p>
+
+<p>Raises <a href="IOError.html"><code>IOError</code></a> if the stream is not opened for reading.</p>
             </div>
           
 
@@ -1219,7 +1258,9 @@ strio_eof(VALUE self)
 
           
             <div class="description">
-              <p>Returns true if the stream is at the end of the data (underlying string). The stream must be opened for reading or an <code>IOError</code> will be raised.</p>
+              <p>Returns <code>true</code> if positioned at end-of-stream, <code>false</code> otherwise; see <a href="IO.html#class-IO-label-Position">Position</a>.</p>
+
+<p>Raises <a href="IOError.html"><code>IOError</code></a> if the stream is not opened for reading.</p>
             </div>
           
 
@@ -1435,7 +1476,7 @@ strio_0(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-getbyte">
             
-              <b>strio.getbyte   &rarr; fixnum or nil
+              <b>getbyte &rarr; byte or nil
 </b>
             
             <a href="../classes/StringIO.html#method-i-getbyte" name="method-i-getbyte" class="permalink">Link</a>
@@ -1443,7 +1484,7 @@ strio_0(VALUE self)
 
           
             <div class="description">
-              <p>See <a href="IO.html#method-i-getbyte"><code>IO#getbyte</code></a>.</p>
+              <p>Reads and returns the next 8-bit byte from the stream; see <a href="IO.html#class-IO-label-Byte+IO">Byte IO</a>.</p>
             </div>
           
 
@@ -1480,7 +1521,7 @@ strio_getbyte(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-getc">
             
-              <b>strio.getc   &rarr; string or nil
+              <b>getc &rarr; character or nil
 </b>
             
             <a href="../classes/StringIO.html#method-i-getc" name="method-i-getc" class="permalink">Link</a>
@@ -1488,7 +1529,7 @@ strio_getbyte(VALUE self)
 
           
             <div class="description">
-              <p>See <a href="IO.html#method-i-getc"><code>IO#getc</code></a>.</p>
+              <p>Reads and returns the next character from the stream; see <a href="IO.html#class-IO-label-Character+IO">Character IO</a>.</p>
             </div>
           
 
@@ -1532,7 +1573,7 @@ strio_getc(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-gets">
             
-              <b>strio.gets(sep=$/, chomp: false)     &rarr; string or nil<br />strio.gets(limit, chomp: false)      &rarr; string or nil<br />strio.gets(sep, limit, chomp: false) &rarr; string or nil
+              <b>gets(sep = $/, chomp: false) &rarr; string or nil<br />gets(limit, chomp: false) &rarr; string or nil<br />gets(sep, limit, chomp: false) &rarr; string or nil
 </b>
             
             <a href="../classes/StringIO.html#method-i-gets" name="method-i-gets" class="permalink">Link</a>
@@ -1540,7 +1581,7 @@ strio_getc(VALUE self)
 
           
             <div class="description">
-              <p>See <a href="IO.html#method-i-gets"><code>IO#gets</code></a>.</p>
+              <p>Reads and returns a line from the stream; assigns the return value to <code>$_</code>; see <a href="IO.html#class-IO-label-Line+IO">Line IO</a>.</p>
             </div>
           
 
@@ -1561,15 +1602,15 @@ strio_getc(VALUE self)
                 <pre>static VALUE
 strio_gets(int argc, VALUE *argv, VALUE self)
 {
+    struct StringIO *ptr = readable(self);
     struct getline_arg arg;
     VALUE str;
 
-    if (prepare_getline_args(&amp;arg, argc, argv)-&gt;limit == 0) {
-        struct StringIO *ptr = readable(self);
+    if (prepare_getline_args(ptr, &amp;arg, argc, argv)-&gt;limit == 0) {
         return rb_enc_str_new(0, 0, get_enc(ptr));
     }
 
-    str = strio_getline(&amp;arg, readable(self));
+    str = strio_getline(&amp;arg, ptr);
     rb_lastline_set(str);
     return str;
 }</pre>
@@ -1688,7 +1729,7 @@ strio_false(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-lineno">
             
-              <b>strio.lineno    &rarr; integer
+              <b>lineno &rarr; current_line_number
 </b>
             
             <a href="../classes/StringIO.html#method-i-lineno" name="method-i-lineno" class="permalink">Link</a>
@@ -1696,7 +1737,7 @@ strio_false(VALUE self)
 
           
             <div class="description">
-              <p>Returns the current line number. The stream must be opened for reading. <code>lineno</code> counts the number of times  <code>gets</code> is called, rather than the number of newlines  encountered. The two values will differ if <code>gets</code> is  called with a separator other than newline.  See also the  <code>$.</code> variable.</p>
+              <p>Returns the current line number in <code>self</code>; see <a href="IO.html#class-IO-label-Line+Number">Line Number</a>.</p>
             </div>
           
 
@@ -1727,7 +1768,7 @@ strio_get_lineno(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-lineno-3D">
             
-              <b>strio.lineno = integer    &rarr; integer
+              <b>lineno = new_line_number &rarr; new_line_number
 </b>
             
             <a href="../classes/StringIO.html#method-i-lineno-3D" name="method-i-lineno-3D" class="permalink">Link</a>
@@ -1735,7 +1776,7 @@ strio_get_lineno(VALUE self)
 
           
             <div class="description">
-              <p>Manually sets the current line number to the given value. <code>$.</code> is updated only on the next read.</p>
+              <p>Sets the current line number in <code>self</code> to the given <code>new_line_number</code>; see <a href="IO.html#class-IO-label-Line+Number">Line Number</a>.</p>
             </div>
           
 
@@ -1806,7 +1847,7 @@ strio_nil(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-pos">
             
-              <b>strio.pos     &rarr; integer<br />strio.tell    &rarr; integer
+              <b>pos &rarr; stream_position
 </b>
             
             <a href="../classes/StringIO.html#method-i-pos" name="method-i-pos" class="permalink">Link</a>
@@ -1814,7 +1855,7 @@ strio_nil(VALUE self)
 
           
             <div class="description">
-              <p>Returns the current offset (in bytes).</p>
+              <p>Returns the current position (in bytes); see <a href="IO.html#class-IO-label-Position">Position</a>.</p>
             </div>
           
 
@@ -1845,7 +1886,7 @@ strio_get_pos(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-pos-3D">
             
-              <b>strio.pos = integer    &rarr; integer
+              <b>pos = new_position &rarr; new_position
 </b>
             
             <a href="../classes/StringIO.html#method-i-pos-3D" name="method-i-pos-3D" class="permalink">Link</a>
@@ -1853,7 +1894,7 @@ strio_get_pos(VALUE self)
 
           
             <div class="description">
-              <p>Seeks to the given position (in bytes).</p>
+              <p>Sets the current position (in bytes); see <a href="IO.html#class-IO-label-Position">Position</a>.</p>
             </div>
           
 
@@ -1881,6 +1922,80 @@ strio_set_pos(VALUE self, VALUE pos)
     }
     ptr-&gt;pos = p;
     return pos;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-pread">
+            
+              <b>pread(maxlen, offset)             &rarr; string<br />pread(maxlen, offset, out_string) &rarr; string
+</b>
+            
+            <a href="../classes/StringIO.html#method-i-pread" name="method-i-pread" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>See <a href="IO.html#method-i-pread"><code>IO#pread</code></a>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-pread_source')" id="l_method-i-pread_source">show</a>
+                
+              </p>
+              <div id="method-i-pread_source" class="dyn-source">
+                <pre>static VALUE
+strio_pread(int argc, VALUE *argv, VALUE self)
+{
+    VALUE rb_len, rb_offset, rb_buf;
+    rb_scan_args(argc, argv, &quot;21&quot;, &amp;rb_len, &amp;rb_offset, &amp;rb_buf);
+    long len = NUM2LONG(rb_len);
+    long offset = NUM2LONG(rb_offset);
+
+    if (len &lt; 0) {
+        rb_raise(rb_eArgError, &quot;negative string size (or size too big): %&quot; PRIsVALUE, rb_len);
+    }
+
+    if (len == 0) {
+        if (NIL_P(rb_buf)) {
+            return rb_str_new(&quot;&quot;, 0);
+        }
+        return rb_buf;
+    }
+
+    if (offset &lt; 0) {
+        rb_syserr_fail_str(EINVAL, rb_sprintf(&quot;pread: Invalid offset argument: %&quot; PRIsVALUE, rb_offset));
+    }
+
+    struct StringIO *ptr = readable(self);
+
+    if (offset &gt;= RSTRING_LEN(ptr-&gt;string)) {
+        rb_eof_error();
+    }
+
+    if (NIL_P(rb_buf)) {
+        return strio_substr(ptr, offset, len, rb_ascii8bit_encoding());
+    }
+
+    long rest = RSTRING_LEN(ptr-&gt;string) - offset;
+    if (len &gt; rest) len = rest;
+    rb_str_resize(rb_buf, len);
+    rb_enc_associate(rb_buf, rb_ascii8bit_encoding());
+    MEMCPY(RSTRING_PTR(rb_buf), RSTRING_PTR(ptr-&gt;string) + offset, char, len);
+    return rb_buf;
 }</pre>
               </div>
             </div>
@@ -2072,15 +2187,15 @@ strio_read(int argc, VALUE *argv, VALUE self)
 strio_readlines(int argc, VALUE *argv, VALUE self)
 {
     VALUE ary, line;
+    struct StringIO *ptr = readable(self);
     struct getline_arg arg;
 
-    StringIO(self);
-    ary = rb_ary_new();
-    if (prepare_getline_args(&amp;arg, argc, argv)-&gt;limit == 0) {
+    if (prepare_getline_args(ptr, &amp;arg, argc, argv)-&gt;limit == 0) {
         rb_raise(rb_eArgError, &quot;invalid limit: 0 for readlines&quot;);
     }
 
-    while (!NIL_P(line = strio_getline(&amp;arg, readable(self)))) {
+    ary = rb_ary_new();
+    while (!NIL_P(line = strio_getline(&amp;arg, ptr))) {
         rb_ary_push(ary, line);
     }
     return ary;
@@ -2093,7 +2208,7 @@ strio_readlines(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-reopen">
             
-              <b>strio.reopen(other_StrIO)     &rarr; strio<br />strio.reopen(string, mode)    &rarr; strio
+              <b>reopen(other, mode = 'r+') &rarr; self
 </b>
             
             <a href="../classes/StringIO.html#method-i-reopen" name="method-i-reopen" class="permalink">Link</a>
@@ -2101,7 +2216,25 @@ strio_readlines(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Reinitializes the stream with the given <em>other_StrIO</em> or <em>string</em> and <em>mode</em> (see StringIO#new).</p>
+              <p>Reinitializes the stream with the given <code>other</code> (string or <a href="StringIO.html"><code>StringIO</code></a>) and <code>mode</code>; see <a href="IO.html#method-c-new"><code>IO.new</code></a>:</p>
+
+<pre><code>StringIO.open(&#39;foo&#39;) do |strio|
+  p strio.string
+  strio.reopen(&#39;bar&#39;)
+  p strio.string
+  other_strio = StringIO.new(&#39;baz&#39;)
+  strio.reopen(other_strio)
+  p strio.string
+  other_strio.close
+end
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>&quot;foo&quot;
+&quot;bar&quot;
+&quot;baz&quot;
+</code></pre>
             </div>
           
 
@@ -2136,7 +2269,7 @@ strio_reopen(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-rewind">
             
-              <b>strio.rewind    &rarr; 0
+              <b>rewind &rarr; 0
 </b>
             
             <a href="../classes/StringIO.html#method-i-rewind" name="method-i-rewind" class="permalink">Link</a>
@@ -2144,7 +2277,7 @@ strio_reopen(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Positions the stream to the beginning of input, resetting <code>lineno</code> to zero.</p>
+              <p>Sets the current position and line number to zero; see <a href="IO.html#class-IO-label-Position">Position</a> and <a href="IO.html#class-IO-label-Line+Number">Line Number</a>.</p>
             </div>
           
 
@@ -2178,7 +2311,7 @@ strio_rewind(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-seek">
             
-              <b>strio.seek(amount, whence=SEEK_SET) &rarr; 0
+              <b>seek(offset, whence = SEEK_SET) &rarr; 0
 </b>
             
             <a href="../classes/StringIO.html#method-i-seek" name="method-i-seek" class="permalink">Link</a>
@@ -2186,7 +2319,7 @@ strio_rewind(VALUE self)
 
           
             <div class="description">
-              <p>Seeks to a given offset <em>amount</em> in the stream according to the value of <em>whence</em> (see <a href="IO.html#method-i-seek"><code>IO#seek</code></a>).</p>
+              <p>Sets the current position to the given integer <code>offset</code> (in bytes), with respect to a given constant <code>whence</code>; see <a href="IO.html#class-IO-label-Position">Position</a>.</p>
             </div>
           
 
@@ -2282,7 +2415,14 @@ strio_set_encoding(int argc, VALUE *argv, VALUE self)
         enc = rb_default_external_encoding();
     }
     else {
-        enc = rb_to_encoding(ext_enc);
+        enc = rb_find_encoding(ext_enc);
+        if (!enc) {
+            rb_io_enc_t convconfig;
+            int oflags, fmode;
+            VALUE vmode = rb_str_append(rb_str_new_cstr(&quot;r:&quot;), ext_enc);
+            rb_io_extract_modeenc(&amp;vmode, 0, Qnil, &amp;oflags, &amp;fmode, &amp;convconfig);
+            enc = convconfig.enc2;
+        }
     }
     ptr-&gt;enc = enc;
     if (WRITABLE(self)) {
@@ -2386,7 +2526,7 @@ strio_size(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-string">
             
-              <b>strio.string     &rarr; string
+              <b>string &rarr; string
 </b>
             
             <a href="../classes/StringIO.html#method-i-string" name="method-i-string" class="permalink">Link</a>
@@ -2394,7 +2534,22 @@ strio_size(VALUE self)
 
           
             <div class="description">
-              <p>Returns underlying <a href="String.html"><code>String</code></a> object, the subject of <a href="IO.html"><code>IO</code></a>.</p>
+              <p>Returns underlying string:</p>
+
+<pre><code>StringIO.open(&#39;foo&#39;) do |strio|
+  p strio.string
+  strio.string = &#39;bar&#39;
+  p strio.string
+end
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>&quot;foo&quot;
+&quot;bar&quot;
+</code></pre>
+
+<p>Related: <a href="StringIO.html#method-i-string-3D"><code>StringIO#string=</code></a> (assigns the underlying string).</p>
             </div>
           
 
@@ -2425,7 +2580,7 @@ strio_get_string(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-string-3D">
             
-              <b>strio.string = string  &rarr; string
+              <b>string = other_string &rarr; other_string
 </b>
             
             <a href="../classes/StringIO.html#method-i-string-3D" name="method-i-string-3D" class="permalink">Link</a>
@@ -2433,7 +2588,22 @@ strio_get_string(VALUE self)
 
           
             <div class="description">
-              <p>Changes underlying <a href="String.html"><code>String</code></a> object, the subject of <a href="IO.html"><code>IO</code></a>.</p>
+              <p>Assigns the underlying string as <code>other_string</code>, and sets position to zero; returns <code>other_string</code>:</p>
+
+<pre><code>StringIO.open(&#39;foo&#39;) do |strio|
+  p strio.string
+  strio.string = &#39;bar&#39;
+  p strio.string
+end
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>&quot;foo&quot;
+&quot;bar&quot;
+</code></pre>
+
+<p>Related: <a href="StringIO.html#method-i-string"><code>StringIO#string</code></a> (returns the underlying string).</p>
             </div>
           
 
@@ -2462,7 +2632,8 @@ strio_set_string(VALUE self, VALUE string)
     ptr-&gt;flags = OBJ_FROZEN(string) ? FMODE_READABLE : FMODE_READWRITE;
     ptr-&gt;pos = 0;
     ptr-&gt;lineno = 0;
-    return ptr-&gt;string = string;
+    RB_OBJ_WRITE(self, &amp;ptr-&gt;string, string);
+    return string;
 }</pre>
               </div>
             </div>
@@ -2472,7 +2643,7 @@ strio_set_string(VALUE self, VALUE string)
         <div class="method">
           <h3 class="title method-title" id="method-i-sync">
             
-              <b>strio.sync    &rarr; true
+              <b>sync &rarr; true
 </b>
             
             <a href="../classes/StringIO.html#method-i-sync" name="method-i-sync" class="permalink">Link</a>
@@ -2480,7 +2651,7 @@ strio_set_string(VALUE self, VALUE string)
 
           
             <div class="description">
-              <p>Returns <code>true</code> always.</p>
+              <p>Returns <code>true</code>; implemented only for compatibility with other stream classes.</p>
             </div>
           
 
@@ -2551,7 +2722,7 @@ strio_first(VALUE self, VALUE arg)
         <div class="method">
           <h3 class="title method-title" id="method-i-tell">
             
-              <b>strio.pos     &rarr; integer<br />strio.tell    &rarr; integer
+              <b>pos &rarr; stream_position
 </b>
             
             <a href="../classes/StringIO.html#method-i-tell" name="method-i-tell" class="permalink">Link</a>
@@ -2559,7 +2730,7 @@ strio_first(VALUE self, VALUE arg)
 
           
             <div class="description">
-              <p>Returns the current offset (in bytes).</p>
+              <p>Returns the current position (in bytes); see <a href="IO.html#class-IO-label-Position">Position</a>.</p>
             </div>
           
 
@@ -2629,7 +2800,7 @@ strio_truncate(VALUE self, VALUE len)
     if (plen &lt; l) {
         MEMZERO(RSTRING_PTR(string) + plen, char, l - plen);
     }
-    return len;
+    return INT2FIX(0);
 }</pre>
               </div>
             </div>
@@ -2664,7 +2835,7 @@ strio_truncate(VALUE self, VALUE len)
         <div class="method">
           <h3 class="title method-title" id="method-i-ungetbyte">
             
-              <b>strio.ungetbyte(fixnum)   &rarr; nil
+              <b>ungetbyte(byte) &rarr; nil
 </b>
             
             <a href="../classes/StringIO.html#method-i-ungetbyte" name="method-i-ungetbyte" class="permalink">Link</a>
@@ -2672,7 +2843,7 @@ strio_truncate(VALUE self, VALUE len)
 
           
             <div class="description">
-              <p>See <a href="IO.html#method-i-ungetbyte"><code>IO#ungetbyte</code></a></p>
+              <p>Pushes back (“unshifts”) an 8-bit byte onto the stream; see <a href="IO.html#class-IO-label-Byte+IO">Byte IO</a>.</p>
             </div>
           
 
@@ -2722,7 +2893,7 @@ strio_ungetbyte(VALUE self, VALUE c)
         <div class="method">
           <h3 class="title method-title" id="method-i-ungetc">
             
-              <b>strio.ungetc(string)   &rarr; nil
+              <b>ungetc(character) &rarr; nil
 </b>
             
             <a href="../classes/StringIO.html#method-i-ungetc" name="method-i-ungetc" class="permalink">Link</a>
@@ -2730,7 +2901,7 @@ strio_ungetbyte(VALUE self, VALUE c)
 
           
             <div class="description">
-              <p>Pushes back one character (passed as a parameter) such that a subsequent buffered read will return it.  There is no limitation for multiple pushbacks including pushing back behind the beginning of the buffer string.</p>
+              <p>Pushes back (“unshifts”) a character or integer onto the stream; see <a href="IO.html#class-IO-label-Character+IO">Character IO</a>.</p>
             </div>
           
 

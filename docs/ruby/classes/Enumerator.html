@@ -30,7 +30,7 @@
     <meta property="og:description" content="A class which allows both internal and external iteration.  An Enumerator can be created by the following methods.  Object#to_enum  Object#enum_for  Enumerator.">
   
 
-    <meta name="keywords" content="Enumerator class, new, each, each_with_index, each_with_object, with_index, with_object, next_values, peek_values, next, peek, feed, rewind, inspect, size, +, produce">
+    <meta name="keywords" content="Enumerator class, new, each, each_with_index, each_with_object, with_index, with_object, next_values, peek_values, next, peek, feed, rewind, inspect, size, +, produce, product">
 </head>
 
 <body>
@@ -123,6 +123,8 @@ end
 # =&gt; [&quot;0:foo&quot;, &quot;1:bar&quot;, &quot;2:baz&quot;]
 </code></pre>
 
+<h2 id="class-Enumerator-label-External+Iteration">External Iteration</h2>
+
 <p>An <a href="Enumerator.html"><code>Enumerator</code></a> can also be used as an external iterator. For example, <a href="Enumerator.html#method-i-next"><code>Enumerator#next</code></a> returns the next value of the iterator or raises <a href="StopIteration.html"><code>StopIteration</code></a> if the <a href="Enumerator.html"><code>Enumerator</code></a> is at the end.</p>
 
 <pre><code>e = [1,2,3].each   # returns an enumerator object.
@@ -132,11 +134,44 @@ puts e.next   # =&gt; 3
 puts e.next   # raises StopIteration
 </code></pre>
 
-<p>Note that enumeration sequence by <code>next</code>, <code>next_values</code>, <code>peek</code> and <code>peek_values</code> do not affect other non-external enumeration methods, unless the underlying iteration method itself has side-effect, e.g. <a href="IO.html#method-i-each_line"><code>IO#each_line</code></a>.</p>
+<p><code>next</code>, <code>next_values</code>, <code>peek</code>, and <code>peek_values</code> are the only methods which use external iteration (and <a href="Array.html#method-i-zip"><code>Array#zip(Enumerable-not-Array)</code></a> which uses <code>next</code> internally).</p>
 
-<p>Moreover, implementation typically uses fibers so performance could be slower and exception stacktraces different than expected.</p>
+<p>These methods do not affect other internal enumeration methods, unless the underlying iteration method itself has side-effect, e.g. <a href="IO.html#method-i-each_line"><code>IO#each_line</code></a>.</p>
 
-<p>You can use this to implement an internal iterator as follows:</p>
+<p><a href="FrozenError.html"><code>FrozenError</code></a> will be raised if these methods are called against a frozen enumerator. Since <code>rewind</code> and <code>feed</code> also change state for external iteration, these methods may raise <a href="FrozenError.html"><code>FrozenError</code></a> too.</p>
+
+<p>External iteration differs <strong>significantly</strong> from internal iteration due to using a Fiber:</p>
+<ul><li>
+<p>The <a href="Fiber.html"><code>Fiber</code></a> adds some overhead compared to internal enumeration.</p>
+</li><li>
+<p>The stacktrace will only include the stack from the <a href="Enumerator.html"><code>Enumerator</code></a>, not above.</p>
+</li><li>
+<p>Fiber-local variables are <strong>not</strong> inherited inside the <a href="Enumerator.html"><code>Enumerator</code></a> <a href="Fiber.html"><code>Fiber</code></a>, which instead starts with no Fiber-local variables.</p>
+</li><li>
+<p><a href="Fiber.html"><code>Fiber</code></a> storage variables <strong>are</strong> inherited and are designed to handle <a href="Enumerator.html"><code>Enumerator</code></a> Fibers. Assigning to a <a href="Fiber.html"><code>Fiber</code></a> storage variable only affects the current <a href="Fiber.html"><code>Fiber</code></a>, so if you want to change state in the caller <a href="Fiber.html"><code>Fiber</code></a> of the <a href="Enumerator.html"><code>Enumerator</code></a> <a href="Fiber.html"><code>Fiber</code></a>, you need to use an extra indirection (e.g., use some object in the <a href="Fiber.html"><code>Fiber</code></a> storage variable and mutate some ivar of it).</p>
+</li></ul>
+
+<p>Concretely:</p>
+
+<pre><code>Thread.current[:fiber_local] = 1
+Fiber[:storage_var] = 1
+e = Enumerator.new do |y|
+  p Thread.current[:fiber_local] # for external iteration: nil, for internal iteration: 1
+  p Fiber[:storage_var] # =&gt; 1, inherited
+  Fiber[:storage_var] += 1
+  y &lt;&lt; 42
+end
+
+p e.next # =&gt; 42
+p Fiber[:storage_var] # =&gt; 1 (it ran in a different Fiber)
+
+e.each { p _1 }
+p Fiber[:storage_var] # =&gt; 2 (it ran in the same Fiber/&quot;stack&quot; as the current Fiber)
+</code></pre>
+
+<h2 id="class-Enumerator-label-Convert+External+Iteration+to+Internal+Iteration">Convert External Iteration to Internal Iteration</h2>
+
+<p>You can use an external iterator to implement an internal iterator as follows:</p>
 
 <pre><code>def ext_each(e)
   while true
@@ -208,6 +243,11 @@ puts ext_each(o.to_enum) {|*x| puts x; [:b, *x] }
         <li>
           <span class="type">CLASS</span>
           <a href="Enumerator/Producer.html">Enumerator::Producer</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
+          <a href="Enumerator/Product.html">Enumerator::Product</a>
         </li>
       
         <li>
@@ -320,7 +360,12 @@ puts ext_each(o.to_enum) {|*x| puts x; [:b, *x] }
             
               
               <li>
-                <a href="#method-c-produce">produce</a>
+                <a href="#method-c-produce">produce</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-product">product</a>
               </li>
             
           </ul>
@@ -536,6 +581,67 @@ enumerator_s_produce(int argc, VALUE *argv, VALUE klass)
             
           </div>
         
+        <div class="method">
+          <h3 class="title method-title" id="method-c-product">
+            
+              <b>Enumerator.product(*enums) &rarr; enumerator<br />Enumerator.product(*enums) { |elts| ... } &rarr; enumerator
+</b>
+            
+            <a href="../classes/Enumerator.html#method-c-product" name="method-c-product" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Generates a new enumerator object that generates a Cartesian product of given enumerable objects.  This is equivalent to <a href="Enumerator/Product.html#method-c-new"><code>Enumerator::Product.new</code></a>.</p>
+
+<pre><code>e = Enumerator.product(1..3, [4, 5])
+e.to_a #=&gt; [[1, 4], [1, 5], [2, 4], [2, 5], [3, 4], [3, 5]]
+e.size #=&gt; 6
+</code></pre>
+
+<p>When a block is given, calls the block with each N-element array generated and returns <code>nil</code>.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-product_source')" id="l_method-c-product_source">show</a>
+                
+              </p>
+              <div id="method-c-product_source" class="dyn-source">
+                <pre>static VALUE
+enumerator_s_product(int argc, VALUE *argv, VALUE klass)
+{
+    VALUE enums = Qnil, options = Qnil, block = Qnil;
+
+    rb_scan_args(argc, argv, &quot;*:&amp;&quot;, &amp;enums, &amp;options, &amp;block);
+
+    if (!NIL_P(options) &amp;&amp; !RHASH_EMPTY_P(options)) {
+        rb_exc_raise(rb_keyword_error_new(&quot;unknown&quot;, rb_hash_keys(options)));
+    }
+
+    VALUE obj = enum_product_initialize(argc, argv, enum_product_allocate(rb_cEnumProduct));
+
+    if (!NIL_P(block)) {
+        enum_product_run(obj, block);
+        return Qnil;
+    }
+
+    return obj;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
       
     
       <h2 class="sectiontitle">Instance Public methods</h2>
@@ -641,9 +747,10 @@ enum.each(:y, :z) { |elm| elm } #=&gt; :method_returned
                 <pre>static VALUE
 enumerator_each(int argc, VALUE *argv, VALUE obj)
 {
+    struct enumerator *e = enumerator_ptr(obj);
+
     if (argc &gt; 0) {
-        struct enumerator *e = enumerator_ptr(obj = rb_obj_dup(obj));
-        VALUE args = e-&gt;args;
+        VALUE args = (e = enumerator_ptr(obj = rb_obj_dup(obj)))-&gt;args;
         if (args) {
 #if SIZEOF_INT &lt; SIZEOF_LONG
             /* check int range overflow */
@@ -655,11 +762,14 @@ enumerator_each(int argc, VALUE *argv, VALUE obj)
         else {
             args = rb_ary_new4(argc, argv);
         }
-        e-&gt;args = args;
+        RB_OBJ_WRITE(obj, &amp;e-&gt;args, args);
         e-&gt;size = Qnil;
         e-&gt;size_fn = 0;
     }
     if (!rb_block_given_p()) return obj;
+
+    if (!lazy_precheck(e-&gt;procs)) return Qnil;
+
     return enumerator_block_call(obj, 0, obj);
 }</pre>
               </div>
@@ -847,10 +957,12 @@ enumerator_feed(VALUE obj, VALUE v)
 {
     struct enumerator *e = enumerator_ptr(obj);
 
-    if (e-&gt;feedvalue != Qundef) {
+    rb_check_frozen(obj);
+
+    if (!UNDEF_P(e-&gt;feedvalue)) {
         rb_raise(rb_eTypeError, &quot;feed value already set&quot;);
     }
-    e-&gt;feedvalue = v;
+    RB_OBJ_WRITE(obj, &amp;e-&gt;feedvalue, v);
 
     return Qnil;
 }</pre>
@@ -1020,7 +1132,9 @@ enumerator_next_values(VALUE obj)
     struct enumerator *e = enumerator_ptr(obj);
     VALUE vs;
 
-    if (e-&gt;lookahead != Qundef) {
+    rb_check_frozen(obj);
+
+    if (!UNDEF_P(e-&gt;lookahead)) {
         vs = e-&gt;lookahead;
         e-&gt;lookahead = Qundef;
         return vs;
@@ -1184,6 +1298,8 @@ enumerator_rewind(VALUE obj)
 {
     struct enumerator *e = enumerator_ptr(obj);
 
+    rb_check_frozen(obj);
+
     rb_check_funcall(e-&gt;obj, id_rewind, 0, 0);
 
     e-&gt;fib = 0;
@@ -1265,7 +1381,7 @@ enumerator_size(VALUE obj)
         argv = RARRAY_CONST_PTR(e-&gt;args);
     }
     size = rb_check_funcall_kw(e-&gt;size, id_call, argc, argv, e-&gt;kw_splat);
-    if (size != Qundef) return size;
+    if (!UNDEF_P(size)) return size;
     return e-&gt;size;
 }</pre>
               </div>

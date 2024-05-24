@@ -30,7 +30,7 @@
     <meta property="og:description" content="Description  An FFI closure wrapper, for handling callbacks.  Example  closure = Class.new(Fiddle::Closure) {   def call     10   end }.">
   
 
-    <meta name="keywords" content="Fiddle::Closure class, new, to_i">
+    <meta name="keywords" content="Fiddle::Closure class, new, to_i, free, freed?, create">
 </head>
 
 <body>
@@ -131,6 +131,35 @@ func.call
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
       
+        <dt>C</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-c-create">create</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>F</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-free">free</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-freed-3F">freed?</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>N</dt>
         <dd>
           <ul>
@@ -201,6 +230,63 @@ func.call
       <h2 class="sectiontitle">Class Public methods</h2>
       
         <div class="method">
+          <h3 class="title method-title" id="method-c-create">
+            
+              <b>create</b>(*args)
+            
+            <a href="../../classes/Fiddle/Closure.html#method-c-create" name="method-c-create" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Create a new closure. If a block is given, the created closure is automatically freed after the given block is executed.</p>
+
+<p>The all given arguments are passed to <a href="Closure.html#method-c-new"><code>Fiddle::Closure.new</code></a>. So using this method without block equals to <a href="Closure.html#method-c-new"><code>Fiddle::Closure.new</code></a>.</p>
+
+<h2 id="method-c-create-label-Example">Example</h2>
+
+<pre><code>Fiddle::Closure.create(TYPE_INT, [TYPE_INT]) do |closure|
+  # closure is freed automatically when this block is finished.
+end
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-create_source')" id="l_method-c-create_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/fiddle/lib/fiddle/closure.rb#L16" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-create_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/ext/fiddle/lib/fiddle/closure.rb, line 16</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">create</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">block_given?</span>
+    <span class="ruby-identifier">closure</span> = <span class="ruby-identifier">new</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+    <span class="ruby-keyword">begin</span>
+      <span class="ruby-keyword">yield</span>(<span class="ruby-identifier">closure</span>)
+    <span class="ruby-keyword">ensure</span>
+      <span class="ruby-identifier">closure</span>.<span class="ruby-identifier">free</span>
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">new</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
               <b>new(ret, args, abi = Fiddle::DEFAULT)
@@ -239,69 +325,14 @@ func.call
               </p>
               <div id="method-c-new_source" class="dyn-source">
                 <pre>static VALUE
-initialize(int rbargc, VALUE argv[], VALUE self)
+initialize(int argc, VALUE *argv, VALUE self)
 {
-    VALUE ret;
-    VALUE args;
-    VALUE normalized_args;
-    VALUE abi;
-    fiddle_closure * cl;
-    ffi_cif * cif;
-    ffi_closure *pcl;
-    ffi_status result;
-    int i, argc;
-
-    if (2 == rb_scan_args(rbargc, argv, &quot;21&quot;, &amp;ret, &amp;args, &amp;abi))
-        abi = INT2NUM(FFI_DEFAULT_ABI);
-
-    Check_Type(args, T_ARRAY);
-
-    argc = RARRAY_LENINT(args);
-
-    TypedData_Get_Struct(self, fiddle_closure, &amp;closure_data_type, cl);
-
-    cl-&gt;argv = (ffi_type **)xcalloc(argc + 1, sizeof(ffi_type *));
-
-    normalized_args = rb_ary_new_capa(argc);
-    for (i = 0; i &lt; argc; i++) {
-        VALUE arg = rb_fiddle_type_ensure(RARRAY_AREF(args, i));
-        rb_ary_push(normalized_args, arg);
-        cl-&gt;argv[i] = rb_fiddle_int_to_ffi_type(NUM2INT(arg));
-    }
-    cl-&gt;argv[argc] = NULL;
-
-    ret = rb_fiddle_type_ensure(ret);
-    rb_iv_set(self, &quot;@ctype&quot;, ret);
-    rb_iv_set(self, &quot;@args&quot;, normalized_args);
-
-    cif = &amp;cl-&gt;cif;
-    pcl = cl-&gt;pcl;
-
-    result = ffi_prep_cif(cif,
-                          NUM2INT(abi),
-                          argc,
-                          rb_fiddle_int_to_ffi_type(NUM2INT(ret)),
-                          cl-&gt;argv);
-
-    if (FFI_OK != result)
-        rb_raise(rb_eRuntimeError, &quot;error prepping CIF %d&quot;, result);
-
-#if USE_FFI_CLOSURE_ALLOC
-    result = ffi_prep_closure_loc(pcl, cif, callback,
-                (void *)self, cl-&gt;code);
-#else
-    result = ffi_prep_closure(pcl, cif, callback, (void *)self);
-    cl-&gt;code = (void *)pcl;
-    i = mprotect(pcl, sizeof(*pcl), PROT_READ | PROT_EXEC);
-    if (i) {
-        rb_sys_fail(&quot;mprotect&quot;);
-    }
-#endif
-
-    if (FFI_OK != result)
-        rb_raise(rb_eRuntimeError, &quot;error prepping closure %d&quot;, result);
-
-    return self;
+    initialize_data data;
+    data.self = self;
+    data.argc = argc;
+    data.argv = argv;
+    return rb_rescue(initialize_body, (VALUE)&amp;data,
+                     initialize_rescue, (VALUE)&amp;data);
 }</pre>
               </div>
             </div>
@@ -313,6 +344,92 @@ initialize(int rbargc, VALUE argv[], VALUE self)
       <h2 class="sectiontitle">Instance Public methods</h2>
       
         <div class="method">
+          <h3 class="title method-title" id="method-i-free">
+            
+              <b>free</b>()
+            
+            <a href="../../classes/Fiddle/Closure.html#method-i-free" name="method-i-free" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Free this closure explicitly. You can’t use this closure anymore.</p>
+
+<p>If this closure is already freed, this does nothing.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-free_source')" id="l_method-i-free_source">show</a>
+                
+              </p>
+              <div id="method-i-free_source" class="dyn-source">
+                <pre>static VALUE
+closure_free(VALUE self)
+{
+    fiddle_closure *closure;
+    TypedData_Get_Struct(self, fiddle_closure, &amp;closure_data_type, closure);
+    if (closure) {
+        dealloc(closure);
+        RTYPEDDATA_DATA(self) = NULL;
+    }
+    return RUBY_Qnil;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-freed-3F">
+            
+              <b>freed?</b>()
+            
+            <a href="../../classes/Fiddle/Closure.html#method-i-freed-3F" name="method-i-freed-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Whether this closure was freed explicitly.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-freed-3F_source')" id="l_method-i-freed-3F_source">show</a>
+                
+              </p>
+              <div id="method-i-freed-3F_source" class="dyn-source">
+                <pre>static VALUE
+closure_freed_p(VALUE self)
+{
+    fiddle_closure *closure;
+    TypedData_Get_Struct(self, fiddle_closure, &amp;closure_data_type, closure);
+    return closure ? RUBY_Qfalse : RUBY_Qtrue;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-to_i">
             
               <b>to_i</b>()
@@ -322,7 +439,7 @@ initialize(int rbargc, VALUE argv[], VALUE self)
 
           
             <div class="description">
-              <p>Returns the memory address for this closure</p>
+              <p>Returns the memory address for this closure.</p>
             </div>
           
 
@@ -343,14 +460,8 @@ initialize(int rbargc, VALUE argv[], VALUE self)
                 <pre>static VALUE
 to_i(VALUE self)
 {
-    fiddle_closure * cl;
-    void *code;
-
-    TypedData_Get_Struct(self, fiddle_closure, &amp;closure_data_type, cl);
-
-    code = cl-&gt;code;
-
-    return PTR2NUM(code);
+    fiddle_closure *closure = get_raw(self);
+    return PTR2NUM(closure-&gt;code);
 }</pre>
               </div>
             </div>

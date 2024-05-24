@@ -198,7 +198,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-reset_runtime_source')" id="l_method-c-reset_runtime_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/log_subscriber.rb#L17" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/log_subscriber.rb#L17" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-reset_runtime_source" class="dyn-source">
@@ -238,7 +238,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-runtime_source')" id="l_method-c-runtime_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/log_subscriber.rb#L13" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/log_subscriber.rb#L13" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-runtime_source" class="dyn-source">
@@ -277,7 +277,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-runtime-3D_source')" id="l_method-c-runtime-3D_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/log_subscriber.rb#L9" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/log_subscriber.rb#L9" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-runtime-3D_source" class="dyn-source">
@@ -320,11 +320,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-sql_source')" id="l_method-i-sql_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/log_subscriber.rb#L32" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/log_subscriber.rb#L30" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-sql_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/log_subscriber.rb, line 32</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/log_subscriber.rb, line 30</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">sql</span>(<span class="ruby-identifier">event</span>)
   <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">runtime</span> <span class="ruby-operator">+=</span> <span class="ruby-identifier">event</span>.<span class="ruby-identifier">duration</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">logger</span>.<span class="ruby-identifier">debug?</span>
@@ -333,7 +333,11 @@
 
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-constant">IGNORE_PAYLOAD_NAMES</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">payload</span>[<span class="ruby-value">:name</span>])
 
-  <span class="ruby-identifier">name</span>  = <span class="ruby-node">&quot;#{payload[:name]} (#{event.duration.round(1)}ms)&quot;</span>
+  <span class="ruby-identifier">name</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">payload</span>[<span class="ruby-value">:async</span>]
+    <span class="ruby-node">&quot;ASYNC #{payload[:name]} (#{payload[:lock_wait].round(1)}ms) (db time #{event.duration.round(1)}ms)&quot;</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-node">&quot;#{payload[:name]} (#{event.duration.round(1)}ms)&quot;</span>
+  <span class="ruby-keyword">end</span>
   <span class="ruby-identifier">name</span>  = <span class="ruby-node">&quot;CACHE #{name}&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">payload</span>[<span class="ruby-value">:cached</span>]
   <span class="ruby-identifier">sql</span>   = <span class="ruby-identifier">payload</span>[<span class="ruby-value">:sql</span>]
   <span class="ruby-identifier">binds</span> = <span class="ruby-keyword">nil</span>
@@ -343,7 +347,17 @@
 
     <span class="ruby-identifier">binds</span> = []
     <span class="ruby-identifier">payload</span>[<span class="ruby-value">:binds</span>].<span class="ruby-identifier">each_with_index</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">attr</span>, <span class="ruby-identifier">i</span><span class="ruby-operator">|</span>
-      <span class="ruby-identifier">binds</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">render_bind</span>(<span class="ruby-identifier">attr</span>, <span class="ruby-identifier">casted_params</span>[<span class="ruby-identifier">i</span>])
+      <span class="ruby-identifier">attribute_name</span> = <span class="ruby-keyword">if</span> <span class="ruby-identifier">attr</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:name</span>)
+        <span class="ruby-identifier">attr</span>.<span class="ruby-identifier">name</span>
+      <span class="ruby-keyword">elsif</span> <span class="ruby-identifier">attr</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:[]</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">attr</span>[<span class="ruby-identifier">i</span>].<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:name</span>)
+        <span class="ruby-identifier">attr</span>[<span class="ruby-identifier">i</span>].<span class="ruby-identifier">name</span>
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-keyword">nil</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-identifier">filtered_params</span> = <span class="ruby-identifier">filter</span>(<span class="ruby-identifier">attribute_name</span>, <span class="ruby-identifier">casted_params</span>[<span class="ruby-identifier">i</span>])
+
+      <span class="ruby-identifier">binds</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">render_bind</span>(<span class="ruby-identifier">attr</span>, <span class="ruby-identifier">filtered_params</span>)
     <span class="ruby-keyword">end</span>
     <span class="ruby-identifier">binds</span> = <span class="ruby-identifier">binds</span>.<span class="ruby-identifier">inspect</span>
     <span class="ruby-identifier">binds</span>.<span class="ruby-identifier">prepend</span>(<span class="ruby-string">&quot;  &quot;</span>)
@@ -385,7 +399,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-strict_loading_violation_source')" id="l_method-i-strict_loading_violation_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/log_subscriber.rb#L22" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/log_subscriber.rb#L22" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-strict_loading_violation_source" class="dyn-source">
@@ -393,10 +407,8 @@
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">strict_loading_violation</span>(<span class="ruby-identifier">event</span>)
   <span class="ruby-identifier">debug</span> <span class="ruby-keyword">do</span>
     <span class="ruby-identifier">owner</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">payload</span>[<span class="ruby-value">:owner</span>]
-    <span class="ruby-identifier">association</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">payload</span>[<span class="ruby-value">:reflection</span>].<span class="ruby-identifier">klass</span>
-    <span class="ruby-identifier">name</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">payload</span>[<span class="ruby-value">:reflection</span>].<span class="ruby-identifier">name</span>
-
-    <span class="ruby-identifier">color</span>(<span class="ruby-node">&quot;Strict loading violation: #{owner} is marked for strict loading. The #{association} association named :#{name} cannot be lazily loaded.&quot;</span>, <span class="ruby-constant">RED</span>)
+    <span class="ruby-identifier">reflection</span> = <span class="ruby-identifier">event</span>.<span class="ruby-identifier">payload</span>[<span class="ruby-value">:reflection</span>]
+    <span class="ruby-identifier">color</span>(<span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">strict_loading_violation_message</span>(<span class="ruby-identifier">owner</span>), <span class="ruby-constant">RED</span>)
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>

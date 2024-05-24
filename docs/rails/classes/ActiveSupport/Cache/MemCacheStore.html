@@ -30,7 +30,7 @@
     <meta property="og:description" content="A cache store implementation which stores data in Memcached: memcached.org  This is currently the most popular cache store for production websites.  Special features:  Clustering and load balancing.">
   
 
-    <meta name="keywords" content="ActiveSupport::Cache::MemCacheStore class, supports_cache_versioning?, new, increment, decrement, clear, stats">
+    <meta name="keywords" content="ActiveSupport::Cache::MemCacheStore class, supports_cache_versioning?, new, write, increment, decrement, clear, stats">
 </head>
 
 <body>
@@ -104,6 +104,22 @@
 
 
   
+    <!-- Namespace -->
+    <div class="sectiontitle">Namespace</div>
+    <ul>
+      
+        <li>
+          <span class="type">MODULE</span>
+          <a href="MemCacheStore/Coders.html">ActiveSupport::Cache::MemCacheStore::Coders</a>
+        </li>
+      
+        <li>
+          <span class="type">MODULE</span>
+          <a href="MemCacheStore/DupLocalCache.html">ActiveSupport::Cache::MemCacheStore::DupLocalCache</a>
+        </li>
+      
+    </ul>
+  
 
 
   
@@ -176,6 +192,18 @@
           </ul>
         </dd>
       
+        <dt>W</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-write">write</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
     </dl>
   
 
@@ -193,18 +221,6 @@
       <!-- Section constants -->
       <h2 class="sectiontitle">Constants</h2>
       <table border='0' cellpadding='5'>
-        
-          <tr valign='top'>
-            <td class="attr-name">DEFAULT_CODER</td>
-            <td>=</td>
-            <td class="attr-value">NullCoder</td>
-          </tr>
-          
-            <tr valign='top'>
-              <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"></td>
-            </tr>
-          
         
           <tr valign='top'>
             <td class="attr-name">ESCAPE_KEY_CHARS</td>
@@ -244,7 +260,7 @@
 <pre><code>ActiveSupport::Cache::MemCacheStore.new(&quot;localhost&quot;, &quot;server-downstairs.localnetwork:8229&quot;)
 </code></pre>
 
-<p>If no addresses are provided, but <a href="'MEMCACHE_SERVERS'">ENV</a> is defined, it will be used instead. Otherwise, <a href="MemCacheStore.html"><code>MemCacheStore</code></a> will connect to localhost:11211 (the default memcached port).</p>
+<p>If no addresses are provided, but <code>ENV[&#39;MEMCACHE_SERVERS&#39;]</code> is defined, it will be used instead. Otherwise, <a href="MemCacheStore.html"><code>MemCacheStore</code></a> will connect to localhost:11211 (the default memcached port).</p>
             </div>
           
 
@@ -260,14 +276,17 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/cache/mem_cache_store.rb#L86" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/cache/mem_cache_store.rb#L109" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 86</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 109</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">addresses</span>)
   <span class="ruby-identifier">addresses</span> = <span class="ruby-identifier">addresses</span>.<span class="ruby-identifier">flatten</span>
   <span class="ruby-identifier">options</span> = <span class="ruby-identifier">addresses</span>.<span class="ruby-identifier">extract_options!</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">options</span>.<span class="ruby-identifier">key?</span>(<span class="ruby-value">:cache_nils</span>)
+    <span class="ruby-identifier">options</span>[<span class="ruby-value">:skip_nil</span>] = <span class="ruby-operator">!</span><span class="ruby-identifier">options</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-value">:cache_nils</span>)
+  <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">super</span>(<span class="ruby-identifier">options</span>)
 
   <span class="ruby-keyword">unless</span> [<span class="ruby-constant">String</span>, <span class="ruby-constant">Dalli</span><span class="ruby-operator">::</span><span class="ruby-constant">Client</span>, <span class="ruby-constant">NilClass</span>].<span class="ruby-identifier">include?</span>(<span class="ruby-identifier">addresses</span>.<span class="ruby-identifier">first</span>.<span class="ruby-identifier">class</span>)
@@ -277,7 +296,9 @@
     <span class="ruby-ivar">@data</span> = <span class="ruby-identifier">addresses</span>.<span class="ruby-identifier">first</span>
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">mem_cache_options</span> = <span class="ruby-identifier">options</span>.<span class="ruby-identifier">dup</span>
-    <span class="ruby-constant">UNIVERSAL_OPTIONS</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-identifier">mem_cache_options</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">name</span>) }
+    <span class="ruby-comment"># The value &quot;compress: false&quot; prevents duplicate compression within Dalli.</span>
+    <span class="ruby-identifier">mem_cache_options</span>[<span class="ruby-value">:compress</span>] = <span class="ruby-keyword">false</span>
+    (<span class="ruby-constant">UNIVERSAL_OPTIONS</span> <span class="ruby-operator">-</span> <span class="ruby-node">%i(compress)</span>).<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">name</span><span class="ruby-operator">|</span> <span class="ruby-identifier">mem_cache_options</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">name</span>) }
     <span class="ruby-ivar">@data</span> = <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">build_mem_cache</span>(<span class="ruby-operator">*</span>(<span class="ruby-identifier">addresses</span> <span class="ruby-operator">+</span> [<span class="ruby-identifier">mem_cache_options</span>]))
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
@@ -312,11 +333,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-supports_cache_versioning-3F_source')" id="l_method-c-supports_cache_versioning-3F_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/cache/mem_cache_store.rb#L46" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/cache/mem_cache_store.rb#L30" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-supports_cache_versioning-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 46</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 30</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">supports_cache_versioning?</span>
   <span class="ruby-keyword">true</span>
 <span class="ruby-keyword">end</span></pre>
@@ -355,11 +376,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-clear_source')" id="l_method-i-clear_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/cache/mem_cache_store.rb#L131" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/cache/mem_cache_store.rb#L175" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-clear_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 131</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 175</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">clear</span>(<span class="ruby-identifier">options</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-identifier">rescue_error_with</span>(<span class="ruby-keyword">nil</span>) { <span class="ruby-ivar">@data</span>.<span class="ruby-identifier">with</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">c</span><span class="ruby-operator">|</span> <span class="ruby-identifier">c</span>.<span class="ruby-identifier">flush_all</span> } }
 <span class="ruby-keyword">end</span></pre>
@@ -378,7 +399,7 @@
 
           
             <div class="description">
-              <p>Decrement a cached value. This method uses the memcached decr atomic operator and can only be used on values written with the :raw option. Calling it on a value not stored with :raw will initialize that value to zero.</p>
+              <p>Decrement a cached value. This method uses the memcached decr atomic operator and can only be used on values written with the <code>:raw</code> option. Calling it on a value not stored with <code>:raw</code> will initialize that value to zero.</p>
             </div>
           
 
@@ -394,11 +415,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-decrement_source')" id="l_method-i-decrement_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/cache/mem_cache_store.rb#L120" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/cache/mem_cache_store.rb#L164" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-decrement_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 120</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 164</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">decrement</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">amount</span> = <span class="ruby-value">1</span>, <span class="ruby-identifier">options</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-identifier">options</span> = <span class="ruby-identifier">merged_options</span>(<span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">instrument</span>(<span class="ruby-value">:decrement</span>, <span class="ruby-identifier">name</span>, <span class="ruby-value">amount:</span> <span class="ruby-identifier">amount</span>) <span class="ruby-keyword">do</span>
@@ -422,7 +443,7 @@
 
           
             <div class="description">
-              <p>Increment a cached value. This method uses the memcached incr atomic operator and can only be used on values written with the :raw option. Calling it on a value not stored with :raw will initialize that value to zero.</p>
+              <p>Increment a cached value. This method uses the memcached incr atomic operator and can only be used on values written with the <code>:raw</code> option. Calling it on a value not stored with <code>:raw</code> will initialize that value to zero.</p>
             </div>
           
 
@@ -438,11 +459,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-increment_source')" id="l_method-i-increment_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/cache/mem_cache_store.rb#L107" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/cache/mem_cache_store.rb#L151" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-increment_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 107</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 151</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">increment</span>(<span class="ruby-identifier">name</span>, <span class="ruby-identifier">amount</span> = <span class="ruby-value">1</span>, <span class="ruby-identifier">options</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-identifier">options</span> = <span class="ruby-identifier">merged_options</span>(<span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">instrument</span>(<span class="ruby-value">:increment</span>, <span class="ruby-identifier">name</span>, <span class="ruby-value">amount:</span> <span class="ruby-identifier">amount</span>) <span class="ruby-keyword">do</span>
@@ -482,14 +503,59 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-stats_source')" id="l_method-i-stats_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activesupport/lib/active_support/cache/mem_cache_store.rb#L136" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/cache/mem_cache_store.rb#L180" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-stats_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 136</span>
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 180</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">stats</span>
   <span class="ruby-ivar">@data</span>.<span class="ruby-identifier">with</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">c</span><span class="ruby-operator">|</span> <span class="ruby-identifier">c</span>.<span class="ruby-identifier">stats</span> }
 <span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-write">
+            
+              <b>write(name, value, options = nil)
+</b>
+            
+            <a href="../../../classes/ActiveSupport/Cache/MemCacheStore.html#method-i-write" name="method-i-write" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Behaves the same as <a href="Store.html#method-i-write"><code>ActiveSupport::Cache::Store#write</code></a>, but supports additional options specific to memcached.</p>
+
+<h4 id="method-i-write-label-Additional+Options">Additional Options</h4>
+<ul><li>
+<p><code>raw: true</code> - Sends the value directly to the server as raw bytes. The value must be a string or number. You can use memcached direct operations like <code>increment</code> and <code>decrement</code> only on raw values.</p>
+</li><li>
+<p><code>unless_exist: true</code> - Prevents overwriting an existing cache entry.</p>
+</li></ul>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-write_source')" id="l_method-i-write_source">show</a>
+                
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activesupport/lib/active_support/cache/mem_cache_store.rb#L132" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-write_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/activesupport/lib/active_support/cache/mem_cache_store.rb, line 132</span>
+      </pre>
               </div>
             </div>
             

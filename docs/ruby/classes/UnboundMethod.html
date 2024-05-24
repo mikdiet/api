@@ -30,7 +30,7 @@
     <meta property="og:description" content="Ruby supports two forms of objectified methods. Class Method is used to represent methods that are associated with a particular object: these method objects are bound to that object.">
   
 
-    <meta name="keywords" content="UnboundMethod class, ==, eql?, hash, clone, arity, inspect, to_s, name, original_name, owner, bind, bind_call, source_location, parameters, super_method, public?, protected?, private?">
+    <meta name="keywords" content="UnboundMethod class, ==, eql?, hash, clone, arity, inspect, to_s, name, original_name, owner, bind, bind_call, source_location, parameters, super_method">
 </head>
 
 <body>
@@ -264,22 +264,7 @@ um.bind(t).call   #=&gt; :original
             
               
               <li>
-                <a href="#method-i-parameters">parameters</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-private-3F">private?</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-protected-3F">protected?</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-public-3F">public?</a>
+                <a href="#method-i-parameters">parameters</a>
               </li>
             
           </ul>
@@ -348,7 +333,14 @@ um.bind(t).call   #=&gt; :original
 
           
             <div class="description">
-              <p>Two method objects are equal if they are bound to the same object and refer to the same method definition and the classes defining the methods are the same class or module.</p>
+              <p>Two unbound method objects are equal if they refer to the same method definition.</p>
+
+<pre><code>Array.instance_method(:each_slice) == Enumerable.instance_method(:each_slice)
+#=&gt; true
+
+Array.instance_method(:sum) == Enumerable.instance_method(:sum)
+#=&gt; false, Array redefines the method for efficiency
+</code></pre>
             </div>
           
 
@@ -370,33 +362,7 @@ um.bind(t).call   #=&gt; :original
                 
               </p>
               <div id="method-i-3D-3D_source" class="dyn-source">
-                <pre>static VALUE
-method_eq(VALUE method, VALUE other)
-{
-    struct METHOD *m1, *m2;
-    VALUE klass1, klass2;
-
-    if (!rb_obj_is_method(other))
-        return Qfalse;
-    if (CLASS_OF(method) != CLASS_OF(other))
-        return Qfalse;
-
-    Check_TypedStruct(method, &amp;method_data_type);
-    m1 = (struct METHOD *)DATA_PTR(method);
-    m2 = (struct METHOD *)DATA_PTR(other);
-
-    klass1 = method_entry_defined_class(m1-&gt;me);
-    klass2 = method_entry_defined_class(m2-&gt;me);
-
-    if (!rb_method_entry_eq(m1-&gt;me, m2-&gt;me) ||
-        klass1 != klass2 ||
-        m1-&gt;klass != m2-&gt;klass ||
-        m1-&gt;recv != m2-&gt;recv) {
-        return Qfalse;
-    }
-
-    return Qtrue;
-}</pre>
+                <pre>#define unbound_method_eq method_eq</pre>
               </div>
             </div>
             
@@ -535,13 +501,14 @@ umethod_bind(VALUE method, VALUE recv)
     const rb_method_entry_t *me;
     const struct METHOD *data;
     TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
-    convert_umethod_to_method_components(data, recv, &amp;methclass, &amp;klass, &amp;iclass, &amp;me);
+    convert_umethod_to_method_components(data, recv, &amp;methclass, &amp;klass, &amp;iclass, &amp;me, true);
 
     struct METHOD *bound;
     method = TypedData_Make_Struct(rb_cMethod, struct METHOD, &amp;method_data_type, bound);
     RB_OBJ_WRITE(method, &amp;bound-&gt;recv, recv);
     RB_OBJ_WRITE(method, &amp;bound-&gt;klass, klass);
     RB_OBJ_WRITE(method, &amp;bound-&gt;iclass, iclass);
+    RB_OBJ_WRITE(method, &amp;bound-&gt;owner, methclass);
     RB_OBJ_WRITE(method, &amp;bound-&gt;me, me);
 
     return method;
@@ -602,8 +569,8 @@ umethod_bind_call(int argc, VALUE *argv, VALUE method)
     else {
         VALUE methclass, klass, iclass;
         const rb_method_entry_t *me;
-        convert_umethod_to_method_components(data, recv, &amp;methclass, &amp;klass, &amp;iclass, &amp;me);
-        struct METHOD bound = { recv, klass, 0, me };
+        convert_umethod_to_method_components(data, recv, &amp;methclass, &amp;klass, &amp;iclass, &amp;me, false);
+        struct METHOD bound = { recv, klass, 0, methclass, me };
 
         return call_method_data(ec, &amp;bound, argc, argv, passed_procval, RB_PASS_CALLED_KEYWORDS);
     }
@@ -661,10 +628,11 @@ method_clone(VALUE self)
 
     TypedData_Get_Struct(self, struct METHOD, &amp;method_data_type, orig);
     clone = TypedData_Make_Struct(CLASS_OF(self), struct METHOD, &amp;method_data_type, data);
-    CLONESETUP(clone, self);
+    rb_obj_clone_setup(self, clone, Qnil);
     RB_OBJ_WRITE(clone, &amp;data-&gt;recv, orig-&gt;recv);
     RB_OBJ_WRITE(clone, &amp;data-&gt;klass, orig-&gt;klass);
     RB_OBJ_WRITE(clone, &amp;data-&gt;iclass, orig-&gt;iclass);
+    RB_OBJ_WRITE(clone, &amp;data-&gt;owner, orig-&gt;owner);
     RB_OBJ_WRITE(clone, &amp;data-&gt;me, rb_method_entry_clone(orig-&gt;me));
     return clone;
 }</pre>
@@ -683,7 +651,14 @@ method_clone(VALUE self)
 
           
             <div class="description">
-              <p>Two method objects are equal if they are bound to the same object and refer to the same method definition and the classes defining the methods are the same class or module.</p>
+              <p>Two unbound method objects are equal if they refer to the same method definition.</p>
+
+<pre><code>Array.instance_method(:each_slice) == Enumerable.instance_method(:each_slice)
+#=&gt; true
+
+Array.instance_method(:sum) == Enumerable.instance_method(:sum)
+#=&gt; false, Array redefines the method for efficiency
+</code></pre>
             </div>
           
 
@@ -834,10 +809,14 @@ method_inspect(VALUE method)
         defined_class = RBASIC_CLASS(defined_class);
     }
 
-    if (FL_TEST(mklass, FL_SINGLETON)) {
-        VALUE v = rb_ivar_get(mklass, attached);
+    if (data-&gt;recv == Qundef) {
+        // UnboundMethod
+        rb_str_buf_append(str, rb_inspect(defined_class));
+    }
+    else if (FL_TEST(mklass, FL_SINGLETON)) {
+        VALUE v = RCLASS_ATTACHED_OBJECT(mklass);
 
-        if (data-&gt;recv == Qundef) {
+        if (UNDEF_P(data-&gt;recv)) {
             rb_str_buf_append(str, rb_inspect(mklass));
         }
         else if (data-&gt;recv == v) {
@@ -855,7 +834,7 @@ method_inspect(VALUE method)
     else {
         mklass = data-&gt;klass;
         if (FL_TEST(mklass, FL_SINGLETON)) {
-            VALUE v = rb_ivar_get(mklass, attached);
+            VALUE v = RCLASS_ATTACHED_OBJECT(mklass);
             if (!(RB_TYPE_P(v, T_CLASS) || RB_TYPE_P(v, T_MODULE))) {
                 do {
                    mklass = RCLASS_SUPER(mklass);
@@ -893,6 +872,16 @@ method_inspect(VALUE method)
 
         rb_str_buf_cat2(str, &quot;(&quot;);
 
+        if (RARRAY_LEN(params) == 3 &amp;&amp;
+            RARRAY_AREF(RARRAY_AREF(params, 0), 0) == rest &amp;&amp;
+            RARRAY_AREF(RARRAY_AREF(params, 0), 1) == ID2SYM(&#39;*&#39;) &amp;&amp;
+            RARRAY_AREF(RARRAY_AREF(params, 1), 0) == keyrest &amp;&amp;
+            RARRAY_AREF(RARRAY_AREF(params, 1), 1) == ID2SYM(idPow) &amp;&amp;
+            RARRAY_AREF(RARRAY_AREF(params, 2), 0) == block &amp;&amp;
+            RARRAY_AREF(RARRAY_AREF(params, 2), 1) == ID2SYM(&#39;&amp;&#39;)) {
+            forwarding = 1;
+        }
+
         for (int i = 0; i &lt; RARRAY_LEN(params); i++) {
             pair = RARRAY_AREF(params, i);
             kind = RARRAY_AREF(pair, 0);
@@ -928,8 +917,7 @@ method_inspect(VALUE method)
             }
             else if (kind == rest) {
                 if (name == ID2SYM(&#39;*&#39;)) {
-                    forwarding = 1;
-                    rb_str_cat_cstr(str, &quot;...&quot;);
+                    rb_str_cat_cstr(str, forwarding ? &quot;...&quot; : &quot;*&quot;);
                 }
                 else {
                     rb_str_catf(str, &quot;*%&quot;PRIsVALUE, name);
@@ -941,6 +929,9 @@ method_inspect(VALUE method)
                 }
                 else if (i &gt; 0) {
                     rb_str_set_len(str, RSTRING_LEN(str) - 2);
+                }
+                else {
+                    rb_str_cat_cstr(str, &quot;**&quot;);
                 }
             }
             else if (kind == block) {
@@ -1086,7 +1077,14 @@ method_original_name(VALUE obj)
 
           
             <div class="description">
-              <p>Returns the class or module that defines the method. See also <a href="Method.html#method-i-receiver"><code>Method#receiver</code></a>.</p>
+              <p>Returns the class or module on which this method is defined. In other words,</p>
+
+<pre><code>meth.owner.instance_methods(false).include?(meth.name) # =&gt; true
+</code></pre>
+
+<p>holds as long as the method is not removed/undefined/replaced, (with private_instance_methods instead of instance_methods if the method is private).</p>
+
+<p>See also <a href="Method.html#method-i-receiver"><code>Method#receiver</code></a>.</p>
 
 <pre><code>(1..3).method(:map).owner #=&gt; Enumerable
 </code></pre>
@@ -1112,7 +1110,7 @@ method_owner(VALUE obj)
 {
     struct METHOD *data;
     TypedData_Get_Struct(obj, struct METHOD, &amp;method_data_type, data);
-    return data-&gt;me-&gt;owner;
+    return data-&gt;owner;
 }</pre>
               </div>
             </div>
@@ -1165,129 +1163,6 @@ method(:foo).parameters #=&gt; [[:req, :bar], [:req, :baz], [:rest, :args], [:bl
 rb_method_parameters(VALUE method)
 {
     return method_def_parameters(rb_method_def(method));
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-private-3F">
-            
-              <b>meth.private? &rarr; true or false
-</b>
-            
-            <a href="../classes/UnboundMethod.html#method-i-private-3F" name="method-i-private-3F" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Returns whether the method is private.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-private-3F_source')" id="l_method-i-private-3F_source">show</a>
-                
-              </p>
-              <div id="method-i-private-3F_source" class="dyn-source">
-                <pre>static VALUE
-method_private_p(VALUE method)
-{
-    const struct METHOD *data;
-    TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
-    return RBOOL(METHOD_ENTRY_VISI(data-&gt;me) == METHOD_VISI_PRIVATE);
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-protected-3F">
-            
-              <b>meth.protected? &rarr; true or false
-</b>
-            
-            <a href="../classes/UnboundMethod.html#method-i-protected-3F" name="method-i-protected-3F" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Returns whether the method is protected.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-protected-3F_source')" id="l_method-i-protected-3F_source">show</a>
-                
-              </p>
-              <div id="method-i-protected-3F_source" class="dyn-source">
-                <pre>static VALUE
-method_protected_p(VALUE method)
-{
-    const struct METHOD *data;
-    TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
-    return RBOOL(METHOD_ENTRY_VISI(data-&gt;me) == METHOD_VISI_PROTECTED);
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-public-3F">
-            
-              <b>meth.public? &rarr; true or false
-</b>
-            
-            <a href="../classes/UnboundMethod.html#method-i-public-3F" name="method-i-public-3F" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              <p>Returns whether the method is public.</p>
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-public-3F_source')" id="l_method-i-public-3F_source">show</a>
-                
-              </p>
-              <div id="method-i-public-3F_source" class="dyn-source">
-                <pre>static VALUE
-method_public_p(VALUE method)
-{
-    const struct METHOD *data;
-    TypedData_Get_Struct(method, struct METHOD, &amp;method_data_type, data);
-    return RBOOL(METHOD_ENTRY_VISI(data-&gt;me) == METHOD_VISI_PUBLIC);
 }</pre>
               </div>
             </div>

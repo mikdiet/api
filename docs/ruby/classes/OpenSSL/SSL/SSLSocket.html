@@ -26,7 +26,7 @@
 
   
 
-    <meta name="keywords" content="OpenSSL::SSL::SSLSocket class, sysclose, post_connection_check, session, new, connect, connect_nonblock, accept, accept_nonblock, sysread, syswrite, cert, peer_cert, peer_cert_chain, ssl_version, cipher, state, pending, session_reused?, session=, verify_result, client_ca, hostname=, finished_message, peer_finished_message, tmp_key, alpn_protocol, npn_protocol">
+    <meta name="keywords" content="OpenSSL::SSL::SSLSocket class, sysclose, post_connection_check, session, new, connect, connect_nonblock, accept, accept_nonblock, sysread, syswrite, cert, peer_cert, peer_cert_chain, ssl_version, cipher, state, pending, session_reused?, session=, verify_result, client_ca, hostname=, finished_message, peer_finished_message, tmp_key, alpn_protocol, export_keying_material, npn_protocol">
 </head>
 
 <body>
@@ -143,6 +143,18 @@
               
               <li>
                 <a href="#method-i-connect_nonblock">connect_nonblock</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>E</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-export_keying_material">export_keying_material</a>
               </li>
             
           </ul>
@@ -449,6 +461,8 @@ ossl_ssl_initialize(int argc, VALUE *argv, VALUE self)
     SSL_set_ex_data(ssl, ossl_ssl_ex_ptr_idx, (void *)self);
     SSL_set_info_callback(ssl, ssl_info_cb);
     verify_cb = rb_attr_get(v_ctx, id_i_verify_callback);
+    // We don&#39;t need to trigger a write barrier because it&#39;s already
+    // an instance variable of this object.
     SSL_set_ex_data(ssl, ossl_ssl_ex_vcb_idx, (void *)verify_cb);
 
     rb_call_super(0, NULL);
@@ -856,6 +870,76 @@ ossl_ssl_connect_nonblock(int argc, VALUE *argv, VALUE self)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-export_keying_material">
+            
+              <b>session.export_keying_material(label, length) &rarr; String
+</b>
+            
+            <a href="../../../classes/OpenSSL/SSL/SSLSocket.html#method-i-export_keying_material" name="method-i-export_keying_material" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Enables use of shared session key material in accordance with RFC 5705.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-export_keying_material_source')" id="l_method-i-export_keying_material_source">show</a>
+                
+              </p>
+              <div id="method-i-export_keying_material_source" class="dyn-source">
+                <pre>static VALUE
+ossl_ssl_export_keying_material(int argc, VALUE *argv, VALUE self)
+{
+    SSL *ssl;
+    VALUE str;
+    VALUE label;
+    VALUE length;
+    VALUE context;
+    unsigned char *p;
+    size_t len;
+    int use_ctx = 0;
+    unsigned char *ctx = NULL;
+    size_t ctx_len = 0;
+    int ret;
+
+    rb_scan_args(argc, argv, &quot;21&quot;, &amp;label, &amp;length, &amp;context);
+    StringValue(label);
+
+    GetSSL(self, ssl);
+
+    len = (size_t)NUM2LONG(length);
+    str = rb_str_new(0, len);
+    p = (unsigned char *)RSTRING_PTR(str);
+    if (!NIL_P(context)) {
+        use_ctx = 1;
+        StringValue(context);
+        ctx = (unsigned char *)RSTRING_PTR(context);
+        ctx_len = RSTRING_LEN(context);
+    }
+    ret = SSL_export_keying_material(ssl, p, len, (char *)RSTRING_PTR(label),
+                                     RSTRING_LENINT(label), ctx, ctx_len, use_ctx);
+    if (ret == 0 || ret == -1) {
+        ossl_raise(eSSLError, &quot;SSL_export_keying_material&quot;);
+    }
+    return str;
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-finished_message">
             
               <b>ssl.finished_message => "finished message"
@@ -1240,11 +1324,11 @@ ossl_ssl_pending(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-post_connection_check_source')" id="l_method-i-post_connection_check_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/ssl.rb#L394" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/ssl.rb#L397" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-post_connection_check_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 394</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 397</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">post_connection_check</span>(<span class="ruby-identifier">hostname</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">peer_cert</span>.<span class="ruby-identifier">nil?</span>
     <span class="ruby-identifier">msg</span> = <span class="ruby-string">&quot;Peer verification enabled, but no certificate received.&quot;</span>
@@ -1292,11 +1376,11 @@ ossl_ssl_pending(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-session_source')" id="l_method-i-session_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/ssl.rb#L415" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/ssl.rb#L418" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-session_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 415</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 418</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">session</span>
   <span class="ruby-constant">SSL</span><span class="ruby-operator">::</span><span class="ruby-constant">Session</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>)
 <span class="ruby-keyword">rescue</span> <span class="ruby-constant">SSL</span><span class="ruby-operator">::</span><span class="ruby-constant">Session</span><span class="ruby-operator">::</span><span class="ruby-constant">SessionError</span>
@@ -1519,11 +1603,11 @@ ossl_ssl_get_state(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-sysclose_source')" id="l_method-i-sysclose_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/openssl/lib/openssl/ssl.rb#L381" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/openssl/lib/openssl/ssl.rb#L384" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-sysclose_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 381</span>
+                <pre><span class="ruby-comment"># File ruby/ext/openssl/lib/openssl/ssl.rb, line 384</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">sysclose</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">closed?</span>
   <span class="ruby-identifier">stop</span>

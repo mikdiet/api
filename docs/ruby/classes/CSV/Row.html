@@ -26,11 +26,11 @@
 
   
     
-    <meta name="description" content="A CSV::Row is part Array and part Hash.">
-    <meta property="og:description" content="A CSV::Row is part Array and part Hash.">
+    <meta name="description" content="CSV::Row  A CSV::Row instance represents a CSV table row. (see class CSV).  The instance may have:  Fields: each is an object, not necessarily a String.">
+    <meta property="og:description" content="CSV::Row  A CSV::Row instance represents a CSV table row. (see class CSV).  The instance may have:  Fields: each is an object, not necessarily a String.">
   
 
-    <meta name="keywords" content="CSV::Row class, new, initialize_copy, header_row?, field_row?, headers, field, [], fetch, has_key?, include?, key?, member?, header?, []=, <<, push, delete, delete_if, fields, values_at, index, field?, each, each_pair, ==, to_h, to_hash, to_csv, to_s, dig, inspect">
+    <meta name="keywords" content="CSV::Row class, new, initialize_copy, header_row?, field_row?, headers, field, [], fetch, has_key?, include?, key?, member?, header?, []=, <<, push, delete, delete_if, fields, values_at, index, field?, each, each_pair, ==, to_h, to_hash, deconstruct_keys, deconstruct, to_csv, to_s, dig, inspect">
 </head>
 
 <body>
@@ -81,9 +81,98 @@
   
     <div class="description">
       
-<p>A <a href="Row.html"><code>CSV::Row</code></a> is part <a href="../Array.html"><code>Array</code></a> and part <a href="../Hash.html"><code>Hash</code></a>. It retains an order for the fields and allows duplicates just as an <a href="../Array.html"><code>Array</code></a> would, but also allows you to access fields by name just as you could if they were in a <a href="../Hash.html"><code>Hash</code></a>.</p>
+<h1 id="class-CSV::Row-label-CSV-3A-3ARow">CSV::Row</h1>
 
-<p>All rows returned by <a href="../CSV.html"><code>CSV</code></a> will be constructed from this class, if header row processing is activated.</p>
+<p>A CSV::Row instance represents a CSV table row. (see <a href="../CSV.html">class CSV</a>).</p>
+
+<p>The instance may have:</p>
+<ul><li>
+<p>Fields: each is an object, not necessarily a String.</p>
+</li><li>
+<p>Headers: each serves a key, and also need not be a String.</p>
+</li></ul>
+
+<h3 id="class-CSV::Row-label-Instance+Methods">Instance Methods</h3>
+
+<p>CSV::Row has three groups of instance methods:</p>
+<ul><li>
+<p>Its own internally defined instance methods.</p>
+</li><li>
+<p>Methods included by module <a href="../Enumerable.html"><code>Enumerable</code></a>.</p>
+</li><li>
+<p>Methods delegated to class <a href="../Array.html"><code>Array</code></a>.:</p>
+<ul><li>
+<p><a href="../Array.html#method-i-empty-3F"><code>Array#empty?</code></a></p>
+</li><li>
+<p><a href="../Array.html#method-i-length"><code>Array#length</code></a></p>
+</li><li>
+<p><a href="../Array.html#method-i-size"><code>Array#size</code></a></p>
+</li></ul>
+</li></ul>
+
+<h2 id="class-CSV::Row-label-Creating+a+CSV-3A-3ARow+Instance">Creating a CSV::Row Instance</h2>
+
+<p>Commonly, a new CSV::Row instance is created by parsing CSV source that has headers:</p>
+
+<pre><code>source = &quot;Name,Value\nfoo,0\nbar,1\nbaz,2\n&quot;
+table = CSV.parse(source, headers: true)
+table.each {|row| p row }
+</code></pre>
+
+<p>Output:</p>
+
+<pre><code>#&lt;CSV::Row &quot;Name&quot;:&quot;foo&quot; &quot;Value&quot;:&quot;0&quot;&gt;
+#&lt;CSV::Row &quot;Name&quot;:&quot;bar&quot; &quot;Value&quot;:&quot;1&quot;&gt;
+#&lt;CSV::Row &quot;Name&quot;:&quot;baz&quot; &quot;Value&quot;:&quot;2&quot;&gt;
+</code></pre>
+
+<p>You can also create a row directly. See <a href="Row.html#method-c-new"><code>::new</code></a>.</p>
+
+<h2 id="class-CSV::Row-label-Headers">Headers</h2>
+
+<p>Like a CSV::Table, a CSV::Row has headers.</p>
+
+<p>A CSV::Row that was created by parsing CSV source inherits its headers from the table:</p>
+
+<pre><code>source = &quot;Name,Value\nfoo,0\nbar,1\nbaz,2\n&quot;
+table = CSV.parse(source, headers: true)
+row = table.first
+row.headers # =&gt; [&quot;Name&quot;, &quot;Value&quot;]
+</code></pre>
+
+<p>You can also create a new row with headers; like the keys in a Hash, the headers need not be Strings:</p>
+
+<pre><code>row = CSV::Row.new([:name, :value], [&#39;foo&#39;, 0])
+row.headers # =&gt; [:name, :value]
+</code></pre>
+
+<p>The new row retains its headers even if added to a table that has headers:</p>
+
+<pre><code>table &lt;&lt; row # =&gt; #&lt;CSV::Table mode:col_or_row row_count:5&gt;
+row.headers # =&gt; [:name, :value]
+row[:name] # =&gt; &quot;foo&quot;
+row[&#39;Name&#39;] # =&gt; nil
+</code></pre>
+
+<h2 id="class-CSV::Row-label-Accessing+Fields">Accessing Fields</h2>
+
+<p>You may access a field in a CSV::Row with either its Integer index (Array-style) or its header (Hash-style).</p>
+
+<p>Fetch a field using method <a href="Row.html#method-i-5B-5D"><code>[]</code></a>:</p>
+
+<pre><code>row = CSV::Row.new([&#39;Name&#39;, &#39;Value&#39;], [&#39;foo&#39;, 0])
+row[1] # =&gt; 0
+row[&#39;Value&#39;] # =&gt; 0
+</code></pre>
+
+<p><a href="../Set.html"><code>Set</code></a> a field using method <a href="Row.html#method-i-5B-5D-3D"><code>[]=</code></a>:</p>
+
+<pre><code>row = CSV::Row.new([&#39;Name&#39;, &#39;Value&#39;], [&#39;foo&#39;, 0])
+row # =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;foo&quot; &quot;Value&quot;:0&gt;
+row[0] = &#39;bar&#39;
+row[&#39;Value&#39;] = 1
+row # =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;bar&quot; &quot;Value&quot;:1&gt;
+</code></pre>
 
     </div>
   
@@ -134,6 +223,16 @@
         <dt>D</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-deconstruct">deconstruct</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-deconstruct_keys">deconstruct_keys</a>,
+              </li>
             
               
               <li>
@@ -397,25 +496,39 @@
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>new</b>(headers, fields, header_row = false)
+              <b>CSV::Row.new(headers, fields, header_row = false) &rarr; csv_row
+</b>
             
             <a href="../../classes/CSV/Row.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Constructs a new <a href="Row.html"><code>CSV::Row</code></a> from <code>headers</code> and <code>fields</code>, which are expected to be Arrays. If one <a href="../Array.html"><code>Array</code></a> is shorter than the other, it will be padded with <code>nil</code> objects.</p>
+              <p>Returns the new CSV::Row instance constructed from arguments <code>headers</code> and <code>fields</code>; both should be Arrays; note that the fields need not be Strings:</p>
 
-<p>The optional <code>header_row</code> parameter can be set to <code>true</code> to indicate, via <a href="Row.html#method-i-header_row-3F"><code>CSV::Row.header_row?()</code></a> and <a href="Row.html#method-i-field_row-3F"><code>CSV::Row.field_row?()</code></a>, that this is a header row. Otherwise, the row assumes to be a field row.</p>
+<pre><code>row = CSV::Row.new([&#39;Name&#39;, &#39;Value&#39;], [&#39;foo&#39;, 0])
+row # =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;foo&quot; &quot;Value&quot;:0&gt;
+</code></pre>
 
-<p>A <a href="Row.html"><code>CSV::Row</code></a> object supports the following <a href="../Array.html"><code>Array</code></a> methods through delegation:</p>
-<ul><li>
-<p>empty?()</p>
-</li><li>
-<p>length()</p>
-</li><li>
-<p>size()</p>
-</li></ul>
+<p>If the Array lengths are different, the shorter is <code>nil</code>-filled:</p>
+
+<pre><code>row = CSV::Row.new([&#39;Name&#39;, &#39;Value&#39;, &#39;Date&#39;, &#39;Size&#39;], [&#39;foo&#39;, 0])
+row # =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;foo&quot; &quot;Value&quot;:0 &quot;Date&quot;:nil &quot;Size&quot;:nil&gt;
+</code></pre>
+
+<p>Each CSV::Row object is either a <em>field row</em> or a <em>header row</em>; by default, a new row is a field row;  for the row created above:</p>
+
+<pre><code>row.field_row? # =&gt; true
+row.header_row? # =&gt; false
+</code></pre>
+
+<p>If the optional argument <code>header_row</code> is given as <code>true</code>, the created row is a header row:</p>
+
+<pre><code>row = CSV::Row.new([&#39;Name&#39;, &#39;Value&#39;], [&#39;foo&#39;, 0], header_row = true)
+row # =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;foo&quot; &quot;Value&quot;:0&gt;
+row.field_row? # =&gt; false
+row.header_row? # =&gt; true
+</code></pre>
             </div>
           
 
@@ -431,11 +544,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L30" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L105" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 30</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 105</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">headers</span>, <span class="ruby-identifier">fields</span>, <span class="ruby-identifier">header_row</span> = <span class="ruby-keyword">false</span>)
   <span class="ruby-ivar">@header_row</span> = <span class="ruby-identifier">header_row</span>
   <span class="ruby-identifier">headers</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">h</span><span class="ruby-operator">|</span> <span class="ruby-identifier">h</span>.<span class="ruby-identifier">freeze</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">h</span>.<span class="ruby-identifier">is_a?</span> <span class="ruby-constant">String</span> }
@@ -510,11 +623,11 @@ row # =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;Foo&quot; &quot;Name&quot;:&quo
                 Source:
                 <a href="javascript:toggleSource('method-i-3C-3C_source')" id="l_method-i-3C-3C_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L310" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L389" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3C-3C_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 310</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 389</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">&lt;&lt;</span>(<span class="ruby-identifier">arg</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">arg</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Array</span>) <span class="ruby-keyword">and</span> <span class="ruby-identifier">arg</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">==</span> <span class="ruby-value">2</span>  <span class="ruby-comment"># appending a header and name</span>
     <span class="ruby-ivar">@row</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">arg</span>
@@ -534,14 +647,24 @@ row # =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;Foo&quot; &quot;Name&quot;:&quo
         <div class="method">
           <h3 class="title method-title" id="method-i-3D-3D">
             
-              <b>==</b>(other)
+              <b>row == other &rarr; true or false
+</b>
             
             <a href="../../classes/CSV/Row.html#method-i-3D-3D" name="method-i-3D-3D" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns <code>true</code> if this row contains the same headers and fields in the same order as <code>other</code>.</p>
+              <p>Returns <code>true</code> if <code>other</code> is a /CSV::Row that has the same fields (headers and values) in the same order as <code>self</code>; otherwise returns <code>false</code>:</p>
+
+<pre><code>source = &quot;Name,Name,Name\nFoo,Bar,Baz\n&quot;
+table = CSV.parse(source, headers: true)
+row = table[0]
+other_row = table[0]
+row == other_row # =&gt; true
+other_row = table[1]
+row == other_row # =&gt; false
+</code></pre>
             </div>
           
 
@@ -557,11 +680,11 @@ row # =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;Foo&quot; &quot;Name&quot;:&quo
                 Source:
                 <a href="javascript:toggleSource('method-i-3D-3D_source')" id="l_method-i-3D-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L522" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L633" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-3D-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 522</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 633</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">==</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-ivar">@row</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">row</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">other</span>.<span class="ruby-identifier">is_a?</span> <span class="ruby-constant">CSV</span><span class="ruby-operator">::</span><span class="ruby-constant">Row</span>
   <span class="ruby-ivar">@row</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">other</span>
@@ -677,11 +800,11 @@ row# =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;foo&quot; &quot;Value&quot;:&quo
                 Source:
                 <a href="javascript:toggleSource('method-i-5B-5D-3D_source')" id="l_method-i-5B-5D-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L260" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L339" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-5B-5D-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 260</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 339</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">[]=</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
   <span class="ruby-identifier">value</span> = <span class="ruby-identifier">args</span>.<span class="ruby-identifier">pop</span>
 
@@ -699,6 +822,90 @@ row# =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;foo&quot; &quot;Value&quot;:&quo
     <span class="ruby-keyword">else</span>                      <span class="ruby-comment"># normal header assignment</span>
       <span class="ruby-ivar">@row</span>[<span class="ruby-identifier">index</span>][<span class="ruby-value">1</span>] = <span class="ruby-identifier">value</span>
     <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-deconstruct">
+            
+              <b>row.deconstruct &rarr; array
+</b>
+            
+            <a href="../../classes/CSV/Row.html#method-i-deconstruct" name="method-i-deconstruct" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the new Array suitable for pattern matching containing the values of the row.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-deconstruct_source')" id="l_method-i-deconstruct_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L682" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-deconstruct_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 682</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">deconstruct</span>
+  <span class="ruby-identifier">fields</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-deconstruct_keys">
+            
+              <b>row.deconstruct_keys(keys) &rarr; hash
+</b>
+            
+            <a href="../../classes/CSV/Row.html#method-i-deconstruct_keys" name="method-i-deconstruct_keys" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the new Hash suitable for pattern matching containing only the keys specified as an argument.</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-deconstruct_keys_source')" id="l_method-i-deconstruct_keys_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L667" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-deconstruct_keys_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 667</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">deconstruct_keys</span>(<span class="ruby-identifier">keys</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">keys</span>.<span class="ruby-identifier">nil?</span>
+    <span class="ruby-identifier">to_h</span>
+  <span class="ruby-keyword">else</span>
+    <span class="ruby-identifier">keys</span>.<span class="ruby-identifier">to_h</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">key</span><span class="ruby-operator">|</span> [<span class="ruby-identifier">key</span>, <span class="ruby-keyword">self</span>[<span class="ruby-identifier">key</span>]] }
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -760,11 +967,11 @@ row.delete(&#39;NAME&#39;, 1) # =&gt; []
                 Source:
                 <a href="javascript:toggleSource('method-i-delete_source')" id="l_method-i-delete_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L372" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L451" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-delete_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 372</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 451</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">delete</span>(<span class="ruby-identifier">header_or_index</span>, <span class="ruby-identifier">minimum_index</span> = <span class="ruby-value">0</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">header_or_index</span>.<span class="ruby-identifier">is_a?</span> <span class="ruby-constant">Integer</span>                 <span class="ruby-comment"># by index</span>
     <span class="ruby-ivar">@row</span>.<span class="ruby-identifier">delete_at</span>(<span class="ruby-identifier">header_or_index</span>)
@@ -821,11 +1028,11 @@ row.delete_if {|header, value| header.start_with?(&#39;B&#39;) } # =&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-i-delete_if_source')" id="l_method-i-delete_if_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L397" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L476" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-delete_if_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 397</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 476</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">delete_if</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">enum_for</span>(<span class="ruby-identifier">__method__</span>) { <span class="ruby-identifier">size</span> } <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block_given?</span>
 
@@ -851,7 +1058,7 @@ row.delete_if {|header, value| header.start_with?(&#39;B&#39;) } # =&gt; false
             <div class="description">
               <p>Finds and returns the object in nested object that is specified by <code>index_or_header</code> and <code>specifiers</code>.</p>
 
-<p>The nested objects may be instances of various classes. See <a href="https://docs.ruby-lang.org/en/master/doc/dig_methods_rdoc.html">Dig Methods</a>.</p>
+<p>The nested objects may be instances of various classes. See <a href="../../files/ruby/doc/dig_methods_rdoc.html">Dig Methods</a>.</p>
 
 <p>Examples:</p>
 
@@ -877,11 +1084,11 @@ row.dig(5) # =&gt; nil
                 Source:
                 <a href="javascript:toggleSource('method-i-dig_source')" id="l_method-i-dig_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L582" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L715" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-dig_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 582</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 715</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">dig</span>(<span class="ruby-identifier">index_or_header</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">indexes</span>)
   <span class="ruby-identifier">value</span> = <span class="ruby-identifier">field</span>(<span class="ruby-identifier">index_or_header</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">value</span>.<span class="ruby-identifier">nil?</span>
@@ -903,18 +1110,32 @@ row.dig(5) # =&gt; nil
         <div class="method">
           <h3 class="title method-title" id="method-i-each">
             
-              <b>each</b>(&amp;block)
+              <b>row.each {|header, value| ... } &rarr; self</b>
             
             <a href="../../classes/CSV/Row.html#method-i-each" name="method-i-each" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Yields each pair of the row as header and field tuples (much like iterating over a <a href="../Hash.html"><code>Hash</code></a>). This method returns the row for chaining.</p>
+              <p>Calls the block with each header-value pair; returns <code>self</code>:</p>
 
-<p>If no block is given, an <a href="../Enumerator.html"><code>Enumerator</code></a> is returned.</p>
+<pre><code>source = &quot;Name,Name,Name\nFoo,Bar,Baz\n&quot;
+table = CSV.parse(source, headers: true)
+row = table[0]
+row.each {|header, value| p [header, value] }
+</code></pre>
 
-<p>Support for <a href="../Enumerable.html"><code>Enumerable</code></a>.</p>
+<p>Output:</p>
+
+<pre><code>[&quot;Name&quot;, &quot;Foo&quot;]
+[&quot;Name&quot;, &quot;Bar&quot;]
+[&quot;Name&quot;, &quot;Baz&quot;]
+</code></pre>
+
+<p>If no block is given, returns a new Enumerator:</p>
+
+<pre><code>row.each # =&gt; #&lt;Enumerator: #&lt;CSV::Row &quot;Name&quot;:&quot;Foo&quot; &quot;Name&quot;:&quot;Bar&quot; &quot;Name&quot;:&quot;Baz&quot;&gt;:each&gt;
+</code></pre>
             </div>
           
 
@@ -934,11 +1155,11 @@ row.dig(5) # =&gt; nil
                 Source:
                 <a href="javascript:toggleSource('method-i-each_source')" id="l_method-i-each_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L508" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L610" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-each_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 508</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 610</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">each</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">enum_for</span>(<span class="ruby-identifier">__method__</span>) { <span class="ruby-identifier">size</span> } <span class="ruby-keyword">unless</span> <span class="ruby-identifier">block_given?</span>
 
@@ -979,7 +1200,7 @@ row.dig(5) # =&gt; nil
         <div class="method">
           <h3 class="title method-title" id="method-i-fetch">
             
-              <b>fetch(header)<br />fetch(header, default)<br />fetch(header) {|row| ... }
+              <b>fetch(header) &rarr; value<br />fetch(header, default) &rarr; value<br />fetch(header) {|row| ... } &rarr; value
 </b>
             
             <a href="../../classes/CSV/Row.html#method-i-fetch" name="method-i-fetch" class="permalink">Link</a>
@@ -1034,11 +1255,11 @@ row.fetch(:nosuch) {|header| &quot;Header &#39;#{header} not found&#39;&quot; } 
                 Source:
                 <a href="javascript:toggleSource('method-i-fetch_source')" id="l_method-i-fetch_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L179" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L258" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-fetch_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 179</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 258</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fetch</span>(<span class="ruby-identifier">header</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">varargs</span>)
   <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-string">&quot;Too many arguments&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">varargs</span>.<span class="ruby-identifier">length</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">1</span>
   <span class="ruby-identifier">pair</span> = <span class="ruby-ivar">@row</span>.<span class="ruby-identifier">assoc</span>(<span class="ruby-identifier">header</span>)
@@ -1062,7 +1283,7 @@ row.fetch(:nosuch) {|header| &quot;Header &#39;#{header} not found&#39;&quot; } 
         <div class="method">
           <h3 class="title method-title" id="method-i-field">
             
-              <b>field(index)<br />field(header)<br />field(header, offset)</b>
+              <b>field(index) &rarr; value<br />field(header) &rarr; value<br />field(header, offset) &rarr; value</b>
             
             <a href="../../classes/CSV/Row.html#method-i-field" name="method-i-field" class="permalink">Link</a>
           </h3>
@@ -1130,11 +1351,11 @@ row.field(&#39;Name&#39;, 2) # =&gt; &quot;Baz&quot;
                 Source:
                 <a href="javascript:toggleSource('method-i-field_source')" id="l_method-i-field_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L124" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L203" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-field_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 124</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 203</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">field</span>(<span class="ruby-identifier">header_or_index</span>, <span class="ruby-identifier">minimum_index</span> = <span class="ruby-value">0</span>)
   <span class="ruby-comment"># locate the pair</span>
   <span class="ruby-identifier">finder</span> = (<span class="ruby-identifier">header_or_index</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Integer</span>) <span class="ruby-operator">||</span> <span class="ruby-identifier">header_or_index</span>.<span class="ruby-identifier">is_a?</span>(<span class="ruby-constant">Range</span>)) <span class="ruby-operator">?</span> <span class="ruby-value">:[]</span> <span class="ruby-operator">:</span> <span class="ruby-value">:assoc</span>
@@ -1155,14 +1376,22 @@ row.field(&#39;Name&#39;, 2) # =&gt; &quot;Baz&quot;
         <div class="method">
           <h3 class="title method-title" id="method-i-field-3F">
             
-              <b>field?</b>(data)
+              <b>row.field?(value) &rarr; true or false
+</b>
             
             <a href="../../classes/CSV/Row.html#method-i-field-3F" name="method-i-field-3F" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Returns <code>true</code> if <code>data</code> matches a field in this row, and <code>false</code> otherwise.</p>
+              <p>Returns <code>true</code> if <code>value</code> is a field in this row, <code>false</code> otherwise:</p>
+
+<pre><code>source = &quot;Name,Name,Name\nFoo,Bar,Baz\n&quot;
+table = CSV.parse(source, headers: true)
+row = table[0]
+row.field?(&#39;Bar&#39;) # =&gt; true
+row.field?(&#39;BAR&#39;) # =&gt; false
+</code></pre>
             </div>
           
 
@@ -1178,11 +1407,11 @@ row.field(&#39;Name&#39;, 2) # =&gt; &quot;Baz&quot;
                 Source:
                 <a href="javascript:toggleSource('method-i-field-3F_source')" id="l_method-i-field-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L494" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L589" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-field-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 494</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 589</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">field?</span>(<span class="ruby-identifier">data</span>)
   <span class="ruby-identifier">fields</span>.<span class="ruby-identifier">include?</span> <span class="ruby-identifier">data</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1218,11 +1447,11 @@ row.field(&#39;Name&#39;, 2) # =&gt; &quot;Baz&quot;
                 Source:
                 <a href="javascript:toggleSource('method-i-field_row-3F_source')" id="l_method-i-field_row-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L69" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L148" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-field_row-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 69</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 148</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">field_row?</span>
   <span class="ruby-keyword">not</span> <span class="ruby-identifier">header_row?</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1234,7 +1463,7 @@ row.field(&#39;Name&#39;, 2) # =&gt; &quot;Baz&quot;
         <div class="method">
           <h3 class="title method-title" id="method-i-fields">
             
-              <b>self.fields(*specifiers)</b>
+              <b>self.fields(*specifiers) &rarr; array_of_fields</b>
             
             <a href="../../classes/CSV/Row.html#method-i-fields" name="method-i-fields" class="permalink">Link</a>
           </h3>
@@ -1312,11 +1541,11 @@ row.fields(&#39;Name&#39;..&#39;NAME&#39;) # =&gt; [&quot;Foo&quot;, &quot;Bar&q
                 Source:
                 <a href="javascript:toggleSource('method-i-fields_source')" id="l_method-i-fields_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L451" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L530" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-fields_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 451</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 530</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">fields</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">headers_and_or_indices</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">headers_and_or_indices</span>.<span class="ruby-identifier">empty?</span>  <span class="ruby-comment"># return all fields--no arguments</span>
     <span class="ruby-ivar">@row</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:last</span>)
@@ -1346,7 +1575,7 @@ row.fields(&#39;Name&#39;..&#39;NAME&#39;) # =&gt; [&quot;Foo&quot;, &quot;Bar&q
         <div class="method">
           <h3 class="title method-title" id="method-i-has_key-3F">
             
-              <b>row.has_key?(header)</b>
+              <b>row.has_key?(header) &rarr; true or false</b>
             
             <a href="../../classes/CSV/Row.html#method-i-has_key-3F" name="method-i-has_key-3F" class="permalink">Link</a>
           </h3>
@@ -1373,11 +1602,11 @@ row.fields(&#39;Name&#39;..&#39;NAME&#39;) # =&gt; [&quot;Foo&quot;, &quot;Bar&q
                 Source:
                 <a href="javascript:toggleSource('method-i-has_key-3F_source')" id="l_method-i-has_key-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L200" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L279" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-has_key-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 200</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 279</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">has_key?</span>(<span class="ruby-identifier">header</span>)
   <span class="ruby-operator">!</span><span class="ruby-operator">!</span><span class="ruby-ivar">@row</span>.<span class="ruby-identifier">assoc</span>(<span class="ruby-identifier">header</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1438,11 +1667,11 @@ row.fields(&#39;Name&#39;..&#39;NAME&#39;) # =&gt; [&quot;Foo&quot;, &quot;Bar&q
                 Source:
                 <a href="javascript:toggleSource('method-i-header_row-3F_source')" id="l_method-i-header_row-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L61" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L140" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-header_row-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 61</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 140</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">header_row?</span>
   <span class="ruby-ivar">@header_row</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1454,7 +1683,7 @@ row.fields(&#39;Name&#39;..&#39;NAME&#39;) # =&gt; [&quot;Foo&quot;, &quot;Bar&q
         <div class="method">
           <h3 class="title method-title" id="method-i-headers">
             
-              <b>row.headers
+              <b>row.headers &rarr; array_of_headers
 </b>
             
             <a href="../../classes/CSV/Row.html#method-i-headers" name="method-i-headers" class="permalink">Link</a>
@@ -1484,11 +1713,11 @@ row.headers # =&gt; [&quot;Name&quot;, &quot;Value&quot;]
                 Source:
                 <a href="javascript:toggleSource('method-i-headers_source')" id="l_method-i-headers_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L81" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L160" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-headers_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 81</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 160</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">headers</span>
   <span class="ruby-ivar">@row</span>.<span class="ruby-identifier">map</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:first</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1525,7 +1754,7 @@ row.headers # =&gt; [&quot;Name&quot;, &quot;Value&quot;]
         <div class="method">
           <h3 class="title method-title" id="method-i-index">
             
-              <b>index( header )<br />index( header, offset )
+              <b>index(header) &rarr; index<br />index(header, offset) &rarr; index
 </b>
             
             <a href="../../classes/CSV/Row.html#method-i-index" name="method-i-index" class="permalink">Link</a>
@@ -1533,7 +1762,22 @@ row.headers # =&gt; [&quot;Name&quot;, &quot;Value&quot;]
 
           
             <div class="description">
-              <p>This method will return the index of a field with the provided <code>header</code>. The <code>offset</code> can be used to locate duplicate header names, as described in <a href="Row.html#method-i-field"><code>CSV::Row.field()</code></a>.</p>
+              <p>Returns the index for the given header, if it exists; otherwise returns <code>nil</code>.</p>
+
+<p>With the single argument <code>header</code>, returns the index of the first-found field with the given <code>header</code>:</p>
+
+<pre><code>source = &quot;Name,Name,Name\nFoo,Bar,Baz\n&quot;
+table = CSV.parse(source, headers: true)
+row = table[0]
+row.index(&#39;Name&#39;) # =&gt; 0
+row.index(&#39;NAME&#39;) # =&gt; nil
+</code></pre>
+
+<p>With arguments <code>header</code> and <code>offset</code>, returns the index of the first-found field with given <code>header</code>, but ignoring the first <code>offset</code> fields:</p>
+
+<pre><code>row.index(&#39;Name&#39;, 1) # =&gt; 1
+row.index(&#39;Name&#39;, 3) # =&gt; nil
+</code></pre>
             </div>
           
 
@@ -1549,11 +1793,11 @@ row.headers # =&gt; [&quot;Name&quot;, &quot;Value&quot;]
                 Source:
                 <a href="javascript:toggleSource('method-i-index_source')" id="l_method-i-index_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L483" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L573" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-index_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 483</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 573</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">index</span>(<span class="ruby-identifier">header</span>, <span class="ruby-identifier">minimum_index</span> = <span class="ruby-value">0</span>)
   <span class="ruby-comment"># find the pair</span>
   <span class="ruby-identifier">index</span> = <span class="ruby-identifier">headers</span>[<span class="ruby-identifier">minimum_index</span><span class="ruby-operator">..</span><span class="ruby-value">-1</span>].<span class="ruby-identifier">index</span>(<span class="ruby-identifier">header</span>)
@@ -1568,14 +1812,15 @@ row.headers # =&gt; [&quot;Name&quot;, &quot;Value&quot;]
         <div class="method">
           <h3 class="title method-title" id="method-i-initialize_copy">
             
-              <b>initialize_copy</b>(other)
+              <b>row.initialize_copy(other_row) &rarr; self
+</b>
             
             <a href="../../classes/CSV/Row.html#method-i-initialize_copy" name="method-i-initialize_copy" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Calls superclass method.</p>
             </div>
           
 
@@ -1591,11 +1836,11 @@ row.headers # =&gt; [&quot;Name&quot;, &quot;Value&quot;]
                 Source:
                 <a href="javascript:toggleSource('method-i-initialize_copy_source')" id="l_method-i-initialize_copy_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L51" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L130" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-initialize_copy_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 51</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 130</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize_copy</span>(<span class="ruby-identifier">other</span>)
   <span class="ruby-identifier">super_return_value</span> = <span class="ruby-keyword">super</span>
   <span class="ruby-ivar">@row</span> = <span class="ruby-ivar">@row</span>.<span class="ruby-identifier">collect</span>(<span class="ruby-operator">&amp;</span><span class="ruby-value">:dup</span>)
@@ -1646,11 +1891,11 @@ row.inspect # =&gt; &quot;#&lt;CSV::Row \&quot;Name\&quot;:\&quot;foo\&quot; \&q
                 Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L607" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L740" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-inspect_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 607</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 740</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">inspect</span>
   <span class="ruby-identifier">str</span> = [<span class="ruby-string">&quot;#&lt;&quot;</span>, <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span>]
   <span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">header</span>, <span class="ruby-identifier">field</span><span class="ruby-operator">|</span>
@@ -1725,7 +1970,7 @@ row.inspect # =&gt; &quot;#&lt;CSV::Row \&quot;Name\&quot;:\&quot;foo\&quot; \&q
         <div class="method">
           <h3 class="title method-title" id="method-i-push">
             
-              <b>row.push(*values) &rarr;self
+              <b>row.push(*values) &rarr; self
 </b>
             
             <a href="../../classes/CSV/Row.html#method-i-push" name="method-i-push" class="permalink">Link</a>
@@ -1756,11 +2001,11 @@ row # =&gt; #&lt;CSV::Row &quot;Name&quot;:&quot;Foo&quot; &quot;Name&quot;:&quo
                 Source:
                 <a href="javascript:toggleSource('method-i-push_source')" id="l_method-i-push_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L331" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L410" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-push_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 331</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 410</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">push</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
   <span class="ruby-identifier">args</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">arg</span><span class="ruby-operator">|</span> <span class="ruby-keyword">self</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">arg</span> }
 
@@ -1807,11 +2052,11 @@ row.to_csv # =&gt; &quot;foo,0\n&quot;
                 Source:
                 <a href="javascript:toggleSource('method-i-to_csv_source')" id="l_method-i-to_csv_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L561" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L694" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_csv_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 561</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 694</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_csv</span>(<span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
   <span class="ruby-identifier">fields</span>.<span class="ruby-identifier">to_csv</span>(<span class="ruby-operator">**</span><span class="ruby-identifier">options</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1864,11 +2109,11 @@ row.to_h # =&gt; {&quot;Name&quot;=&gt;&quot;Foo&quot;}
                 Source:
                 <a href="javascript:toggleSource('method-i-to_h_source')" id="l_method-i-to_h_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/csv/row.rb#L542" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/csv/row.rb#L653" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-to_h_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 542</span>
+                <pre><span class="ruby-comment"># File ruby/lib/csv/row.rb, line 653</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">to_h</span>
   <span class="ruby-identifier">hash</span> = {}
   <span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">key</span>, <span class="ruby-identifier">_value</span><span class="ruby-operator">|</span>

@@ -26,8 +26,8 @@
 
   
     
-    <meta name="description" content="Document-class: TracePoint  A class that provides the functionality of Kernel#set_trace_func in a nice Object-Oriented API.">
-    <meta property="og:description" content="Document-class: TracePoint  A class that provides the functionality of Kernel#set_trace_func in a nice Object-Oriented API.">
+    <meta name="description" content="A class that provides the functionality of Kernel#set_trace_func in a nice Object-Oriented API.  Example  We can use TracePoint to gather information specifically for exceptions:  trace = TracePoint.">
+    <meta property="og:description" content="A class that provides the functionality of Kernel#set_trace_func in a nice Object-Oriented API.  Example  We can use TracePoint to gather information specifically for exceptions:  trace = TracePoint.">
   
 
     <meta name="keywords" content="TracePoint class, new, inspect, stat, trace, allow_reentry, enable, disable, enabled?, event, lineno, path, parameters, method_id, callee_id, defined_class, binding, self, return_value, raised_exception, eval_script, instruction_sequence">
@@ -83,8 +83,6 @@
   
     <div class="description">
       
-<p>Document-class: <a href="TracePoint.html"><code>TracePoint</code></a></p>
-
 <p>A class that provides the functionality of <a href="Kernel.html#method-i-set_trace_func"><code>Kernel#set_trace_func</code></a> in a nice Object-Oriented API.</p>
 
 <h2 id="class-TracePoint-label-Example">Example</h2>
@@ -134,6 +132,9 @@ trace.enable
 </dd><dt><code>:raise</code>
 <dd>
 <p>raise an exception</p>
+</dd><dt><code>:rescue</code>
+<dd>
+<p>rescue an exception</p>
 </dd><dt><code>:b_call</code>
 <dd>
 <p>event hook at block entry</p>
@@ -401,7 +402,7 @@ trace.enable
         <div class="method">
           <h3 class="title method-title" id="method-c-allow_reentry">
             
-              <b>TracePoint.allow_reentry
+              <b>TracePoint.allow_reentry { block }
 </b>
             
             <a href="../classes/TracePoint.html#method-c-allow_reentry" name="method-c-allow_reentry" class="permalink">Link</a>
@@ -412,6 +413,50 @@ trace.enable
               <p>In general, while a <a href="TracePoint.html"><code>TracePoint</code></a> callback is running, other registered callbacks are not called to avoid confusion by reentrance. This method allows the reentrance in a given block. This method should be used carefully, otherwise the callback can be easily called infinitely.</p>
 
 <p>If this method is called when the reentrance is already allowed, it raises a <a href="RuntimeError.html"><code>RuntimeError</code></a>.</p>
+
+<p><strong>Example:</strong></p>
+
+<pre><code># Without reentry
+# ---------------
+
+line_handler = TracePoint.new(:line) do |tp|
+  next if tp.path != __FILE__ # only work in this file
+  puts &quot;Line handler&quot;
+  binding.eval(&quot;class C; end&quot;)
+end.enable
+
+class_handler = TracePoint.new(:class) do |tp|
+  puts &quot;Class handler&quot;
+end.enable
+
+class B
+end
+
+# This script will print &quot;Class handler&quot; only once: when inside :line
+# handler, all other handlers are ignored
+
+# With reentry
+# ------------
+
+line_handler = TracePoint.new(:line) do |tp|
+  next if tp.path != __FILE__ # only work in this file
+  next if (__LINE__..__LINE__+3).cover?(tp.lineno) # don&#39;t be invoked from itself
+  puts &quot;Line handler&quot;
+  TracePoint.allow_reentry { binding.eval(&quot;class C; end&quot;) }
+end.enable
+
+class_handler = TracePoint.new(:class) do |tp|
+  puts &quot;Class handler&quot;
+end.enable
+
+class B
+end
+
+# This wil print &quot;Class handler&quot; twice: inside allow_reentry block in :line
+# handler, other handlers are enabled.
+</code></pre>
+
+<p>Note that the example shows the principal effect of the method, but its practical usage is for debugging libraries that sometimes require other libraries hooks to not be affected by debugger being inside trace point handling. Precautions should be taken against infinite recursion in this case (note that we needed to filter out calls by itself from :line handler, otherwise it will call itself infinitely).</p>
             </div>
           
 
@@ -427,11 +472,11 @@ trace.enable
                 Source:
                 <a href="javascript:toggleSource('method-c-allow_reentry_source')" id="l_method-c-allow_reentry_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L150" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L198" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-allow_reentry_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 150</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 198</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">allow_reentry</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_allow_reentry</span>
 <span class="ruby-keyword">end</span></pre>
@@ -510,11 +555,11 @@ $tp.lineno #=&gt; access from outside (RuntimeError)
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L97" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L96" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 97</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 96</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">new</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">events</span>)
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_new_s</span>(<span class="ruby-identifier">events</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -554,11 +599,11 @@ $tp.lineno #=&gt; access from outside (RuntimeError)
                 Source:
                 <a href="javascript:toggleSource('method-c-stat_source')" id="l_method-c-stat_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L119" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L118" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-stat_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 119</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 118</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">stat</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_stat_s</span>
 <span class="ruby-keyword">end</span></pre>
@@ -600,11 +645,11 @@ trace.enabled? #=&gt; true
                 Source:
                 <a href="javascript:toggleSource('method-c-trace_source')" id="l_method-c-trace_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L134" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L133" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-trace_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 134</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 133</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">trace</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">events</span>)
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_trace_s</span>(<span class="ruby-identifier">events</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -629,7 +674,7 @@ trace.enabled? #=&gt; true
             <div class="description">
               <p>Return the generated binding object from event.</p>
 
-<p>Note that for <code>c_call</code> and <code>c_return</code> events, the binding returned is the binding of the nearest Ruby method calling the C method, since C methods themselves do not have bindings.</p>
+<p>Note that for <code>:c_call</code> and <code>:c_return</code> events, the method will return <code>nil</code>, since C methods themselves do not have bindings.</p>
             </div>
           
 
@@ -645,11 +690,11 @@ trace.enabled? #=&gt; true
                 Source:
                 <a href="javascript:toggleSource('method-i-binding_source')" id="l_method-i-binding_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L333" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L381" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-binding_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 333</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 381</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">binding</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_binding</span>
 <span class="ruby-keyword">end</span></pre>
@@ -684,11 +729,11 @@ trace.enabled? #=&gt; true
                 Source:
                 <a href="javascript:toggleSource('method-i-callee_id_source')" id="l_method-i-callee_id_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L288" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L337" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-callee_id_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 288</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 337</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">callee_id</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_callee_id</span>
 <span class="ruby-keyword">end</span></pre>
@@ -756,11 +801,11 @@ end
                 Source:
                 <a href="javascript:toggleSource('method-i-defined_class_source')" id="l_method-i-defined_class_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L324" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L373" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-defined_class_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 324</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 373</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">defined_class</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_defined_class</span>
 <span class="ruby-keyword">end</span></pre>
@@ -824,11 +869,11 @@ trace.enabled?
                 Source:
                 <a href="javascript:toggleSource('method-i-disable_source')" id="l_method-i-disable_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L247" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L296" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-disable_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 247</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 296</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">disable</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_disable_m</span>
 <span class="ruby-keyword">end</span></pre>
@@ -840,7 +885,7 @@ trace.enabled?
         <div class="method">
           <h3 class="title method-title" id="method-i-enable">
             
-              <b>trace.enable(target: nil, target_line: nil, target_thread: nil)    &rarr; true or false<br />trace.enable(target: nil, target_line: nil, target_thread: nil) { block }  &rarr; obj
+              <b>trace.enable(target: nil, target_line: nil, target_thread: nil)    &rarr; true or false<br />trace.enable(target: nil, target_line: nil, target_thread: :default) { block }  &rarr; obj
 </b>
             
             <a href="../classes/TracePoint.html#method-i-enable" name="method-i-enable" class="permalink">Link</a>
@@ -860,14 +905,14 @@ trace.enable    #=&gt; true (previous state)
                 #   trace is still enabled
 </code></pre>
 
-<p>If a block is given, the trace will only be enabled within the scope of the block.</p>
+<p>If a block is given, the trace will only be enabled during the block call. If target and target_line are both nil, then target_thread will default to the current thread if a block is given.</p>
 
 <pre><code>trace.enabled?
 #=&gt; false
 
 trace.enable do
   trace.enabled?
-  # only enabled for this block
+  # only enabled for this block and thread
 end
 
 trace.enabled?
@@ -914,12 +959,12 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-enable_source')" id="l_method-i-enable_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L211" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L260" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-enable_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 211</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">enable</span>(<span class="ruby-value">target:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">target_line:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">target_thread:</span> <span class="ruby-keyword">nil</span>)
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 260</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">enable</span>(<span class="ruby-value">target:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">target_line:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">target_thread:</span> <span class="ruby-value">:default</span>)
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_enable_m</span>(<span class="ruby-identifier">target</span>, <span class="ruby-identifier">target_line</span>, <span class="ruby-identifier">target_thread</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -954,11 +999,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-enabled-3F_source')" id="l_method-i-enabled-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L255" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L304" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-enabled-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 255</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 304</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">enabled?</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_enabled_p</span>
 <span class="ruby-keyword">end</span></pre>
@@ -993,11 +1038,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-eval_script_source')" id="l_method-i-eval_script_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L359" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L407" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-eval_script_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 359</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 407</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">eval_script</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_eval_script</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1034,11 +1079,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-event_source')" id="l_method-i-event_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L262" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L311" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-event_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 262</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 311</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">event</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_event</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1074,11 +1119,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L106" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L105" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-inspect_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 106</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 105</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">inspect</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_inspect</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1115,11 +1160,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-instruction_sequence_source')" id="l_method-i-instruction_sequence_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L367" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L415" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-instruction_sequence_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 367</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 415</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">instruction_sequence</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_instruction_sequence</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1154,11 +1199,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-lineno_source')" id="l_method-i-lineno_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L267" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L316" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-lineno_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 267</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 316</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">lineno</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_lineno</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1193,11 +1238,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-method_id_source')" id="l_method-i-method_id_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L283" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L332" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-method_id_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 283</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 332</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">method_id</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_method_id</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1232,11 +1277,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-parameters_source')" id="l_method-i-parameters_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L278" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L327" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-parameters_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 278</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 327</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parameters</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_parameters</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1271,11 +1316,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-path_source')" id="l_method-i-path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L272" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L321" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-path_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 272</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 321</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">path</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_path</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1294,7 +1339,7 @@ m2
 
           
             <div class="description">
-              <p>Value from exception raised on the <code>:raise</code> event</p>
+              <p>Value from exception raised on the <code>:raise</code> event, or rescued on the <code>:rescue</code> event.</p>
             </div>
           
 
@@ -1310,11 +1355,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-raised_exception_source')" id="l_method-i-raised_exception_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L353" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L401" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-raised_exception_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 353</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 401</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">raised_exception</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_raised_exception</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1333,7 +1378,7 @@ m2
 
           
             <div class="description">
-              <p>Return value from <code>:return</code>, <code>c_return</code>, and <code>b_return</code> event</p>
+              <p>Return value from <code>:return</code>, <code>:c_return</code>, and <code>:b_return</code> event</p>
             </div>
           
 
@@ -1349,11 +1394,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-return_value_source')" id="l_method-i-return_value_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L348" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L396" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-return_value_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 348</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 396</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">return_value</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">tracepoint_attr_return_value</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1374,7 +1419,7 @@ m2
             <div class="description">
               <p>Return the trace object during event</p>
 
-<p>Same as the following, except it returns the correct object (the method receiver) for <code>c_call</code> and <code>c_return</code> events:</p>
+<p>Same as the following, except it returns the correct object (the method receiver) for <code>:c_call</code> and <code>:c_return</code> events:</p>
 
 <pre><code>trace.binding.eval(&#39;self&#39;)
 </code></pre>
@@ -1393,11 +1438,11 @@ m2
                 Source:
                 <a href="javascript:toggleSource('method-i-self_source')" id="l_method-i-self_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/trace_point.rb#L343" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/trace_point.rb#L391" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-self_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 343</span>
+                <pre><span class="ruby-comment"># File ruby/trace_point.rb, line 391</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier ruby-title">tracepoint_attr_self</span>
 <span class="ruby-keyword">end</span></pre>

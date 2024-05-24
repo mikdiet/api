@@ -56,10 +56,10 @@
             <li>
                 ruby/doc/syntax/control_expressions.rdoc
                 
-                    <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/doc/syntax/control_expressions.rdoc" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/doc/syntax/control_expressions.rdoc" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2022-09-06 00:52:29 +0300</li>
+            <li>Last modified: 2024-05-24 23:57:53 +0300</li>
         </ul>
     </div>
 
@@ -549,7 +549,7 @@ stmt if v = expr unless x
 
 <h2 id="label-Flip-Flop">Flip-Flop</h2>
 
-<p>The flip-flop is a rarely seen conditional expression.  It’s primary use is for processing text from ruby one-line programs used with <code>ruby -n</code> or <code>ruby -p</code>.</p>
+<p>The flip-flop is a slightly special conditional expression.  One of its typical uses is processing text from ruby one-line programs used with <code>ruby -n</code> or <code>ruby -p</code>.</p>
 
 <p>The form of the flip-flop is an expression that indicates when the flip-flop turns on, <code>..</code> (or <code>...</code>), then an expression that indicates when the flip-flop will turn off.  While the flip-flop is on it will continue to evaluate to <code>true</code>, and <code>false</code> when off.</p>
 
@@ -564,11 +564,11 @@ end
 p selected # prints [2, 3, 4, 5, 6, 7, 8]
 </code></pre>
 
-<p>In the above example, the on condition is <code>n==2</code>.  The flip-flop is initially off (false) for 0 and 1, but becomes on (true) for 2 and remains on through 8.  After 8 it turns off and remains off for 9 and 10.</p>
+<p>In the above example, the ‘on’ condition is <code>n==2</code>.  The flip-flop is initially ‘off’ (false) for 0 and 1, but becomes ‘on’ (true) for 2 and remains ‘on’ through 8.  After 8 it turns off and remains ‘off’ for 9 and 10.</p>
 
-<p>The flip-flop must be used inside a conditional such as <code>if</code>, <code>while</code>, <code>unless</code>, <code>until</code> etc. including the modifier forms.</p>
+<p>The flip-flop must be used inside a conditional such as <code>!</code>, <code>? :</code>, <code>not</code>, <code>if</code>, <code>while</code>, <code>unless</code>, <code>until</code> etc. including the modifier forms.</p>
 
-<p>When you use an inclusive range (<code>..</code>), the off condition is evaluated when the on condition changes:</p>
+<p>When you use an inclusive range (<code>..</code>), the ‘off’ condition is evaluated when the ‘on’ condition changes:</p>
 
 <pre><code>selected = []
 
@@ -581,7 +581,7 @@ p selected # prints [2]
 
 <p>Here, both sides of the flip-flop are evaluated so the flip-flop turns on and off only when <code>value</code> equals 2.  Since the flip-flop turned on in the iteration it returns true.</p>
 
-<p>When you use an exclusive range (<code>...</code>), the off condition is evaluated on the following iteration:</p>
+<p>When you use an exclusive range (<code>...</code>), the ‘off’ condition is evaluated on the following iteration:</p>
 
 <pre><code>selected = []
 
@@ -592,7 +592,60 @@ end
 p selected # prints [2, 3, 4, 5]
 </code></pre>
 
-<p>Here, the flip-flop turns on when <code>value</code> equals 2, but doesn’t turn off on the same iteration.  The off condition isn’t evaluated until the following iteration and <code>value</code> will never be two again.</p>
+<p>Here, the flip-flop turns on when <code>value</code> equals 2, but doesn’t turn off on the same iteration.  The ‘off’ condition isn’t evaluated until the following iteration and <code>value</code> will never be two again.</p>
+
+<h2 id="label-throw-2Fcatch">throw/catch</h2>
+
+<p><code>throw</code> and <code>catch</code> are used to implement non-local control flow in Ruby. They operate similarly to exceptions, allowing control to pass directly from the place where <code>throw</code> is called to the place where the matching <code>catch</code> is called. The main difference between <code>throw</code>/<code>catch</code> and the use of exceptions is that <code>throw</code>/<code>catch</code> are designed for expected non-local control flow, while exceptions are designed for exceptional control flow situations, such as handling unexpected errors.</p>
+
+<p>When using <code>throw</code>, you provide 1-2 arguments.  The first argument is the value for the matching <code>catch</code>.  The second argument is optional (defaults to <code>nil</code>), and will be the value that <code>catch</code> returns if there is a matching <code>throw</code> inside the <code>catch</code> block.  If no matching <code>throw</code> method is called inside a <code>catch</code> block, the <code>catch</code> method returns the return value of the block passed to it.</p>
+
+<pre><code>def a(n)
+  throw :d, :a if n == 0
+  b(n)
+end
+
+def b(n)
+  throw :d, :b if n == 1
+  c(n)
+end
+
+def c(n)
+  throw :d if n == 2
+end
+
+4.times.map do |i|
+  catch(:d) do
+    a(i)
+    :default
+  end
+end
+# =&gt; [:a, :b, nil, :default]
+</code></pre>
+
+<p>If the first argument you pass to <code>throw</code> is not handled by a matching <code>catch</code>, an <a href="../../../../classes/UncaughtThrowError.html"><code>UncaughtThrowError</code></a> exception will be raised.  This is because <code>throw</code>/<code>catch</code> should only be used for expected control flow changes, so using a value that is not already expected is an error.</p>
+
+<p><code>throw</code>/<code>catch</code> are implemented as <a href="../../../../classes/Kernel.html"><code>Kernel</code></a> methods (<a href="../../../../classes/Kernel.html#method-i-throw"><code>Kernel#throw</code></a> and <a href="../../../../classes/Kernel.html#method-i-catch"><code>Kernel#catch</code></a>), not as keywords. So they are not usable directly if you are in a <a href="../../../../classes/BasicObject.html"><code>BasicObject</code></a> context.  You can use <a href="../../../../classes/Kernel.html#method-i-throw"><code>Kernel.throw</code></a> and <a href="../../../../classes/Kernel.html#method-i-catch"><code>Kernel.catch</code></a> in this case:</p>
+
+<pre><code>BasicObject.new.instance_exec do
+  def a
+    b
+  end
+
+  def b
+    c
+  end
+
+  def c
+    ::Kernel.throw :d, :e
+  end
+
+  result = ::Kernel.catch(:d) do
+    a
+  end
+  result # =&gt; :e
+end
+</code></pre>
 
     </div>
   

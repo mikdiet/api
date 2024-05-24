@@ -30,7 +30,7 @@
     <meta property="og:description" content="This class represents queues of specified size capacity.  The push operation may be blocked if the capacity is full.  See Thread::Queue for an example of how a Thread::SizedQueue works.">
   
 
-    <meta name="keywords" content="Thread::SizedQueue class, new, close, max, max=, push, pop, empty?, clear, length, num_waiting, enq, <<, deq, shift, size">
+    <meta name="keywords" content="Thread::SizedQueue class, new, close, max, max=, empty?, clear, length, num_waiting, freeze, size, pop, deq, shift, push, enq, <<">
 </head>
 
 <body>
@@ -72,6 +72,8 @@
         <ul class="files">
             
             <li><a href="../../files/ruby/thread_sync_c.html">ruby/thread_sync.c</a></li>
+            
+            <li><a href="../../files/ruby/thread_sync_rb.html">ruby/thread_sync.rb</a></li>
             
         </ul>
     </div>
@@ -157,6 +159,18 @@
               
               <li>
                 <a href="#method-i-enq">enq</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
+        <dt>F</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-freeze">freeze</a>
               </li>
             
           </ul>
@@ -305,9 +319,9 @@ rb_szqueue_initialize(VALUE self, VALUE vmax)
         rb_raise(rb_eArgError, &quot;queue size must be positive&quot;);
     }
 
-    RB_OBJ_WRITE(self, &amp;sq-&gt;q.que, ary_buf_new());
-    list_head_init(szqueue_waitq(sq));
-    list_head_init(szqueue_pushq(sq));
+    RB_OBJ_WRITE(self, szqueue_list(sq), ary_buf_new());
+    ccan_list_head_init(szqueue_waitq(sq));
+    ccan_list_head_init(szqueue_pushq(sq));
     sq-&gt;max = max;
 
     return self;
@@ -331,9 +345,7 @@ rb_szqueue_initialize(VALUE self, VALUE vmax)
 
           
             <div class="description">
-              <p>Pushes <code>object</code> to the queue.</p>
-
-<p>If there is no space left in the queue, waits until space becomes available, unless <code>non_block</code> is true.  If <code>non_block</code> is true, the thread isn’t suspended, and <code>ThreadError</code> is raised.</p>
+              
             </div>
           
 
@@ -443,16 +455,14 @@ rb_szqueue_close(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-deq">
             
-              <b>deq(non_block=false)</b>
+              <b>deq</b>(non_block = false, timeout: nil)
             
             <a href="../../classes/Thread/SizedQueue.html#method-i-deq" name="method-i-deq" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Retrieves data from the queue.</p>
-
-<p>If the queue is empty, the calling thread is suspended until data is pushed onto the queue. If <code>non_block</code> is true, the thread isn’t suspended, and <code>ThreadError</code> is raised.</p>
+              
             </div>
           
 
@@ -511,16 +521,14 @@ rb_szqueue_empty_p(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-enq">
             
-              <b>enq(object, non_block=false)</b>
+              <b>enq(object, non_block=false, timeout: nil)</b>
             
             <a href="../../classes/Thread/SizedQueue.html#method-i-enq" name="method-i-enq" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Pushes <code>object</code> to the queue.</p>
-
-<p>If there is no space left in the queue, waits until space becomes available, unless <code>non_block</code> is true.  If <code>non_block</code> is true, the thread isn’t suspended, and <code>ThreadError</code> is raised.</p>
+              
             </div>
           
 
@@ -533,6 +541,49 @@ rb_szqueue_empty_p(VALUE self)
           
 
           
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-freeze">
+            
+              <b>freeze
+</b>
+            
+            <a href="../../classes/Thread/SizedQueue.html#method-i-freeze" name="method-i-freeze" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>The queue can’t be frozen, so this method raises an exception:</p>
+
+<pre><code>Thread::Queue.new.freeze # Raises TypeError (cannot freeze #&lt;Thread::Queue:0x...&gt;)
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-freeze_source')" id="l_method-i-freeze_source">show</a>
+                
+              </p>
+              <div id="method-i-freeze_source" class="dyn-source">
+                <pre>static VALUE
+rb_queue_freeze(VALUE self)
+{
+    rb_raise(rb_eTypeError, &quot;cannot freeze &quot; &quot;%+&quot;PRIsVALUE, self);
+    UNREACHABLE_RETURN(self);
+}</pre>
+              </div>
+            </div>
+            
           </div>
         
         <div class="method">
@@ -711,7 +762,7 @@ rb_szqueue_num_waiting(VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-pop">
             
-              <b>pop(non_block=false)</b>
+              <b>pop(non_block=false, timeout: nil)</b>
             
             <a href="../../classes/Thread/SizedQueue.html#method-i-pop" name="method-i-pop" class="permalink">Link</a>
           </h3>
@@ -721,6 +772,8 @@ rb_szqueue_num_waiting(VALUE self)
               <p>Retrieves data from the queue.</p>
 
 <p>If the queue is empty, the calling thread is suspended until data is pushed onto the queue. If <code>non_block</code> is true, the thread isn’t suspended, and <code>ThreadError</code> is raised.</p>
+
+<p>If <code>timeout</code> seconds have passed and no data is available <code>nil</code> is returned. If <code>timeout</code> is <code>0</code> it returns immediately.</p>
             </div>
           
 
@@ -740,14 +793,17 @@ rb_szqueue_num_waiting(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-pop_source')" id="l_method-i-pop_source">show</a>
                 
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/thread_sync.rb#L36" target="_blank" class="github_url">on GitHub</a>
+                
               </p>
               <div id="method-i-pop_source" class="dyn-source">
-                <pre>static VALUE
-rb_szqueue_pop(int argc, VALUE *argv, VALUE self)
-{
-    int should_block = queue_pop_should_block(argc, argv);
-    return szqueue_do_pop(self, should_block);
-}</pre>
+                <pre><span class="ruby-comment"># File ruby/thread_sync.rb, line 36</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">pop</span>(<span class="ruby-identifier">non_block</span> = <span class="ruby-keyword">false</span>, <span class="ruby-value">timeout:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">non_block</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">timeout</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-string">&quot;can&#39;t set a timeout if non_block is enabled&quot;</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">rb_szqueue_pop</span>(<span class="ruby-identifier">non_block</span>, <span class="ruby-identifier">timeout</span>)
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -756,7 +812,7 @@ rb_szqueue_pop(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-push">
             
-              <b>push(object, non_block=false)</b>
+              <b>push(object, non_block=false, timeout: nil)</b>
             
             <a href="../../classes/Thread/SizedQueue.html#method-i-push" name="method-i-push" class="permalink">Link</a>
           </h3>
@@ -766,6 +822,8 @@ rb_szqueue_pop(int argc, VALUE *argv, VALUE self)
               <p>Pushes <code>object</code> to the queue.</p>
 
 <p>If there is no space left in the queue, waits until space becomes available, unless <code>non_block</code> is true.  If <code>non_block</code> is true, the thread isn’t suspended, and <code>ThreadError</code> is raised.</p>
+
+<p>If <code>timeout</code> seconds have passed and no space is available <code>nil</code> is returned. If <code>timeout</code> is <code>0</code> it returns immediately. Otherwise it returns <code>self</code>.</p>
             </div>
           
 
@@ -785,43 +843,17 @@ rb_szqueue_pop(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-i-push_source')" id="l_method-i-push_source">show</a>
                 
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/thread_sync.rb#L59" target="_blank" class="github_url">on GitHub</a>
+                
               </p>
               <div id="method-i-push_source" class="dyn-source">
-                <pre>static VALUE
-rb_szqueue_push(int argc, VALUE *argv, VALUE self)
-{
-    struct rb_szqueue *sq = szqueue_ptr(self);
-    int should_block = szqueue_push_should_block(argc, argv);
-
-    while (queue_length(self, &amp;sq-&gt;q) &gt;= sq-&gt;max) {
-        if (!should_block) {
-            rb_raise(rb_eThreadError, &quot;queue full&quot;);
-        }
-        else if (queue_closed_p(self)) {
-            break;
-        }
-        else {
-            rb_execution_context_t *ec = GET_EC();
-            struct queue_waiter queue_waiter = {
-                .w = {.self = self, .th = ec-&gt;thread_ptr, .fiber = ec-&gt;fiber_ptr},
-                .as = {.sq = sq}
-            };
-
-            struct list_head *pushq = szqueue_pushq(sq);
-
-            list_add_tail(pushq, &amp;queue_waiter.w.node);
-            sq-&gt;num_waiting_push++;
-
-            rb_ensure(queue_sleep, self, szqueue_sleep_done, (VALUE)&amp;queue_waiter);
-        }
-    }
-
-    if (queue_closed_p(self)) {
-        raise_closed_queue_error(self);
-    }
-
-    return queue_do_push(self, &amp;sq-&gt;q, argv[0]);
-}</pre>
+                <pre><span class="ruby-comment"># File ruby/thread_sync.rb, line 59</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">push</span>(<span class="ruby-identifier">object</span>, <span class="ruby-identifier">non_block</span> = <span class="ruby-keyword">false</span>, <span class="ruby-value">timeout:</span> <span class="ruby-keyword">nil</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">non_block</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">timeout</span>
+    <span class="ruby-identifier">raise</span> <span class="ruby-constant">ArgumentError</span>, <span class="ruby-string">&quot;can&#39;t set a timeout if non_block is enabled&quot;</span>
+  <span class="ruby-keyword">end</span>
+  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">rb_szqueue_push</span>(<span class="ruby-identifier">object</span>, <span class="ruby-identifier">non_block</span>, <span class="ruby-identifier">timeout</span>)
+<span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -830,16 +862,14 @@ rb_szqueue_push(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-i-shift">
             
-              <b>shift(non_block=false)</b>
+              <b>shift</b>(non_block = false, timeout: nil)
             
             <a href="../../classes/Thread/SizedQueue.html#method-i-shift" name="method-i-shift" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              <p>Retrieves data from the queue.</p>
-
-<p>If the queue is empty, the calling thread is suspended until data is pushed onto the queue. If <code>non_block</code> is true, the thread isn’t suspended, and <code>ThreadError</code> is raised.</p>
+              
             </div>
           
 

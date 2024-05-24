@@ -2,11 +2,11 @@
 
 ```bash
 rm -rf docs rubydoc railsdoc ruby rails
-git clone --depth=1 --branch v6.1.6.1 https://github.com/rails/rails.git
-git clone --depth=1 --branch v3_1_2 https://github.com/ruby/ruby.git
+git clone --depth=1 --branch v7.0.8.3 https://github.com/rails/rails.git
+git clone --depth=1 --branch v3_3_1 https://github.com/ruby/ruby.git
 bundle exec sdoc --template=rails -o rubydoc -g --debug -m 'ruby/README.md' ruby
 bundle exec sdoc --template=rails -o railsdoc -g --exclude=test --debug -m "rails/README.md" rails
-bundle exec sdoc-merge --title "Rails v6.1.6.1, Ruby v3.1.2" --op docs --names "rails, ruby" railsdoc rubydoc
+bundle exec sdoc-merge --title "Rails v7.0.8.3, Ruby v3.3.1" --op docs --names "rails, ruby" railsdoc rubydoc
 echo 'api.rusrails.ru' >> docs/CNAME
 ```
 

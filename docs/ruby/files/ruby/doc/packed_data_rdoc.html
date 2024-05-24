@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>packed_data.rdoc</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+
+<meta name="data-rel-prefix" content="/">
+<meta name="data-tree-keys" content='[]'>
+
+</head>
+
+<body>
+    <a class="sr-only sr-only-focusable" href="#content" data-turbolinks="false">Skip to Content</a>
+    <a class="sr-only sr-only-focusable" href="#search" data-turbolinks="false">Skip to Search</a>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<nav class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search (/) for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</nav>
+
+
+    <div class="banner">
+        
+        <h2>
+            packed_data.rdoc
+        </h2>
+        <ul class="files">
+            
+            <li>
+                ruby/doc/packed_data.rdoc
+                
+                    <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/doc/packed_data.rdoc" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2024-05-24 23:57:53 +0300</li>
+        </ul>
+    </div>
+
+    <main id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<h1 id="label-Packed+Data">Packed Data</h1>
+
+<p>Certain Ruby core methods deal with packing and unpacking data:</p>
+<ul><li>
+<p>Method <a href="../../../classes/Array.html#method-i-pack"><code>Array#pack</code></a>: Formats each element in array <code>self</code> into a binary string; returns that string.</p>
+</li><li>
+<p>Method <a href="../../../classes/String.html#method-i-unpack"><code>String#unpack</code></a>: Extracts data from string <code>self</code>, forming objects that become the elements of a new array; returns that array.</p>
+</li><li>
+<p>Method <a href="../../../classes/String.html#method-i-unpack1"><code>String#unpack1</code></a>: Does the same, but unpacks and returns only the first extracted object.</p>
+</li></ul>
+
+<p>Each of these methods accepts a string <code>template</code>, consisting of zero or more <em>directive</em> characters, each followed by zero or more <em>modifier</em> characters.</p>
+
+<p>Examples (directive <code>&#39;C&#39;</code> specifies ‘unsigned character’):</p>
+
+<pre><code>[65].pack(&#39;C&#39;)      # =&gt; &quot;A&quot;  # One element, one directive.
+[65, 66].pack(&#39;CC&#39;) # =&gt; &quot;AB&quot; # Two elements, two directives.
+[65, 66].pack(&#39;C&#39;)  # =&gt; &quot;A&quot;  # Extra element is ignored.
+[65].pack(&#39;&#39;)       # =&gt; &quot;&quot;   # No directives.
+[65].pack(&#39;CC&#39;)               # Extra directive raises ArgumentError.
+
+&#39;A&#39;.unpack(&#39;C&#39;)   # =&gt; [65]      # One character, one directive.
+&#39;AB&#39;.unpack(&#39;CC&#39;) # =&gt; [65, 66]  # Two characters, two directives.
+&#39;AB&#39;.unpack(&#39;C&#39;)  # =&gt; [65]      # Extra character is ignored.
+&#39;A&#39;.unpack(&#39;CC&#39;)  # =&gt; [65, nil] # Extra directive generates nil.
+&#39;AB&#39;.unpack(&#39;&#39;)   # =&gt; []        # No directives.
+</code></pre>
+
+<p>The string <code>template</code> may contain any mixture of valid directives (directive <code>&#39;c&#39;</code> specifies ‘signed character’):</p>
+
+<pre><code>[65, -1].pack(&#39;cC&#39;)  # =&gt; &quot;A\xFF&quot;
+&quot;A\xFF&quot;.unpack(&#39;cC&#39;) # =&gt; [65, 255]
+</code></pre>
+
+<p>The string <code>template</code> may contain whitespace (which is ignored) and comments, each of which begins with character <code>&#39;#&#39;</code> and continues up to and including the next following newline:</p>
+
+<pre><code>[0,1].pack(&quot;  C  #foo \n  C  &quot;)    # =&gt; &quot;\x00\x01&quot;
+&quot;\0\1&quot;.unpack(&quot;  C  #foo \n  C  &quot;) # =&gt; [0, 1]
+</code></pre>
+
+<p>Any directive may be followed by either of these modifiers:</p>
+<ul><li>
+<p><code>&#39;*&#39;</code> - The directive is to be applied as many times as needed:</p>
+
+<pre><code>[65, 66].pack(&#39;C*&#39;) # =&gt; &quot;AB&quot;
+&#39;AB&#39;.unpack(&#39;C*&#39;)   # =&gt; [65, 66]
+</code></pre>
+</li><li>
+<p><a href="../../../classes/Integer.html"><code>Integer</code></a> <code>count</code> - The directive is to be applied <code>count</code> times:</p>
+
+<pre><code>[65, 66].pack(&#39;C2&#39;) # =&gt; &quot;AB&quot;
+[65, 66].pack(&#39;C3&#39;) # Raises ArgumentError.
+&#39;AB&#39;.unpack(&#39;C2&#39;)   # =&gt; [65, 66]
+&#39;AB&#39;.unpack(&#39;C3&#39;)   # =&gt; [65, 66, nil]
+</code></pre>
+
+<p>Note: Directives in <code>%w[A a Z m]</code> use <code>count</code> differently; see <a href="packed_data_rdoc.html#label-String+Directives">String Directives</a>.</p>
+</li></ul>
+
+<p>If elements don’t fit the provided directive, only least significant bits are encoded:</p>
+
+<pre><code>[257].pack(&quot;C&quot;).unpack(&quot;C&quot;) # =&gt; [1]
+</code></pre>
+
+<h2 id="label-Packing+Method">Packing Method</h2>
+
+<p>Method <a href="../../../classes/Array.html#method-i-pack"><code>Array#pack</code></a> accepts optional keyword argument <code>buffer</code> that specifies the target string (instead of a new string):</p>
+
+<pre><code>[65, 66].pack(&#39;C*&#39;, buffer: &#39;foo&#39;) # =&gt; &quot;fooAB&quot;
+</code></pre>
+
+<p>The method can accept a block:</p>
+
+<pre><code># Packed string is passed to the block.
+[65, 66].pack(&#39;C*&#39;) {|s| p s }    # =&gt; &quot;AB&quot;
+</code></pre>
+
+<h2 id="label-Unpacking+Methods">Unpacking Methods</h2>
+
+<p>Methods <a href="../../../classes/String.html#method-i-unpack"><code>String#unpack</code></a> and <a href="../../../classes/String.html#method-i-unpack1"><code>String#unpack1</code></a> each accept an optional keyword argument <code>offset</code> that specifies an offset into the string:</p>
+
+<pre><code>&#39;ABC&#39;.unpack(&#39;C*&#39;, offset: 1)  # =&gt; [66, 67]
+&#39;ABC&#39;.unpack1(&#39;C*&#39;, offset: 1) # =&gt; 66
+</code></pre>
+
+<p>Both methods can accept a block:</p>
+
+<pre><code># Each unpacked object is passed to the block.
+ret = []
+&quot;ABCD&quot;.unpack(&quot;C*&quot;) {|c| ret &lt;&lt; c }
+ret # =&gt; [65, 66, 67, 68]
+
+# The single unpacked object is passed to the block.
+&#39;AB&#39;.unpack1(&#39;C*&#39;) {|ele| p ele } # =&gt; 65
+</code></pre>
+
+<h2 id="label-Integer+Directives">Integer Directives</h2>
+
+<p>Each integer directive specifies the packing or unpacking for one element in the input or output array.</p>
+
+<h3 id="label-8-Bit+Integer+Directives">8-Bit Integer Directives</h3>
+<ul><li>
+<p><code>&#39;c&#39;</code> - 8-bit signed integer (like C <code>signed char</code>):</p>
+
+<pre><code>[0, 1, 255].pack(&#39;c*&#39;)  # =&gt; &quot;\x00\x01\xFF&quot;
+s = [0, 1, -1].pack(&#39;c*&#39;) # =&gt; &quot;\x00\x01\xFF&quot;
+s.unpack(&#39;c*&#39;) # =&gt; [0, 1, -1]
+</code></pre>
+</li><li>
+<p><code>&#39;C&#39;</code> - 8-bit unsigned integer (like C <code>unsigned char</code>):</p>
+
+<pre><code>[0, 1, 255].pack(&#39;C*&#39;)    # =&gt; &quot;\x00\x01\xFF&quot;
+s = [0, 1, -1].pack(&#39;C*&#39;) # =&gt; &quot;\x00\x01\xFF&quot;
+s.unpack(&#39;C*&#39;)            # =&gt; [0, 1, 255]
+</code></pre>
+</li></ul>
+
+<h3 id="label-16-Bit+Integer+Directives">16-Bit Integer Directives</h3>
+<ul><li>
+<p><code>&#39;s&#39;</code> - 16-bit signed integer, native-endian (like C <code>int16_t</code>):</p>
+
+<pre><code>[513, -514].pack(&#39;s*&#39;)      # =&gt; &quot;\x01\x02\xFE\xFD&quot;
+s = [513, 65022].pack(&#39;s*&#39;) # =&gt; &quot;\x01\x02\xFE\xFD&quot;
+s.unpack(&#39;s*&#39;)              # =&gt; [513, -514]
+</code></pre>
+</li><li>
+<p><code>&#39;S&#39;</code> - 16-bit unsigned integer, native-endian (like C <code>uint16_t</code>):</p>
+
+<pre><code>[513, -514].pack(&#39;S*&#39;)      # =&gt; &quot;\x01\x02\xFE\xFD&quot;
+s = [513, 65022].pack(&#39;S*&#39;) # =&gt; &quot;\x01\x02\xFE\xFD&quot;
+s.unpack(&#39;S*&#39;)              # =&gt; [513, 65022]
+</code></pre>
+</li><li>
+<p><code>&#39;n&#39;</code> - 16-bit network integer, big-endian:</p>
+
+<pre><code>s = [0, 1, -1, 32767, -32768, 65535].pack(&#39;n*&#39;)
+# =&gt; &quot;\x00\x00\x00\x01\xFF\xFF\x7F\xFF\x80\x00\xFF\xFF&quot;
+s.unpack(&#39;n*&#39;)
+# =&gt; [0, 1, 65535, 32767, 32768, 65535]
+</code></pre>
+</li><li>
+<p><code>&#39;v&#39;</code> - 16-bit VAX integer, little-endian:</p>
+
+<pre><code>s = [0, 1, -1, 32767, -32768, 65535].pack(&#39;v*&#39;)
+# =&gt; &quot;\x00\x00\x01\x00\xFF\xFF\xFF\x7F\x00\x80\xFF\xFF&quot;
+s.unpack(&#39;v*&#39;)
+# =&gt; [0, 1, 65535, 32767, 32768, 65535]
+</code></pre>
+</li></ul>
+
+<h3 id="label-32-Bit+Integer+Directives">32-Bit Integer Directives</h3>
+<ul><li>
+<p><code>&#39;l&#39;</code> - 32-bit signed integer, native-endian (like C <code>int32_t</code>):</p>
+
+<pre><code>s = [67305985, -50462977].pack(&#39;l*&#39;)
+# =&gt; &quot;\x01\x02\x03\x04\xFF\xFE\xFD\xFC&quot;
+s.unpack(&#39;l*&#39;)
+# =&gt; [67305985, -50462977]
+</code></pre>
+</li><li>
+<p><code>&#39;L&#39;</code> - 32-bit unsigned integer, native-endian (like C <code>uint32_t</code>):</p>
+
+<pre><code>s = [67305985, 4244504319].pack(&#39;L*&#39;)
+# =&gt; &quot;\x01\x02\x03\x04\xFF\xFE\xFD\xFC&quot;
+s.unpack(&#39;L*&#39;)
+# =&gt; [67305985, 4244504319]
+</code></pre>
+</li><li>
+<p><code>&#39;N&#39;</code> - 32-bit network integer, big-endian:</p>
+
+<pre><code>s = [0,1,-1].pack(&#39;N*&#39;)
+# =&gt; &quot;\x00\x00\x00\x00\x00\x00\x00\x01\xFF\xFF\xFF\xFF&quot;
+s.unpack(&#39;N*&#39;)
+# =&gt; [0, 1, 4294967295]
+</code></pre>
+</li><li>
+<p><code>&#39;V&#39;</code> - 32-bit VAX integer, little-endian:</p>
+
+<pre><code>s = [0,1,-1].pack(&#39;V*&#39;)
+# =&gt; &quot;\x00\x00\x00\x00\x01\x00\x00\x00\xFF\xFF\xFF\xFF&quot;
+s.unpack(&#39;v*&#39;)
+# =&gt; [0, 0, 1, 0, 65535, 65535]
+</code></pre>
+</li></ul>
+
+<h3 id="label-64-Bit+Integer+Directives">64-Bit Integer Directives</h3>
+<ul><li>
+<p><code>&#39;q&#39;</code> - 64-bit signed integer, native-endian (like C <code>int64_t</code>):</p>
+
+<pre><code>s = [578437695752307201, -506097522914230529].pack(&#39;q*&#39;)
+# =&gt; &quot;\x01\x02\x03\x04\x05\x06\a\b\xFF\xFE\xFD\xFC\xFB\xFA\xF9\xF8&quot;
+s.unpack(&#39;q*&#39;)
+# =&gt; [578437695752307201, -506097522914230529]
+</code></pre>
+</li><li>
+<p><code>&#39;Q&#39;</code> - 64-bit unsigned integer, native-endian (like C <code>uint64_t</code>):</p>
+
+<pre><code>s = [578437695752307201, 17940646550795321087].pack(&#39;Q*&#39;)
+# =&gt; &quot;\x01\x02\x03\x04\x05\x06\a\b\xFF\xFE\xFD\xFC\xFB\xFA\xF9\xF8&quot;
+s.unpack(&#39;Q*&#39;)
+# =&gt; [578437695752307201, 17940646550795321087]
+</code></pre>
+</li></ul>
+
+<h3 id="label-Platform-Dependent+Integer+Directives">Platform-Dependent Integer Directives</h3>
+<ul><li>
+<p><code>&#39;i&#39;</code> - Platform-dependent width signed integer, native-endian (like C <code>int</code>):</p>
+
+<pre><code>s = [67305985, -50462977].pack(&#39;i*&#39;)
+# =&gt; &quot;\x01\x02\x03\x04\xFF\xFE\xFD\xFC&quot;
+s.unpack(&#39;i*&#39;)
+# =&gt; [67305985, -50462977]
+</code></pre>
+</li><li>
+<p><code>&#39;I&#39;</code> - Platform-dependent width unsigned integer, native-endian (like C <code>unsigned int</code>):</p>
+
+<pre><code>s = [67305985, -50462977].pack(&#39;I*&#39;)
+# =&gt; &quot;\x01\x02\x03\x04\xFF\xFE\xFD\xFC&quot;
+s.unpack(&#39;I*&#39;)
+# =&gt; [67305985, 4244504319]
+</code></pre>
+</li><li>
+<p><code>&#39;j&#39;</code> - Pointer-width signed integer, native-endian (like C <code>intptr_t</code>):</p>
+
+<pre><code>s = [67305985, -50462977].pack(&#39;j*&#39;)
+# =&gt; &quot;\x01\x02\x03\x04\x00\x00\x00\x00\xFF\xFE\xFD\xFC\xFF\xFF\xFF\xFF&quot;
+s.unpack(&#39;j*&#39;)
+# =&gt; [67305985, -50462977]
+</code></pre>
+</li><li>
+<p><code>&#39;J&#39;</code> - Pointer-width unsigned integer, native-endian (like C <code>uintptr_t</code>):</p>
+
+<pre><code>s = [67305985, 4244504319].pack(&#39;J*&#39;)
+# =&gt; &quot;\x01\x02\x03\x04\x00\x00\x00\x00\xFF\xFE\xFD\xFC\x00\x00\x00\x00&quot;
+s.unpack(&#39;J*&#39;)
+# =&gt; [67305985, 4244504319]
+</code></pre>
+</li></ul>
+
+<h3 id="label-Other+Integer+Directives">Other Integer Directives</h3>
+<ul><li>
+<p><code>&#39;U&#39;</code> - UTF-8 character:</p>
+
+<pre><code>s = [4194304].pack(&#39;U*&#39;)
+# =&gt; &quot;\xF8\x90\x80\x80\x80&quot;
+s.unpack(&#39;U*&#39;)
+# =&gt; [4194304]
+</code></pre>
+</li><li>
+<p><code>&#39;w&#39;</code> - BER-encoded integer (see <a href="https://en.wikipedia.org/wiki/X.690#BER_encoding">BER enocding</a>):</p>
+
+<pre><code>s = [1073741823].pack(&#39;w*&#39;)
+# =&gt; &quot;\x83\xFF\xFF\xFF\x7F&quot;
+s.unpack(&#39;w*&#39;)
+# =&gt; [1073741823]
+</code></pre>
+</li></ul>
+
+<h3 id="label-Modifiers+for+Integer+Directives">Modifiers for Integer Directives</h3>
+
+<p>For the following directives, <code>&#39;!&#39;</code> or <code>&#39;_&#39;</code> modifiers may be suffixed as underlying platform’s native size.</p>
+<ul><li>
+<p><code>&#39;i&#39;</code>, <code>&#39;I&#39;</code> - C <code>int</code>, always native size.</p>
+</li><li>
+<p><code>&#39;s&#39;</code>, <code>&#39;S&#39;</code> - C <code>short</code>.</p>
+</li><li>
+<p><code>&#39;l&#39;</code>, <code>&#39;L&#39;</code> - C <code>long</code>.</p>
+</li><li>
+<p><code>&#39;q&#39;</code>, <code>&#39;Q&#39;</code> - C <code>long long</code>, if available.</p>
+</li><li>
+<p><code>&#39;j&#39;</code>, <code>&#39;J&#39;</code> - C <code>intptr_t</code>, always native size.</p>
+</li></ul>
+
+<p>Native size modifiers are silently ignored for always native size directives.</p>
+
+<p>The endian modifiers also may be suffixed in the directives above:</p>
+<ul><li>
+<p><code>&#39;&gt;&#39;</code> - Big-endian.</p>
+</li><li>
+<p><code>&#39;&lt;&#39;</code> - Little-endian.</p>
+</li></ul>
+
+<h2 id="label-Float+Directives">Float Directives</h2>
+
+<p>Each float directive specifies the packing or unpacking for one element in the input or output array.</p>
+
+<h3 id="label-Single-Precision+Float+Directives">Single-Precision Float Directives</h3>
+<ul><li>
+<p><code>&#39;F&#39;</code> or <code>&#39;f&#39;</code> - Native format:</p>
+
+<pre><code>s = [3.0].pack(&#39;F&#39;) # =&gt; &quot;\x00\x00@@&quot;
+s.unpack(&#39;F&#39;)       # =&gt; [3.0]
+</code></pre>
+</li><li>
+<p><code>&#39;e&#39;</code> - Little-endian:</p>
+
+<pre><code>s = [3.0].pack(&#39;e&#39;) # =&gt; &quot;\x00\x00@@&quot;
+s.unpack(&#39;e&#39;)       # =&gt; [3.0]
+</code></pre>
+</li><li>
+<p><code>&#39;g&#39;</code> - Big-endian:</p>
+
+<pre><code>s = [3.0].pack(&#39;g&#39;) # =&gt; &quot;@@\x00\x00&quot;
+s.unpack(&#39;g&#39;)       # =&gt; [3.0]
+</code></pre>
+</li></ul>
+
+<h3 id="label-Double-Precision+Float+Directives">Double-Precision Float Directives</h3>
+<ul><li>
+<p><code>&#39;D&#39;</code> or <code>&#39;d&#39;</code> - Native format:</p>
+
+<pre><code>s = [3.0].pack(&#39;D&#39;) # =&gt; &quot;\x00\x00\x00\x00\x00\x00\b@&quot;
+s.unpack(&#39;D&#39;)       # =&gt; [3.0]
+</code></pre>
+</li><li>
+<p><code>&#39;E&#39;</code> - Little-endian:</p>
+
+<pre><code>s = [3.0].pack(&#39;E&#39;) # =&gt; &quot;\x00\x00\x00\x00\x00\x00\b@&quot;
+s.unpack(&#39;E&#39;)       # =&gt; [3.0]
+</code></pre>
+</li><li>
+<p><code>&#39;G&#39;</code> - Big-endian:</p>
+
+<pre><code>s = [3.0].pack(&#39;G&#39;) # =&gt; &quot;@\b\x00\x00\x00\x00\x00\x00&quot;
+s.unpack(&#39;G&#39;)       # =&gt; [3.0]
+</code></pre>
+</li></ul>
+
+<p>A float directive may be infinity or not-a-number:</p>
+
+<pre><code>inf = 1.0/0.0                  # =&gt; Infinity
+[inf].pack(&#39;f&#39;)                # =&gt; &quot;\x00\x00\x80\x7F&quot;
+&quot;\x00\x00\x80\x7F&quot;.unpack(&#39;f&#39;) # =&gt; [Infinity]
+
+nan = inf/inf                  # =&gt; NaN
+[nan].pack(&#39;f&#39;)                # =&gt; &quot;\x00\x00\xC0\x7F&quot;
+&quot;\x00\x00\xC0\x7F&quot;.unpack(&#39;f&#39;) # =&gt; [NaN]
+</code></pre>
+
+<h2 id="label-String+Directives">String Directives</h2>
+
+<p>Each string directive specifies the packing or unpacking for one byte in the input or output string.</p>
+
+<h3 id="label-Binary+String+Directives">Binary String Directives</h3>
+<ul><li>
+<p><code>&#39;A&#39;</code> - Arbitrary binary string (space padded; count is width); <code>nil</code> is treated as the empty string:</p>
+
+<pre><code>[&#39;foo&#39;].pack(&#39;A&#39;)    # =&gt; &quot;f&quot;
+[&#39;foo&#39;].pack(&#39;A*&#39;)   # =&gt; &quot;foo&quot;
+[&#39;foo&#39;].pack(&#39;A2&#39;)   # =&gt; &quot;fo&quot;
+[&#39;foo&#39;].pack(&#39;A4&#39;)   # =&gt; &quot;foo &quot;
+[nil].pack(&#39;A&#39;)      # =&gt; &quot; &quot;
+[nil].pack(&#39;A*&#39;)     # =&gt; &quot;&quot;
+[nil].pack(&#39;A2&#39;)     # =&gt; &quot;  &quot;
+[nil].pack(&#39;A4&#39;)     # =&gt; &quot;    &quot;
+
+&quot;foo\0&quot;.unpack(&#39;A&#39;)      # =&gt; [&quot;f&quot;]
+&quot;foo\0&quot;.unpack(&#39;A4&#39;)     # =&gt; [&quot;foo&quot;]
+&quot;foo\0bar&quot;.unpack(&#39;A10&#39;) # =&gt; [&quot;foo\x00bar&quot;] # Reads past &quot;\0&quot;.
+&quot;foo &quot;.unpack(&#39;A&#39;)       # =&gt; [&quot;f&quot;]
+&quot;foo &quot;.unpack(&#39;A4&#39;)      # =&gt; [&quot;foo&quot;]
+&quot;foo&quot;.unpack(&#39;A4&#39;)       # =&gt; [&quot;foo&quot;]
+
+russian = &quot;\u{442 435 441 442}&quot; # =&gt; &quot;тест&quot;
+russian.size         # =&gt; 4
+russian.bytesize     # =&gt; 8
+[russian].pack(&#39;A&#39;)  # =&gt; &quot;\xD1&quot;
+[russian].pack(&#39;A*&#39;) # =&gt; &quot;\xD1\x82\xD0\xB5\xD1\x81\xD1\x82&quot;
+russian.unpack(&#39;A&#39;)  # =&gt; [&quot;\xD1&quot;]
+russian.unpack(&#39;A2&#39;) # =&gt; [&quot;\xD1\x82&quot;]
+russian.unpack(&#39;A4&#39;) # =&gt; [&quot;\xD1\x82\xD0\xB5&quot;]
+russian.unpack(&#39;A*&#39;) # =&gt; [&quot;\xD1\x82\xD0\xB5\xD1\x81\xD1\x82&quot;]
+</code></pre>
+</li><li>
+<p><code>&#39;a&#39;</code> - Arbitrary binary string (null padded; count is width):</p>
+
+<pre><code>[&quot;foo&quot;].pack(&#39;a&#39;)    # =&gt; &quot;f&quot;
+[&quot;foo&quot;].pack(&#39;a*&#39;)   # =&gt; &quot;foo&quot;
+[&quot;foo&quot;].pack(&#39;a2&#39;)   # =&gt; &quot;fo&quot;
+[&quot;foo\0&quot;].pack(&#39;a4&#39;) # =&gt; &quot;foo\x00&quot;
+[nil].pack(&#39;a&#39;)      # =&gt; &quot;\x00&quot;
+[nil].pack(&#39;a*&#39;)     # =&gt; &quot;&quot;
+[nil].pack(&#39;a2&#39;)     # =&gt; &quot;\x00\x00&quot;
+[nil].pack(&#39;a4&#39;)     # =&gt; &quot;\x00\x00\x00\x00&quot;
+
+&quot;foo\0&quot;.unpack(&#39;a&#39;)     # =&gt; [&quot;f&quot;]
+&quot;foo\0&quot;.unpack(&#39;a4&#39;)    # =&gt; [&quot;foo\x00&quot;]
+&quot;foo &quot;.unpack(&#39;a4&#39;)     # =&gt; [&quot;foo &quot;]
+&quot;foo&quot;.unpack(&#39;a4&#39;)      # =&gt; [&quot;foo&quot;]
+&quot;foo\0bar&quot;.unpack(&#39;a4&#39;) # =&gt; [&quot;foo\x00&quot;] # Reads past &quot;\0&quot;.
+</code></pre>
+</li><li>
+<p><code>&#39;Z&#39;</code> - Same as <code>&#39;a&#39;</code>, except that null is added or ignored with <code>&#39;*&#39;</code>:</p>
+
+<pre><code>[&quot;foo&quot;].pack(&#39;Z*&#39;)   # =&gt; &quot;foo\x00&quot;
+[nil].pack(&#39;Z*&#39;)     # =&gt; &quot;\x00&quot;
+
+&quot;foo\0&quot;.unpack(&#39;Z*&#39;)    # =&gt; [&quot;foo&quot;]
+&quot;foo&quot;.unpack(&#39;Z*&#39;)      # =&gt; [&quot;foo&quot;]
+&quot;foo\0bar&quot;.unpack(&#39;Z*&#39;) # =&gt; [&quot;foo&quot;] # Does not read past &quot;\0&quot;.
+</code></pre>
+</li></ul>
+
+<h3 id="label-Bit+String+Directives">Bit String Directives</h3>
+<ul><li>
+<p><code>&#39;B&#39;</code> - Bit string (high byte first):</p>
+
+<pre><code>[&#39;11111111&#39; + &#39;00000000&#39;].pack(&#39;B*&#39;) # =&gt; &quot;\xFF\x00&quot;
+[&#39;10000000&#39; + &#39;01000000&#39;].pack(&#39;B*&#39;) # =&gt; &quot;\x80@&quot;
+
+[&#39;1&#39;].pack(&#39;B0&#39;) # =&gt; &quot;&quot;
+[&#39;1&#39;].pack(&#39;B1&#39;) # =&gt; &quot;\x80&quot;
+[&#39;1&#39;].pack(&#39;B2&#39;) # =&gt; &quot;\x80\x00&quot;
+[&#39;1&#39;].pack(&#39;B3&#39;) # =&gt; &quot;\x80\x00&quot;
+[&#39;1&#39;].pack(&#39;B4&#39;) # =&gt; &quot;\x80\x00\x00&quot;
+[&#39;1&#39;].pack(&#39;B5&#39;) # =&gt; &quot;\x80\x00\x00&quot;
+[&#39;1&#39;].pack(&#39;B6&#39;) # =&gt; &quot;\x80\x00\x00\x00&quot;
+
+&quot;\xff\x00&quot;.unpack(&quot;B*&quot;) # =&gt; [&quot;1111111100000000&quot;]
+&quot;\x01\x02&quot;.unpack(&quot;B*&quot;) # =&gt; [&quot;0000000100000010&quot;]
+
+&quot;&quot;.unpack(&quot;B0&quot;)     # =&gt; [&quot;&quot;]
+&quot;\x80&quot;.unpack(&quot;B1&quot;) # =&gt; [&quot;1&quot;]
+&quot;\x80&quot;.unpack(&quot;B2&quot;) # =&gt; [&quot;10&quot;]
+&quot;\x80&quot;.unpack(&quot;B3&quot;) # =&gt; [&quot;100&quot;]
+</code></pre>
+</li><li>
+<p><code>&#39;b&#39;</code> - Bit string (low byte first):</p>
+
+<pre><code>[&#39;11111111&#39; + &#39;00000000&#39;].pack(&#39;b*&#39;) # =&gt; &quot;\xFF\x00&quot;
+[&#39;10000000&#39; + &#39;01000000&#39;].pack(&#39;b*&#39;) # =&gt; &quot;\x01\x02&quot;
+
+[&#39;1&#39;].pack(&#39;b0&#39;) # =&gt; &quot;&quot;
+[&#39;1&#39;].pack(&#39;b1&#39;) # =&gt; &quot;\x01&quot;
+[&#39;1&#39;].pack(&#39;b2&#39;) # =&gt; &quot;\x01\x00&quot;
+[&#39;1&#39;].pack(&#39;b3&#39;) # =&gt; &quot;\x01\x00&quot;
+[&#39;1&#39;].pack(&#39;b4&#39;) # =&gt; &quot;\x01\x00\x00&quot;
+[&#39;1&#39;].pack(&#39;b5&#39;) # =&gt; &quot;\x01\x00\x00&quot;
+[&#39;1&#39;].pack(&#39;b6&#39;) # =&gt; &quot;\x01\x00\x00\x00&quot;
+
+&quot;\xff\x00&quot;.unpack(&quot;b*&quot;) # =&gt; [&quot;1111111100000000&quot;]
+&quot;\x01\x02&quot;.unpack(&quot;b*&quot;) # =&gt; [&quot;1000000001000000&quot;]
+
+&quot;&quot;.unpack(&quot;b0&quot;)     # =&gt; [&quot;&quot;]
+&quot;\x01&quot;.unpack(&quot;b1&quot;) # =&gt; [&quot;1&quot;]
+&quot;\x01&quot;.unpack(&quot;b2&quot;) # =&gt; [&quot;10&quot;]
+&quot;\x01&quot;.unpack(&quot;b3&quot;) # =&gt; [&quot;100&quot;]
+</code></pre>
+</li></ul>
+
+<h3 id="label-Hex+String+Directives">Hex String Directives</h3>
+<ul><li>
+<p><code>&#39;H&#39;</code> - Hex string (high nibble first):</p>
+
+<pre><code>[&#39;10ef&#39;].pack(&#39;H*&#39;)    # =&gt; &quot;\x10\xEF&quot;
+[&#39;10ef&#39;].pack(&#39;H0&#39;)    # =&gt; &quot;&quot;
+[&#39;10ef&#39;].pack(&#39;H3&#39;)    # =&gt; &quot;\x10\xE0&quot;
+[&#39;10ef&#39;].pack(&#39;H5&#39;)    # =&gt; &quot;\x10\xEF\x00&quot;
+
+[&#39;fff&#39;].pack(&#39;H3&#39;)    # =&gt; &quot;\xFF\xF0&quot;
+[&#39;fff&#39;].pack(&#39;H4&#39;)    # =&gt; &quot;\xFF\xF0&quot;
+[&#39;fff&#39;].pack(&#39;H5&#39;)    # =&gt; &quot;\xFF\xF0\x00&quot;
+[&#39;fff&#39;].pack(&#39;H6&#39;)    # =&gt; &quot;\xFF\xF0\x00&quot;
+[&#39;fff&#39;].pack(&#39;H7&#39;)    # =&gt; &quot;\xFF\xF0\x00\x00&quot;
+[&#39;fff&#39;].pack(&#39;H8&#39;)    # =&gt; &quot;\xFF\xF0\x00\x00&quot;
+
+&quot;\x10\xef&quot;.unpack(&#39;H*&#39;)    # =&gt; [&quot;10ef&quot;]
+&quot;\x10\xef&quot;.unpack(&#39;H0&#39;)    # =&gt; [&quot;&quot;]
+&quot;\x10\xef&quot;.unpack(&#39;H1&#39;)    # =&gt; [&quot;1&quot;]
+&quot;\x10\xef&quot;.unpack(&#39;H2&#39;)    # =&gt; [&quot;10&quot;]
+&quot;\x10\xef&quot;.unpack(&#39;H3&#39;)    # =&gt; [&quot;10e&quot;]
+&quot;\x10\xef&quot;.unpack(&#39;H4&#39;)    # =&gt; [&quot;10ef&quot;]
+&quot;\x10\xef&quot;.unpack(&#39;H5&#39;)    # =&gt; [&quot;10ef&quot;]
+</code></pre>
+</li><li>
+<p><code>&#39;h&#39;</code> - Hex string (low nibble first):</p>
+
+<pre><code>[&#39;10ef&#39;].pack(&#39;h*&#39;) # =&gt; &quot;\x01\xFE&quot;
+[&#39;10ef&#39;].pack(&#39;h0&#39;) # =&gt; &quot;&quot;
+[&#39;10ef&#39;].pack(&#39;h3&#39;) # =&gt; &quot;\x01\x0E&quot;
+[&#39;10ef&#39;].pack(&#39;h5&#39;) # =&gt; &quot;\x01\xFE\x00&quot;
+
+[&#39;fff&#39;].pack(&#39;h3&#39;) # =&gt; &quot;\xFF\x0F&quot;
+[&#39;fff&#39;].pack(&#39;h4&#39;) # =&gt; &quot;\xFF\x0F&quot;
+[&#39;fff&#39;].pack(&#39;h5&#39;) # =&gt; &quot;\xFF\x0F\x00&quot;
+[&#39;fff&#39;].pack(&#39;h6&#39;) # =&gt; &quot;\xFF\x0F\x00&quot;
+[&#39;fff&#39;].pack(&#39;h7&#39;) # =&gt; &quot;\xFF\x0F\x00\x00&quot;
+[&#39;fff&#39;].pack(&#39;h8&#39;) # =&gt; &quot;\xFF\x0F\x00\x00&quot;
+
+&quot;\x01\xfe&quot;.unpack(&#39;h*&#39;) # =&gt; [&quot;10ef&quot;]
+&quot;\x01\xfe&quot;.unpack(&#39;h0&#39;) # =&gt; [&quot;&quot;]
+&quot;\x01\xfe&quot;.unpack(&#39;h1&#39;) # =&gt; [&quot;1&quot;]
+&quot;\x01\xfe&quot;.unpack(&#39;h2&#39;) # =&gt; [&quot;10&quot;]
+&quot;\x01\xfe&quot;.unpack(&#39;h3&#39;) # =&gt; [&quot;10e&quot;]
+&quot;\x01\xfe&quot;.unpack(&#39;h4&#39;) # =&gt; [&quot;10ef&quot;]
+&quot;\x01\xfe&quot;.unpack(&#39;h5&#39;) # =&gt; [&quot;10ef&quot;]
+</code></pre>
+</li></ul>
+
+<h3 id="label-Pointer+String+Directives">Pointer String Directives</h3>
+<ul><li>
+<p><code>&#39;P&#39;</code> - Pointer to a structure (fixed-length string):</p>
+
+<pre><code>s = [&#39;abc&#39;].pack(&#39;P&#39;)  # =&gt; &quot;\xE0O\x7F\xE5\xA1\x01\x00\x00&quot;
+s.unpack(&#39;P*&#39;)         # =&gt; [&quot;abc&quot;]
+&quot;.&quot;.unpack(&quot;P&quot;)        # =&gt; []
+(&quot;\0&quot; * 8).unpack(&quot;P&quot;) # =&gt; [nil]
+[nil].pack(&quot;P&quot;)        # =&gt; &quot;\x00\x00\x00\x00\x00\x00\x00\x00&quot;
+</code></pre>
+</li><li>
+<p><code>&#39;p&#39;</code> - Pointer to a null-terminated string:</p>
+
+<pre><code>s = [&#39;abc&#39;].pack(&#39;p&#39;)  # =&gt; &quot;(\xE4u\xE5\xA1\x01\x00\x00&quot;
+s.unpack(&#39;p*&#39;)         # =&gt; [&quot;abc&quot;]
+&quot;.&quot;.unpack(&quot;p&quot;)        # =&gt; []
+(&quot;\0&quot; * 8).unpack(&quot;p&quot;) # =&gt; [nil]
+[nil].pack(&quot;p&quot;)        # =&gt; &quot;\x00\x00\x00\x00\x00\x00\x00\x00&quot;
+</code></pre>
+</li></ul>
+
+<h3 id="label-Other+String+Directives">Other String Directives</h3>
+<ul><li>
+<p><code>&#39;M&#39;</code> - Quoted printable, MIME encoding; text mode, but input must use LF and output LF; (see <a href="https://www.ietf.org/rfc/rfc2045.txt">RFC 2045</a>):</p>
+
+<pre><code>[&quot;a b c\td \ne&quot;].pack(&#39;M&#39;) # =&gt; &quot;a b c\td =\n\ne=\n&quot;
+[&quot;\0&quot;].pack(&#39;M&#39;)           # =&gt; &quot;=00=\n&quot;
+
+[&quot;a&quot;*1023].pack(&#39;M&#39;) == (&quot;a&quot;*73+&quot;=\n&quot;)*14+&quot;a=\n&quot;     # =&gt; true
+(&quot;a&quot;*73+&quot;=\na=\n&quot;).unpack(&#39;M&#39;) == [&quot;a&quot;*74]           # =&gt; true
+((&quot;a&quot;*73+&quot;=\n&quot;)*14+&quot;a=\n&quot;).unpack(&#39;M&#39;) == [&quot;a&quot;*1023] # =&gt; true
+
+&quot;a b c\td =\n\ne=\n&quot;.unpack(&#39;M&#39;)    # =&gt; [&quot;a b c\td \ne&quot;]
+&quot;=00=\n&quot;.unpack(&#39;M&#39;)    # =&gt; [&quot;\x00&quot;]
+
+&quot;pre=31=32=33after&quot;.unpack(&#39;M&#39;) # =&gt; [&quot;pre123after&quot;]
+&quot;pre=\nafter&quot;.unpack(&#39;M&#39;)       # =&gt; [&quot;preafter&quot;]
+&quot;pre=\r\nafter&quot;.unpack(&#39;M&#39;)     # =&gt; [&quot;preafter&quot;]
+&quot;pre=&quot;.unpack(&#39;M&#39;)              # =&gt; [&quot;pre=&quot;]
+&quot;pre=\r&quot;.unpack(&#39;M&#39;)            # =&gt; [&quot;pre=\r&quot;]
+&quot;pre=hoge&quot;.unpack(&#39;M&#39;)          # =&gt; [&quot;pre=hoge&quot;]
+&quot;pre==31after&quot;.unpack(&#39;M&#39;)      # =&gt; [&quot;pre==31after&quot;]
+&quot;pre===31after&quot;.unpack(&#39;M&#39;)     # =&gt; [&quot;pre===31after&quot;]
+</code></pre>
+</li><li>
+<p><code>&#39;m&#39;</code> - <a href="../../../classes/Base64.html"><code>Base64</code></a> encoded string; count specifies input bytes between each newline, rounded down to nearest multiple of 3; if count is zero, no newlines are added; (see <a href="https://www.ietf.org/rfc/rfc4648.txt">RFC 4648</a>):</p>
+
+<pre><code>[&quot;&quot;].pack(&#39;m&#39;)             # =&gt; &quot;&quot;
+[&quot;\0&quot;].pack(&#39;m&#39;)           # =&gt; &quot;AA==\n&quot;
+[&quot;\0\0&quot;].pack(&#39;m&#39;)         # =&gt; &quot;AAA=\n&quot;
+[&quot;\0\0\0&quot;].pack(&#39;m&#39;)       # =&gt; &quot;AAAA\n&quot;
+[&quot;\377&quot;].pack(&#39;m&#39;)         # =&gt; &quot;/w==\n&quot;
+[&quot;\377\377&quot;].pack(&#39;m&#39;)     # =&gt; &quot;//8=\n&quot;
+[&quot;\377\377\377&quot;].pack(&#39;m&#39;) # =&gt; &quot;////\n&quot;
+
+&quot;&quot;.unpack(&#39;m&#39;)       # =&gt; [&quot;&quot;]
+&quot;AA==\n&quot;.unpack(&#39;m&#39;) # =&gt; [&quot;\x00&quot;]
+&quot;AAA=\n&quot;.unpack(&#39;m&#39;) # =&gt; [&quot;\x00\x00&quot;]
+&quot;AAAA\n&quot;.unpack(&#39;m&#39;) # =&gt; [&quot;\x00\x00\x00&quot;]
+&quot;/w==\n&quot;.unpack(&#39;m&#39;) # =&gt; [&quot;\xFF&quot;]
+&quot;//8=\n&quot;.unpack(&#39;m&#39;) # =&gt; [&quot;\xFF\xFF&quot;]
+&quot;////\n&quot;.unpack(&#39;m&#39;) # =&gt; [&quot;\xFF\xFF\xFF&quot;]
+&quot;A\n&quot;.unpack(&#39;m&#39;)    # =&gt; [&quot;&quot;]
+&quot;AA\n&quot;.unpack(&#39;m&#39;)   # =&gt; [&quot;\x00&quot;]
+&quot;AA=\n&quot;.unpack(&#39;m&#39;)  # =&gt; [&quot;\x00&quot;]
+&quot;AAA\n&quot;.unpack(&#39;m&#39;)  # =&gt; [&quot;\x00\x00&quot;]
+
+[&quot;&quot;].pack(&#39;m0&#39;)             # =&gt; &quot;&quot;
+[&quot;\0&quot;].pack(&#39;m0&#39;)           # =&gt; &quot;AA==&quot;
+[&quot;\0\0&quot;].pack(&#39;m0&#39;)         # =&gt; &quot;AAA=&quot;
+[&quot;\0\0\0&quot;].pack(&#39;m0&#39;)       # =&gt; &quot;AAAA&quot;
+[&quot;\377&quot;].pack(&#39;m0&#39;)         # =&gt; &quot;/w==&quot;
+[&quot;\377\377&quot;].pack(&#39;m0&#39;)     # =&gt; &quot;//8=&quot;
+[&quot;\377\377\377&quot;].pack(&#39;m0&#39;) # =&gt; &quot;////&quot;
+
+&quot;&quot;.unpack(&#39;m0&#39;)     # =&gt; [&quot;&quot;]
+&quot;AA==&quot;.unpack(&#39;m0&#39;) # =&gt; [&quot;\x00&quot;]
+&quot;AAA=&quot;.unpack(&#39;m0&#39;) # =&gt; [&quot;\x00\x00&quot;]
+&quot;AAAA&quot;.unpack(&#39;m0&#39;) # =&gt; [&quot;\x00\x00\x00&quot;]
+&quot;/w==&quot;.unpack(&#39;m0&#39;) # =&gt; [&quot;\xFF&quot;]
+&quot;//8=&quot;.unpack(&#39;m0&#39;) # =&gt; [&quot;\xFF\xFF&quot;]
+&quot;////&quot;.unpack(&#39;m0&#39;) # =&gt; [&quot;\xFF\xFF\xFF&quot;]
+</code></pre>
+</li><li>
+<p><code>&#39;u&#39;</code> - UU-encoded string:</p>
+
+<pre><code>[0].pack(&quot;U&quot;)          # =&gt; &quot;\u0000&quot;
+[0x3fffffff].pack(&quot;U&quot;) # =&gt; &quot;\xFC\xBF\xBF\xBF\xBF\xBF&quot;
+[0x40000000].pack(&quot;U&quot;) # =&gt; &quot;\xFD\x80\x80\x80\x80\x80&quot;
+[0x7fffffff].pack(&quot;U&quot;) # =&gt; &quot;\xFD\xBF\xBF\xBF\xBF\xBF&quot;
+</code></pre>
+</li></ul>
+
+<h2 id="label-Offset+Directives">Offset Directives</h2>
+<ul><li>
+<p><code>&#39;@&#39;</code> - Begin packing at the given byte offset; for packing, null fill if necessary:</p>
+
+<pre><code>[1, 2].pack(&quot;C@0C&quot;) # =&gt; &quot;\x02&quot;
+[1, 2].pack(&quot;C@1C&quot;) # =&gt; &quot;\x01\x02&quot;
+[1, 2].pack(&quot;C@5C&quot;) # =&gt; &quot;\x01\x00\x00\x00\x00\x02&quot;
+
+&quot;\x01\x00\x00\x02&quot;.unpack(&quot;C@3C&quot;) # =&gt; [1, 2]
+&quot;\x00&quot;.unpack(&quot;@1C&quot;)              # =&gt; [nil]
+</code></pre>
+</li><li>
+<p><code>&#39;X&#39;</code> - Back up a byte:</p>
+
+<pre><code>[0, 1, 2].pack(&quot;CCXC&quot;)    # =&gt; &quot;\x00\x02&quot;
+[0, 1, 2].pack(&quot;CCX2C&quot;)   # =&gt; &quot;\x02&quot;
+&quot;\x00\x02&quot;.unpack(&quot;CCXC&quot;) # =&gt; [0, 2, 2]
+</code></pre>
+</li></ul>
+
+<h2 id="label-Null+Byte+Direcive">Null Byte Direcive</h2>
+<ul><li>
+<p><code>&#39;x&#39;</code> - Null byte:</p>
+
+<pre><code>[].pack(&quot;x0&quot;)                # =&gt; &quot;&quot;
+[].pack(&quot;x&quot;)                 # =&gt; &quot;\x00&quot;
+[].pack(&quot;x8&quot;)                # =&gt; &quot;\x00\x00\x00\x00\x00\x00\x00\x00&quot;
+&quot;\x00\x00\x02&quot;.unpack(&quot;CxC&quot;) # =&gt; [0, 2]
+</code></pre>
+</li></ul>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </main>
+  </body>
+</html>

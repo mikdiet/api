@@ -30,7 +30,7 @@
     <meta property="og:description" content="The GC module provides an interface to Ruby’s mark and sweep garbage collection mechanism.  Some of the underlying methods are also available via the ObjectSpace module.">
   
 
-    <meta name="keywords" content="GC class, verify_internal_consistency, verify_transient_heap_internal_consistency, malloc_allocated_size, malloc_allocations, add_stress_to_class, remove_stress_to_class, start, garbage_collect, auto_compact, auto_compact=, enable, disable, stress, stress=, count, stat, latest_gc_info, latest_compact_info, compact, verify_compaction_references, measure_total_time=, measure_total_time, total_time">
+    <meta name="keywords" content="GC class, verify_internal_consistency, malloc_allocated_size, malloc_allocations, compact, auto_compact, auto_compact=, latest_compact_info, add_stress_to_class, remove_stress_to_class, start, garbage_collect, enable, disable, stress, stress=, count, stat, stat_heap, latest_gc_info, verify_compaction_references, measure_total_time=, measure_total_time, total_time">
 </head>
 
 <body>
@@ -77,11 +77,11 @@
   
     <div class="description">
       
-<p>The <a href="GC.html"><code>GC</code></a> module provides an interface to Ruby’s mark and sweep garbage collection mechanism.</p>
+<p>The GC module provides an interface to Ruby’s mark and sweep garbage collection mechanism.</p>
 
 <p>Some of the underlying methods are also available via the <a href="ObjectSpace.html"><code>ObjectSpace</code></a> module.</p>
 
-<p>You may obtain information about the operation of the <a href="GC.html"><code>GC</code></a> through <a href="GC/Profiler.html"><code>GC::Profiler</code></a>.</p>
+<p>You may obtain information about the operation of the GC through <a href="GC/Profiler.html"><code>GC::Profiler</code></a>.</p>
 
     </div>
   
@@ -260,6 +260,11 @@
             
               
               <li>
+                <a href="#method-c-stat_heap">stat_heap</a>,
+              </li>
+            
+              
+              <li>
                 <a href="#method-c-stress">stress</a>,
               </li>
             
@@ -294,12 +299,7 @@
             
               
               <li>
-                <a href="#method-c-verify_internal_consistency">verify_internal_consistency</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-c-verify_transient_heap_internal_consistency">verify_transient_heap_internal_consistency</a>
+                <a href="#method-c-verify_internal_consistency">verify_internal_consistency</a>
               </li>
             
           </ul>
@@ -331,7 +331,7 @@
           
             <tr valign='top'>
               <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"><p>internal constants</p></td>
+              <td colspan="2" class="attr-desc"><p>Internal constants in the garbage collector.</p></td>
             </tr>
           
         
@@ -343,7 +343,7 @@
           
             <tr valign='top'>
               <td>&nbsp;</td>
-              <td colspan="2" class="attr-desc"><p><a href="GC.html"><code>GC</code></a> build options</p></td>
+              <td colspan="2" class="attr-desc"><p>GC build options</p></td>
             </tr>
           
         
@@ -393,7 +393,7 @@ rb_gcdebug_add_stress_to_class(int argc, VALUE *argv, VALUE self)
     rb_objspace_t *objspace = &amp;rb_objspace;
 
     if (!stress_to_class) {
-        stress_to_class = rb_ary_tmp_new(argc);
+        set_stress_to_class(rb_ary_hidden_new(argc));
     }
     rb_ary_cat(stress_to_class, argv, argc);
     return self;
@@ -430,14 +430,13 @@ rb_gcdebug_add_stress_to_class(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-auto_compact_source')" id="l_method-c-auto_compact_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L46" target="_blank" class="github_url">on GitHub</a>
-                
               </p>
               <div id="method-c-auto_compact_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 46</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">auto_compact</span>
-  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_get_auto_compact</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+gc_get_auto_compact(VALUE _)
+{
+    return RBOOL(ruby_enable_autocompact);
+}</pre>
               </div>
             </div>
             
@@ -474,14 +473,28 @@ rb_gcdebug_add_stress_to_class(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-auto_compact-3D_source')" id="l_method-c-auto_compact-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L58" target="_blank" class="github_url">on GitHub</a>
-                
               </p>
               <div id="method-c-auto_compact-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 58</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">auto_compact=</span>(<span class="ruby-identifier">flag</span>)
-  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_set_auto_compact</span>(<span class="ruby-identifier">flag</span>)
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+gc_set_auto_compact(VALUE _, VALUE v)
+{
+    GC_ASSERT(GC_COMPACTION_SUPPORTED);
+
+    ruby_enable_autocompact = RTEST(v);
+
+#if RGENGC_CHECK_MODE
+    ruby_autocompact_compare_func = NULL;
+
+    if (SYMBOL_P(v)) {
+        ID id = RB_SYM2ID(v);
+        if (id == rb_intern(&quot;empty&quot;)) {
+            ruby_autocompact_compare_func = compare_free_slots;
+        }
+    }
+#endif
+
+    return v;
+}</pre>
               </div>
             </div>
             
@@ -498,9 +511,14 @@ rb_gcdebug_add_stress_to_class(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>This function compacts objects together in Ruby’s heap.  It eliminates unused space (or fragmentation) in the heap by moving objects in to that unused space.  This function returns a hash which contains statistics about which objects were moved.  See ‘GC.latest_gc_info` for details about compaction statistics.</p>
+              <p>This function compacts objects together in Ruby’s heap.  It eliminates unused space (or fragmentation) in the heap by moving objects in to that unused space.  This function returns a hash which contains statistics about which objects were moved.  See <code>GC.latest_gc_info</code> for details about compaction statistics.</p>
 
 <p>This method is implementation specific and not expected to be implemented in any implementation besides MRI.</p>
+
+<p>To test whether GC compaction is supported, use the idiom:</p>
+
+<pre><code>GC.respond_to?(:compact)
+</code></pre>
             </div>
           
 
@@ -516,14 +534,16 @@ rb_gcdebug_add_stress_to_class(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-compact_source')" id="l_method-c-compact_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L238" target="_blank" class="github_url">on GitHub</a>
-                
               </p>
               <div id="method-c-compact_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 238</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">compact</span>
-  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_compact</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+gc_compact(VALUE self)
+{
+    /* Run GC with compaction enabled */
+    gc_start_internal(NULL, self, Qtrue, Qtrue, Qtrue, Qtrue);
+
+    return gc_compact_stats(self);
+}</pre>
               </div>
             </div>
             
@@ -540,9 +560,9 @@ rb_gcdebug_add_stress_to_class(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>The number of times <a href="GC.html"><code>GC</code></a> occurred.</p>
+              <p>The number of times GC occurred.</p>
 
-<p>It returns the number of times <a href="GC.html"><code>GC</code></a> occurred since the process started.</p>
+<p>It returns the number of times GC occurred since the process started.</p>
             </div>
           
 
@@ -558,11 +578,11 @@ rb_gcdebug_add_stress_to_class(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-count_source')" id="l_method-c-count_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L120" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L105" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-count_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 120</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 105</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">count</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_count</span>
 <span class="ruby-keyword">end</span></pre>
@@ -602,11 +622,11 @@ GC.disable   #=&gt; true
                 Source:
                 <a href="javascript:toggleSource('method-c-disable_source')" id="l_method-c-disable_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L84" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L69" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-disable_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 84</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 69</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">disable</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_disable</span>
 <span class="ruby-keyword">end</span></pre>
@@ -647,11 +667,11 @@ GC.enable    #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-c-enable_source')" id="l_method-c-enable_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L72" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L57" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-enable_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 72</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 57</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">enable</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_enable</span>
 <span class="ruby-keyword">end</span></pre>
@@ -663,7 +683,7 @@ GC.enable    #=&gt; false
         <div class="method">
           <h3 class="title method-title" id="method-c-latest_compact_info">
             
-              <b>GC.latest_compact_info &rarr; {:considered=>{:T_CLASS=>11}, :moved=>{:T_CLASS=>11}}
+              <b>GC.latest_compact_info &rarr; hash
 </b>
             
             <a href="../classes/GC.html#method-c-latest_compact_info" name="method-c-latest_compact_info" class="permalink">Link</a>
@@ -671,8 +691,7 @@ GC.enable    #=&gt; false
 
           
             <div class="description">
-              <pre><code>Returns information about object moved in the most recent GC compaction.
-</code></pre>
+              <p>Returns information about object moved in the most recent GC compaction.</p>
 
 <p>The returned hash has two keys :considered and :moved.  The hash for :considered lists the number of objects that were considered for movement by the compactor, and the :moved hash lists the number of objects that were actually moved.  Some objects can’t be moved (maybe they were pinned) so these numbers can be used to calculate compaction efficiency.</p>
             </div>
@@ -690,14 +709,44 @@ GC.enable    #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-c-latest_compact_info_source')" id="l_method-c-latest_compact_info_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L223" target="_blank" class="github_url">on GitHub</a>
-                
               </p>
               <div id="method-c-latest_compact_info_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 223</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">latest_compact_info</span>
-  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_compact_stats</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre>static VALUE
+gc_compact_stats(VALUE self)
+{
+    size_t i;
+    rb_objspace_t *objspace = &amp;rb_objspace;
+    VALUE h = rb_hash_new();
+    VALUE considered = rb_hash_new();
+    VALUE moved = rb_hash_new();
+    VALUE moved_up = rb_hash_new();
+    VALUE moved_down = rb_hash_new();
+
+    for (i=0; i&lt;T_MASK; i++) {
+        if (objspace-&gt;rcompactor.considered_count_table[i]) {
+            rb_hash_aset(considered, type_sym(i), SIZET2NUM(objspace-&gt;rcompactor.considered_count_table[i]));
+        }
+
+        if (objspace-&gt;rcompactor.moved_count_table[i]) {
+            rb_hash_aset(moved, type_sym(i), SIZET2NUM(objspace-&gt;rcompactor.moved_count_table[i]));
+        }
+
+        if (objspace-&gt;rcompactor.moved_up_count_table[i]) {
+            rb_hash_aset(moved_up, type_sym(i), SIZET2NUM(objspace-&gt;rcompactor.moved_up_count_table[i]));
+        }
+
+        if (objspace-&gt;rcompactor.moved_down_count_table[i]) {
+            rb_hash_aset(moved_down, type_sym(i), SIZET2NUM(objspace-&gt;rcompactor.moved_down_count_table[i]));
+        }
+    }
+
+    rb_hash_aset(h, ID2SYM(rb_intern(&quot;considered&quot;)), considered);
+    rb_hash_aset(h, ID2SYM(rb_intern(&quot;moved&quot;)), moved);
+    rb_hash_aset(h, ID2SYM(rb_intern(&quot;moved_up&quot;)), moved_up);
+    rb_hash_aset(h, ID2SYM(rb_intern(&quot;moved_down&quot;)), moved_down);
+
+    return h;
+}</pre>
               </div>
             </div>
             
@@ -706,7 +755,7 @@ GC.enable    #=&gt; false
         <div class="method">
           <h3 class="title method-title" id="method-c-latest_gc_info">
             
-              <b>GC.latest_gc_info &rarr; {:gc_by=>:newobj}<br />GC.latest_gc_info(hash) &rarr; hash<br />GC.latest_gc_info(:major_by) &rarr; :malloc
+              <b>GC.latest_gc_info &rarr; hash<br />GC.latest_gc_info(hash) &rarr; hash<br />GC.latest_gc_info(:major_by) &rarr; :malloc
 </b>
             
             <a href="../classes/GC.html#method-c-latest_gc_info" name="method-c-latest_gc_info" class="permalink">Link</a>
@@ -714,8 +763,7 @@ GC.enable    #=&gt; false
 
           
             <div class="description">
-              <pre><code>Returns information about the most recent garbage collection.
-</code></pre>
+              <p>Returns information about the most recent garbage collection.</p>
 
 <p>If the optional argument, hash, is given, it is overwritten and returned. This is intended to avoid probe effect.</p>
             </div>
@@ -733,11 +781,11 @@ GC.enable    #=&gt; false
                 Source:
                 <a href="javascript:toggleSource('method-c-latest_gc_info_source')" id="l_method-c-latest_gc_info_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L209" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L266" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-latest_gc_info_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 209</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 266</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">latest_gc_info</span> <span class="ruby-identifier">hash_or_key</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_latest_gc_info</span> <span class="ruby-identifier">hash_or_key</span>
 <span class="ruby-keyword">end</span></pre>
@@ -855,11 +903,11 @@ gc_malloc_allocations(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-measure_total_time_source')" id="l_method-c-measure_total_time_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L288" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L308" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-measure_total_time_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 288</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 308</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">measure_total_time</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">cexpr!</span> <span class="ruby-string">%{
     RBOOL(rb_objspace.flags.measure_gc)
@@ -881,7 +929,7 @@ gc_malloc_allocations(VALUE self)
 
           
             <div class="description">
-              <p>Enable to measure <a href="GC.html"><code>GC</code></a> time. You can get the result with <code>GC.stat(:time)</code>. Note that <a href="GC.html"><code>GC</code></a> time measurement can cause some performance overhead.</p>
+              <p>Enable to measure GC time. You can get the result with <code>GC.stat(:time)</code>. Note that GC time measurement can cause some performance overhead.</p>
             </div>
           
 
@@ -897,11 +945,11 @@ gc_malloc_allocations(VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-measure_total_time-3D_source')" id="l_method-c-measure_total_time-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L276" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L296" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-measure_total_time-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 276</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 296</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">measure_total_time=</span>(<span class="ruby-identifier">flag</span>)
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">cstmt!</span> <span class="ruby-string">%{
     rb_objspace.flags.measure_gc = RTEST(flag) ? TRUE : FALSE;
@@ -953,7 +1001,7 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
             rb_ary_delete_same(stress_to_class, argv[i]);
         }
         if (RARRAY_LEN(stress_to_class) == 0) {
-            stress_to_class = 0;
+            set_stress_to_class(0);
         }
     }
     return Qnil;
@@ -966,8 +1014,7 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
         <div class="method">
           <h3 class="title method-title" id="method-c-start">
             
-              <b>GC.start                     &rarr; nil<br />ObjectSpace.garbage_collect  &rarr; nil<br />include GC; garbage_collect  &rarr; nil<br />GC.start(full_mark: true, immediate_sweep: true)           &rarr; nil<br />ObjectSpace.garbage_collect(full_mark: true, immediate_sweep: true) &rarr; nil<br />include GC; garbage_collect(full_mark: true, immediate_sweep: true) &rarr; nil
-</b>
+              <b>start</b>(full_mark: true, immediate_mark: true, immediate_sweep: true)
             
             <a href="../classes/GC.html#method-c-start" name="method-c-start" class="permalink">Link</a>
           </h3>
@@ -976,12 +1023,11 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
             <div class="description">
               <p>Initiates garbage collection, even if manually disabled.</p>
 
-<p>This method is defined with keyword arguments that default to true:</p>
+<p>The <code>full_mark</code> keyword argument determines whether or not to perform a major garbage collection cycle. When set to <code>true</code>, a major garbage collection cycle is ran, meaning all objects are marked. When set to <code>false</code>, a minor garbage collection cycle is ran, meaning only young objects are marked.</p>
 
-<pre><code>def GC.start(full_mark: true, immediate_sweep: true); end
-</code></pre>
+<p>The <code>immediate_mark</code> keyword argument determines whether or not to perform incremental marking. When set to <code>true</code>, marking is completed during the call to this method. When set to <code>false</code>, marking is performed in steps that is interleaved with future Ruby code execution, so marking might not be completed during this method call. Note that if <code>full_mark</code> is <code>false</code> then marking will always be immediate, regardless of the value of <code>immediate_mark</code>.</p>
 
-<p>Use full_mark: false to perform a minor <a href="GC.html"><code>GC</code></a>. Use immediate_sweep: false to defer sweeping (use lazy sweep).</p>
+<p>The <code>immedate_sweep</code> keyword argument determines whether or not to defer sweeping (using lazy sweep). When set to <code>true</code>, sweeping is performed in steps that is interleaved with future Ruby code execution, so sweeping might not be completed during this method call. When set to <code>false</code>, sweeping is completed during the call to this method.</p>
 
 <p>Note: These keyword arguments are implementation and version dependent. They are not guaranteed to be future-compatible, and may be ignored if the underlying implementation does not support them.</p>
             </div>
@@ -999,11 +1045,11 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-start_source')" id="l_method-c-start_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L33" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L38" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-start_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 33</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 38</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">start</span> <span class="ruby-value">full_mark:</span> <span class="ruby-keyword">true</span>, <span class="ruby-value">immediate_mark:</span> <span class="ruby-keyword">true</span>, <span class="ruby-value">immediate_sweep:</span> <span class="ruby-keyword">true</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_start_internal</span> <span class="ruby-identifier">full_mark</span>, <span class="ruby-identifier">immediate_mark</span>, <span class="ruby-identifier">immediate_sweep</span>, <span class="ruby-keyword">false</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1023,26 +1069,29 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Returns a <a href="Hash.html"><code>Hash</code></a> containing information about the <a href="GC.html"><code>GC</code></a>.</p>
+              <p>Returns a <a href="Hash.html"><code>Hash</code></a> containing information about the GC.</p>
 
 <p>The contents of the hash are implementation specific and may change in the future without notice.</p>
 
-<p>The hash includes information about internal statistics about <a href="GC.html"><code>GC</code></a> such as:</p>
+<p>The hash includes information about internal statistics about GC such as:</p>
 <dl class="rdoc-list label-list"><dt>count
 <dd>
 <p>The total number of garbage collections ran since application start (count includes both minor and major garbage collections)</p>
+</dd><dt>time
+<dd>
+<p>The total time spent in garbage collections (in milliseconds)</p>
 </dd><dt>heap_allocated_pages
 <dd>
-<p>The total number of ‘:heap_eden_pages` + `:heap_tomb_pages`</p>
+<p>The total number of <code>:heap_eden_pages</code> + <code>:heap_tomb_pages</code></p>
 </dd><dt>heap_sorted_length
 <dd>
 <p>The number of pages that can fit into the buffer that holds references to all pages</p>
 </dd><dt>heap_allocatable_pages
 <dd>
-<p>The total number of pages the application could allocate without additional <a href="GC.html"><code>GC</code></a></p>
+<p>The total number of pages the application could allocate without additional GC</p>
 </dd><dt>heap_available_slots
 <dd>
-<p>The total number of slots in all ‘:heap_allocated_pages`</p>
+<p>The total number of slots in all <code>:heap_allocated_pages</code></p>
 </dd><dt>heap_live_slots
 <dd>
 <p>The total number of slots which contain live objects</p>
@@ -1054,7 +1103,7 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
 <p>The total number of slots with pending finalizers to be run</p>
 </dd><dt>heap_marked_slots
 <dd>
-<p>The total number of objects marked in the last <a href="GC.html"><code>GC</code></a></p>
+<p>The total number of objects marked in the last GC</p>
 </dd><dt>heap_eden_pages
 <dd>
 <p>The total number of pages which contain at least one live slot</p>
@@ -1075,34 +1124,43 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
 <p>The cumulative number of objects freed since application start</p>
 </dd><dt>malloc_increase_bytes
 <dd>
-<p>Amount of memory allocated on the heap for objects. Decreased by any <a href="GC.html"><code>GC</code></a></p>
+<p>Amount of memory allocated on the heap for objects. Decreased by any GC</p>
 </dd><dt>malloc_increase_bytes_limit
 <dd>
-<p>When ‘:malloc_increase_bytes` crosses this limit, <a href="GC.html"><code>GC</code></a> is triggered</p>
+<p>When <code>:malloc_increase_bytes</code> crosses this limit, GC is triggered</p>
 </dd><dt>minor_gc_count
 <dd>
 <p>The total number of minor garbage collections run since process start</p>
 </dd><dt>major_gc_count
 <dd>
 <p>The total number of major garbage collections run since process start</p>
+</dd><dt>compact_count
+<dd>
+<p>The total number of compactions run since process start</p>
+</dd><dt>read_barrier_faults
+<dd>
+<p>The total number of times the read barrier was triggered during compaction</p>
+</dd><dt>total_moved_objects
+<dd>
+<p>The total number of objects compaction has moved</p>
 </dd><dt>remembered_wb_unprotected_objects
 <dd>
 <p>The total number of objects without write barriers</p>
 </dd><dt>remembered_wb_unprotected_objects_limit
 <dd>
-<p>When ‘:remembered_wb_unprotected_objects` crosses this limit, major <a href="GC.html"><code>GC</code></a> is triggered</p>
+<p>When <code>:remembered_wb_unprotected_objects</code> crosses this limit, major GC is triggered</p>
 </dd><dt>old_objects
 <dd>
 <p>Number of live, old objects which have survived at least 3 garbage collections</p>
 </dd><dt>old_objects_limit
 <dd>
-<p>When ‘:old_objects` crosses this limit, major <a href="GC.html"><code>GC</code></a> is triggered</p>
+<p>When <code>:old_objects</code> crosses this limit, major GC is triggered</p>
 </dd><dt>oldmalloc_increase_bytes
 <dd>
-<p>Amount of memory allocated on the heap for objects. Decreased by major <a href="GC.html"><code>GC</code></a></p>
+<p>Amount of memory allocated on the heap for objects. Decreased by major GC</p>
 </dd><dt>oldmalloc_increase_bytes_limit
 <dd>
-<p>When ‘:old_malloc_increase_bytes` crosses this limit, major <a href="GC.html"><code>GC</code></a> is triggered</p>
+<p>When <code>:old_malloc_increase_bytes</code> crosses this limit, major GC is triggered</p>
 </dd></dl>
 
 <p>If the optional argument, hash, is given, it is overwritten and returned. This is intended to avoid probe effect.</p>
@@ -1123,13 +1181,100 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-stat_source')" id="l_method-c-stat_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L195" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L189" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-stat_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 195</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 189</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">stat</span> <span class="ruby-identifier">hash_or_key</span> = <span class="ruby-keyword">nil</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_stat</span> <span class="ruby-identifier">hash_or_key</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-stat_heap">
+            
+              <b>GC.stat_heap &rarr; Hash<br />GC.stat_heap(nil, hash) &rarr; Hash<br />GC.stat_heap(heap_name) &rarr; Hash<br />GC.stat_heap(heap_name, hash) &rarr; Hash<br />GC.stat_heap(heap_name, :key) &rarr; Numeric
+</b>
+            
+            <a href="../classes/GC.html#method-c-stat_heap" name="method-c-stat_heap" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns information for heaps in the GC.</p>
+
+<p>If the first optional argument, <code>heap_name</code>, is passed in and not <code>nil</code>, it returns a <code>Hash</code> containing information about the particular heap. Otherwise, it will return a <code>Hash</code> with heap names as keys and a <code>Hash</code> containing information about the heap as values.</p>
+
+<p>If the second optional argument, <code>hash_or_key</code>, is given as <code>Hash</code>, it will be overwritten and returned. This is intended to avoid the probe effect.</p>
+
+<p>If both optional arguments are passed in and the second optional argument is a symbol, it will return a <code>Numeric</code> of the value for the particular heap.</p>
+
+<p>On CRuby, <code>heap_name</code> is of the type <code>Integer</code> but may be of type <code>String</code> on other implementations.</p>
+
+<p>The contents of the hash are implementation specific and may change in the future without notice.</p>
+
+<p>If the optional argument, hash, is given, it is overwritten and returned.</p>
+
+<p>This method is only expected to work on CRuby.</p>
+
+<p>The hash includes the following keys about the internal information in the GC:</p>
+<dl class="rdoc-list label-list"><dt>slot_size
+<dd>
+<p>The slot size of the heap in bytes.</p>
+</dd><dt>heap_allocatable_pages
+<dd>
+<p>The number of pages that can be allocated without triggering a new garbage collection cycle.</p>
+</dd><dt>heap_eden_pages
+<dd>
+<p>The number of pages in the eden heap.</p>
+</dd><dt>heap_eden_slots
+<dd>
+<p>The total number of slots in all of the pages in the eden heap.</p>
+</dd><dt>heap_tomb_pages
+<dd>
+<p>The number of pages in the tomb heap. The tomb heap only contains pages that do not have any live objects.</p>
+</dd><dt>heap_tomb_slots
+<dd>
+<p>The total number of slots in all of the pages in the tomb heap.</p>
+</dd><dt>total_allocated_pages
+<dd>
+<p>The total number of pages that have been allocated in the heap.</p>
+</dd><dt>total_freed_pages
+<dd>
+<p>The total number of pages that have been freed and released back to the system in the heap.</p>
+</dd><dt>force_major_gc_count
+<dd>
+<p>The number of times major garbage collection cycles this heap has forced to start due to running out of free slots.</p>
+</dd><dt>force_incremental_marking_finish_count
+<dd>
+<p>The number of times this heap has forced incremental marking to complete due to running out of pooled slots.</p>
+</dd></dl>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-stat_heap_source')" id="l_method-c-stat_heap_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L252" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-stat_heap_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 252</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">stat_heap</span> <span class="ruby-identifier">heap_name</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">hash_or_key</span> = <span class="ruby-keyword">nil</span>
+  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_stat_heap</span> <span class="ruby-identifier">heap_name</span>, <span class="ruby-identifier">hash_or_key</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1147,7 +1292,7 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Returns current status of <a href="GC.html"><code>GC</code></a> stress mode.</p>
+              <p>Returns current status of GC stress mode.</p>
             </div>
           
 
@@ -1163,11 +1308,11 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-stress_source')" id="l_method-c-stress_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L92" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L77" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-stress_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 92</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 77</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">stress</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_stress_get</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1187,9 +1332,9 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Updates the <a href="GC.html"><code>GC</code></a> stress mode.</p>
+              <p>Updates the GC stress mode.</p>
 
-<p>When stress mode is enabled, the <a href="GC.html"><code>GC</code></a> is invoked at every <a href="GC.html"><code>GC</code></a> opportunity: all memory and object allocations.</p>
+<p>When stress mode is enabled, the GC is invoked at every GC opportunity: all memory and object allocations.</p>
 
 <p>Enabling stress mode will degrade performance, it is only for debugging.</p>
 
@@ -1214,11 +1359,11 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-stress-3D_source')" id="l_method-c-stress-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L110" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L95" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-stress-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 110</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 95</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">stress=</span>(<span class="ruby-identifier">flag</span>)
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_stress_set_m</span> <span class="ruby-identifier">flag</span>
 <span class="ruby-keyword">end</span></pre>
@@ -1238,7 +1383,7 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
 
           
             <div class="description">
-              <p>Return measured <a href="GC.html"><code>GC</code></a> total time in nano seconds.</p>
+              <p>Return measured GC total time in nano seconds.</p>
             </div>
           
 
@@ -1254,14 +1399,14 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-total_time_source')" id="l_method-c-total_time_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L298" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L318" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-total_time_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 298</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 318</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">total_time</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">cexpr!</span> <span class="ruby-string">%{
-    ULL2NUM(rb_objspace.profile.total_time_ns)
+    ULL2NUM(rb_objspace.profile.marking_time_ns + rb_objspace.profile.sweeping_time_ns)
   }</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -1284,7 +1429,7 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
 
 <p>This method is implementation specific.  During compaction, objects that were moved are replaced with T_MOVED objects.  No object should have a reference to a T_MOVED object after compaction.</p>
 
-<p>This function doubles the heap to ensure room to move all objects, compacts the heap to make sure everything moves, updates all references, then performs a full <a href="GC.html"><code>GC</code></a>.  If any object contains a reference to a T_MOVED object, that object should be pushed on the mark stack, and will make a SEGV.</p>
+<p>This function expands the heap to ensure room to move all objects, compacts the heap to make sure everything moves, updates all references, then performs a full GC.  If any object contains a reference to a T_MOVED object, that object should be pushed on the mark stack, and will make a SEGV.</p>
             </div>
           
 
@@ -1300,13 +1445,13 @@ rb_gcdebug_remove_stress_to_class(int argc, VALUE *argv, VALUE self)
                 Source:
                 <a href="javascript:toggleSource('method-c-verify_compaction_references_source')" id="l_method-c-verify_compaction_references_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L256" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L285" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-verify_compaction_references_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 256</span>
-<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">verify_compaction_references</span>(<span class="ruby-value">toward:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">double_heap:</span> <span class="ruby-keyword">false</span>)
-  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_verify_compaction_references</span>(<span class="ruby-identifier">double_heap</span>, <span class="ruby-identifier">toward</span> <span class="ruby-operator">==</span> <span class="ruby-value">:empty</span>)
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 285</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">verify_compaction_references</span>(<span class="ruby-value">toward:</span> <span class="ruby-keyword">nil</span>, <span class="ruby-value">double_heap:</span> <span class="ruby-keyword">false</span>, <span class="ruby-value">expand_heap:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_verify_compaction_references</span>(<span class="ruby-identifier">double_heap</span>, <span class="ruby-identifier">expand_heap</span>, <span class="ruby-identifier">toward</span> <span class="ruby-operator">==</span> <span class="ruby-value">:empty</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1355,45 +1500,6 @@ gc_verify_internal_consistency_m(VALUE dummy)
             
           </div>
         
-        <div class="method">
-          <h3 class="title method-title" id="method-c-verify_transient_heap_internal_consistency">
-            
-              <b>verify_transient_heap_internal_consistency</b>()
-            
-            <a href="../classes/GC.html#method-c-verify_transient_heap_internal_consistency" name="method-c-verify_transient_heap_internal_consistency" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-c-verify_transient_heap_internal_consistency_source')" id="l_method-c-verify_transient_heap_internal_consistency_source">show</a>
-                
-              </p>
-              <div id="method-c-verify_transient_heap_internal_consistency_source" class="dyn-source">
-                <pre>static VALUE
-gc_verify_transient_heap_internal_consistency(VALUE dmy)
-{
-    rb_transient_heap_verify();
-    return Qnil;
-}</pre>
-              </div>
-            </div>
-            
-          </div>
-        
       
     
       <h2 class="sectiontitle">Instance Public methods</h2>
@@ -1408,7 +1514,7 @@ gc_verify_transient_heap_internal_consistency(VALUE dmy)
 
           
             <div class="description">
-              
+              <p>Alias of <a href="GC.html#method-c-start"><code>GC.start</code></a></p>
             </div>
           
 
@@ -1424,11 +1530,11 @@ gc_verify_transient_heap_internal_consistency(VALUE dmy)
                 Source:
                 <a href="javascript:toggleSource('method-i-garbage_collect_source')" id="l_method-i-garbage_collect_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/gc.rb#L37" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/gc.rb#L43" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-garbage_collect_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/gc.rb, line 37</span>
+                <pre><span class="ruby-comment"># File ruby/gc.rb, line 43</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">garbage_collect</span> <span class="ruby-value">full_mark:</span> <span class="ruby-keyword">true</span>, <span class="ruby-value">immediate_mark:</span> <span class="ruby-keyword">true</span>, <span class="ruby-value">immediate_sweep:</span> <span class="ruby-keyword">true</span>
   <span class="ruby-constant">Primitive</span>.<span class="ruby-identifier">gc_start_internal</span> <span class="ruby-identifier">full_mark</span>, <span class="ruby-identifier">immediate_mark</span>, <span class="ruby-identifier">immediate_sweep</span>, <span class="ruby-keyword">false</span>
 <span class="ruby-keyword">end</span></pre>

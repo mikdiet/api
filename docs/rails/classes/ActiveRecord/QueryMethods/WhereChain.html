@@ -26,11 +26,11 @@
 
   
     
-    <meta name="description" content="WhereChain objects act as placeholder for queries in which where does not have any parameter. In this case, where must be chained with not to return a new relation.">
-    <meta property="og:description" content="WhereChain objects act as placeholder for queries in which where does not have any parameter. In this case, where must be chained with not to return a new relation.">
+    <meta name="description" content="WhereChain objects act as placeholder for queries in which where does not have any parameter. In this case, where can be chained to return a new relation.">
+    <meta property="og:description" content="WhereChain objects act as placeholder for queries in which where does not have any parameter. In this case, where can be chained to return a new relation.">
   
 
-    <meta name="keywords" content="ActiveRecord::QueryMethods::WhereChain class, new, not, missing">
+    <meta name="keywords" content="ActiveRecord::QueryMethods::WhereChain class, not, associated, missing">
 </head>
 
 <body>
@@ -81,7 +81,7 @@
   
     <div class="description">
       
-<p><a href="WhereChain.html"><code>WhereChain</code></a> objects act as placeholder for queries in which where does not have any parameter. In this case, where must be chained with <a href="WhereChain.html#method-i-not"><code>not</code></a> to return a new relation.</p>
+<p><a href="WhereChain.html"><code>WhereChain</code></a> objects act as placeholder for queries in which <code>where</code> does not have any parameter. In this case, <code>where</code> can be chained to return a new relation.</p>
 
     </div>
   
@@ -102,6 +102,18 @@
     <div class="sectiontitle">Methods</div>
     <dl class="methods">
       
+        <dt>A</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-associated">associated</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>M</dt>
         <dd>
           <ul>
@@ -117,11 +129,6 @@
         <dt>N</dt>
         <dd>
           <ul>
-            
-              
-              <li>
-                <a href="#method-c-new">new</a>,
-              </li>
             
               
               <li>
@@ -152,19 +159,37 @@
 
     <!-- Methods -->
     
-      <h2 class="sectiontitle">Class Public methods</h2>
+    
+      <h2 class="sectiontitle">Instance Public methods</h2>
       
         <div class="method">
-          <h3 class="title method-title" id="method-c-new">
+          <h3 class="title method-title" id="method-i-associated">
             
-              <b>new</b>(scope)
+              <b>associated</b>(*associations)
             
-            <a href="../../../classes/ActiveRecord/QueryMethods/WhereChain.html#method-c-new" name="method-c-new" class="permalink">Link</a>
+            <a href="../../../classes/ActiveRecord/QueryMethods/WhereChain.html#method-i-associated" name="method-i-associated" class="permalink">Link</a>
           </h3>
 
           
             <div class="description">
-              
+              <p>Returns a new relation with joins and where clause to identify associated relations.</p>
+
+<p>For example, posts that are associated to a related author:</p>
+
+<pre><code>Post.where.associated(:author)
+# SELECT &quot;posts&quot;.* FROM &quot;posts&quot;
+# INNER JOIN &quot;authors&quot; ON &quot;authors&quot;.&quot;id&quot; = &quot;posts&quot;.&quot;author_id&quot;
+# WHERE &quot;authors&quot;.&quot;id&quot; IS NOT NULL
+</code></pre>
+
+<p>Additionally, multiple relations can be combined. This will return posts associated to both an author and any comments:</p>
+
+<pre><code>Post.where.associated(:author, :comments)
+# SELECT &quot;posts&quot;.* FROM &quot;posts&quot;
+# INNER JOIN &quot;authors&quot; ON &quot;authors&quot;.&quot;id&quot; = &quot;posts&quot;.&quot;author_id&quot;
+# INNER JOIN &quot;comments&quot; ON &quot;comments&quot;.&quot;post_id&quot; = &quot;posts&quot;.&quot;id&quot;
+# WHERE &quot;authors&quot;.&quot;id&quot; IS NOT NULL AND &quot;comments&quot;.&quot;id&quot; IS NOT NULL
+</code></pre>
             </div>
           
 
@@ -178,29 +203,35 @@
               
               <p class="source-link">
                 Source:
-                <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
+                <a href="javascript:toggleSource('method-i-associated_source')" id="l_method-i-associated_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/relation/query_methods.rb#L18" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/relation/query_methods.rb#L76" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
-              <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/relation/query_methods.rb, line 18</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">scope</span>)
-  <span class="ruby-ivar">@scope</span> = <span class="ruby-identifier">scope</span>
+              <div id="method-i-associated_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/relation/query_methods.rb, line 76</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">associated</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">associations</span>)
+  <span class="ruby-identifier">associations</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">association</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">reflection</span> = <span class="ruby-identifier">scope_association_reflection</span>(<span class="ruby-identifier">association</span>)
+    <span class="ruby-ivar">@scope</span>.<span class="ruby-identifier">joins!</span>(<span class="ruby-identifier">association</span>)
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">options</span>[<span class="ruby-value">:class_name</span>]
+      <span class="ruby-keyword">self</span>.<span class="ruby-identifier">not</span>(<span class="ruby-identifier">association</span> <span class="ruby-operator">=&gt;</span> { <span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">association_primary_key</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">nil</span> })
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-keyword">self</span>.<span class="ruby-identifier">not</span>(<span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">table_name</span> <span class="ruby-operator">=&gt;</span> { <span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">association_primary_key</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">nil</span> })
+    <span class="ruby-keyword">end</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-ivar">@scope</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
           </div>
         
-      
-    
-      <h2 class="sectiontitle">Instance Public methods</h2>
-      
         <div class="method">
           <h3 class="title method-title" id="method-i-missing">
             
-              <b>missing</b>(*args)
+              <b>missing</b>(*associations)
             
             <a href="../../../classes/ActiveRecord/QueryMethods/WhereChain.html#method-i-missing" name="method-i-missing" class="permalink">Link</a>
           </h3>
@@ -240,17 +271,20 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-missing_source')" id="l_method-i-missing_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/relation/query_methods.rb#L71" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/relation/query_methods.rb#L108" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-missing_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/relation/query_methods.rb, line 71</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">missing</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>)
-  <span class="ruby-identifier">args</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">arg</span><span class="ruby-operator">|</span>
-    <span class="ruby-identifier">reflection</span> = <span class="ruby-ivar">@scope</span>.<span class="ruby-identifier">klass</span>.<span class="ruby-identifier">_reflect_on_association</span>(<span class="ruby-identifier">arg</span>)
-    <span class="ruby-identifier">opts</span> = { <span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">table_name</span> <span class="ruby-operator">=&gt;</span> { <span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">association_primary_key</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">nil</span> } }
-    <span class="ruby-ivar">@scope</span>.<span class="ruby-identifier">left_outer_joins!</span>(<span class="ruby-identifier">arg</span>)
-    <span class="ruby-ivar">@scope</span>.<span class="ruby-identifier">where!</span>(<span class="ruby-identifier">opts</span>)
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/relation/query_methods.rb, line 108</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">missing</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">associations</span>)
+  <span class="ruby-identifier">associations</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">association</span><span class="ruby-operator">|</span>
+    <span class="ruby-identifier">reflection</span> = <span class="ruby-identifier">scope_association_reflection</span>(<span class="ruby-identifier">association</span>)
+    <span class="ruby-ivar">@scope</span>.<span class="ruby-identifier">left_outer_joins!</span>(<span class="ruby-identifier">association</span>)
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">options</span>[<span class="ruby-value">:class_name</span>]
+      <span class="ruby-ivar">@scope</span>.<span class="ruby-identifier">where!</span>(<span class="ruby-identifier">association</span> <span class="ruby-operator">=&gt;</span> { <span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">association_primary_key</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">nil</span> })
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-ivar">@scope</span>.<span class="ruby-identifier">where!</span>(<span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">table_name</span> <span class="ruby-operator">=&gt;</span> { <span class="ruby-identifier">reflection</span>.<span class="ruby-identifier">association_primary_key</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-keyword">nil</span> })
+    <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-ivar">@scope</span>
@@ -292,6 +326,14 @@ User.where.not(name: %w(Ko1 Nobu))
 User.where.not(name: &quot;Jon&quot;, role: &quot;admin&quot;)
 # SELECT * FROM users WHERE NOT (name == &#39;Jon&#39; AND role == &#39;admin&#39;)
 </code></pre>
+
+<p>If there is a non-nil condition on a nullable column in the hash condition, the records that have nil values on the nullable column won’t be returned.</p>
+
+<pre><code>User.create!(nullable_country: nil)
+User.where.not(nullable_country: &quot;UK&quot;)
+# SELECT * FROM users WHERE NOT (nullable_country = &#39;UK&#39;)
+# =&gt; []
+</code></pre>
             </div>
           
 
@@ -307,11 +349,11 @@ User.where.not(name: &quot;Jon&quot;, role: &quot;admin&quot;)
                 Source:
                 <a href="javascript:toggleSource('method-i-not_source')" id="l_method-i-not_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/9650d254d4539ed8201394bc9f639e78bac24b20/activerecord/lib/active_record/relation/query_methods.rb#L45" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/relation/query_methods.rb#L50" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-not_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/relation/query_methods.rb, line 45</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/relation/query_methods.rb, line 50</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">not</span>(<span class="ruby-identifier ruby-title">opts</span>, <span class="ruby-operator">*</span><span class="ruby-identifier">rest</span>)
   <span class="ruby-identifier">where_clause</span> = <span class="ruby-ivar">@scope</span>.<span class="ruby-identifier">send</span>(<span class="ruby-value">:build_where_clause</span>, <span class="ruby-identifier">opts</span>, <span class="ruby-identifier">rest</span>)
 

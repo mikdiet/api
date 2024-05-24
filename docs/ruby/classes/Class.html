@@ -30,7 +30,7 @@
     <meta property="og:description" content="Extends any Class to include json_creatable? method.  Classes in Ruby are first-class objects—each is an instance of class Class.">
   
 
-    <meta name="keywords" content="Class class, json_creatable?, allocate, new, new, superclass, subclasses">
+    <meta name="keywords" content="Class class, json_creatable?, allocate, new, new, superclass, subclasses, attached_object">
 </head>
 
 <body>
@@ -164,7 +164,12 @@ obj---&gt;OtherClass----------&gt;(OtherClass)-----------...
             
               
               <li>
-                <a href="#method-i-allocate">allocate</a>
+                <a href="#method-i-allocate">allocate</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-i-attached_object">attached_object</a>
               </li>
             
           </ul>
@@ -378,6 +383,60 @@ rb_class_alloc_m(VALUE klass)
           </div>
         
         <div class="method">
+          <h3 class="title method-title" id="method-i-attached_object">
+            
+              <b>attached_object &rarr; object
+</b>
+            
+            <a href="../classes/Class.html#method-i-attached_object" name="method-i-attached_object" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Returns the object for which the receiver is the singleton class.</p>
+
+<p>Raises an <a href="TypeError.html"><code>TypeError</code></a> if the class is not a singleton class.</p>
+
+<pre><code>class Foo; end
+
+Foo.singleton_class.attached_object        #=&gt; Foo
+Foo.attached_object                        #=&gt; TypeError: `Foo&#39; is not a singleton class
+Foo.new.singleton_class.attached_object    #=&gt; #&lt;Foo:0x000000010491a370&gt;
+TrueClass.attached_object                  #=&gt; TypeError: `TrueClass&#39; is not a singleton class
+NilClass.attached_object                   #=&gt; TypeError: `NilClass&#39; is not a singleton class
+</code></pre>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-attached_object_source')" id="l_method-i-attached_object_source">show</a>
+                
+              </p>
+              <div id="method-i-attached_object_source" class="dyn-source">
+                <pre>VALUE
+rb_class_attached_object(VALUE klass)
+{
+    if (!FL_TEST(klass, FL_SINGLETON)) {
+        rb_raise(rb_eTypeError, &quot;`%&quot;PRIsVALUE&quot;&#39; is not a singleton class&quot;, klass);
+    }
+
+    return RCLASS_ATTACHED_OBJECT(klass);
+}</pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
           <h3 class="title method-title" id="method-i-json_creatable-3F">
             
               <b>json_creatable?</b>()
@@ -403,11 +462,11 @@ rb_class_alloc_m(VALUE klass)
                 Source:
                 <a href="javascript:toggleSource('method-i-json_creatable-3F_source')" id="l_method-i-json_creatable-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/ext/json/lib/json/common.rb#L700" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/ext/json/lib/json/common.rb#L694" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-json_creatable-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/common.rb, line 700</span>
+                <pre><span class="ruby-comment"># File ruby/ext/json/lib/json/common.rb, line 694</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">json_creatable?</span>
   <span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:json_create</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -482,6 +541,25 @@ A.subclasses        #=&gt; [D, B]
 B.subclasses        #=&gt; [C]
 C.subclasses        #=&gt; []
 </code></pre>
+
+<p>Anonymous subclasses (not associated with a constant) are returned, too:</p>
+
+<pre><code>c = Class.new(A)
+A.subclasses        # =&gt; [#&lt;Class:0x00007f003c77bd78&gt;, D, B]
+</code></pre>
+
+<p>Note that the parent does not hold references to subclasses and doesn’t prevent them from being garbage collected. This means that the subclass might disappear when all references to it are dropped:</p>
+
+<pre><code># drop the reference to subclass, it can be garbage-collected now
+c = nil
+
+A.subclasses
+# It can be
+#  =&gt; [#&lt;Class:0x00007f003c77bd78&gt;, D, B]
+# ...or just
+#  =&gt; [D, B]
+# ...depending on whether garbage collector was run
+</code></pre>
             </div>
           
 
@@ -554,19 +632,23 @@ Bar.superclass           #=&gt; Foo
                 <pre>VALUE
 rb_class_superclass(VALUE klass)
 {
+    RUBY_ASSERT(RB_TYPE_P(klass, T_CLASS));
+
     VALUE super = RCLASS_SUPER(klass);
 
     if (!super) {
         if (klass == rb_cBasicObject) return Qnil;
         rb_raise(rb_eTypeError, &quot;uninitialized class&quot;);
     }
-    while (RB_TYPE_P(super, T_ICLASS)) {
-        super = RCLASS_SUPER(super);
-    }
-    if (!super) {
+
+    if (!RCLASS_SUPERCLASS_DEPTH(klass)) {
         return Qnil;
     }
-    return super;
+    else {
+        super = RCLASS_SUPERCLASSES(klass)[RCLASS_SUPERCLASS_DEPTH(klass) - 1];
+        RUBY_ASSERT(RB_TYPE_P(klass, T_CLASS));
+        return super;
+    }
 }</pre>
               </div>
             </div>

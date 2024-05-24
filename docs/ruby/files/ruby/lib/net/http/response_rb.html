@@ -56,10 +56,10 @@
             <li>
                 ruby/lib/net/http/response.rb
                 
-                    <a href="https://github.com/ruby/ruby/blob/9650d254d4539ed8201394bc9f639e78bac24b20/lib/net/http/response.rb" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/net/http/response.rb" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2022-09-06 00:52:29 +0300</li>
+            <li>Last modified: 2024-05-24 23:57:54 +0300</li>
         </ul>
     </div>
 
@@ -68,23 +68,211 @@
   
     <div class="description">
       
-<p>HTTP response class.</p>
+<p>This class is the base class for Net::HTTP response classes.</p>
 
-<p>This class wraps together the response header and the response body (the entity requested).</p>
+<h2 id="label-About+the+Examples">About the Examples</h2>
 
-<p>It mixes in the HTTPHeader module, which provides access to response header values both via hash-like methods and via individual readers.</p>
+<h2 id="label-Returned+Responses">Returned Responses</h2>
 
-<p>Note that each possible HTTP response code defines its own HTTPResponse subclass. All classes are defined under the <a href="../../../../../classes/Net.html"><code>Net</code></a> module. Indentation indicates inheritance.  For a list of the classes see <a href="../../../../../classes/Net/HTTP.html"><code>Net::HTTP</code></a>.</p>
+<p>Method <a href="../../../../../classes/Net/HTTP.html#method-c-get_response"><code>Net::HTTP.get_response</code></a> returns an instance of one of the subclasses of Net::HTTPResponse:</p>
 
-<p>Correspondence <code>HTTP code =&gt; class</code> is stored in CODE_TO_OBJ constant:</p>
-
-<pre><code>Net::HTTPResponse::CODE_TO_OBJ[&#39;404&#39;] #=&gt; Net::HTTPNotFound
+<pre><code>Net::HTTP.get_response(uri)
+# =&gt; #&lt;Net::HTTPOK 200 OK readbody=true&gt;
+Net::HTTP.get_response(hostname, &#39;/nosuch&#39;)
+# =&gt; #&lt;Net::HTTPNotFound 404 Not Found readbody=true&gt;
 </code></pre>
+
+<p>As does method <a href="../../../../../classes/Net/HTTP.html#method-i-request"><code>Net::HTTP#request</code></a>:</p>
+
+<pre><code>req = Net::HTTP::Get.new(uri)
+Net::HTTP.start(hostname) do |http|
+  http.request(req)
+end # =&gt; #&lt;Net::HTTPOK 200 OK readbody=true&gt;
+</code></pre>
+
+<p>Class Net::HTTPResponse includes module <a href="../../../../../classes/Net/HTTPHeader.html"><code>Net::HTTPHeader</code></a>, which provides access to response header values via (among others):</p>
+<ul><li>
+<p>Hash-like method <code>[]</code>.</p>
+</li><li>
+<p>Specific reader methods, such as <code>content_type</code>.</p>
+</li></ul>
+
+<p>Examples:</p>
+
+<pre><code>res = Net::HTTP.get_response(uri) # =&gt; #&lt;Net::HTTPOK 200 OK readbody=true&gt;
+res[&#39;Content-Type&#39;]               # =&gt; &quot;text/html; charset=UTF-8&quot;
+res.content_type                  # =&gt; &quot;text/html&quot;
+</code></pre>
+
+<h2 id="label-Response+Subclasses">Response Subclasses</h2>
+
+<p>Class Net::HTTPResponse has a subclass for each <a href="https://en.wikipedia.org/wiki/List_of_HTTP_status_codes">HTTP status code</a>. You can look up the response class for a given code:</p>
+
+<pre><code>Net::HTTPResponse::CODE_TO_OBJ[&#39;200&#39;] # =&gt; Net::HTTPOK
+Net::HTTPResponse::CODE_TO_OBJ[&#39;400&#39;] # =&gt; Net::HTTPBadRequest
+Net::HTTPResponse::CODE_TO_OBJ[&#39;404&#39;] # =&gt; Net::HTTPNotFound
+</code></pre>
+
+<p>And you can retrieve the status code for a response object:</p>
+
+<pre><code>Net::HTTP.get_response(uri).code                 # =&gt; &quot;200&quot;
+Net::HTTP.get_response(hostname, &#39;/nosuch&#39;).code # =&gt; &quot;404&quot;
+</code></pre>
+
+<p>The response subclasses (indentation shows class hierarchy):</p>
+<ul><li>
+<p><a href="../../../../../classes/Net/HTTPUnknownResponse.html"><code>Net::HTTPUnknownResponse</code></a> (for unhandled HTTP extensions).</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPInformation.html"><code>Net::HTTPInformation</code></a>:</p>
+<ul><li>
+<p><a href="../../../../../classes/Net/HTTPContinue.html"><code>Net::HTTPContinue</code></a> (100)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPSwitchProtocol.html"><code>Net::HTTPSwitchProtocol</code></a> (101)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPProcessing.html"><code>Net::HTTPProcessing</code></a> (102)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPEarlyHints.html"><code>Net::HTTPEarlyHints</code></a> (103)</p>
+</li></ul>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPSuccess.html"><code>Net::HTTPSuccess</code></a>:</p>
+<ul><li>
+<p><a href="../../../../../classes/Net/HTTPOK.html"><code>Net::HTTPOK</code></a> (200)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPCreated.html"><code>Net::HTTPCreated</code></a> (201)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPAccepted.html"><code>Net::HTTPAccepted</code></a> (202)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPNonAuthoritativeInformation.html"><code>Net::HTTPNonAuthoritativeInformation</code></a> (203)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPNoContent.html"><code>Net::HTTPNoContent</code></a> (204)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPResetContent.html"><code>Net::HTTPResetContent</code></a> (205)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPPartialContent.html"><code>Net::HTTPPartialContent</code></a> (206)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPMultiStatus.html"><code>Net::HTTPMultiStatus</code></a> (207)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPAlreadyReported.html"><code>Net::HTTPAlreadyReported</code></a> (208)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPIMUsed.html"><code>Net::HTTPIMUsed</code></a> (226)</p>
+</li></ul>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPRedirection.html"><code>Net::HTTPRedirection</code></a>:</p>
+<ul><li>
+<p><a href="../../../../../classes/Net/HTTPMultipleChoices.html"><code>Net::HTTPMultipleChoices</code></a> (300)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPMovedPermanently.html"><code>Net::HTTPMovedPermanently</code></a> (301)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPFound.html"><code>Net::HTTPFound</code></a> (302)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPSeeOther.html"><code>Net::HTTPSeeOther</code></a> (303)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPNotModified.html"><code>Net::HTTPNotModified</code></a> (304)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPUseProxy.html"><code>Net::HTTPUseProxy</code></a> (305)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPTemporaryRedirect.html"><code>Net::HTTPTemporaryRedirect</code></a> (307)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPPermanentRedirect.html"><code>Net::HTTPPermanentRedirect</code></a> (308)</p>
+</li></ul>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPClientError.html"><code>Net::HTTPClientError</code></a>:</p>
+<ul><li>
+<p><a href="../../../../../classes/Net/HTTPBadRequest.html"><code>Net::HTTPBadRequest</code></a> (400)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPUnauthorized.html"><code>Net::HTTPUnauthorized</code></a> (401)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPPaymentRequired.html"><code>Net::HTTPPaymentRequired</code></a> (402)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPForbidden.html"><code>Net::HTTPForbidden</code></a> (403)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPNotFound.html"><code>Net::HTTPNotFound</code></a> (404)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPMethodNotAllowed.html"><code>Net::HTTPMethodNotAllowed</code></a> (405)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPNotAcceptable.html"><code>Net::HTTPNotAcceptable</code></a> (406)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPProxyAuthenticationRequired.html"><code>Net::HTTPProxyAuthenticationRequired</code></a> (407)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPRequestTimeout.html"><code>Net::HTTPRequestTimeOut</code></a> (408)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPConflict.html"><code>Net::HTTPConflict</code></a> (409)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPGone.html"><code>Net::HTTPGone</code></a> (410)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPLengthRequired.html"><code>Net::HTTPLengthRequired</code></a> (411)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPPreconditionFailed.html"><code>Net::HTTPPreconditionFailed</code></a> (412)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPPayloadTooLarge.html"><code>Net::HTTPRequestEntityTooLarge</code></a> (413)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPURITooLong.html"><code>Net::HTTPRequestURITooLong</code></a> (414)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPUnsupportedMediaType.html"><code>Net::HTTPUnsupportedMediaType</code></a> (415)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPRangeNotSatisfiable.html"><code>Net::HTTPRequestedRangeNotSatisfiable</code></a> (416)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPExpectationFailed.html"><code>Net::HTTPExpectationFailed</code></a> (417)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPMisdirectedRequest.html"><code>Net::HTTPMisdirectedRequest</code></a> (421)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPUnprocessableEntity.html"><code>Net::HTTPUnprocessableEntity</code></a> (422)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPLocked.html"><code>Net::HTTPLocked</code></a> (423)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPFailedDependency.html"><code>Net::HTTPFailedDependency</code></a> (424)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPUpgradeRequired.html"><code>Net::HTTPUpgradeRequired</code></a> (426)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPPreconditionRequired.html"><code>Net::HTTPPreconditionRequired</code></a> (428)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPTooManyRequests.html"><code>Net::HTTPTooManyRequests</code></a> (429)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPRequestHeaderFieldsTooLarge.html"><code>Net::HTTPRequestHeaderFieldsTooLarge</code></a> (431)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPUnavailableForLegalReasons.html"><code>Net::HTTPUnavailableForLegalReasons</code></a> (451)</p>
+</li></ul>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPServerError.html"><code>Net::HTTPServerError</code></a>:</p>
+<ul><li>
+<p><a href="../../../../../classes/Net/HTTPInternalServerError.html"><code>Net::HTTPInternalServerError</code></a> (500)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPNotImplemented.html"><code>Net::HTTPNotImplemented</code></a> (501)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPBadGateway.html"><code>Net::HTTPBadGateway</code></a> (502)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPServiceUnavailable.html"><code>Net::HTTPServiceUnavailable</code></a> (503)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPGatewayTimeout.html"><code>Net::HTTPGatewayTimeOut</code></a> (504)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPVersionNotSupported.html"><code>Net::HTTPVersionNotSupported</code></a> (505)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPVariantAlsoNegotiates.html"><code>Net::HTTPVariantAlsoNegotiates</code></a> (506)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPInsufficientStorage.html"><code>Net::HTTPInsufficientStorage</code></a> (507)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPLoopDetected.html"><code>Net::HTTPLoopDetected</code></a> (508)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPNotExtended.html"><code>Net::HTTPNotExtended</code></a> (510)</p>
+</li><li>
+<p><a href="../../../../../classes/Net/HTTPNetworkAuthenticationRequired.html"><code>Net::HTTPNetworkAuthenticationRequired</code></a> (511)</p>
+</li></ul>
+</li></ul>
+
+<p>There is also the Net::HTTPBadResponse exception which is raised when there is a protocol error.</p>
 
     </div>
   
 
 
+  
+    <!-- File only: requires -->
+    <div class="sectiontitle">Required Files</div>
+    <ul>
+      
+        <li>strscan</li>
+      
+    </ul>
   
 
 
