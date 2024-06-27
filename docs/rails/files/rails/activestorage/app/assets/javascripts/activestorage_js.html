@@ -56,10 +56,10 @@
             <li>
                 rails/activestorage/app/assets/javascripts/activestorage.js
                 
-                    <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activestorage/app/assets/javascripts/activestorage.js" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activestorage/app/assets/javascripts/activestorage.js" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2024-05-24 23:57:11 +0300</li>
+            <li>Last modified: 2024-06-28 01:29:16 +0300</li>
         </ul>
     </div>
 
@@ -577,7 +577,7 @@ function toArray(value) {
   }
 }
 class BlobRecord {
-  constructor(file, checksum, url) {
+  constructor(file, checksum, url, customHeaders = {}) {
     this.file = file;
     this.attributes = {
       filename: file.name,
@@ -591,6 +591,9 @@ class BlobRecord {
     this.xhr.setRequestHeader(&quot;Content-Type&quot;, &quot;application/json&quot;);
     this.xhr.setRequestHeader(&quot;Accept&quot;, &quot;application/json&quot;);
     this.xhr.setRequestHeader(&quot;X-Requested-With&quot;, &quot;XMLHttpRequest&quot;);
+    Object.keys(customHeaders).forEach((headerKey =&gt; {
+      this.xhr.setRequestHeader(headerKey, customHeaders[headerKey]);
+    }));
     const csrfToken = getMetaValue(&quot;csrf-token&quot;);
     if (csrfToken != undefined) {
       this.xhr.setRequestHeader(&quot;X-CSRF-Token&quot;, csrfToken);
@@ -670,11 +673,12 @@ class BlobUpload {
 }
 let id = 0;
 class DirectUpload {
-  constructor(file, url, delegate) {
+  constructor(file, url, delegate, customHeaders = {}) {
     this.id = ++id;
     this.file = file;
     this.url = url;
     this.delegate = delegate;
+    this.customHeaders = customHeaders;
   }
   create(callback) {
     FileChecksum.create(this.file, ((error, checksum) =&gt; {
@@ -682,7 +686,7 @@ class DirectUpload {
         callback(error);
         return;
       }
-      const blob = new BlobRecord(this.file, checksum, this.url);
+      const blob = new BlobRecord(this.file, checksum, this.url, this.customHeaders);
       notify(this.delegate, &quot;directUploadWillCreateBlobWithXHR&quot;, blob.xhr);
       blob.create((error =&gt; {
         if (error) {
@@ -824,9 +828,9 @@ function start() {
   }
 }
 function didClick(event) {
-  const {target: target} = event;
-  if ((target.tagName == &quot;INPUT&quot; || target.tagName == &quot;BUTTON&quot;) &amp;&amp; target.type == &quot;submit&quot; &amp;&amp; target.form) {
-    submitButtonsByForm.set(target.form, target);
+  const button = event.target.closest(&quot;button, input&quot;);
+  if (button &amp;&amp; button.type === &quot;submit&quot; &amp;&amp; button.form) {
+    submitButtonsByForm.set(button.form, button);
   }
 }
 function didSubmitForm(event) {
@@ -890,6 +894,8 @@ function autostart() {
 }
 setTimeout(autostart, 1);
 exports.DirectUpload = DirectUpload;
+exports.DirectUploadController = DirectUploadController;
+exports.DirectUploadsController = DirectUploadsController;
 exports.start = start;
 Object.defineProperty(exports, &quot;__esModule&quot;, {
   value: true

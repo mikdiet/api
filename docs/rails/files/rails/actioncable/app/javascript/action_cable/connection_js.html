@@ -56,10 +56,10 @@
             <li>
                 rails/actioncable/app/javascript/action_cable/connection.js
                 
-                    <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actioncable/app/javascript/action_cable/connection.js" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/actioncable/app/javascript/action_cable/connection.js" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2024-05-24 23:57:09 +0300</li>
+            <li>Last modified: 2024-06-28 01:29:16 +0300</li>
         </ul>
     </div>
 
@@ -100,9 +100,10 @@ open() {
     logger.log(`Attempted to open WebSocket, but existing socket is ${this.getState()}`)
     return false
   } else {
-    logger.log(`Opening WebSocket, current state is ${this.getState()}, subprotocols: ${protocols}`)
+    const socketProtocols = [...protocols, ...this.consumer.subprotocols || []]
+    logger.log(`Opening WebSocket, current state is ${this.getState()}, subprotocols: ${socketProtocols}`)
     if (this.webSocket) { this.uninstallEventHandlers() }
-    this.webSocket = new adapters.WebSocket(this.consumer.url, protocols)
+    this.webSocket = new adapters.WebSocket(this.consumer.url, socketProtocols)
     this.installEventHandlers()
     this.monitor.start()
     return true
@@ -146,6 +147,10 @@ isOpen() {
 
 isActive() {
   return this.isState(&quot;open&quot;, &quot;connecting&quot;)
+}
+
+triedToReconnect() {
+  return this.monitor.reconnectAttempts &gt; 0
 }
 
 // Private
@@ -194,6 +199,9 @@ uninstallEventHandlers() {
   const {identifier, message, reason, reconnect, type} = JSON.parse(event.data)
   switch (type) {
     case message_types.welcome:
+      if (this.triedToReconnect()) {
+        this.reconnectAttempted = true
+      }
       this.monitor.recordConnect()
       return this.subscriptions.reload()
     case message_types.disconnect:
@@ -203,7 +211,12 @@ uninstallEventHandlers() {
       return this.monitor.recordPing()
     case message_types.confirmation:
       this.subscriptions.confirmSubscription(identifier)
-      return this.subscriptions.notify(identifier, &quot;connected&quot;)
+      if (this.reconnectAttempted) {
+        this.reconnectAttempted = false
+        return this.subscriptions.notify(identifier, &quot;connected&quot;, {reconnected: true})
+      } else {
+        return this.subscriptions.notify(identifier, &quot;connected&quot;, {reconnected: false})
+      }
     case message_types.rejection:
       return this.subscriptions.reject(identifier)
     default:

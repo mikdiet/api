@@ -26,7 +26,7 @@
 
   
 
-    <meta name="keywords" content="IRB::Irb class, new, debug_break, debug_readline, run, eval_input, read_input, readmultiline, each_top_level_statement, build_statement, single_line_command?, configure_io, convert_invalid_byte_sequence, encode_with_invalid_byte_sequence, handle_exception, suspend_name, suspend_workspace, suspend_input_method, signal_handle, signal_status, inspect">
+    <meta name="keywords" content="IRB::Irb class, new, debug_break, debug_readline, run, eval_input, read_input, readmultiline, each_top_level_statement, build_statement, parse_command, command?, configure_io, convert_invalid_byte_sequence, encode_with_invalid_byte_sequence, handle_exception, suspend_name, suspend_workspace, suspend_input_method, signal_handle, signal_status, inspect">
 </head>
 
 <body>
@@ -109,6 +109,11 @@
         <dt>C</dt>
         <dd>
           <ul>
+            
+              
+              <li>
+                <a href="#method-i-command-3F">command?</a>,
+              </li>
             
               
               <li>
@@ -198,6 +203,18 @@
           </ul>
         </dd>
       
+        <dt>P</dt>
+        <dd>
+          <ul>
+            
+              
+              <li>
+                <a href="#method-i-parse_command">parse_command</a>
+              </li>
+            
+          </ul>
+        </dd>
+      
         <dt>R</dt>
         <dd>
           <ul>
@@ -232,11 +249,6 @@
               
               <li>
                 <a href="#method-i-signal_status">signal_status</a>,
-              </li>
-            
-              
-              <li>
-                <a href="#method-i-single_line_command-3F">single_line_command?</a>,
               </li>
             
               
@@ -278,7 +290,7 @@
           <tr valign='top'>
             <td class="attr-name">CONTROL_CHARACTERS_PATTERN</td>
             <td>=</td>
-            <td class="attr-value">&quot;\x00-\x1F&quot;.freeze</td>
+            <td class="attr-value">&quot;\x00-\x1F&quot;</td>
           </tr>
           
             <tr valign='top'>
@@ -302,7 +314,7 @@
           <tr valign='top'>
             <td class="attr-name">PROMPT_MAIN_TRUNCATE_OMISSION</td>
             <td>=</td>
-            <td class="attr-value">&#39;...&#39;.freeze</td>
+            <td class="attr-value">&#39;...&#39;</td>
           </tr>
           
             <tr valign='top'>
@@ -330,6 +342,14 @@
         
           <tr valign='top'>
             <td class='attr-rw'>
+              [R]
+            </td>
+            <td class='attr-name'>from_binding</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
               [RW]
             </td>
             <td class='attr-name'>scanner</td>
@@ -347,7 +367,7 @@
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>new</b>(workspace = nil, input_method = nil)
+              <b>new</b>(workspace = nil, input_method = nil, from_binding: false)
             
             <a href="../../classes/IRB/Irb.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </h3>
@@ -370,14 +390,15 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L934" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L937" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 934</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">workspace</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">input_method</span> = <span class="ruby-keyword">nil</span>)
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 937</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">workspace</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">input_method</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-value">from_binding:</span> <span class="ruby-keyword">false</span>)
+  <span class="ruby-ivar">@from_binding</span> = <span class="ruby-identifier">from_binding</span>
   <span class="ruby-ivar">@context</span> = <span class="ruby-constant">Context</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>, <span class="ruby-identifier">workspace</span>, <span class="ruby-identifier">input_method</span>)
-  <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">workspace</span>.<span class="ruby-identifier">load_commands_to_main</span>
+  <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">workspace</span>.<span class="ruby-identifier">load_helper_methods_to_main</span>
   <span class="ruby-ivar">@signal_status</span> = <span class="ruby-value">:IN_IRB</span>
   <span class="ruby-ivar">@scanner</span> = <span class="ruby-constant">RubyLex</span>.<span class="ruby-identifier">new</span>
   <span class="ruby-ivar">@line_no</span> = <span class="ruby-value">1</span>
@@ -417,25 +438,63 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-build_statement_source')" id="l_method-i-build_statement_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1105" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1126" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-build_statement_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1105</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1126</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">build_statement</span>(<span class="ruby-identifier">code</span>)
-  <span class="ruby-identifier">code</span>.<span class="ruby-identifier">force_encoding</span>(<span class="ruby-ivar">@context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">encoding</span>)
-  <span class="ruby-identifier">command_or_alias</span>, <span class="ruby-identifier">arg</span> = <span class="ruby-identifier">code</span>.<span class="ruby-identifier">split</span>(<span class="ruby-regexp">/\s/</span>, <span class="ruby-value">2</span>)
-  <span class="ruby-comment"># Transform a non-identifier alias (@, $) or keywords (next, break)</span>
-  <span class="ruby-identifier">command_name</span> = <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">command_aliases</span>[<span class="ruby-identifier">command_or_alias</span>.<span class="ruby-identifier">to_sym</span>]
-  <span class="ruby-identifier">command</span> = <span class="ruby-identifier">command_name</span> <span class="ruby-operator">||</span> <span class="ruby-identifier">command_or_alias</span>
-  <span class="ruby-identifier">command_class</span> = <span class="ruby-constant">ExtendCommandBundle</span>.<span class="ruby-identifier">load_command</span>(<span class="ruby-identifier">command</span>)
+  <span class="ruby-keyword">if</span> <span class="ruby-identifier">code</span>.<span class="ruby-identifier">match?</span>(<span class="ruby-regexp">/\A\n*\z/</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-constant">Statement</span><span class="ruby-operator">::</span><span class="ruby-constant">EmptyInput</span>.<span class="ruby-identifier">new</span>
+  <span class="ruby-keyword">end</span>
 
-  <span class="ruby-keyword">if</span> <span class="ruby-identifier">command_class</span>
-    <span class="ruby-constant">Statement</span><span class="ruby-operator">::</span><span class="ruby-constant">Command</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">code</span>, <span class="ruby-identifier">command</span>, <span class="ruby-identifier">arg</span>, <span class="ruby-identifier">command_class</span>)
+  <span class="ruby-identifier">code</span>.<span class="ruby-identifier">force_encoding</span>(<span class="ruby-ivar">@context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">encoding</span>)
+  <span class="ruby-keyword">if</span> (<span class="ruby-identifier">command</span>, <span class="ruby-identifier">arg</span> = <span class="ruby-identifier">parse_command</span>(<span class="ruby-identifier">code</span>))
+    <span class="ruby-identifier">command_class</span> = <span class="ruby-constant">Command</span>.<span class="ruby-identifier">load_command</span>(<span class="ruby-identifier">command</span>)
+    <span class="ruby-constant">Statement</span><span class="ruby-operator">::</span><span class="ruby-constant">Command</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">code</span>, <span class="ruby-identifier">command_class</span>, <span class="ruby-identifier">arg</span>)
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">is_assignment_expression</span> = <span class="ruby-ivar">@scanner</span>.<span class="ruby-identifier">assignment_expression?</span>(<span class="ruby-identifier">code</span>, <span class="ruby-value">local_variables:</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">local_variables</span>)
     <span class="ruby-constant">Statement</span><span class="ruby-operator">::</span><span class="ruby-constant">Expression</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">code</span>, <span class="ruby-identifier">is_assignment_expression</span>)
   <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-command-3F">
+            
+              <b>command?</b>(code)
+            
+            <a href="../../classes/IRB/Irb.html#method-i-command-3F" name="method-i-command-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-command-3F_source')" id="l_method-i-command-3F_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1160" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-command-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1160</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">command?</span>(<span class="ruby-identifier">code</span>)
+  <span class="ruby-operator">!</span><span class="ruby-operator">!</span><span class="ruby-identifier">parse_command</span>(<span class="ruby-identifier">code</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -468,11 +527,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-configure_io_source')" id="l_method-i-configure_io_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1126" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1164" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-configure_io_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1126</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1164</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">configure_io</span>
   <span class="ruby-keyword">if</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:check_termination</span>)
     <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">check_termination</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">code</span><span class="ruby-operator">|</span>
@@ -488,8 +547,7 @@
           <span class="ruby-keyword">false</span>
         <span class="ruby-keyword">end</span>
       <span class="ruby-keyword">else</span>
-        <span class="ruby-comment"># Accept any single-line input for symbol aliases or commands that transform args</span>
-        <span class="ruby-keyword">next</span> <span class="ruby-keyword">true</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">single_line_command?</span>(<span class="ruby-identifier">code</span>)
+        <span class="ruby-keyword">next</span> <span class="ruby-keyword">true</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">command?</span>(<span class="ruby-identifier">code</span>)
 
         <span class="ruby-identifier">_tokens</span>, <span class="ruby-identifier">_opens</span>, <span class="ruby-identifier">terminated</span> = <span class="ruby-ivar">@scanner</span>.<span class="ruby-identifier">check_code_state</span>(<span class="ruby-identifier">code</span>, <span class="ruby-value">local_variables:</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">local_variables</span>)
         <span class="ruby-identifier">terminated</span>
@@ -498,13 +556,13 @@
   <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">if</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:dynamic_prompt</span>)
     <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">dynamic_prompt</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">lines</span><span class="ruby-operator">|</span>
-      <span class="ruby-identifier">lines</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-string">&#39;&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">lines</span>.<span class="ruby-identifier">empty?</span>
       <span class="ruby-identifier">tokens</span> = <span class="ruby-constant">RubyLex</span>.<span class="ruby-identifier">ripper_lex_without_warning</span>(<span class="ruby-identifier">lines</span>.<span class="ruby-identifier">map</span>{ <span class="ruby-operator">|</span><span class="ruby-identifier">l</span><span class="ruby-operator">|</span> <span class="ruby-identifier">l</span> <span class="ruby-operator">+</span> <span class="ruby-string">&quot;\n&quot;</span> }.<span class="ruby-identifier">join</span>, <span class="ruby-value">local_variables:</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">local_variables</span>)
       <span class="ruby-identifier">line_results</span> = <span class="ruby-constant">IRB</span><span class="ruby-operator">::</span><span class="ruby-constant">NestingParser</span>.<span class="ruby-identifier">parse_by_line</span>(<span class="ruby-identifier">tokens</span>)
       <span class="ruby-identifier">tokens_until_line</span> = []
       <span class="ruby-identifier">line_results</span>.<span class="ruby-identifier">map</span>.<span class="ruby-identifier">with_index</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span>(<span class="ruby-identifier">line_tokens</span>, <span class="ruby-identifier">_prev_opens</span>, <span class="ruby-identifier">next_opens</span>, <span class="ruby-identifier">_min_depth</span>), <span class="ruby-identifier">line_num_offset</span><span class="ruby-operator">|</span>
         <span class="ruby-identifier">line_tokens</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">token</span>, <span class="ruby-identifier">_s</span><span class="ruby-operator">|</span>
-          <span class="ruby-comment"># Avoid appending duplicated token. Tokens that include &quot;\n&quot; like multiline tstring_content can exist in multiple lines.</span>
+          <span class="ruby-comment"># Avoid appending duplicated token. Tokens that include &quot;n&quot; like multiline</span>
+          <span class="ruby-comment"># tstring_content can exist in multiple lines.</span>
           <span class="ruby-identifier">tokens_until_line</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">token</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">token</span> <span class="ruby-operator">!=</span> <span class="ruby-identifier">tokens_until_line</span>.<span class="ruby-identifier">last</span>
         <span class="ruby-keyword">end</span>
         <span class="ruby-identifier">continue</span> = <span class="ruby-ivar">@scanner</span>.<span class="ruby-identifier">should_continue?</span>(<span class="ruby-identifier">tokens_until_line</span>)
@@ -555,11 +613,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-convert_invalid_byte_sequence_source')" id="l_method-i-convert_invalid_byte_sequence_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1178" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1215" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-convert_invalid_byte_sequence_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1178</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1215</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">convert_invalid_byte_sequence</span>(<span class="ruby-identifier">str</span>, <span class="ruby-identifier">enc</span>)
   <span class="ruby-identifier">str</span>.<span class="ruby-identifier">force_encoding</span>(<span class="ruby-identifier">enc</span>)
   <span class="ruby-identifier">str</span>.<span class="ruby-identifier">scrub</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">c</span><span class="ruby-operator">|</span>
@@ -581,7 +639,7 @@
 
           
             <div class="description">
-              <p>A hook point for ‘debug` command’s breakpoint after :IRB_EXIT as well as its clean-up</p>
+              <p>A hook point for <code>debug</code> command’s breakpoint after :IRB_EXIT as well as its clean-up</p>
             </div>
           
 
@@ -597,11 +655,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-debug_break_source')" id="l_method-i-debug_break_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L943" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L948" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-debug_break_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 943</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 948</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">debug_break</span>
   <span class="ruby-comment"># it means the debug integration has been activated</span>
   <span class="ruby-keyword">if</span> <span class="ruby-keyword">defined?</span>(<span class="ruby-constant">DEBUGGER__</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-constant">DEBUGGER__</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:capture_frames_without_irb</span>)
@@ -642,35 +700,43 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-debug_readline_source')" id="l_method-i-debug_readline_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L953" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L958" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-debug_readline_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 953</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 958</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">debug_readline</span>(<span class="ruby-identifier">binding</span>)
   <span class="ruby-identifier">workspace</span> = <span class="ruby-constant">IRB</span><span class="ruby-operator">::</span><span class="ruby-constant">WorkSpace</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">binding</span>)
-  <span class="ruby-identifier">context</span>.<span class="ruby-identifier">workspace</span> = <span class="ruby-identifier">workspace</span>
-  <span class="ruby-identifier">context</span>.<span class="ruby-identifier">workspace</span>.<span class="ruby-identifier">load_commands_to_main</span>
+  <span class="ruby-identifier">context</span>.<span class="ruby-identifier">replace_workspace</span>(<span class="ruby-identifier">workspace</span>)
+  <span class="ruby-identifier">context</span>.<span class="ruby-identifier">workspace</span>.<span class="ruby-identifier">load_helper_methods_to_main</span>
   <span class="ruby-ivar">@line_no</span> <span class="ruby-operator">+=</span> <span class="ruby-value">1</span>
 
   <span class="ruby-comment"># When users run:</span>
-  <span class="ruby-comment"># 1. Debugging commands, like `step 2`</span>
-  <span class="ruby-comment"># 2. Any input that&#39;s not irb-command, like `foo = 123`</span>
+  <span class="ruby-comment"># 1.  Debugging commands, like `step 2`</span>
+  <span class="ruby-comment"># 2.  Any input that&#39;s not irb-command, like `foo = 123`</span>
   <span class="ruby-comment">#</span>
-  <span class="ruby-comment"># Irb#eval_input will simply return the input, and we need to pass it to the debugger.</span>
-  <span class="ruby-identifier">input</span> = <span class="ruby-keyword">if</span> <span class="ruby-constant">IRB</span>.<span class="ruby-identifier">conf</span>[<span class="ruby-value">:SAVE_HISTORY</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">support_history_saving?</span>
-    <span class="ruby-comment"># Previous IRB session&#39;s history has been saved when `Irb#run` is exited</span>
-    <span class="ruby-comment"># We need to make sure the saved history is not saved again by reseting the counter</span>
-    <span class="ruby-identifier">context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">reset_history_counter</span>
+  <span class="ruby-comment">#</span>
+  <span class="ruby-comment"># Irb#eval_input will simply return the input, and we need to pass it to the</span>
+  <span class="ruby-comment"># debugger.</span>
+  <span class="ruby-identifier">input</span> = <span class="ruby-keyword">nil</span>
+  <span class="ruby-identifier">forced_exit</span> = <span class="ruby-identifier">catch</span>(<span class="ruby-value">:IRB_EXIT</span>) <span class="ruby-keyword">do</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-constant">IRB</span>.<span class="ruby-identifier">conf</span>[<span class="ruby-value">:SAVE_HISTORY</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">support_history_saving?</span>
+      <span class="ruby-comment"># Previous IRB session&#39;s history has been saved when `Irb#run` is exited We need</span>
+      <span class="ruby-comment"># to make sure the saved history is not saved again by resetting the counter</span>
+      <span class="ruby-identifier">context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">reset_history_counter</span>
 
-    <span class="ruby-keyword">begin</span>
-      <span class="ruby-identifier">eval_input</span>
-    <span class="ruby-keyword">ensure</span>
-      <span class="ruby-identifier">context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">save_history</span>
+      <span class="ruby-keyword">begin</span>
+        <span class="ruby-identifier">input</span> = <span class="ruby-identifier">eval_input</span>
+      <span class="ruby-keyword">ensure</span>
+        <span class="ruby-identifier">context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">save_history</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">else</span>
+      <span class="ruby-identifier">input</span> = <span class="ruby-identifier">eval_input</span>
     <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">else</span>
-    <span class="ruby-identifier">eval_input</span>
+    <span class="ruby-keyword">false</span>
   <span class="ruby-keyword">end</span>
+
+  <span class="ruby-constant">Kernel</span>.<span class="ruby-identifier">exit</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">forced_exit</span>
 
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">input</span>&amp;.<span class="ruby-identifier">include?</span>(<span class="ruby-string">&quot;\n&quot;</span>)
     <span class="ruby-ivar">@line_no</span> <span class="ruby-operator">+=</span> <span class="ruby-identifier">input</span>.<span class="ruby-identifier">count</span>(<span class="ruby-string">&quot;\n&quot;</span>) <span class="ruby-operator">-</span> <span class="ruby-value">1</span>
@@ -709,19 +775,16 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-each_top_level_statement_source')" id="l_method-i-each_top_level_statement_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1092" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1116" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-each_top_level_statement_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1092</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1116</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">each_top_level_statement</span>
   <span class="ruby-identifier">loop</span> <span class="ruby-keyword">do</span>
     <span class="ruby-identifier">code</span> = <span class="ruby-identifier">readmultiline</span>
     <span class="ruby-keyword">break</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">code</span>
-
-    <span class="ruby-keyword">if</span> <span class="ruby-identifier">code</span> <span class="ruby-operator">!=</span> <span class="ruby-string">&quot;\n&quot;</span>
-      <span class="ruby-keyword">yield</span> <span class="ruby-identifier">build_statement</span>(<span class="ruby-identifier">code</span>), <span class="ruby-ivar">@line_no</span>
-    <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">yield</span> <span class="ruby-identifier">build_statement</span>(<span class="ruby-identifier">code</span>), <span class="ruby-ivar">@line_no</span>
     <span class="ruby-ivar">@line_no</span> <span class="ruby-operator">+=</span> <span class="ruby-identifier">code</span>.<span class="ruby-identifier">count</span>(<span class="ruby-string">&quot;\n&quot;</span>)
   <span class="ruby-keyword">rescue</span> <span class="ruby-constant">RubyLex</span><span class="ruby-operator">::</span><span class="ruby-constant">TerminateLineInput</span>
   <span class="ruby-keyword">end</span>
@@ -757,11 +820,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-encode_with_invalid_byte_sequence_source')" id="l_method-i-encode_with_invalid_byte_sequence_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1185" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1222" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-encode_with_invalid_byte_sequence_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1185</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1222</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">encode_with_invalid_byte_sequence</span>(<span class="ruby-identifier">str</span>, <span class="ruby-identifier">enc</span>)
   <span class="ruby-identifier">conv</span> = <span class="ruby-constant">Encoding</span><span class="ruby-operator">::</span><span class="ruby-constant">Converter</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">str</span>.<span class="ruby-identifier">encoding</span>, <span class="ruby-identifier">enc</span>)
   <span class="ruby-identifier">dst</span> = <span class="ruby-constant">String</span>.<span class="ruby-identifier">new</span>
@@ -814,23 +877,24 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-eval_input_source')" id="l_method-i-eval_input_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1012" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1037" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-eval_input_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1012</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1037</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">eval_input</span>
   <span class="ruby-identifier">configure_io</span>
 
   <span class="ruby-identifier">each_top_level_statement</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">statement</span>, <span class="ruby-identifier">line_no</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">signal_status</span>(<span class="ruby-value">:IN_EVAL</span>) <span class="ruby-keyword">do</span>
       <span class="ruby-keyword">begin</span>
-        <span class="ruby-comment"># If the integration with debugger is activated, we return certain input if it should be dealt with by debugger</span>
+        <span class="ruby-comment"># If the integration with debugger is activated, we return certain input if it</span>
+        <span class="ruby-comment"># should be dealt with by debugger</span>
         <span class="ruby-keyword">if</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">with_debugger</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">statement</span>.<span class="ruby-identifier">should_be_handled_by_debugger?</span>
           <span class="ruby-keyword">return</span> <span class="ruby-identifier">statement</span>.<span class="ruby-identifier">code</span>
         <span class="ruby-keyword">end</span>
 
-        <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">evaluate</span>(<span class="ruby-identifier">statement</span>.<span class="ruby-identifier">evaluable_code</span>, <span class="ruby-identifier">line_no</span>)
+        <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">evaluate</span>(<span class="ruby-identifier">statement</span>, <span class="ruby-identifier">line_no</span>)
 
         <span class="ruby-keyword">if</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">echo?</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-identifier">statement</span>.<span class="ruby-identifier">suppresses_echo?</span>
           <span class="ruby-keyword">if</span> <span class="ruby-identifier">statement</span>.<span class="ruby-identifier">is_assignment?</span>
@@ -881,11 +945,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-handle_exception_source')" id="l_method-i-handle_exception_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1207" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1244" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-handle_exception_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1207</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1244</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">handle_exception</span>(<span class="ruby-identifier">exc</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">backtrace</span>[<span class="ruby-value">0</span>] <span class="ruby-operator">=~</span> <span class="ruby-regexp">/\/irb(2)?(\/.*|-.*|\.rb)?:/</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">class</span>.<span class="ruby-identifier">to_s</span> <span class="ruby-operator">!~</span> <span class="ruby-regexp">/^IRB/</span> <span class="ruby-operator">&amp;&amp;</span>
      <span class="ruby-operator">!</span>(<span class="ruby-constant">SyntaxError</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">exc</span>) <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span>(<span class="ruby-constant">EncodingError</span> <span class="ruby-operator">===</span> <span class="ruby-identifier">exc</span>)
@@ -893,20 +957,33 @@
     <span class="ruby-identifier">irb_bug</span> = <span class="ruby-keyword">true</span>
   <span class="ruby-keyword">else</span>
     <span class="ruby-identifier">irb_bug</span> = <span class="ruby-keyword">false</span>
+    <span class="ruby-comment"># To support backtrace filtering while utilizing Exception#full_message, we need to clone</span>
+    <span class="ruby-comment"># the exception to avoid modifying the original exception&#39;s backtrace.</span>
+    <span class="ruby-identifier">exc</span> = <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">clone</span>
+    <span class="ruby-identifier">filtered_backtrace</span> = <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">backtrace</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">l</span><span class="ruby-operator">|</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">workspace</span>.<span class="ruby-identifier">filter_backtrace</span>(<span class="ruby-identifier">l</span>) }.<span class="ruby-identifier">compact</span>
+    <span class="ruby-identifier">backtrace_filter</span> = <span class="ruby-constant">IRB</span>.<span class="ruby-identifier">conf</span>[<span class="ruby-value">:BACKTRACE_FILTER</span>]
+
+    <span class="ruby-keyword">if</span> <span class="ruby-identifier">backtrace_filter</span>
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">backtrace_filter</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:call</span>)
+        <span class="ruby-identifier">filtered_backtrace</span> = <span class="ruby-identifier">backtrace_filter</span>.<span class="ruby-identifier">call</span>(<span class="ruby-identifier">filtered_backtrace</span>)
+      <span class="ruby-keyword">else</span>
+        <span class="ruby-identifier">warn</span> <span class="ruby-node">&quot;IRB.conf[:BACKTRACE_FILTER] #{backtrace_filter} should respond to `call` method&quot;</span>
+      <span class="ruby-keyword">end</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">set_backtrace</span>(<span class="ruby-identifier">filtered_backtrace</span>)
   <span class="ruby-keyword">end</span>
 
-  <span class="ruby-keyword">if</span> <span class="ruby-constant">RUBY_VERSION</span> <span class="ruby-operator">&lt;</span> <span class="ruby-string">&#39;3.0.0&#39;</span>
-    <span class="ruby-keyword">if</span> <span class="ruby-constant">STDOUT</span>.<span class="ruby-identifier">tty?</span>
-      <span class="ruby-identifier">message</span> = <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">full_message</span>(<span class="ruby-value">order:</span> <span class="ruby-value">:bottom</span>)
-      <span class="ruby-identifier">order</span> = <span class="ruby-value">:bottom</span>
-    <span class="ruby-keyword">else</span>
-      <span class="ruby-identifier">message</span> = <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">full_message</span>(<span class="ruby-value">order:</span> <span class="ruby-value">:top</span>)
-      <span class="ruby-identifier">order</span> = <span class="ruby-value">:top</span>
+  <span class="ruby-identifier">highlight</span> = <span class="ruby-constant">Color</span>.<span class="ruby-identifier">colorable?</span>
+
+  <span class="ruby-identifier">order</span> =
+    <span class="ruby-keyword">if</span> <span class="ruby-constant">RUBY_VERSION</span> <span class="ruby-operator">&lt;</span> <span class="ruby-string">&#39;3.0.0&#39;</span>
+      <span class="ruby-constant">STDOUT</span>.<span class="ruby-identifier">tty?</span> <span class="ruby-operator">?</span> <span class="ruby-value">:bottom</span> <span class="ruby-operator">:</span> <span class="ruby-value">:top</span>
+    <span class="ruby-keyword">else</span> <span class="ruby-comment"># &#39;3.0.0&#39; &lt;= RUBY_VERSION</span>
+      <span class="ruby-value">:top</span>
     <span class="ruby-keyword">end</span>
-  <span class="ruby-keyword">else</span> <span class="ruby-comment"># &#39;3.0.0&#39; &lt;= RUBY_VERSION</span>
-    <span class="ruby-identifier">message</span> = <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">full_message</span>(<span class="ruby-value">order:</span> <span class="ruby-value">:top</span>)
-    <span class="ruby-identifier">order</span> = <span class="ruby-value">:top</span>
-  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-identifier">message</span> = <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">full_message</span>(<span class="ruby-value">order:</span> <span class="ruby-identifier">order</span>, <span class="ruby-value">highlight:</span> <span class="ruby-identifier">highlight</span>)
   <span class="ruby-identifier">message</span> = <span class="ruby-identifier">convert_invalid_byte_sequence</span>(<span class="ruby-identifier">message</span>, <span class="ruby-identifier">exc</span>.<span class="ruby-identifier">message</span>.<span class="ruby-identifier">encoding</span>)
   <span class="ruby-identifier">message</span> = <span class="ruby-identifier">encode_with_invalid_byte_sequence</span>(<span class="ruby-identifier">message</span>, <span class="ruby-constant">IRB</span>.<span class="ruby-identifier">conf</span>[<span class="ruby-value">:LC_MESSAGES</span>].<span class="ruby-identifier">encoding</span>) <span class="ruby-keyword">unless</span> <span class="ruby-identifier">message</span>.<span class="ruby-identifier">encoding</span>.<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">casecmp?</span>(<span class="ruby-constant">IRB</span>.<span class="ruby-identifier">conf</span>[<span class="ruby-value">:LC_MESSAGES</span>].<span class="ruby-identifier">encoding</span>.<span class="ruby-identifier">to_s</span>)
   <span class="ruby-identifier">message</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/((?:^\t.+$\n)+)/</span>) { <span class="ruby-operator">|</span><span class="ruby-identifier">m</span><span class="ruby-operator">|</span>
@@ -917,7 +994,6 @@
       <span class="ruby-identifier">lines</span> = <span class="ruby-identifier">m</span>.<span class="ruby-identifier">split</span>(<span class="ruby-string">&quot;\n&quot;</span>).<span class="ruby-identifier">reverse</span>
     <span class="ruby-keyword">end</span>
     <span class="ruby-keyword">unless</span> <span class="ruby-identifier">irb_bug</span>
-      <span class="ruby-identifier">lines</span> = <span class="ruby-identifier">lines</span>.<span class="ruby-identifier">map</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">l</span><span class="ruby-operator">|</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">workspace</span>.<span class="ruby-identifier">filter_backtrace</span>(<span class="ruby-identifier">l</span>) }.<span class="ruby-identifier">compact</span>
       <span class="ruby-keyword">if</span> <span class="ruby-identifier">lines</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">&gt;</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">back_trace_limit</span>
         <span class="ruby-identifier">omit</span> = <span class="ruby-identifier">lines</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">-</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">back_trace_limit</span>
         <span class="ruby-identifier">lines</span> = <span class="ruby-identifier">lines</span>[<span class="ruby-value">0</span><span class="ruby-operator">..</span>(<span class="ruby-ivar">@context</span>.<span class="ruby-identifier">back_trace_limit</span> <span class="ruby-operator">-</span> <span class="ruby-value">1</span>)]
@@ -928,7 +1004,7 @@
     <span class="ruby-identifier">lines</span>.<span class="ruby-identifier">map</span>{ <span class="ruby-operator">|</span><span class="ruby-identifier">l</span><span class="ruby-operator">|</span> <span class="ruby-identifier">l</span> <span class="ruby-operator">+</span> <span class="ruby-string">&quot;\n&quot;</span> }.<span class="ruby-identifier">join</span>
   }
   <span class="ruby-comment"># The &quot;&lt;top (required)&gt;&quot; in &quot;(irb)&quot; may be the top level of IRB so imitate the main object.</span>
-  <span class="ruby-identifier">message</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/\(irb\):(?&lt;num&gt;\d+):in `&lt;(?&lt;frame&gt;top \(required\))&gt;&#39;/</span>) { <span class="ruby-node">&quot;(irb):#{$~[:num]}:in `&lt;main&gt;&#39;&quot;</span> }
+  <span class="ruby-identifier">message</span> = <span class="ruby-identifier">message</span>.<span class="ruby-identifier">gsub</span>(<span class="ruby-regexp">/\(irb\):(?&lt;num&gt;\d+):in (?&lt;open_quote&gt;[`&#39;])&lt;(?&lt;frame&gt;top \(required\))&gt;&#39;/</span>) { <span class="ruby-node">&quot;(irb):#{$~[:num]}:in #{$~[:open_quote]}&lt;main&gt;&#39;&quot;</span> }
   <span class="ruby-identifier">puts</span> <span class="ruby-identifier">message</span>
   <span class="ruby-identifier">puts</span> <span class="ruby-string">&#39;Maybe IRB bug!&#39;</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">irb_bug</span>
 <span class="ruby-keyword">rescue</span> <span class="ruby-constant">Exception</span> <span class="ruby-operator">=&gt;</span> <span class="ruby-identifier">handler_exc</span>
@@ -970,11 +1046,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-inspect_source')" id="l_method-i-inspect_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1380" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1425" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-inspect_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1380</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1425</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">inspect</span>
   <span class="ruby-identifier">ary</span> = []
   <span class="ruby-keyword">for</span> <span class="ruby-identifier">iv</span> <span class="ruby-keyword">in</span> <span class="ruby-identifier">instance_variables</span>
@@ -988,6 +1064,60 @@
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span>
   <span class="ruby-identifier">format</span>(<span class="ruby-string">&quot;#&lt;%s: %s&gt;&quot;</span>, <span class="ruby-keyword">self</span>.<span class="ruby-identifier">class</span>, <span class="ruby-identifier">ary</span>.<span class="ruby-identifier">join</span>(<span class="ruby-string">&quot;, &quot;</span>))
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-i-parse_command">
+            
+              <b>parse_command</b>(code)
+            
+            <a href="../../classes/IRB/Irb.html#method-i-parse_command" name="method-i-parse_command" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-i-parse_command_source')" id="l_method-i-parse_command_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1141" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-i-parse_command_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1141</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">parse_command</span>(<span class="ruby-identifier">code</span>)
+  <span class="ruby-identifier">command_name</span>, <span class="ruby-identifier">arg</span> = <span class="ruby-identifier">code</span>.<span class="ruby-identifier">strip</span>.<span class="ruby-identifier">split</span>(<span class="ruby-regexp">/\s+/</span>, <span class="ruby-value">2</span>)
+  <span class="ruby-keyword">return</span> <span class="ruby-keyword">unless</span> <span class="ruby-identifier">code</span>.<span class="ruby-identifier">lines</span>.<span class="ruby-identifier">size</span> <span class="ruby-operator">==</span> <span class="ruby-value">1</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">command_name</span>
+
+  <span class="ruby-identifier">arg</span> <span class="ruby-operator">||=</span> <span class="ruby-string">&#39;&#39;</span>
+  <span class="ruby-identifier">command</span> = <span class="ruby-identifier">command_name</span>.<span class="ruby-identifier">to_sym</span>
+  <span class="ruby-comment"># Command aliases are always command. example: $, @</span>
+  <span class="ruby-keyword">if</span> (<span class="ruby-identifier">alias_name</span> = <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">command_aliases</span>[<span class="ruby-identifier">command</span>])
+    <span class="ruby-keyword">return</span> [<span class="ruby-identifier">alias_name</span>, <span class="ruby-identifier">arg</span>]
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-comment"># Check visibility</span>
+  <span class="ruby-identifier">public_method</span> = <span class="ruby-operator">!</span><span class="ruby-operator">!</span><span class="ruby-constant">Kernel</span>.<span class="ruby-identifier">instance_method</span>(<span class="ruby-value">:public_method</span>).<span class="ruby-identifier">bind_call</span>(<span class="ruby-ivar">@context</span>.<span class="ruby-identifier">main</span>, <span class="ruby-identifier">command</span>) <span class="ruby-keyword">rescue</span> <span class="ruby-keyword">false</span>
+  <span class="ruby-identifier">private_method</span> = <span class="ruby-operator">!</span><span class="ruby-identifier">public_method</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-operator">!</span><span class="ruby-operator">!</span><span class="ruby-constant">Kernel</span>.<span class="ruby-identifier">instance_method</span>(<span class="ruby-value">:method</span>).<span class="ruby-identifier">bind_call</span>(<span class="ruby-ivar">@context</span>.<span class="ruby-identifier">main</span>, <span class="ruby-identifier">command</span>) <span class="ruby-keyword">rescue</span> <span class="ruby-keyword">false</span>
+  <span class="ruby-keyword">if</span> <span class="ruby-constant">Command</span>.<span class="ruby-identifier">execute_as_command?</span>(<span class="ruby-identifier">command</span>, <span class="ruby-value">public_method:</span> <span class="ruby-identifier">public_method</span>, <span class="ruby-value">private_method:</span> <span class="ruby-identifier">private_method</span>)
+    [<span class="ruby-identifier">command</span>, <span class="ruby-identifier">arg</span>]
+  <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1020,11 +1150,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-read_input_source')" id="l_method-i-read_input_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1044" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1070" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-read_input_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1044</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1070</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">read_input</span>(<span class="ruby-identifier">prompt</span>)
   <span class="ruby-identifier">signal_status</span>(<span class="ruby-value">:IN_INPUT</span>) <span class="ruby-keyword">do</span>
     <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">prompt</span> = <span class="ruby-identifier">prompt</span>
@@ -1074,11 +1204,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-readmultiline_source')" id="l_method-i-readmultiline_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1063" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1089" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-readmultiline_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1063</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1089</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">readmultiline</span>
   <span class="ruby-identifier">prompt</span> = <span class="ruby-identifier">generate_prompt</span>([], <span class="ruby-keyword">false</span>, <span class="ruby-value">0</span>)
 
@@ -1086,7 +1216,7 @@
   <span class="ruby-keyword">return</span> <span class="ruby-identifier">read_input</span>(<span class="ruby-identifier">prompt</span>) <span class="ruby-keyword">if</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">respond_to?</span>(<span class="ruby-value">:check_termination</span>)
 
   <span class="ruby-comment"># nomultiline</span>
-  <span class="ruby-identifier">code</span> = <span class="ruby-string">&#39;&#39;</span>
+  <span class="ruby-identifier">code</span> = <span class="ruby-string">+&#39;&#39;</span>
   <span class="ruby-identifier">line_offset</span> = <span class="ruby-value">0</span>
   <span class="ruby-identifier">loop</span> <span class="ruby-keyword">do</span>
     <span class="ruby-identifier">line</span> = <span class="ruby-identifier">read_input</span>(<span class="ruby-identifier">prompt</span>)
@@ -1095,9 +1225,7 @@
     <span class="ruby-keyword">end</span>
 
     <span class="ruby-identifier">code</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">line</span>
-
-    <span class="ruby-comment"># Accept any single-line input for symbol aliases or commands that transform args</span>
-    <span class="ruby-keyword">return</span> <span class="ruby-identifier">code</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">single_line_command?</span>(<span class="ruby-identifier">code</span>)
+    <span class="ruby-keyword">return</span> <span class="ruby-identifier">code</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">command?</span>(<span class="ruby-identifier">code</span>)
 
     <span class="ruby-identifier">tokens</span>, <span class="ruby-identifier">opens</span>, <span class="ruby-identifier">terminated</span> = <span class="ruby-ivar">@scanner</span>.<span class="ruby-identifier">check_code_state</span>(<span class="ruby-identifier">code</span>, <span class="ruby-value">local_variables:</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">local_variables</span>)
     <span class="ruby-keyword">return</span> <span class="ruby-identifier">code</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">terminated</span>
@@ -1138,14 +1266,15 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-run_source')" id="l_method-i-run_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L985" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L998" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-run_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 985</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 998</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">run</span>(<span class="ruby-identifier">conf</span> = <span class="ruby-constant">IRB</span>.<span class="ruby-identifier">conf</span>)
   <span class="ruby-identifier">in_nested_session</span> = <span class="ruby-operator">!</span><span class="ruby-operator">!</span><span class="ruby-identifier">conf</span>[<span class="ruby-value">:MAIN_CONTEXT</span>]
   <span class="ruby-identifier">conf</span>[<span class="ruby-value">:IRB_RC</span>].<span class="ruby-identifier">call</span>(<span class="ruby-identifier">context</span>) <span class="ruby-keyword">if</span> <span class="ruby-identifier">conf</span>[<span class="ruby-value">:IRB_RC</span>]
+  <span class="ruby-identifier">prev_context</span> = <span class="ruby-identifier">conf</span>[<span class="ruby-value">:MAIN_CONTEXT</span>]
   <span class="ruby-identifier">conf</span>[<span class="ruby-value">:MAIN_CONTEXT</span>] = <span class="ruby-identifier">context</span>
 
   <span class="ruby-identifier">save_history</span> = <span class="ruby-operator">!</span><span class="ruby-identifier">in_nested_session</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">conf</span>[<span class="ruby-value">:SAVE_HISTORY</span>] <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">support_history_saving?</span>
@@ -1159,13 +1288,24 @@
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-keyword">begin</span>
-    <span class="ruby-identifier">catch</span>(<span class="ruby-value">:IRB_EXIT</span>) <span class="ruby-keyword">do</span>
+    <span class="ruby-keyword">if</span> <span class="ruby-keyword">defined?</span>(<span class="ruby-constant">RubyVM</span>.<span class="ruby-identifier">keep_script_lines</span>)
+      <span class="ruby-identifier">keep_script_lines_backup</span> = <span class="ruby-constant">RubyVM</span>.<span class="ruby-identifier">keep_script_lines</span>
+      <span class="ruby-constant">RubyVM</span>.<span class="ruby-identifier">keep_script_lines</span> = <span class="ruby-keyword">true</span>
+    <span class="ruby-keyword">end</span>
+
+    <span class="ruby-identifier">forced_exit</span> = <span class="ruby-identifier">catch</span>(<span class="ruby-value">:IRB_EXIT</span>) <span class="ruby-keyword">do</span>
       <span class="ruby-identifier">eval_input</span>
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">ensure</span>
+    <span class="ruby-comment"># Do not restore to nil. It will cause IRB crash when used with threads.</span>
+    <span class="ruby-constant">IRB</span>.<span class="ruby-identifier">conf</span>[<span class="ruby-value">:MAIN_CONTEXT</span>] = <span class="ruby-identifier">prev_context</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">prev_context</span>
+
+    <span class="ruby-constant">RubyVM</span>.<span class="ruby-identifier">keep_script_lines</span> = <span class="ruby-identifier">keep_script_lines_backup</span> <span class="ruby-keyword">if</span> <span class="ruby-keyword">defined?</span>(<span class="ruby-constant">RubyVM</span>.<span class="ruby-identifier">keep_script_lines</span>)
     <span class="ruby-identifier">trap</span>(<span class="ruby-string">&quot;SIGINT&quot;</span>, <span class="ruby-identifier">prev_trap</span>)
     <span class="ruby-identifier">conf</span>[<span class="ruby-value">:AT_EXIT</span>].<span class="ruby-identifier">each</span>{<span class="ruby-operator">|</span><span class="ruby-identifier">hook</span><span class="ruby-operator">|</span> <span class="ruby-identifier">hook</span>.<span class="ruby-identifier">call</span>}
+
     <span class="ruby-identifier">context</span>.<span class="ruby-identifier">io</span>.<span class="ruby-identifier">save_history</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">save_history</span>
+    <span class="ruby-constant">Kernel</span>.<span class="ruby-identifier">exit</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">forced_exit</span>
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -1199,11 +1339,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-signal_handle_source')" id="l_method-i-signal_handle_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1307" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1352" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-signal_handle_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1307</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1352</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">signal_handle</span>
   <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">ignore_sigint?</span>
     <span class="ruby-identifier">print</span> <span class="ruby-string">&quot;\nabort!\n&quot;</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">verbose?</span>
@@ -1255,11 +1395,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-signal_status_source')" id="l_method-i-signal_status_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1329" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1374" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-signal_status_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1329</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1374</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">signal_status</span>(<span class="ruby-identifier">status</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">yield</span> <span class="ruby-keyword">if</span> <span class="ruby-ivar">@signal_status</span> <span class="ruby-operator">==</span> <span class="ruby-value">:IN_LOAD</span>
 
@@ -1270,46 +1410,6 @@
   <span class="ruby-keyword">ensure</span>
     <span class="ruby-ivar">@signal_status</span> = <span class="ruby-identifier">signal_status_back</span>
   <span class="ruby-keyword">end</span>
-<span class="ruby-keyword">end</span></pre>
-              </div>
-            </div>
-            
-          </div>
-        
-        <div class="method">
-          <h3 class="title method-title" id="method-i-single_line_command-3F">
-            
-              <b>single_line_command?</b>(code)
-            
-            <a href="../../classes/IRB/Irb.html#method-i-single_line_command-3F" name="method-i-single_line_command-3F" class="permalink">Link</a>
-          </h3>
-
-          
-            <div class="description">
-              
-            </div>
-          
-
-          
-
-          
-
-          
-            
-            <div class="sourcecode">
-              
-              <p class="source-link">
-                Source:
-                <a href="javascript:toggleSource('method-i-single_line_command-3F_source')" id="l_method-i-single_line_command-3F_source">show</a>
-                
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1121" target="_blank" class="github_url">on GitHub</a>
-                
-              </p>
-              <div id="method-i-single_line_command-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1121</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">single_line_command?</span>(<span class="ruby-identifier">code</span>)
-  <span class="ruby-identifier">command</span> = <span class="ruby-identifier">code</span>.<span class="ruby-identifier">split</span>(<span class="ruby-regexp">/\s/</span>, <span class="ruby-value">2</span>).<span class="ruby-identifier">first</span>
-  <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">symbol_alias?</span>(<span class="ruby-identifier">command</span>) <span class="ruby-operator">||</span> <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">transform_args?</span>(<span class="ruby-identifier">command</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -1344,11 +1444,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-suspend_input_method_source')" id="l_method-i-suspend_input_method_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1296" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1341" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-suspend_input_method_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1296</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1341</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">suspend_input_method</span>(<span class="ruby-identifier">input_method</span>)
   <span class="ruby-identifier">back_io</span> = <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">io</span>
   <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">instance_eval</span>{<span class="ruby-ivar">@io</span> = <span class="ruby-identifier">input_method</span>}
@@ -1391,11 +1491,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-suspend_name_source')" id="l_method-i-suspend_name_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1266" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1314" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-suspend_name_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1266</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1314</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">suspend_name</span>(<span class="ruby-identifier">path</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">name</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">irb_path</span>, <span class="ruby-identifier">back_path</span> = <span class="ruby-identifier">path</span>, <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">irb_path</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">path</span>
   <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">irb_name</span>, <span class="ruby-identifier">back_name</span> = <span class="ruby-identifier">name</span>, <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">irb_name</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">name</span>
@@ -1421,7 +1521,7 @@
 
           
             <div class="description">
-              <p>Evaluates the given block using the given <code>workspace</code> as the <a href="Context.html#attribute-i-workspace"><code>Context#workspace</code></a>.</p>
+              <p>Evaluates the given block using the given <code>workspace</code> as the <a href="Context.html#method-i-workspace"><code>Context#workspace</code></a>.</p>
 
 <p>Used by the irb command <code>irb_load</code>, see <a href="../IRB.html#module-IRB-label-IRB+Sessions">IRB Sessions at <code>IRB</code></a> for more information.</p>
             </div>
@@ -1439,18 +1539,17 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-suspend_workspace_source')" id="l_method-i-suspend_workspace_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/irb.rb#L1282" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/irb.rb#L1329" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-suspend_workspace_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1282</span>
+                <pre><span class="ruby-comment"># File ruby/lib/irb.rb, line 1329</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">suspend_workspace</span>(<span class="ruby-identifier">workspace</span>)
-  <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">workspace</span>, <span class="ruby-identifier">back_workspace</span> = <span class="ruby-identifier">workspace</span>, <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">workspace</span>
-  <span class="ruby-keyword">begin</span>
-    <span class="ruby-keyword">yield</span> <span class="ruby-identifier">back_workspace</span>
-  <span class="ruby-keyword">ensure</span>
-    <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">workspace</span> = <span class="ruby-identifier">back_workspace</span>
-  <span class="ruby-keyword">end</span>
+  <span class="ruby-identifier">current_workspace</span> = <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">workspace</span>
+  <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">replace_workspace</span>(<span class="ruby-identifier">workspace</span>)
+  <span class="ruby-keyword">yield</span>
+<span class="ruby-keyword">ensure</span>
+  <span class="ruby-ivar">@context</span>.<span class="ruby-identifier">replace_workspace</span> <span class="ruby-identifier">current_workspace</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>

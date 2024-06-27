@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Dockerfile.tt</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    
+<link rel="stylesheet" href="/css/reset.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/panel.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/main.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<link rel="stylesheet" href="/css/github.css" type="text/css" media="screen" data-turbolinks-track="reload" />
+<script src="/js/jquery-3.5.1.min.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/main.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/highlight.pack.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/turbolinks.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/search_index.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searcher.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/panel/tree.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+<script src="/js/searchdoc.js" type="text/javascript" charset="utf-8" data-turbolinks-track="reload"></script>
+
+<meta name="data-rel-prefix" content="/">
+<meta name="data-tree-keys" content='[]'>
+
+</head>
+
+<body>
+    <a class="sr-only sr-only-focusable" href="#content" data-turbolinks="false">Skip to Content</a>
+    <a class="sr-only sr-only-focusable" href="#search" data-turbolinks="false">Skip to Search</a>
+
+    <input type="checkbox" id="hamburger" class="panel_checkbox">
+<label class="panel_mobile_button" for="hamburger"><span></span> Menu</label>
+<nav class="panel panel_tree" id="panel" data-turbolinks-permanent>
+  <div class="header">
+    <input type="text" placeholder="Search (/) for a class, method, ..." autosave="searchdoc" results="10" id="search" autocomplete="off" tabindex="-1" />
+    <label class="panel_mobile_button_close" for="hamburger"><span></span> Close</label>
+  </div>
+  <div class="tree">
+    <ul>
+    </ul>
+  </div>
+  <div class="result">
+    <ul>
+    </ul>
+  </div>
+  <a href="links.html" id="links">index</a>
+</nav>
+
+
+    <div class="banner">
+        
+        <h2>
+            Dockerfile.tt
+        </h2>
+        <ul class="files">
+            
+            <li>
+                rails/railties/lib/rails/generators/rails/app/templates/Dockerfile.tt
+                
+                    <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/railties/lib/rails/generators/rails/app/templates/Dockerfile.tt" target="_blank" class="github_url">on GitHub</a>
+                
+            </li>
+            <li>Last modified: 2024-06-28 01:29:16 +0300</li>
+        </ul>
+    </div>
+
+    <main id="bodyContent">
+        <div id="content">
+  
+    <div class="description">
+      
+<p># syntax = docker/dockerfile:1</p>
+
+<p># Make sure RUBY_VERSION matches the Ruby version in .ruby-version and <a href="../../../../../../../Gemfile.html">Gemfile</a> ARG RUBY_VERSION=&lt;%= gem_ruby_version %&gt; FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim as base</p>
+
+<p># <a href="../../../../../../../../../classes/Rails.html"><code>Rails</code></a> app lives here WORKDIR /rails</p>
+
+<p># Set production environment ENV RAILS_ENV=“production” \</p>
+
+<pre><code>BUNDLE_DEPLOYMENT=&quot;1&quot; \
+BUNDLE_PATH=&quot;/usr/local/bundle&quot; \
+BUNDLE_WITHOUT=&quot;development&quot;
+</code></pre>
+
+<p># Throw-away build stage to reduce size of final image FROM base as build</p>
+
+<p># Install packages needed to build gems&lt;%= using_node? ? “ and node modules” : “” %&gt; RUN apt-get update -qq &amp;&amp; \</p>
+
+<pre><code>apt-get install --no-install-recommends -y &lt;%= dockerfile_build_packages.join(&quot; &quot;) %&gt;
+</code></pre>
+
+<p>&lt;% if using_node? -%&gt; # Install JavaScript dependencies ARG NODE_VERSION=&lt;%= node_version %&gt; ARG YARN_VERSION=&lt;%= dockerfile_yarn_version %&gt; ENV PATH=/usr/local/node/bin:$PATH RUN curl -sL <a href="https://github.com/nodenv/node-build/archive/master.tar.gz">github.com/nodenv/node-build/archive/master.tar.gz</a> | tar xz -C /tmp/ &amp;&amp; \</p>
+
+<pre><code>/tmp/node-build-master/bin/node-build &quot;${NODE_VERSION}&quot; /usr/local/node &amp;&amp; \
+npm install -g yarn@$YARN_VERSION &amp;&amp; \
+rm -rf /tmp/node-build-master
+</code></pre>
+
+<p>&lt;% end -%&gt; &lt;% if using_bun? -%&gt; ENV BUN_INSTALL=/usr/local/bun ENV PATH=/usr/local/bun/bin:$PATH ARG BUN_VERSION=&lt;%= dockerfile_bun_version %&gt; RUN curl -fsSL <a href="https://bun.sh/install">bun.sh/install</a> | bash -s – “bun-v${BUN_VERSION}”</p>
+
+<p>&lt;% end -%&gt; # Install application gems COPY <a href="../../../../../../../Gemfile.html">Gemfile</a> <a href="../../../../../../../Gemfile_lock.html">Gemfile.lock</a> ./ RUN bundle install &amp;&amp; \</p>
+
+<pre><code>rm -rf ~/.bundle/ &quot;${BUNDLE_PATH}&quot;/ruby/*/cache &quot;${BUNDLE_PATH}&quot;/ruby/*/bundler/gems/*/.git&lt;% if depend_on_bootsnap? -%&gt; &amp;&amp; \
+bundle exec bootsnap precompile --gemfile&lt;% end %&gt;
+</code></pre>
+
+<p>&lt;% if using_node? -%&gt; # Install node modules COPY <a href="../../../../../../../actioncable/package_json.html">package.json</a> <a href="../../../../../../../yarn_lock.html">yarn.lock</a> ./ RUN yarn install –frozen-lockfile</p>
+
+<p>&lt;% end -%&gt; &lt;% if using_bun? -%&gt; # Install node modules COPY <a href="../../../../../../../actioncable/package_json.html">package.json</a> bun.lockb ./ RUN bun install –frozen-lockfile</p>
+
+<p>&lt;% end -%&gt; # Copy application code COPY . .</p>
+
+<p>&lt;% if depend_on_bootsnap? -%&gt; # Precompile bootsnap code for faster boot times RUN bundle exec bootsnap precompile app/ lib/</p>
+
+<p>&lt;% end -%&gt; &lt;% unless dockerfile_binfile_fixups.empty? -%&gt; # Adjust binfiles to be executable on Linux &lt;%= “RUN ” + dockerfile_binfile_fixups.join(“ &amp;&amp; \n    ”) %&gt;</p>
+
+<p>&lt;% end -%&gt; &lt;% unless options.api? || skip_asset_pipeline? -%&gt; # Precompiling assets for production without requiring secret RAILS_MASTER_KEY RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile</p>
+
+<p>&lt;% end -%&gt;</p>
+
+<p># Final stage for app image FROM base</p>
+
+<p>&lt;% unless dockerfile_deploy_packages.empty? -%&gt; # Install packages needed for deployment RUN apt-get update -qq &amp;&amp; \</p>
+
+<pre><code>apt-get install --no-install-recommends -y &lt;%= dockerfile_deploy_packages.join(&quot; &quot;) %&gt; &amp;&amp; \
+rm -rf /var/lib/apt/lists /var/cache/apt/archives
+</code></pre>
+
+<p>&lt;% end -%&gt; # Copy built artifacts: gems, application COPY –from=build /usr/local/bundle /usr/local/bundle COPY –from=build /rails /rails</p>
+
+<p># Run and own only the runtime files as a non-root user for security RUN useradd rails –create-home –shell /bin/bash &amp;&amp; \</p>
+
+<pre><code>chown -R rails:rails &lt;%= dockerfile_chown_directories.join(&quot; &quot;) %&gt;
+</code></pre>
+
+<p>USER rails:rails</p>
+
+<p># Entrypoint prepares the database. ENTRYPOINT [“/rails/bin/docker-entrypoint”]</p>
+
+<p># Start the server by default, this can be overwritten at runtime EXPOSE 3000 CMD [“./bin/rails”, “server”]</p>
+
+    </div>
+  
+
+
+  
+
+
+  
+  
+
+
+  
+
+
+  
+
+  
+
+
+
+  
+
+    
+
+    
+
+    
+
+
+    
+
+
+    <!-- Methods -->
+    
+    
+    
+  
+</div>
+
+    </main>
+  </body>
+</html>

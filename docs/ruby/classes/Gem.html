@@ -30,7 +30,7 @@
     <meta property="og:description" content="RubyGems is the Ruby standard for publishing and managing third party libraries.">
   
 
-    <meta name="keywords" content="Gem class, try_activate, needs, finish_resolve, bin_path, binary_mode, bindir, plugindir, clear_paths, configuration, configuration=, deflate, paths, paths=, dir, path, spec_cache_dir, ensure_gem_subdirectories, ensure_default_gem_subdirectories, find_files, find_latest_files, install, host, host=, load_path_insert_index, activated_gem_paths, add_to_load_path, load_yaml, load_safe_marshal, location_of_caller, marshal_version, platforms=, platforms, post_build, post_install, done_installing, post_reset, post_uninstall, pre_install, pre_reset, pre_uninstall, prefix, refresh, read_binary, write_binary, open_file, ruby, ruby_api_version, env_requirement, latest_spec_for, latest_rubygems_version, latest_version_for, ruby_version, rubygems_version, sources, sources=, suffix_pattern, suffix_regexp, plugin_suffix_pattern, plugin_suffix_regexp, suffixes, dynamic_library_suffixes, time, ui, use_paths, win_platform?, java_platform?, solaris_platform?, load_plugins, load_env_plugins, use_gemdeps, source_date_epoch_string, source_date_epoch, register_default_spec, find_default_spec, find_unresolved_default_spec, clear_default_specs, default_sources, default_spec_cache_dir, default_dir, default_ext_dir_for, default_rubygems_dirs, default_specifications_dir, user_home, user_dir, config_home, find_config_file, config_file, state_file, cache_home, data_home, state_home, path_separator, default_path, default_exec_format, default_bindir, ruby_engine, default_key_path, default_cert_path, operating_system_defaults, platform_defaults">
+    <meta name="keywords" content="Gem class, try_activate, needs, finish_resolve, bin_path, binary_mode, bindir, plugindir, clear_paths, configuration, configuration=, deflate, paths, paths=, dir, path, spec_cache_dir, ensure_gem_subdirectories, ensure_default_gem_subdirectories, find_files, find_latest_files, install, host, host=, load_path_insert_index, activated_gem_paths, add_to_load_path, load_yaml, load_safe_marshal, location_of_caller, marshal_version, platforms=, platforms, post_build, post_install, done_installing, post_reset, post_uninstall, pre_install, pre_reset, pre_uninstall, prefix, refresh, read_binary, write_binary, open_file, ruby, ruby_api_version, env_requirement, latest_spec_for, latest_rubygems_version, latest_version_for, ruby_version, rubygems_version, sources, sources=, suffix_pattern, suffix_regexp, plugin_suffix_pattern, plugin_suffix_regexp, suffixes, dynamic_library_suffixes, time, ui, use_paths, win_platform?, java_platform?, solaris_platform?, freebsd_platform?, load_plugins, load_env_plugins, use_gemdeps, source_date_epoch_string, source_date_epoch, register_default_spec, find_default_spec, find_unresolved_default_spec, clear_default_specs, default_sources, default_spec_cache_dir, default_dir, default_ext_dir_for, default_rubygems_dirs, default_specifications_dir, user_home, user_dir, config_home, find_config_file, config_file, state_file, cache_home, data_home, state_home, path_separator, default_path, default_exec_format, default_bindir, ruby_engine, default_key_path, default_cert_path, operating_system_defaults, platform_defaults">
 </head>
 
 <body>
@@ -391,6 +391,8 @@
             
             <li><a href="../files/ruby/lib/rubygems/specification_policy_rb.html">ruby/lib/rubygems/specification_policy.rb</a></li>
             
+            <li><a href="../files/ruby/lib/rubygems/specification_record_rb.html">ruby/lib/rubygems/specification_record.rb</a></li>
+            
             <li><a href="../files/ruby/lib/rubygems/stub_specification_rb.html">ruby/lib/rubygems/stub_specification.rb</a></li>
             
             <li><a href="../files/ruby/lib/rubygems/text_rb.html">ruby/lib/rubygems/text.rb</a></li>
@@ -537,6 +539,78 @@
 <p>Thanks!</p>
 
 <p>-The RubyGems Team</p>
+
+<p>Provides 3 methods for declaring when something is going away.</p>
+
+<p>+deprecate(name, repl, year, month)+:</p>
+
+<pre><code>Indicate something may be removed on/after a certain date.
+</code></pre>
+
+<p>+rubygems_deprecate(name, replacement=:none)+:</p>
+
+<pre><code>Indicate something will be removed in the next major RubyGems version,
+and (optionally) a replacement for it.
+</code></pre>
+
+<p><code>rubygems_deprecate_command</code>:</p>
+
+<pre><code>Indicate a RubyGems command (in +lib/rubygems/commands/*.rb+) will be
+removed in the next RubyGems version.
+</code></pre>
+
+<p>Also provides <code>skip_during</code> for temporarily turning off deprecation warnings. This is intended to be used in the test suite, so deprecation warnings don’t cause test failures if you need to make sure stderr is otherwise empty.</p>
+
+<p>Example usage of <code>deprecate</code> and <code>rubygems_deprecate</code>:</p>
+
+<pre><code>class Legacy
+  def self.some_class_method
+    # ...
+  end
+
+  def some_instance_method
+    # ...
+  end
+
+  def some_old_method
+    # ...
+  end
+
+  extend Gem::Deprecate
+  deprecate :some_instance_method, &quot;X.z&quot;, 2011, 4
+  rubygems_deprecate :some_old_method, &quot;Modern#some_new_method&quot;
+
+  class &lt;&lt; self
+    extend Gem::Deprecate
+    deprecate :some_class_method, :none, 2011, 4
+  end
+end
+</code></pre>
+
+<p>Example usage of <code>rubygems_deprecate_command</code>:</p>
+
+<pre><code>class Gem::Commands::QueryCommand &lt; Gem::Command
+  extend Gem::Deprecate
+  rubygems_deprecate_command
+
+  # ...
+end
+</code></pre>
+
+<p>Example usage of <code>skip_during</code>:</p>
+
+<pre><code>class TestSomething &lt; Gem::Testcase
+  def test_some_thing_with_deprecations
+    Gem::Deprecate.skip_during do
+      actual_stdout, actual_stderr = capture_output do
+        Gem.something_deprecated
+      end
+      assert_empty actual_stdout
+      assert_equal(expected, actual_stderr)
+    end
+  end
+end
+</code></pre>
 
     </div>
   
@@ -971,6 +1045,11 @@
       
         <li>
           <span class="type">CLASS</span>
+          <a href="Gem/SpecificationRecord.html">Gem::SpecificationRecord</a>
+        </li>
+      
+        <li>
+          <span class="type">CLASS</span>
           <a href="Gem/StreamUI.html">Gem::StreamUI</a>
         </li>
       
@@ -1274,7 +1353,12 @@
             
               
               <li>
-                <a href="#method-c-finish_resolve">finish_resolve</a>
+                <a href="#method-c-finish_resolve">finish_resolve</a>,
+              </li>
+            
+              
+              <li>
+                <a href="#method-c-freebsd_platform-3F">freebsd_platform?</a>
               </li>
             
           </ul>
@@ -1821,7 +1905,7 @@ specifications
           <tr valign='top'>
             <td class="attr-name">VERSION</td>
             <td>=</td>
-            <td class="attr-value">&quot;3.5.9&quot;</td>
+            <td class="attr-value">&quot;3.5.11&quot;</td>
           </tr>
           
             <tr valign='top'>
@@ -1988,7 +2072,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-activated_gem_paths_source')" id="l_method-c-activated_gem_paths_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L572" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L572" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-activated_gem_paths_source" class="dyn-source">
@@ -2027,7 +2111,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-add_to_load_path_source')" id="l_method-c-add_to_load_path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L579" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L579" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-add_to_load_path_source" class="dyn-source">
@@ -2069,7 +2153,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-bin_path_source')" id="l_method-c-bin_path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L235" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L235" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-bin_path_source" class="dyn-source">
@@ -2111,7 +2195,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-binary_mode_source')" id="l_method-c-binary_mode_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L289" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L289" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-binary_mode_source" class="dyn-source">
@@ -2150,7 +2234,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-bindir_source')" id="l_method-c-bindir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L296" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L296" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-bindir_source" class="dyn-source">
@@ -2191,7 +2275,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-cache_home_source')" id="l_method-c-cache_home_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L147" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L147" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-cache_home_source" class="dyn-source">
@@ -2230,11 +2314,11 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-clear_default_specs_source')" id="l_method-c-clear_default_specs_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1234" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1241" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-clear_default_specs_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1234</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1241</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">clear_default_specs</span>
   <span class="ruby-ivar">@path_to_default_spec_map</span>.<span class="ruby-identifier">clear</span>
 <span class="ruby-keyword">end</span></pre>
@@ -2269,7 +2353,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-clear_paths_source')" id="l_method-c-clear_paths_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L314" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L314" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-clear_paths_source" class="dyn-source">
@@ -2311,7 +2395,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-config_file_source')" id="l_method-c-config_file_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L133" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L133" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-config_file_source" class="dyn-source">
@@ -2350,7 +2434,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-config_home_source')" id="l_method-c-config_home_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L114" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L114" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-config_home_source" class="dyn-source">
@@ -2389,7 +2473,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-configuration_source')" id="l_method-c-configuration_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L324" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L324" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-configuration_source" class="dyn-source">
@@ -2428,7 +2512,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-configuration-3D_source')" id="l_method-c-configuration-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L332" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L332" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-configuration-3D_source" class="dyn-source">
@@ -2467,7 +2551,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-data_home_source')" id="l_method-c-data_home_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L154" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L154" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-data_home_source" class="dyn-source">
@@ -2506,7 +2590,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_bindir_source')" id="l_method-c-default_bindir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L204" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L204" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_bindir_source" class="dyn-source">
@@ -2545,7 +2629,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_cert_path_source')" id="l_method-c-default_cert_path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L228" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L228" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_cert_path_source" class="dyn-source">
@@ -2590,7 +2674,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_dir_source')" id="l_method-c-default_dir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L37" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L37" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_dir_source" class="dyn-source">
@@ -2629,7 +2713,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_exec_format_source')" id="l_method-c-default_exec_format_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L186" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L186" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_exec_format_source" class="dyn-source">
@@ -2681,7 +2765,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_ext_dir_for_source')" id="l_method-c-default_ext_dir_for_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L48" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L48" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_ext_dir_for_source" class="dyn-source">
@@ -2720,7 +2804,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_key_path_source')" id="l_method-c-default_key_path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L215" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L215" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_key_path_source" class="dyn-source">
@@ -2765,7 +2849,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_path_source')" id="l_method-c-default_path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L175" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L175" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_path_source" class="dyn-source">
@@ -2808,7 +2892,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_rubygems_dirs_source')" id="l_method-c-default_rubygems_dirs_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L55" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L55" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_rubygems_dirs_source" class="dyn-source">
@@ -2847,7 +2931,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_sources_source')" id="l_method-c-default_sources_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L15" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L15" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_sources_source" class="dyn-source">
@@ -2886,7 +2970,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_spec_cache_dir_source')" id="l_method-c-default_spec_cache_dir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L23" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L23" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_spec_cache_dir_source" class="dyn-source">
@@ -2931,7 +3015,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-default_specifications_dir_source')" id="l_method-c-default_specifications_dir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L62" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L62" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-default_specifications_dir_source" class="dyn-source">
@@ -2970,7 +3054,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-deflate_source')" id="l_method-c-deflate_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L339" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L339" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-deflate_source" class="dyn-source">
@@ -3010,7 +3094,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-dir_source')" id="l_method-c-dir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L387" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L387" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-dir_source" class="dyn-source">
@@ -3049,7 +3133,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-done_installing_source')" id="l_method-c-done_installing_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L683" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L683" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-done_installing_source" class="dyn-source">
@@ -3088,7 +3172,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-dynamic_library_suffixes_source')" id="l_method-c-dynamic_library_suffixes_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L948" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L948" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-dynamic_library_suffixes_source" class="dyn-source">
@@ -3131,7 +3215,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-ensure_default_gem_subdirectories_source')" id="l_method-c-ensure_default_gem_subdirectories_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L421" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L421" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-ensure_default_gem_subdirectories_source" class="dyn-source">
@@ -3174,7 +3258,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-ensure_gem_subdirectories_source')" id="l_method-c-ensure_gem_subdirectories_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L408" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L408" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-ensure_gem_subdirectories_source" class="dyn-source">
@@ -3213,7 +3297,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-env_requirement_source')" id="l_method-c-env_requirement_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L816" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L816" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-env_requirement_source" class="dyn-source">
@@ -3256,7 +3340,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-find_config_file_source')" id="l_method-c-find_config_file_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L121" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L121" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-find_config_file_source" class="dyn-source">
@@ -3300,11 +3384,11 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-find_default_spec_source')" id="l_method-c-find_default_spec_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1219" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1226" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-find_default_spec_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1219</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1226</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_default_spec</span>(<span class="ruby-identifier">path</span>)
   <span class="ruby-ivar">@path_to_default_spec_map</span>[<span class="ruby-identifier">path</span>]
 <span class="ruby-keyword">end</span></pre>
@@ -3346,7 +3430,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-find_files_source')" id="l_method-c-find_files_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L472" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L472" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-find_files_source" class="dyn-source">
@@ -3406,7 +3490,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-find_latest_files_source')" id="l_method-c-find_latest_files_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L509" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L509" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-find_latest_files_source" class="dyn-source">
@@ -3457,11 +3541,11 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-find_unresolved_default_spec_source')" id="l_method-c-find_unresolved_default_spec_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1226" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1233" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-find_unresolved_default_spec_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1226</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1233</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">find_unresolved_default_spec</span>(<span class="ruby-identifier">path</span>)
   <span class="ruby-identifier">default_spec</span> = <span class="ruby-ivar">@path_to_default_spec_map</span>[<span class="ruby-identifier">path</span>]
   <span class="ruby-identifier">default_spec</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">default_spec</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">loaded_specs</span>[<span class="ruby-identifier">default_spec</span>.<span class="ruby-identifier">name</span>] <span class="ruby-operator">!=</span> <span class="ruby-identifier">default_spec</span>
@@ -3497,7 +3581,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-finish_resolve_source')" id="l_method-c-finish_resolve_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L220" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L220" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-finish_resolve_source" class="dyn-source">
@@ -3509,6 +3593,45 @@ specifications
   <span class="ruby-identifier">request_set</span>.<span class="ruby-identifier">resolve_current</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">s</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">s</span>.<span class="ruby-identifier">full_spec</span>.<span class="ruby-identifier">activate</span>
   <span class="ruby-keyword">end</span>
+<span class="ruby-keyword">end</span></pre>
+              </div>
+            </div>
+            
+          </div>
+        
+        <div class="method">
+          <h3 class="title method-title" id="method-c-freebsd_platform-3F">
+            
+              <b>freebsd_platform?</b>()
+            
+            <a href="../classes/Gem.html#method-c-freebsd_platform-3F" name="method-c-freebsd_platform-3F" class="permalink">Link</a>
+          </h3>
+
+          
+            <div class="description">
+              <p>Is this platform FreeBSD</p>
+            </div>
+          
+
+          
+
+          
+
+          
+            
+            <div class="sourcecode">
+              
+              <p class="source-link">
+                Source:
+                <a href="javascript:toggleSource('method-c-freebsd_platform-3F_source')" id="l_method-c-freebsd_platform-3F_source">show</a>
+                
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1018" target="_blank" class="github_url">on GitHub</a>
+                
+              </p>
+              <div id="method-c-freebsd_platform-3F_source" class="dyn-source">
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1018</span>
+<span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">freebsd_platform?</span>
+  <span class="ruby-constant">RbConfig</span><span class="ruby-operator">::</span><span class="ruby-constant">CONFIG</span>[<span class="ruby-string">&quot;host_os&quot;</span>].<span class="ruby-identifier">to_s</span>.<span class="ruby-identifier">include?</span>(<span class="ruby-string">&quot;bsd&quot;</span>)
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -3541,7 +3664,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-host_source')" id="l_method-c-host_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L544" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L544" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-host_source" class="dyn-source">
@@ -3580,7 +3703,7 @@ specifications
                 Source:
                 <a href="javascript:toggleSource('method-c-host-3D_source')" id="l_method-c-host-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L550" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L550" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-host-3D_source" class="dyn-source">
@@ -3625,7 +3748,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-install_source')" id="l_method-c-install_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L533" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L533" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-install_source" class="dyn-source">
@@ -3667,7 +3790,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-java_platform-3F_source')" id="l_method-c-java_platform-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1004" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1004" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-java_platform-3F_source" class="dyn-source">
@@ -3706,7 +3829,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-latest_rubygems_version_source')" id="l_method-c-latest_rubygems_version_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L841" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L841" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-latest_rubygems_version_source" class="dyn-source">
@@ -3746,7 +3869,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-latest_spec_for_source')" id="l_method-c-latest_spec_for_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L828" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L828" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-latest_spec_for_source" class="dyn-source">
@@ -3791,7 +3914,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-latest_version_for_source')" id="l_method-c-latest_version_for_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L849" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L849" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-latest_version_for_source" class="dyn-source">
@@ -3830,11 +3953,11 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-load_env_plugins_source')" id="l_method-c-load_env_plugins_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1046" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1053" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-load_env_plugins_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1046</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1053</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">load_env_plugins</span>
   <span class="ruby-identifier">load_plugin_files</span> <span class="ruby-identifier">find_files_from_load_path</span>(<span class="ruby-string">&quot;rubygems_plugin&quot;</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -3869,7 +3992,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-load_path_insert_index_source')" id="l_method-c-load_path_insert_index_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L558" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L558" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-load_path_insert_index_source" class="dyn-source">
@@ -3914,11 +4037,11 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-load_plugins_source')" id="l_method-c-load_plugins_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1037" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1044" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-load_plugins_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1037</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1044</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">load_plugins</span>
   <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">path</span>.<span class="ruby-identifier">each</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">gem_path</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">load_plugin_files</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Util</span>.<span class="ruby-identifier">glob_files_in_dir</span>(<span class="ruby-node">&quot;*#{Gem.plugin_suffix_pattern}&quot;</span>, <span class="ruby-identifier">plugindir</span>(<span class="ruby-identifier">gem_path</span>))
@@ -3955,7 +4078,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-load_safe_marshal_source')" id="l_method-c-load_safe_marshal_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L604" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L604" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-load_safe_marshal_source" class="dyn-source">
@@ -3998,7 +4121,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-load_yaml_source')" id="l_method-c-load_yaml_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L591" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L591" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-load_yaml_source" class="dyn-source">
@@ -4052,7 +4175,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-location_of_caller_source')" id="l_method-c-location_of_caller_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L626" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L626" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-location_of_caller_source" class="dyn-source">
@@ -4095,7 +4218,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-marshal_version_source')" id="l_method-c-marshal_version_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L637" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L637" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-marshal_version_source" class="dyn-source">
@@ -4134,7 +4257,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-needs_source')" id="l_method-c-needs_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L212" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L212" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-needs_source" class="dyn-source">
@@ -4177,7 +4300,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-open_file_source')" id="l_method-c-open_file_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L776" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L776" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-open_file_source" class="dyn-source">
@@ -4246,7 +4369,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-operating_system_defaults_source')" id="l_method-c-operating_system_defaults_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L286" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L286" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-operating_system_defaults_source" class="dyn-source">
@@ -4285,7 +4408,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-path_source')" id="l_method-c-path_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L391" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L391" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-path_source" class="dyn-source">
@@ -4324,7 +4447,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-path_separator_source')" id="l_method-c-path_separator_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L168" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L168" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-path_separator_source" class="dyn-source">
@@ -4363,7 +4486,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-paths_source')" id="l_method-c-paths_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L347" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L347" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-paths_source" class="dyn-source">
@@ -4402,7 +4525,7 @@ Fetching: minitest-5.14.0.gem (100%)
                 Source:
                 <a href="javascript:toggleSource('method-c-paths-3D_source')" id="l_method-c-paths-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L357" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L357" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-paths-3D_source" class="dyn-source">
@@ -4478,7 +4601,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-platform_defaults_source')" id="l_method-c-platform_defaults_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L305" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L305" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-platform_defaults_source" class="dyn-source">
@@ -4517,7 +4640,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-platforms_source')" id="l_method-c-platforms_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L651" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L651" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-platforms_source" class="dyn-source">
@@ -4560,7 +4683,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-platforms-3D_source')" id="l_method-c-platforms-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L644" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L644" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-platforms-3D_source" class="dyn-source">
@@ -4599,7 +4722,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-plugin_suffix_pattern_source')" id="l_method-c-plugin_suffix_pattern_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L921" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L921" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-plugin_suffix_pattern_source" class="dyn-source">
@@ -4638,7 +4761,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-plugin_suffix_regexp_source')" id="l_method-c-plugin_suffix_regexp_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L928" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L928" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-plugin_suffix_regexp_source" class="dyn-source">
@@ -4677,7 +4800,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-plugindir_source')" id="l_method-c-plugindir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L305" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L305" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-plugindir_source" class="dyn-source">
@@ -4716,7 +4839,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-post_build_source')" id="l_method-c-post_build_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L666" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L666" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-post_build_source" class="dyn-source">
@@ -4755,7 +4878,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-post_install_source')" id="l_method-c-post_install_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L674" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L674" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-post_install_source" class="dyn-source">
@@ -4794,7 +4917,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-post_reset_source')" id="l_method-c-post_reset_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L691" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L691" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-post_reset_source" class="dyn-source">
@@ -4833,7 +4956,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-post_uninstall_source')" id="l_method-c-post_uninstall_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L700" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L700" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-post_uninstall_source" class="dyn-source">
@@ -4872,7 +4995,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-pre_install_source')" id="l_method-c-pre_install_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L709" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L709" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-pre_install_source" class="dyn-source">
@@ -4911,7 +5034,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-pre_reset_source')" id="l_method-c-pre_reset_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L717" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L717" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-pre_reset_source" class="dyn-source">
@@ -4950,7 +5073,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-pre_uninstall_source')" id="l_method-c-pre_uninstall_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L726" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L726" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-pre_uninstall_source" class="dyn-source">
@@ -4989,7 +5112,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-prefix_source')" id="l_method-c-prefix_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L735" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L735" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-prefix_source" class="dyn-source">
@@ -5034,7 +5157,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-read_binary_source')" id="l_method-c-read_binary_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L755" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L755" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-read_binary_source" class="dyn-source">
@@ -5075,7 +5198,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-refresh_source')" id="l_method-c-refresh_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L748" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L748" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-refresh_source" class="dyn-source">
@@ -5121,11 +5244,11 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-register_default_spec_source')" id="l_method-c-register_default_spec_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1194" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1201" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-register_default_spec_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1194</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1201</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">register_default_spec</span>(<span class="ruby-identifier">spec</span>)
   <span class="ruby-identifier">extended_require_paths</span> = <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">require_paths</span>.<span class="ruby-identifier">map</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span> <span class="ruby-identifier">f</span> <span class="ruby-operator">+</span> <span class="ruby-string">&quot;/&quot;</span> }
   <span class="ruby-identifier">new_format</span> = <span class="ruby-identifier">extended_require_paths</span>.<span class="ruby-identifier">any?</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">path</span><span class="ruby-operator">|</span> <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">files</span>.<span class="ruby-identifier">any?</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">f</span><span class="ruby-operator">|</span> <span class="ruby-identifier">f</span>.<span class="ruby-identifier">start_with?</span> <span class="ruby-identifier">path</span> } }
@@ -5178,7 +5301,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-ruby_source')" id="l_method-c-ruby_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L799" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L799" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-ruby_source" class="dyn-source">
@@ -5223,7 +5346,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-ruby_api_version_source')" id="l_method-c-ruby_api_version_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L812" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L812" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-ruby_api_version_source" class="dyn-source">
@@ -5262,7 +5385,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-ruby_engine_source')" id="l_method-c-ruby_engine_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L208" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L208" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-ruby_engine_source" class="dyn-source">
@@ -5301,7 +5424,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-ruby_version_source')" id="l_method-c-ruby_version_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L856" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L856" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-ruby_version_source" class="dyn-source">
@@ -5352,7 +5475,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-rubygems_version_source')" id="l_method-c-rubygems_version_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L875" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L875" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-rubygems_version_source" class="dyn-source">
@@ -5392,7 +5515,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-solaris_platform-3F_source')" id="l_method-c-solaris_platform-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1011" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1011" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-solaris_platform-3F_source" class="dyn-source">
@@ -5433,11 +5556,11 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-source_date_epoch_source')" id="l_method-c-source_date_epoch_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1149" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1156" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-source_date_epoch_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1149</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1156</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">source_date_epoch</span>
   <span class="ruby-constant">Time</span>.<span class="ruby-identifier">at</span>(<span class="ruby-identifier">source_date_epoch_string</span>.<span class="ruby-identifier">to_i</span>).<span class="ruby-identifier">utc</span>.<span class="ruby-identifier">freeze</span>
 <span class="ruby-keyword">end</span></pre>
@@ -5484,11 +5607,11 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-source_date_epoch_string_source')" id="l_method-c-source_date_epoch_string_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1130" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1137" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-source_date_epoch_string_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1130</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1137</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">source_date_epoch_string</span>
   <span class="ruby-comment"># The value used if $SOURCE_DATE_EPOCH is not set.</span>
   <span class="ruby-ivar">@default_source_date_epoch</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Time</span>.<span class="ruby-identifier">now</span>.<span class="ruby-identifier">to_i</span>.<span class="ruby-identifier">to_s</span>
@@ -5533,7 +5656,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-sources_source')" id="l_method-c-sources_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L884" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L884" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-sources_source" class="dyn-source">
@@ -5575,7 +5698,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-sources-3D_source')" id="l_method-c-sources-3D_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L896" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L896" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-sources-3D_source" class="dyn-source">
@@ -5618,7 +5741,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-spec_cache_dir_source')" id="l_method-c-spec_cache_dir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L395" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L395" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-spec_cache_dir_source" class="dyn-source">
@@ -5657,7 +5780,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-state_file_source')" id="l_method-c-state_file_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L140" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L140" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-state_file_source" class="dyn-source">
@@ -5696,7 +5819,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-state_home_source')" id="l_method-c-state_home_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L161" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L161" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-state_home_source" class="dyn-source">
@@ -5735,7 +5858,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-suffix_pattern_source')" id="l_method-c-suffix_pattern_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L907" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L907" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-suffix_pattern_source" class="dyn-source">
@@ -5774,7 +5897,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-suffix_regexp_source')" id="l_method-c-suffix_regexp_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L914" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L914" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-suffix_regexp_source" class="dyn-source">
@@ -5813,7 +5936,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-suffixes_source')" id="l_method-c-suffixes_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L935" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L935" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-suffixes_source" class="dyn-source">
@@ -5858,7 +5981,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-time_source')" id="l_method-c-time_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L956" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L956" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-time_source" class="dyn-source">
@@ -5905,7 +6028,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-try_activate_source')" id="l_method-c-try_activate_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L187" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L187" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-try_activate_source" class="dyn-source">
@@ -5965,7 +6088,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-ui_source')" id="l_method-c-ui_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L971" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L971" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-ui_source" class="dyn-source">
@@ -6014,11 +6137,11 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-use_gemdeps_source')" id="l_method-c-use_gemdeps_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L1070" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L1077" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-use_gemdeps_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1070</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems.rb, line 1077</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">use_gemdeps</span>(<span class="ruby-identifier">path</span> = <span class="ruby-keyword">nil</span>)
   <span class="ruby-identifier">raise_exception</span> = <span class="ruby-identifier">path</span>
 
@@ -6092,7 +6215,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-use_paths_source')" id="l_method-c-use_paths_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L981" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L981" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-use_paths_source" class="dyn-source">
@@ -6135,7 +6258,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-user_dir_source')" id="l_method-c-user_dir_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L103" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L103" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-user_dir_source" class="dyn-source">
@@ -6178,7 +6301,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-user_home_source')" id="l_method-c-user_home_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/defaults.rb#L96" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/defaults.rb#L96" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-user_home_source" class="dyn-source">
@@ -6217,7 +6340,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-win_platform-3F_source')" id="l_method-c-win_platform-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L992" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L992" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-win_platform-3F_source" class="dyn-source">
@@ -6261,7 +6384,7 @@ An Array (#{env.inspect}) was passed in from #{caller[3]}
                 Source:
                 <a href="javascript:toggleSource('method-c-write_binary_source')" id="l_method-c-write_binary_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems.rb#L763" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems.rb#L763" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-write_binary_source" class="dyn-source">

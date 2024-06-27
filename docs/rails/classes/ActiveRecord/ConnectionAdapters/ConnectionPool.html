@@ -26,8 +26,8 @@
 
   
     
-    <meta name="description" content="Connection pool base class for managing Active Record database connections.  Introduction  A connection pool synchronizes thread access to a limited number of database connections.">
-    <meta property="og:description" content="Connection pool base class for managing Active Record database connections.  Introduction  A connection pool synchronizes thread access to a limited number of database connections.">
+    <meta name="description" content="Active Record Connection Pool  Connection pool base class for managing Active Record database connections.">
+    <meta property="og:description" content="Active Record Connection Pool  Connection pool base class for managing Active Record database connections.">
   
 
     <meta name="keywords" content="ActiveRecord::ConnectionAdapters::ConnectionPool class, new, lock_thread=, connection, active_connection?, release_connection, with_connection, connected?, connections, disconnect, disconnect!, clear_reloadable_connections, clear_reloadable_connections!, checkout, checkin, remove, reap, flush, flush!, stat">
@@ -85,17 +85,19 @@
   
     <div class="description">
       
+<h1 id="class-ActiveRecord::ConnectionAdapters::ConnectionPool-label-Active+Record+Connection+Pool">Active Record Connection Pool</h1>
+
 <p>Connection pool base class for managing Active Record database connections.</p>
 
 <h2 id="class-ActiveRecord::ConnectionAdapters::ConnectionPool-label-Introduction">Introduction</h2>
 
-<p>A connection pool synchronizes thread access to a limited number of database connections. The basic idea is that each thread checks out a database connection from the pool, uses that connection, and checks the connection back in. <a href="ConnectionPool.html"><code>ConnectionPool</code></a> is completely thread-safe, and will ensure that a connection cannot be used by two threads at the same time, as long as ConnectionPool’s contract is correctly followed. It will also handle cases in which there are more threads than connections: if all connections have been checked out, and a thread tries to checkout a connection anyway, then <a href="ConnectionPool.html"><code>ConnectionPool</code></a> will wait until some other thread has checked in a connection.</p>
+<p>A connection pool synchronizes thread access to a limited number of database connections. The basic idea is that each thread checks out a database connection from the pool, uses that connection, and checks the connection back in. <a href="ConnectionPool.html"><code>ConnectionPool</code></a> is completely thread-safe, and will ensure that a connection cannot be used by two threads at the same time, as long as ConnectionPool’s contract is correctly followed. It will also handle cases in which there are more threads than connections: if all connections have been checked out, and a thread tries to checkout a connection anyway, then <a href="ConnectionPool.html"><code>ConnectionPool</code></a> will wait until some other thread has checked in a connection, or the <code>checkout_timeout</code> has expired.</p>
 
 <h2 id="class-ActiveRecord::ConnectionAdapters::ConnectionPool-label-Obtaining+-28checking+out-29+a+connection">Obtaining (checking out) a connection</h2>
 
 <p>Connections can be obtained and used from a connection pool in several ways:</p>
 <ol><li>
-<p>Simply use <a href="../ConnectionHandling.html#method-i-connection">ActiveRecord::Base.connection</a> as with Active Record 2.1 and earlier (pre-connection-pooling). Eventually, when you’re done with the connection(s) and wish it to be returned to the pool, you call <a href="ConnectionHandler.html#method-i-clear_active_connections-21">ActiveRecord::Base.clear_active_connections!</a>. This will be the default behavior for Active Record when used in conjunction with Action Pack’s request handling cycle.</p>
+<p>Simply use <a href="../ConnectionHandling.html#method-i-connection">ActiveRecord::Base.connection</a>. When you’re done with the connection(s) and wish it to be returned to the pool, you call <a href="ConnectionHandler.html#method-i-clear_active_connections-21">ActiveRecord::Base.connection_handler.clear_active_connections!</a>. This is the default behavior for Active Record when used in conjunction with Action Pack’s request handling cycle.</p>
 </li><li>
 <p>Manually check out a connection from the pool with <a href="ConnectionPool.html#method-i-checkout">ActiveRecord::Base.connection_pool.checkout</a>. You are responsible for returning this connection to the pool when finished by calling <a href="ConnectionPool.html#method-i-checkin">ActiveRecord::Base.connection_pool.checkin(connection)</a>.</p>
 </li><li>
@@ -103,6 +105,8 @@
 </li></ol>
 
 <p>Connections in the pool are actually <a href="AbstractAdapter.html"><code>AbstractAdapter</code></a> objects (or objects compatible with AbstractAdapter’s interface).</p>
+
+<p>While a thread has a connection checked out from the pool using one of the above three methods, that connection will automatically be the one used by <a href="../../ActiveRecord.html"><code>ActiveRecord</code></a> queries executing on that thread. It is not required to explicitly pass the checked out connection to Rails models or queries, for example.</p>
 
 <h2 id="class-ActiveRecord::ConnectionAdapters::ConnectionPool-label-Options">Options</h2>
 
@@ -377,22 +381,6 @@
             <td class='attr-rw'>
               [R]
             </td>
-            <td class='attr-name'>connection_class</td>
-            <td class='attr-desc'></td>
-          </tr>
-        
-          <tr valign='top'>
-            <td class='attr-rw'>
-              [R]
-            </td>
-            <td class='attr-name'>connection_klass</td>
-            <td class='attr-desc'></td>
-          </tr>
-        
-          <tr valign='top'>
-            <td class='attr-rw'>
-              [R]
-            </td>
             <td class='attr-name'>db_config</td>
             <td class='attr-desc'></td>
           </tr>
@@ -473,7 +461,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L120" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L120" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
@@ -483,7 +471,6 @@
 
   <span class="ruby-ivar">@pool_config</span> = <span class="ruby-identifier">pool_config</span>
   <span class="ruby-ivar">@db_config</span> = <span class="ruby-identifier">pool_config</span>.<span class="ruby-identifier">db_config</span>
-  <span class="ruby-ivar">@connection_class</span> = <span class="ruby-identifier">pool_config</span>.<span class="ruby-identifier">connection_class</span>
   <span class="ruby-ivar">@role</span> = <span class="ruby-identifier">pool_config</span>.<span class="ruby-identifier">role</span>
   <span class="ruby-ivar">@shard</span> = <span class="ruby-identifier">pool_config</span>.<span class="ruby-identifier">shard</span>
 
@@ -518,8 +505,6 @@
   <span class="ruby-ivar">@lock_thread</span> = <span class="ruby-keyword">false</span>
 
   <span class="ruby-ivar">@async_executor</span> = <span class="ruby-identifier">build_async_executor</span>
-
-  <span class="ruby-identifier">lazily_set_schema_cache</span>
 
   <span class="ruby-ivar">@reaper</span> = <span class="ruby-constant">Reaper</span>.<span class="ruby-identifier">new</span>(<span class="ruby-keyword">self</span>, <span class="ruby-identifier">db_config</span>.<span class="ruby-identifier">reaping_frequency</span>)
   <span class="ruby-ivar">@reaper</span>.<span class="ruby-identifier">run</span>
@@ -561,11 +546,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-active_connection-3F_source')" id="l_method-i-active_connection-3F_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L189" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L196" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-active_connection-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 189</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 196</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">active_connection?</span>
   <span class="ruby-ivar">@thread_cached_conns</span>[<span class="ruby-identifier">connection_cache_key</span>(<span class="ruby-identifier">current_thread</span>)]
 <span class="ruby-keyword">end</span></pre>
@@ -602,11 +587,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-checkin_source')" id="l_method-i-checkin_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L349" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L363" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-checkin_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 349</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 363</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">checkin</span>(<span class="ruby-identifier">conn</span>)
   <span class="ruby-identifier">conn</span>.<span class="ruby-identifier">lock</span>.<span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
     <span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
@@ -616,6 +601,7 @@
         <span class="ruby-identifier">conn</span>.<span class="ruby-identifier">expire</span>
       <span class="ruby-keyword">end</span>
 
+      <span class="ruby-identifier">conn</span>.<span class="ruby-identifier">lock_thread</span> = <span class="ruby-keyword">nil</span>
       <span class="ruby-ivar">@available</span>.<span class="ruby-identifier">add</span> <span class="ruby-identifier">conn</span>
     <span class="ruby-keyword">end</span>
   <span class="ruby-keyword">end</span>
@@ -662,13 +648,15 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-checkout_source')" id="l_method-i-checkout_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L340" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L352" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-checkout_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 340</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 352</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">checkout</span>(<span class="ruby-identifier">checkout_timeout</span> = <span class="ruby-ivar">@checkout_timeout</span>)
-  <span class="ruby-identifier">checkout_and_verify</span>(<span class="ruby-identifier">acquire_connection</span>(<span class="ruby-identifier">checkout_timeout</span>))
+  <span class="ruby-identifier">connection</span> = <span class="ruby-identifier">checkout_and_verify</span>(<span class="ruby-identifier">acquire_connection</span>(<span class="ruby-identifier">checkout_timeout</span>))
+  <span class="ruby-identifier">connection</span>.<span class="ruby-identifier">lock_thread</span> = <span class="ruby-ivar">@lock_thread</span>
+  <span class="ruby-identifier">connection</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -706,11 +694,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-clear_reloadable_connections_source')" id="l_method-i-clear_reloadable_connections_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L298" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L310" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-clear_reloadable_connections_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 298</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 310</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">clear_reloadable_connections</span>(<span class="ruby-identifier">raise_on_acquisition_timeout</span> = <span class="ruby-keyword">true</span>)
   <span class="ruby-identifier">with_exclusively_acquired_all_connections</span>(<span class="ruby-identifier">raise_on_acquisition_timeout</span>) <span class="ruby-keyword">do</span>
     <span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
@@ -759,11 +747,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-clear_reloadable_connections-21_source')" id="l_method-i-clear_reloadable_connections-21_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L322" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L334" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-clear_reloadable_connections-21_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 322</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 334</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">clear_reloadable_connections!</span>
   <span class="ruby-identifier">clear_reloadable_connections</span>(<span class="ruby-keyword">false</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -798,11 +786,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-connected-3F_source')" id="l_method-i-connected-3F_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L221" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L233" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-connected-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 221</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 233</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">connected?</span>
   <span class="ruby-identifier">synchronize</span> { <span class="ruby-ivar">@connections</span>.<span class="ruby-identifier">any?</span> }
 <span class="ruby-keyword">end</span></pre>
@@ -839,11 +827,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-connection_source')" id="l_method-i-connection_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L180" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L181" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-connection_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 180</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 181</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">connection</span>
   <span class="ruby-ivar">@thread_cached_conns</span>[<span class="ruby-identifier">connection_cache_key</span>(<span class="ruby-identifier">current_thread</span>)] <span class="ruby-operator">||=</span> <span class="ruby-identifier">checkout</span>
 <span class="ruby-keyword">end</span></pre>
@@ -882,11 +870,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-connections_source')" id="l_method-i-connections_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L236" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L248" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-connections_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 236</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 248</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">connections</span>
   <span class="ruby-identifier">synchronize</span> { <span class="ruby-ivar">@connections</span>.<span class="ruby-identifier">dup</span> }
 <span class="ruby-keyword">end</span></pre>
@@ -926,11 +914,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-disconnect_source')" id="l_method-i-disconnect_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L246" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L258" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-disconnect_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 246</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 258</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">disconnect</span>(<span class="ruby-identifier">raise_on_acquisition_timeout</span> = <span class="ruby-keyword">true</span>)
   <span class="ruby-identifier">with_exclusively_acquired_all_connections</span>(<span class="ruby-identifier">raise_on_acquisition_timeout</span>) <span class="ruby-keyword">do</span>
     <span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
@@ -979,11 +967,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-disconnect-21_source')" id="l_method-i-disconnect-21_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L268" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L280" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-disconnect-21_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 268</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 280</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">disconnect!</span>
   <span class="ruby-identifier">disconnect</span>(<span class="ruby-keyword">false</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -1018,11 +1006,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-flush_source')" id="l_method-i-flush_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L420" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L435" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-flush_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 420</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 435</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">flush</span>(<span class="ruby-identifier">minimum_idle</span> = <span class="ruby-ivar">@idle_timeout</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">minimum_idle</span>.<span class="ruby-identifier">nil?</span>
 
@@ -1073,11 +1061,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-flush-21_source')" id="l_method-i-flush-21_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L442" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L457" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-flush-21_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 442</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 457</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">flush!</span>
   <span class="ruby-identifier">reap</span>
   <span class="ruby-identifier">flush</span>(<span class="ruby-value">-1</span>)
@@ -1113,16 +1101,20 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-lock_thread-3D_source')" id="l_method-i-lock_thread-3D_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L167" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L164" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-lock_thread-3D_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 167</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 164</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">lock_thread=</span>(<span class="ruby-identifier">lock_thread</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">lock_thread</span>
-    <span class="ruby-ivar">@lock_thread</span> = <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>
+    <span class="ruby-ivar">@lock_thread</span> = <span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">IsolatedExecutionState</span>.<span class="ruby-identifier">context</span>
   <span class="ruby-keyword">else</span>
     <span class="ruby-ivar">@lock_thread</span> = <span class="ruby-keyword">nil</span>
+  <span class="ruby-keyword">end</span>
+
+  <span class="ruby-keyword">if</span> (<span class="ruby-identifier">active_connection</span> = <span class="ruby-ivar">@thread_cached_conns</span>[<span class="ruby-identifier">connection_cache_key</span>(<span class="ruby-identifier">current_thread</span>)])
+    <span class="ruby-identifier">active_connection</span>.<span class="ruby-identifier">lock_thread</span> = <span class="ruby-ivar">@lock_thread</span>
   <span class="ruby-keyword">end</span>
 <span class="ruby-keyword">end</span></pre>
               </div>
@@ -1156,11 +1148,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-reap_source')" id="l_method-i-reap_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L397" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L412" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-reap_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 397</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 412</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">reap</span>
   <span class="ruby-identifier">stale_connections</span> = <span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
     <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier">discarded?</span>
@@ -1188,7 +1180,7 @@
         <div class="method">
           <h3 class="title method-title" id="method-i-release_connection">
             
-              <b>release_connection</b>(owner_thread = Thread.current)
+              <b>release_connection</b>(owner_thread = ActiveSupport::IsolatedExecutionState.context)
             
             <a href="../../../classes/ActiveRecord/ConnectionAdapters/ConnectionPool.html#method-i-release_connection" name="method-i-release_connection" class="permalink">Link</a>
           </h3>
@@ -1213,12 +1205,12 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-release_connection_source')" id="l_method-i-release_connection_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L200" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L207" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-release_connection_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 200</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">release_connection</span>(<span class="ruby-identifier">owner_thread</span> = <span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>)
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 207</span>
+<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">release_connection</span>(<span class="ruby-identifier">owner_thread</span> = <span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">IsolatedExecutionState</span>.<span class="ruby-identifier">context</span>)
   <span class="ruby-keyword">if</span> <span class="ruby-identifier">conn</span> = <span class="ruby-ivar">@thread_cached_conns</span>.<span class="ruby-identifier">delete</span>(<span class="ruby-identifier">connection_cache_key</span>(<span class="ruby-identifier">owner_thread</span>))
     <span class="ruby-identifier">checkin</span> <span class="ruby-identifier">conn</span>
   <span class="ruby-keyword">end</span>
@@ -1254,11 +1246,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-remove_source')" id="l_method-i-remove_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L365" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L380" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-remove_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 365</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 380</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">remove</span>(<span class="ruby-identifier">conn</span>)
   <span class="ruby-identifier">needs_new_connection</span> = <span class="ruby-keyword">false</span>
 
@@ -1302,7 +1294,7 @@
 
           
             <div class="description">
-              <p>Return connection pool’s usage statistic Example:</p>
+              <p>Returns the connection pool’s usage statistic.</p>
 
 <pre><code>ActiveRecord::Base.connection_pool.stat # =&gt; { size: 15, connections: 1, busy: 1, dead: 0, idle: 0, waiting: 0, checkout_timeout: 5 }
 </code></pre>
@@ -1321,11 +1313,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-stat_source')" id="l_method-i-stat_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L455" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L469" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-stat_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 455</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 469</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">stat</span>
   <span class="ruby-identifier">synchronize</span> <span class="ruby-keyword">do</span>
     {
@@ -1354,7 +1346,7 @@
 
           
             <div class="description">
-              <p>If a connection obtained through <a href="ConnectionPool.html#method-i-connection"><code>connection</code></a> or <a href="ConnectionPool.html#method-i-with_connection"><code>with_connection</code></a> methods already exists yield it to the block. If no such connection exists checkout a connection, yield it to the block, and checkin the connection when finished.</p>
+              <p>Yields a connection from the connection pool to the block. If no connection is already checked out by the current thread, a connection will be checked out from the pool, yielded to the block, and then returned to the pool when the block is finished. If a connection has already been checked out on the current thread, such as via <a href="ConnectionPool.html#method-i-connection"><code>connection</code></a> or <a href="ConnectionPool.html#method-i-with_connection"><code>with_connection</code></a>, that existing connection will be the one yielded and it will not be returned to the pool automatically at the end of the block; it is expected that such an existing connection will be properly returned to the pool by the code that checked it out.</p>
             </div>
           
 
@@ -1370,13 +1362,13 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-with_connection_source')" id="l_method-i-with_connection_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L210" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb#L222" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-with_connection_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 210</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/connection_adapters/abstract/connection_pool.rb, line 222</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">with_connection</span>
-  <span class="ruby-keyword">unless</span> <span class="ruby-identifier">conn</span> = <span class="ruby-ivar">@thread_cached_conns</span>[<span class="ruby-identifier">connection_cache_key</span>(<span class="ruby-constant">Thread</span>.<span class="ruby-identifier">current</span>)]
+  <span class="ruby-keyword">unless</span> <span class="ruby-identifier">conn</span> = <span class="ruby-ivar">@thread_cached_conns</span>[<span class="ruby-identifier">connection_cache_key</span>(<span class="ruby-constant">ActiveSupport</span><span class="ruby-operator">::</span><span class="ruby-constant">IsolatedExecutionState</span>.<span class="ruby-identifier">context</span>)]
     <span class="ruby-identifier">conn</span> = <span class="ruby-identifier">connection</span>
     <span class="ruby-identifier">fresh_connection</span> = <span class="ruby-keyword">true</span>
   <span class="ruby-keyword">end</span>

@@ -56,10 +56,10 @@
             <li>
                 rails/railties/lib/rails/generators/rails/app/templates/config/environments/production.rb.tt
                 
-                    <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/railties/lib/rails/generators/rails/app/templates/config/environments/production.rb.tt" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/railties/lib/rails/generators/rails/app/templates/config/environments/production.rb.tt" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2024-05-24 23:57:11 +0300</li>
+            <li>Last modified: 2024-06-28 01:29:16 +0300</li>
         </ul>
     </div>
 
@@ -75,7 +75,7 @@
 <pre><code># Settings specified here will take precedence over those in config/application.rb.
 
 # Code is not reloaded between requests.
-config.cache_classes = true
+config.enable_reloading = false
 
 # Eager load code on boot. This eager loads most of Rails and
 # your application in memory, allowing both threaded web servers
@@ -84,24 +84,23 @@ config.cache_classes = true
 config.eager_load = true
 
 # Full error reports are disabled and caching is turned on.
-config.consider_all_requests_local       = false
+config.consider_all_requests_local = false
 &lt;%- unless options.api? -%&gt;
 config.action_controller.perform_caching = true
 &lt;%- end -%&gt;
 
-# Ensures that a master key has been made available in either ENV[&quot;RAILS_MASTER_KEY&quot;]
-# or in config/master.key. This key is used to decrypt credentials (and other encrypted files).
+# Ensures that a master key has been made available in ENV[&quot;RAILS_MASTER_KEY&quot;], config/master.key, or an environment
+# key such as config/credentials/production.key. This key is used to decrypt credentials (and other encrypted files).
 # config.require_master_key = true
 
-# Disable serving static files from the `/public` folder by default since
-# Apache or NGINX already handles this.
-config.public_file_server.enabled = ENV[&quot;RAILS_SERVE_STATIC_FILES&quot;].present?
+# Disable serving static files from `public/`, relying on NGINX/Apache to do so instead.
+# config.public_file_server.enabled = false
 
 &lt;%- unless skip_sprockets? -%&gt;
 # Compress CSS using a preprocessor.
 # config.assets.css_compressor = :sass
 
-# Do not fallback to assets pipeline if a precompiled asset is missed.
+# Do not fall back to assets pipeline if a precompiled asset is missed.
 config.assets.compile = false
 
 &lt;%- end -%&gt;
@@ -117,33 +116,43 @@ config.assets.compile = false
 config.active_storage.service = :local
 
 &lt;%- end -%&gt;
-&lt;%- unless options[:skip_action_cable] -%&gt;
+&lt;%- unless skip_action_cable? -%&gt;
 # Mount Action Cable outside main process or domain.
 # config.action_cable.mount_path = nil
 # config.action_cable.url = &quot;wss://example.com/cable&quot;
 # config.action_cable.allowed_request_origins = [ &quot;http://example.com&quot;, /http:\/\/example.*/ ]
 
 &lt;%- end -%&gt;
-# Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
-# config.force_ssl = true
+# Assume all access to the app is happening through a SSL-terminating reverse proxy.
+# Can be used together with config.force_ssl for Strict-Transport-Security and secure cookies.
+# config.assume_ssl = true
 
-# Include generic and useful information about system operation, but avoid logging too much
-# information to avoid inadvertent exposure of personally identifiable information (PII).
-config.log_level = :info
+# Force all access to the app over SSL, use Strict-Transport-Security, and use secure cookies.
+config.force_ssl = true
+
+# Log to STDOUT by default
+config.logger = ActiveSupport::Logger.new(STDOUT)
+  .tap  { |logger| logger.formatter = ::Logger::Formatter.new }
+  .then { |logger| ActiveSupport::TaggedLogging.new(logger) }
 
 # Prepend all log lines with the following tags.
 config.log_tags = [ :request_id ]
+
+# &quot;info&quot; includes generic and useful information about system operation, but avoids logging too much
+# information to avoid inadvertent exposure of personally identifiable information (PII). If you
+# want to log everything, set the level to &quot;debug&quot;.
+config.log_level = ENV.fetch(&quot;RAILS_LOG_LEVEL&quot;, &quot;info&quot;)
 
 # Use a different cache store in production.
 # config.cache_store = :mem_cache_store
 
 &lt;%- unless options[:skip_active_job] -%&gt;
 # Use a real queuing backend for Active Job (and separate queues per environment).
-# config.active_job.queue_adapter     = :resque
+# config.active_job.queue_adapter = :resque
 # config.active_job.queue_name_prefix = &quot;&lt;%= app_name %&gt;_production&quot;
 
 &lt;%- end -%&gt;
-&lt;%- unless skip_action_mailer? -%&gt;
+&lt;%- unless options.skip_action_mailer? -%&gt;
 config.action_mailer.perform_caching = false
 
 # Ignore bad email addresses and do not raise email delivery errors.
@@ -157,24 +166,19 @@ config.i18n.fallbacks = true
 
 # Don&#39;t log any deprecations.
 config.active_support.report_deprecations = false
-
-# Use default logging formatter so that PID and timestamp are not suppressed.
-config.log_formatter = ::Logger::Formatter.new
-
-# Use a different logger for distributed setups.
-# require &quot;syslog/logger&quot;
-# config.logger = ActiveSupport::TaggedLogging.new(Syslog::Logger.new &quot;app-name&quot;)
-
-if ENV[&quot;RAILS_LOG_TO_STDOUT&quot;].present?
-  logger           = ActiveSupport::Logger.new(STDOUT)
-  logger.formatter = config.log_formatter
-  config.logger    = ActiveSupport::TaggedLogging.new(logger)
-end
 &lt;%- unless options.skip_active_record? -%&gt;
 
 # Do not dump schema after migrations.
 config.active_record.dump_schema_after_migration = false
 &lt;%- end -%&gt;
+
+# Enable DNS rebinding protection and other `Host` header attacks.
+# config.hosts = [
+#   &quot;example.com&quot;,     # Allow requests from example.com
+#   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
+# ]
+# Skip DNS rebinding protection for the default health check endpoint.
+# config.host_authorization = { exclude: -&gt;(request) { request.path == &quot;/up&quot; } }
 </code></pre>
 
 <p>end</p>

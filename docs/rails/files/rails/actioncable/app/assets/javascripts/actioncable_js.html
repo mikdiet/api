@@ -56,10 +56,10 @@
             <li>
                 rails/actioncable/app/assets/javascripts/actioncable.js
                 
-                    <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actioncable/app/assets/javascripts/actioncable.js" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/actioncable/app/assets/javascripts/actioncable.js" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2024-05-24 23:57:09 +0300</li>
+            <li>Last modified: 2024-06-28 01:29:16 +0300</li>
         </ul>
     </div>
 
@@ -78,8 +78,8 @@ factory(global.ActionCable = {}));
 
 <pre><code>&quot;use strict&quot;;
 var adapters = {
-  logger: self.console,
-  WebSocket: self.WebSocket
+  logger: typeof console !== &quot;undefined&quot; ? console : undefined,
+  WebSocket: typeof WebSocket !== &quot;undefined&quot; ? WebSocket : undefined
 };
 var logger = {
   log(...messages) {
@@ -195,7 +195,8 @@ var INTERNAL = {
   disconnect_reasons: {
     unauthorized: &quot;unauthorized&quot;,
     invalid_request: &quot;invalid_request&quot;,
-    server_restart: &quot;server_restart&quot;
+    server_restart: &quot;server_restart&quot;,
+    remote: &quot;remote&quot;
   },
   default_mount_path: &quot;/cable&quot;,
   protocols: [ &quot;actioncable-v1-json&quot;, &quot;actioncable-unsupported&quot; ]
@@ -224,11 +225,12 @@ class Connection {
       logger.log(`Attempted to open WebSocket, but existing socket is ${this.getState()}`);
       return false;
     } else {
-      logger.log(`Opening WebSocket, current state is ${this.getState()}, subprotocols: ${protocols}`);
+      const socketProtocols = [ ...protocols, ...this.consumer.subprotocols || [] ];
+      logger.log(`Opening WebSocket, current state is ${this.getState()}, subprotocols: ${socketProtocols}`);
       if (this.webSocket) {
         this.uninstallEventHandlers();
       }
-      this.webSocket = new adapters.WebSocket(this.consumer.url, protocols);
+      this.webSocket = new adapters.WebSocket(this.consumer.url, socketProtocols);
       this.installEventHandlers();
       this.monitor.start();
       return true;
@@ -270,6 +272,9 @@ class Connection {
   isActive() {
     return this.isState(&quot;open&quot;, &quot;connecting&quot;);
   }
+  triedToReconnect() {
+    return this.monitor.reconnectAttempts &gt; 0;
+  }
   isProtocolSupported() {
     return indexOf.call(supportedProtocols, this.getProtocol()) &gt;= 0;
   }
@@ -307,6 +312,9 @@ Connection.prototype.events = {
     const {identifier: identifier, message: message, reason: reason, reconnect: reconnect, type: type} = JSON.parse(event.data);
     switch (type) {
      case message_types.welcome:
+      if (this.triedToReconnect()) {
+        this.reconnectAttempted = true;
+      }
       this.monitor.recordConnect();
       return this.subscriptions.reload();
 
@@ -321,7 +329,16 @@ Connection.prototype.events = {
 
      case message_types.confirmation:
       this.subscriptions.confirmSubscription(identifier);
-      return this.subscriptions.notify(identifier, &quot;connected&quot;);
+      if (this.reconnectAttempted) {
+        this.reconnectAttempted = false;
+        return this.subscriptions.notify(identifier, &quot;connected&quot;, {
+          reconnected: true
+        });
+      } else {
+        return this.subscriptions.notify(identifier, &quot;connected&quot;, {
+          reconnected: false
+        });
+      }
 
      case message_types.rejection:
       return this.subscriptions.reject(identifier);
@@ -501,6 +518,7 @@ class Consumer {
     this._url = url;
     this.subscriptions = new Subscriptions(this);
     this.connection = new Connection(this);
+    this.subprotocols = [];
   }
   get url() {
     return createWebSocketURL(this._url);
@@ -520,6 +538,9 @@ class Consumer {
     if (!this.connection.isActive()) {
       return this.connection.open();
     }
+  }
+  addSubProtocol(subprotocol) {
+    this.subprotocols = [ ...this.subprotocols, subprotocol ];
   }
 }
 function createWebSocketURL(url) {

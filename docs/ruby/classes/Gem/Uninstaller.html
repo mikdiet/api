@@ -240,7 +240,7 @@
               [R]
             </td>
             <td class='attr-name'>gem_home</td>
-            <td class='attr-desc'><p>The gem repository the gem will be installed into</p></td>
+            <td class='attr-desc'><p>The gem repository the gem will be uninstalled from</p></td>
           </tr>
         
           <tr valign='top'>
@@ -285,7 +285,7 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/uninstaller.rb#L48" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/uninstaller.rb#L48" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
@@ -294,8 +294,9 @@
   <span class="ruby-comment"># TODO: document the valid options</span>
   <span class="ruby-ivar">@gem</span>                = <span class="ruby-identifier">gem</span>
   <span class="ruby-ivar">@version</span>            = <span class="ruby-identifier">options</span>[<span class="ruby-value">:version</span>] <span class="ruby-operator">||</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Requirement</span>.<span class="ruby-identifier">default</span>
-  <span class="ruby-ivar">@gem_home</span>           = <span class="ruby-constant">File</span>.<span class="ruby-identifier">realpath</span>(<span class="ruby-identifier">options</span>[<span class="ruby-value">:install_dir</span>] <span class="ruby-operator">||</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">dir</span>)
-  <span class="ruby-ivar">@plugins_dir</span>        = <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">plugindir</span>(<span class="ruby-ivar">@gem_home</span>)
+  <span class="ruby-ivar">@install_dir</span>        = <span class="ruby-identifier">options</span>[<span class="ruby-value">:install_dir</span>]
+  <span class="ruby-ivar">@gem_home</span>           = <span class="ruby-constant">File</span>.<span class="ruby-identifier">realpath</span>(<span class="ruby-ivar">@install_dir</span> <span class="ruby-operator">||</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">dir</span>)
+  <span class="ruby-ivar">@user_dir</span>           = <span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-constant">Gem</span>.<span class="ruby-identifier">user_dir</span>) <span class="ruby-operator">?</span> <span class="ruby-constant">File</span>.<span class="ruby-identifier">realpath</span>(<span class="ruby-constant">Gem</span>.<span class="ruby-identifier">user_dir</span>) <span class="ruby-operator">:</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">user_dir</span>
   <span class="ruby-ivar">@force_executables</span>  = <span class="ruby-identifier">options</span>[<span class="ruby-value">:executables</span>]
   <span class="ruby-ivar">@force_all</span>          = <span class="ruby-identifier">options</span>[<span class="ruby-value">:all</span>]
   <span class="ruby-ivar">@force_ignore</span>       = <span class="ruby-identifier">options</span>[<span class="ruby-value">:ignore</span>]
@@ -315,7 +316,7 @@
 
   <span class="ruby-comment"># only add user directory if install_dir is not set</span>
   <span class="ruby-ivar">@user_install</span> = <span class="ruby-keyword">false</span>
-  <span class="ruby-ivar">@user_install</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:user_install</span>] <span class="ruby-keyword">unless</span> <span class="ruby-identifier">options</span>[<span class="ruby-value">:install_dir</span>]
+  <span class="ruby-ivar">@user_install</span> = <span class="ruby-identifier">options</span>[<span class="ruby-value">:user_install</span>] <span class="ruby-keyword">unless</span> <span class="ruby-ivar">@install_dir</span>
 
   <span class="ruby-comment"># Optimization: populated during #uninstall</span>
   <span class="ruby-ivar">@default_specs_matching_uninstall_params</span> = []
@@ -355,11 +356,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-path_ok-3F_source')" id="l_method-i-path_ok-3F_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/uninstaller.rb#L303" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/uninstaller.rb#L305" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-path_ok-3F_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 303</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 305</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">path_ok?</span>(<span class="ruby-identifier">gem_dir</span>, <span class="ruby-identifier">spec</span>)
   <span class="ruby-identifier">full_path</span>     = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span> <span class="ruby-identifier">gem_dir</span>, <span class="ruby-string">&quot;gems&quot;</span>, <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">full_name</span>
   <span class="ruby-identifier">original_path</span> = <span class="ruby-constant">File</span>.<span class="ruby-identifier">join</span> <span class="ruby-identifier">gem_dir</span>, <span class="ruby-string">&quot;gems&quot;</span>, <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">original_name</span>
@@ -397,16 +398,17 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-regenerate_plugins_source')" id="l_method-i-regenerate_plugins_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/uninstaller.rb#L293" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/uninstaller.rb#L294" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-regenerate_plugins_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 293</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 294</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">regenerate_plugins</span>
-  <span class="ruby-identifier">latest</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Specification</span>.<span class="ruby-identifier">latest_spec_for</span>(<span class="ruby-ivar">@spec</span>.<span class="ruby-identifier">name</span>)
+  <span class="ruby-identifier">specification_record</span> = <span class="ruby-ivar">@install_dir</span> <span class="ruby-operator">?</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">SpecificationRecord</span>.<span class="ruby-identifier">from_path</span>(<span class="ruby-ivar">@install_dir</span>) <span class="ruby-operator">:</span> <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Specification</span>.<span class="ruby-identifier">specification_record</span>
+  <span class="ruby-identifier">latest</span> = <span class="ruby-identifier">specification_record</span>.<span class="ruby-identifier">latest_spec_for</span>(<span class="ruby-ivar">@spec</span>.<span class="ruby-identifier">name</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">latest</span>.<span class="ruby-identifier">nil?</span>
 
-  <span class="ruby-identifier">regenerate_plugins_for</span>(<span class="ruby-identifier">latest</span>, <span class="ruby-ivar">@plugins_dir</span>)
+  <span class="ruby-identifier">regenerate_plugins_for</span>(<span class="ruby-identifier">latest</span>, <span class="ruby-identifier">plugin_dir_for</span>(<span class="ruby-ivar">@spec</span>))
 <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
@@ -442,14 +444,14 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-remove_source')" id="l_method-i-remove_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/uninstaller.rb#L240" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/uninstaller.rb#L241" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-remove_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 240</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 241</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">remove</span>(<span class="ruby-identifier">spec</span>)
   <span class="ruby-keyword">unless</span> <span class="ruby-identifier">path_ok?</span>(<span class="ruby-ivar">@gem_home</span>, <span class="ruby-identifier">spec</span>) <span class="ruby-operator">||</span>
-         (<span class="ruby-ivar">@user_install</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">path_ok?</span>(<span class="ruby-constant">Gem</span>.<span class="ruby-identifier">user_dir</span>, <span class="ruby-identifier">spec</span>))
+         (<span class="ruby-ivar">@user_install</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">path_ok?</span>(<span class="ruby-ivar">@user_dir</span>, <span class="ruby-identifier">spec</span>))
     <span class="ruby-identifier">e</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">GemNotInHomeException</span>.<span class="ruby-identifier">new</span> \
       <span class="ruby-node">&quot;Gem &#39;#{spec.full_name}&#39; is not installed in directory #{@gem_home}&quot;</span>
     <span class="ruby-identifier">e</span>.<span class="ruby-identifier">spec</span> = <span class="ruby-identifier">spec</span>
@@ -520,11 +522,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-remove_all_source')" id="l_method-i-remove_all_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/uninstaller.rb#L233" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/uninstaller.rb#L234" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-remove_all_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 233</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 234</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">remove_all</span>(<span class="ruby-identifier">list</span>)
   <span class="ruby-identifier">list</span>.<span class="ruby-identifier">each</span> {<span class="ruby-operator">|</span><span class="ruby-identifier">spec</span><span class="ruby-operator">|</span> <span class="ruby-identifier">uninstall_gem</span> <span class="ruby-identifier">spec</span> }
 <span class="ruby-keyword">end</span></pre>
@@ -559,11 +561,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-remove_executables_source')" id="l_method-i-remove_executables_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/uninstaller.rb#L179" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/uninstaller.rb#L180" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-remove_executables_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 179</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 180</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">remove_executables</span>(<span class="ruby-identifier">spec</span>)
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">executables</span>.<span class="ruby-identifier">empty?</span>
 
@@ -643,11 +645,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-safe_delete_source')" id="l_method-i-safe_delete_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/uninstaller.rb#L369" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/uninstaller.rb#L371" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-safe_delete_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 369</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 371</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">safe_delete</span>(<span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-identifier">block</span>.<span class="ruby-identifier">call</span>
 <span class="ruby-keyword">rescue</span> <span class="ruby-constant">Errno</span><span class="ruby-operator">::</span><span class="ruby-constant">ENOENT</span>
@@ -689,11 +691,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-uninstall_source')" id="l_method-i-uninstall_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/uninstaller.rb#L83" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/uninstaller.rb#L84" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-uninstall_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 83</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 84</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">uninstall</span>
   <span class="ruby-identifier">dependency</span> = <span class="ruby-constant">Gem</span><span class="ruby-operator">::</span><span class="ruby-constant">Dependency</span>.<span class="ruby-identifier">new</span> <span class="ruby-ivar">@gem</span>, <span class="ruby-ivar">@version</span>
 
@@ -719,7 +721,7 @@
 
   <span class="ruby-identifier">list</span>, <span class="ruby-identifier">other_repo_specs</span> = <span class="ruby-identifier">list</span>.<span class="ruby-identifier">partition</span> <span class="ruby-keyword">do</span> <span class="ruby-operator">|</span><span class="ruby-identifier">spec</span><span class="ruby-operator">|</span>
     <span class="ruby-ivar">@gem_home</span> <span class="ruby-operator">==</span> <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">base_dir</span> <span class="ruby-operator">||</span>
-      (<span class="ruby-ivar">@user_install</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">base_dir</span> <span class="ruby-operator">==</span> <span class="ruby-constant">Gem</span>.<span class="ruby-identifier">user_dir</span>)
+      (<span class="ruby-ivar">@user_install</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">spec</span>.<span class="ruby-identifier">base_dir</span> <span class="ruby-operator">==</span> <span class="ruby-ivar">@user_dir</span>)
   <span class="ruby-keyword">end</span>
 
   <span class="ruby-identifier">list</span>.<span class="ruby-identifier">sort!</span>
@@ -787,11 +789,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-uninstall_gem_source')" id="l_method-i-uninstall_gem_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/rubygems/uninstaller.rb#L149" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/rubygems/uninstaller.rb#L150" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-uninstall_gem_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 149</span>
+                <pre><span class="ruby-comment"># File ruby/lib/rubygems/uninstaller.rb, line 150</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">uninstall_gem</span>(<span class="ruby-identifier">spec</span>)
   <span class="ruby-ivar">@spec</span> = <span class="ruby-identifier">spec</span>
 

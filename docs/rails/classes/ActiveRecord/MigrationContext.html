@@ -26,8 +26,8 @@
 
   
     
-    <meta name="description" content="MigrationContext sets the context in which a migration is run.  A migration context requires the path to the migrations is set in the migrations_paths parameter.">
-    <meta property="og:description" content="MigrationContext sets the context in which a migration is run.  A migration context requires the path to the migrations is set in the migrations_paths parameter.">
+    <meta name="description" content="Migration Context  MigrationContext sets the context in which a migration is run.  A migration context requires the path to the migrations is set in the migrations_paths parameter.">
+    <meta property="og:description" content="Migration Context  MigrationContext sets the context in which a migration is run.  A migration context requires the path to the migrations is set in the migrations_paths parameter.">
   
 
     <meta name="keywords" content="ActiveRecord::MigrationContext class, new, migrate">
@@ -81,9 +81,11 @@
   
     <div class="description">
       
+<h1 id="class-ActiveRecord::MigrationContext-label-Migration+Context">Migration Context</h1>
+
 <p><a href="MigrationContext.html"><code>MigrationContext</code></a> sets the context in which a migration is run.</p>
 
-<p>A migration context requires the path to the migrations is set in the <code>migrations_paths</code> parameter. Optionally a <code>schema_migration</code> class can be provided. For most applications, <code>SchemaMigration</code> is sufficient. Multiple database applications need a <code>SchemaMigration</code> per primary database.</p>
+<p>A migration context requires the path to the migrations is set in the <code>migrations_paths</code> parameter. Optionally a <code>schema_migration</code> class can be provided. Multiple database applications will instantiate a <code>SchemaMigration</code> object per database. From the Rake tasks, Rails will handle this for you.</p>
 
     </div>
   
@@ -153,6 +155,14 @@
             <td class='attr-rw'>
               [R]
             </td>
+            <td class='attr-name'>internal_metadata</td>
+            <td class='attr-desc'></td>
+          </tr>
+        
+          <tr valign='top'>
+            <td class='attr-rw'>
+              [R]
+            </td>
             <td class='attr-name'>migrations_paths</td>
             <td class='attr-desc'></td>
           </tr>
@@ -176,7 +186,7 @@
         <div class="method">
           <h3 class="title method-title" id="method-c-new">
             
-              <b>new</b>(migrations_paths, schema_migration = SchemaMigration)
+              <b>new</b>(migrations_paths, schema_migration = nil, internal_metadata = nil)
             
             <a href="../../classes/ActiveRecord/MigrationContext.html#method-c-new" name="method-c-new" class="permalink">Link</a>
           </h3>
@@ -199,15 +209,38 @@
                 Source:
                 <a href="javascript:toggleSource('method-c-new_source')" id="l_method-c-new_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/migration.rb#L1120" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/migration.rb#L1205" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-new_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/migration.rb, line 1120</span>
-<span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">migrations_paths</span>, <span class="ruby-identifier">schema_migration</span> = <span class="ruby-constant">SchemaMigration</span>)
-  <span class="ruby-ivar">@migrations_paths</span> = <span class="ruby-identifier">migrations_paths</span>
-  <span class="ruby-ivar">@schema_migration</span> = <span class="ruby-identifier">schema_migration</span>
-<span class="ruby-keyword">end</span></pre>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/migration.rb, line 1205</span>
+    <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">initialize</span>(<span class="ruby-identifier">migrations_paths</span>, <span class="ruby-identifier">schema_migration</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-identifier">internal_metadata</span> = <span class="ruby-keyword">nil</span>)
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">schema_migration</span> <span class="ruby-operator">==</span> <span class="ruby-constant">SchemaMigration</span>
+        <span class="ruby-constant">ActiveRecord</span>.<span class="ruby-identifier">deprecator</span>.<span class="ruby-identifier">warn</span>(<span class="ruby-identifier">&lt;&lt;-MSG</span>.<span class="ruby-identifier">squish</span>)
+<span class="ruby-value">          SchemaMigration no longer inherits from ActiveRecord::Base. If you want
+          to use the default connection, remove this argument. If you want to use a
+          specific connection, instantiate MigrationContext with the connection&#39;s schema
+          migration, for example `MigrationContext.new(path, Dog.connection.schema_migration)`.
+</span><span class="ruby-identifier">        MSG</span>
+
+        <span class="ruby-identifier">schema_migration</span> = <span class="ruby-keyword">nil</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-keyword">if</span> <span class="ruby-identifier">internal_metadata</span> <span class="ruby-operator">==</span> <span class="ruby-constant">InternalMetadata</span>
+        <span class="ruby-constant">ActiveRecord</span>.<span class="ruby-identifier">deprecator</span>.<span class="ruby-identifier">warn</span>(<span class="ruby-identifier">&lt;&lt;-MSG</span>.<span class="ruby-identifier">squish</span>)
+<span class="ruby-value">          SchemaMigration no longer inherits from ActiveRecord::Base. If you want
+          to use the default connection, remove this argument. If you want to use a
+          specific connection, instantiate MigrationContext with the connection&#39;s internal
+          metadata, for example `MigrationContext.new(path, nil, Dog.connection.internal_metadata)`.
+</span><span class="ruby-identifier">        MSG</span>
+
+        <span class="ruby-identifier">internal_metadata</span> = <span class="ruby-keyword">nil</span>
+      <span class="ruby-keyword">end</span>
+
+      <span class="ruby-ivar">@migrations_paths</span> = <span class="ruby-identifier">migrations_paths</span>
+      <span class="ruby-ivar">@schema_migration</span> = <span class="ruby-identifier">schema_migration</span> <span class="ruby-operator">||</span> <span class="ruby-constant">SchemaMigration</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">connection</span>)
+      <span class="ruby-ivar">@internal_metadata</span> = <span class="ruby-identifier">internal_metadata</span> <span class="ruby-operator">||</span> <span class="ruby-constant">InternalMetadata</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">connection</span>)
+    <span class="ruby-keyword">end</span></pre>
               </div>
             </div>
             
@@ -251,11 +284,11 @@
                 Source:
                 <a href="javascript:toggleSource('method-i-migrate_source')" id="l_method-i-migrate_source">show</a>
                 
-                  | <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/activerecord/lib/active_record/migration.rb#L1138" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/activerecord/lib/active_record/migration.rb#L1246" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-i-migrate_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/migration.rb, line 1138</span>
+                <pre><span class="ruby-comment"># File rails/activerecord/lib/active_record/migration.rb, line 1246</span>
 <span class="ruby-keyword">def</span> <span class="ruby-identifier ruby-title">migrate</span>(<span class="ruby-identifier">target_version</span> = <span class="ruby-keyword">nil</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-keyword">case</span>
   <span class="ruby-keyword">when</span> <span class="ruby-identifier">target_version</span>.<span class="ruby-identifier">nil?</span>

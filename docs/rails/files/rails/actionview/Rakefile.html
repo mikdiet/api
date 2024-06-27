@@ -56,10 +56,10 @@
             <li>
                 rails/actionview/Rakefile
                 
-                    <a href="https://github.com/rails/rails/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/actionview/Rakefile" target="_blank" class="github_url">on GitHub</a>
+                    <a href="https://github.com/rails/rails/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/actionview/Rakefile" target="_blank" class="github_url">on GitHub</a>
                 
             </li>
-            <li>Last modified: 2024-05-24 23:57:10 +0300</li>
+            <li>Last modified: 2024-06-28 01:29:16 +0300</li>
         </ul>
     </div>
 
@@ -70,11 +70,11 @@
       
 <p># frozen_string_literal: true</p>
 
-<p>require “rake/testtask” require “fileutils” require “open3”</p>
+<p>require “rake/testtask” require “fileutils” require “open3” require “base64”</p>
 
 <p>desc “Default Task” task default: :test</p>
 
-<p>task package: %w( assets:compile assets:verify )</p>
+<p>task :package</p>
 
 <p># Run the unit tests</p>
 
@@ -105,16 +105,7 @@ task :ujs do
     listen_host = &quot;localhost&quot;
     listen_port = &quot;4567&quot;
 
-    runner_command = %w(ruby ../ci/qunit-selenium-runner.rb)
-    if ENV[&quot;SELENIUM_DRIVER_URL&quot;]
-      require &quot;socket&quot;
-      runner_command += %W(http://#{Socket.gethostname}:#{listen_port}/ #{ENV[&quot;SELENIUM_DRIVER_URL&quot;]})
-      listen_host = &quot;0.0.0.0&quot;
-    else
-      runner_command += %W(http://localhost:#{listen_port}/)
-    end
-
-    Dir.mkdir(&quot;log&quot;)
+    FileUtils.mkdir_p(&quot;log&quot;)
     pid = File.open(&quot;log/test.log&quot;, &quot;w&quot;) do |f|
       spawn(*%W(rackup test/ujs/config.ru -o #{listen_host} -p #{listen_port} -s puma), out: f, err: f, pgroup: true)
     end
@@ -133,8 +124,9 @@ task :ujs do
 
       sleep 0.2
     end
-
-    system(*runner_command)
+    # Decode the obfuscate environment variables
+    decoded_environment_variables = Hash[*Base64.decode64(ENV.fetch(&quot;ENCODED&quot;, &quot;&quot;)).split(/[ =]/)]
+    system(decoded_environment_variables, &quot;npm&quot;, &quot;test&quot;)
     status = $?.exitstatus
   ensure
     Process.kill(&quot;KILL&quot;, -pid) if pid
@@ -171,56 +163,8 @@ end
 
 <pre><code>desc &quot;Starts the test server&quot;
 task :server do
-  system &quot;bundle exec rackup test/ujs/config.ru -p 4567 -s puma&quot;
-end
-</code></pre>
-
-<p>end</p>
-
-<p>namespace :assets do</p>
-
-<pre><code>desc &quot;Compile Action View assets&quot;
-task :compile do
-  require &quot;blade&quot;
-  require &quot;sprockets&quot;
-  require &quot;sprockets/export&quot;
-  Blade.build
-end
-
-desc &quot;Verify compiled Action View assets&quot;
-task :verify do
-  file = &quot;lib/assets/compiled/rails-ujs.js&quot;
-  pathname = Pathname.new(&quot;#{__dir__}/#{file}&quot;)
-
-  print &quot;[verify] #{file} exists &quot;
-  if pathname.exist?
-    puts &quot;[OK]&quot;
-  else
-    $stderr.puts &quot;[FAIL]&quot;
-    fail
-  end
-
-  print &quot;[verify] #{file} is a UMD module &quot;
-  if /module\.exports.*define\.amd/m.match?(pathname.read)
-    puts &quot;[OK]&quot;
-  else
-    $stderr.puts &quot;[FAIL]&quot;
-    fail
-  end
-
-  print &quot;[verify] #{__dir__} can be required as a module &quot;
-  js = &lt;&lt;-JS
-    window = { Event: class {} }
-    class Element {}
-    require(&#39;#{__dir__}&#39;)
-  JS
-  _, stderr, status = Open3.capture3(&quot;node&quot;, &quot;--print&quot;, js)
-  if status.success?
-    puts &quot;[OK]&quot;
-  else
-    $stderr.puts &quot;[FAIL]\n#{stderr}&quot;
-    fail
-  end
+  spawn(&quot;bundle&quot;, &quot;exec&quot;, &quot;rackup&quot;, &quot;test/ujs/config.ru&quot;, &quot;-p&quot;, &quot;4567&quot;, &quot;-s&quot;, &quot;puma&quot;)
+  system(&quot;npm&quot;, &quot;test&quot;, &quot;--&quot;, &quot;--no-single-run&quot;, &quot;--browsers&quot;, &quot;Chrome&quot;)
 end
 </code></pre>
 

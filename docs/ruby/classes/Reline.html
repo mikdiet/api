@@ -234,32 +234,25 @@
             <td>=</td>
             <td class="attr-value">-&gt;() {
 # autocomplete
-return nil unless config.autocompletion
-if just_cursor_moving and completion_journey_data.nil?
-# Auto complete starts only when edited
-return nil
-end
-pre, target, post = retrieve_completion_block(true)
-if target.nil? or target.empty? or (completion_journey_data&amp;.pointer == -1 and target.size &lt;= 3)
-return nil
-end
-if completion_journey_data and completion_journey_data.list
-result = completion_journey_data.list.dup
-result.shift
-pointer = completion_journey_data.pointer - 1
-else
-result = call_completion_proc_with_checking_args(pre, target, post)
-pointer = nil
-end
-if result and result.size == 1 and result[0] == target and pointer != 0
-result = nil
-end
+return unless config.autocompletion
+
+journey_data = completion_journey_data
+return unless journey_data
+
+target = journey_data.list.first
+completed = journey_data.list[journey_data.pointer]
+result = journey_data.list.drop(1)
+pointer = journey_data.pointer - 1
+return if completed.empty? || (result == [completed] &amp;&amp; pointer &lt; 0)
+
 target_width = Reline::Unicode.calculate_width(target)
-x = cursor_pos.x - target_width
-if x &lt; 0
-x = screen_width + x
+completed_width = Reline::Unicode.calculate_width(completed)
+if cursor_pos.x &lt;= completed_width - target_width
+# When target is rendered on the line above cursor position
+x = screen_width - completed_width
 y = -1
 else
+x = [cursor_pos.x - completed_width, 0].max
 y = 0
 end
 cursor_pos_to_render = Reline::CursorPos.new(x, y)
@@ -388,7 +381,7 @@ end</td>
           <tr valign='top'>
             <td class="attr-name">VERSION</td>
             <td>=</td>
-            <td class="attr-value">&#39;0.4.1&#39;</td>
+            <td class="attr-value">&#39;0.5.7&#39;</td>
           </tr>
           
             <tr valign='top'>
@@ -434,11 +427,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-core_source')" id="l_method-c-core_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/reline.rb#L550" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/reline.rb#L547" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-core_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 550</span>
+                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 547</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">core</span>
   <span class="ruby-ivar">@core</span> <span class="ruby-operator">||=</span> <span class="ruby-constant">Core</span>.<span class="ruby-identifier">new</span> { <span class="ruby-operator">|</span><span class="ruby-identifier">core</span><span class="ruby-operator">|</span>
     <span class="ruby-identifier">core</span>.<span class="ruby-identifier">config</span> = <span class="ruby-constant">Reline</span><span class="ruby-operator">::</span><span class="ruby-constant">Config</span>.<span class="ruby-identifier">new</span>
@@ -485,11 +478,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-encoding_system_needs_source')" id="l_method-c-encoding_system_needs_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/reline.rb#L546" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/reline.rb#L543" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-encoding_system_needs_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 546</span>
+                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 543</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">encoding_system_needs</span>
   <span class="ruby-keyword">self</span>.<span class="ruby-identifier">core</span>.<span class="ruby-identifier">encoding</span>
 <span class="ruby-keyword">end</span></pre>
@@ -524,11 +517,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-insert_text_source')" id="l_method-c-insert_text_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/reline.rb#L527" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/reline.rb#L524" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-insert_text_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 527</span>
+                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 524</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">insert_text</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-identifier">line_editor</span>.<span class="ruby-identifier">insert_text</span>(<span class="ruby-operator">*</span><span class="ruby-identifier">args</span>, <span class="ruby-operator">&amp;</span><span class="ruby-identifier">block</span>)
   <span class="ruby-keyword">self</span>
@@ -564,11 +557,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-line_editor_source')" id="l_method-c-line_editor_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/reline.rb#L570" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/reline.rb#L567" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-line_editor_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 570</span>
+                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 567</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">line_editor</span>
   <span class="ruby-identifier">core</span>.<span class="ruby-identifier">line_editor</span>
 <span class="ruby-keyword">end</span></pre>
@@ -603,11 +596,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-ungetc_source')" id="l_method-c-ungetc_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/reline.rb#L566" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/reline.rb#L563" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-ungetc_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 566</span>
+                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 563</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">ungetc</span>(<span class="ruby-identifier">c</span>)
   <span class="ruby-identifier">core</span>.<span class="ruby-identifier">io_gate</span>.<span class="ruby-identifier">ungetc</span>(<span class="ruby-identifier">c</span>)
 <span class="ruby-keyword">end</span></pre>
@@ -642,11 +635,11 @@ end</td>
                 Source:
                 <a href="javascript:toggleSource('method-c-update_iogate_source')" id="l_method-c-update_iogate_source">show</a>
                 
-                  | <a href="https://github.com/ruby/ruby/blob/7b55c452b7d9a295d148ff882e0197cd139a9f8f/lib/reline.rb#L574" target="_blank" class="github_url">on GitHub</a>
+                  | <a href="https://github.com/ruby/ruby/blob/49dc0a12f185d791f1826396035b54cf3fb1771e/lib/reline.rb#L571" target="_blank" class="github_url">on GitHub</a>
                 
               </p>
               <div id="method-c-update_iogate_source" class="dyn-source">
-                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 574</span>
+                <pre><span class="ruby-comment"># File ruby/lib/reline.rb, line 571</span>
 <span class="ruby-keyword">def</span> <span class="ruby-keyword">self</span>.<span class="ruby-identifier ruby-title">update_iogate</span>
   <span class="ruby-keyword">return</span> <span class="ruby-keyword">if</span> <span class="ruby-identifier">core</span>.<span class="ruby-identifier">config</span>.<span class="ruby-identifier">test_mode</span>
 
